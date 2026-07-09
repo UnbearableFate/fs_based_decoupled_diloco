@@ -18,7 +18,7 @@ Milestone 1 的核心约束如下：
 
 - 模型类型：GPT 风格 causal language model，默认 `gpt2`。
 - 数据集：默认 WikiText-2，配置为 `wikitext` / `wikitext-2-raw-v1`。
-- 节点形态：8 个 learner 节点，每个 learner 单进程、单 GPU；1 个 syncer 节点，CPU-only。
+- 节点形态：8 个 learner 节点，每个 learner 单进程、单 GPU；1 个 syncer 节点，使用本地 GPU 做聚合、pseudo-gradient 和 outer optimizer step。
 - 通信模拟：大张量通过共享文件系统上的 `safetensors` 文件传输；控制状态通过 syncer 本地 SQLite 管理；learner 用 JSON metadata 文件作为提交标记；syncer 通过 `control/latest.json` 发布最新全局版本。
 - 上传粒度：Milestone 1 使用完整可训练参数向量作为单个逻辑 fragment，即 `fragment_id = 0`。
 - learner 采用新全局版本时必须覆盖完整模型参数，并重置 inner optimizer 和 scheduler。
@@ -44,7 +44,7 @@ Learner 是实际训练进程。每个 learner：
 
 ### Syncer
 
-Syncer 是中心同步进程。它通常运行在 rank 0 节点，并通过 `CUDA_VISIBLE_DEVICES=""` 禁用 GPU。Syncer：
+Syncer 是中心同步进程。它通常运行在 rank 0 节点，并通过 `CUDA_VISIBLE_DEVICES=${SYNCER_CUDA_VISIBLE_DEVICES:-0}` 使用本地 GPU。Syncer：
 
 1. 初始化共享 run 目录。
 2. 建立 syncer-local SQLite DB。
@@ -59,7 +59,8 @@ Syncer 是中心同步进程。它通常运行在 rank 0 节点，并通过 `CUD
 11. 发布新的全局权重和 optimizer state。
 12. 将已选 update 标为 applied，过期或被替代的 update 标为 dropped。
 13. 周期性将 SQLite 备份到共享文件系统。
-14. 满足停止条件后写 `control/stop.json`。
+14. 将 selected update loss、token、staleness 和耗时指标写入自动命名的 W&B run。
+15. 满足停止条件后写 `control/stop.json`。
 
 ### Shared Root
 
@@ -83,7 +84,7 @@ Milestone 1 has these constraints:
 
 - Model family: GPT-style causal language modeling, default `gpt2`.
 - Dataset: default WikiText-2, configured as `wikitext` / `wikitext-2-raw-v1`.
-- Runtime shape: 8 learner nodes with one learner process and one GPU each, plus 1 CPU-only syncer process.
+- Runtime shape: 8 learner nodes with one learner process and one GPU each, plus 1 syncer process that uses a local GPU for aggregation, pseudo-gradient computation, and outer optimizer updates.
 - Communication simulation: large tensors are exchanged as `safetensors` files on the shared filesystem; control state is stored in syncer-local SQLite; learner metadata JSON files are commit markers; syncer publishes global versions through `control/latest.json`.
 - Upload granularity: a full trainable parameter vector is treated as a single logical fragment, `fragment_id = 0`.
 - When learners adopt a newer global version, they overwrite the full model and reset the inner optimizer.
@@ -109,7 +110,7 @@ A learner is a training process. It:
 
 ### Syncer
 
-The syncer is the central coordination process. It usually runs on rank 0 with `CUDA_VISIBLE_DEVICES=""`. It:
+The syncer is the central coordination process. It usually runs on rank 0 with `CUDA_VISIBLE_DEVICES=${SYNCER_CUDA_VISIBLE_DEVICES:-0}`. It:
 
 1. Creates the shared run layout.
 2. Opens a syncer-local SQLite database.
@@ -124,7 +125,8 @@ The syncer is the central coordination process. It usually runs on rank 0 with `
 11. Publishes the next global weights and optimizer state.
 12. Marks selected updates as applied and obsolete updates as dropped.
 13. Dumps SQLite backups to the shared filesystem.
-14. Writes `control/stop.json` when a stop condition is met.
+14. Logs selected-update loss, token, staleness, and timing metrics to an automatically named W&B run.
+15. Writes `control/stop.json` when a stop condition is met.
 
 ### Shared Root
 

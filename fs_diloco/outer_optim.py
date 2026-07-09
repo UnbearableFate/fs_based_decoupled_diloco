@@ -58,7 +58,9 @@ def outer_optimizer_step(
     name = cfg.name.lower()
     theta = theta.detach().clone()
     grad = grad.detach().to(theta.dtype).clone()
-    step = int(state.get("step", torch.tensor(0)).item()) + 1
+    state_step = state.get("step")
+    step = int(state_step.item()) + 1 if state_step is not None else 1
+    step_tensor = torch.tensor(step, dtype=torch.int64, device=theta.device)
 
     if name in {"sgd", "momentum", "nesterov"}:
         if cfg.weight_decay:
@@ -76,7 +78,7 @@ def outer_optimizer_step(
             else:
                 update = momentum_buffer
         theta = theta.add(update, alpha=-cfg.lr)
-        new_state = {"step": torch.tensor(step, dtype=torch.int64), "momentum": momentum_buffer}
+        new_state = {"step": step_tensor, "momentum": momentum_buffer}
         return theta, new_state
 
     if name == "adamw":
@@ -97,7 +99,7 @@ def outer_optimizer_step(
         v_hat = exp_avg_sq / bias_correction2
         theta = theta.addcdiv(m_hat, v_hat.sqrt().add(cfg.eps), value=-cfg.lr)
         new_state = {
-            "step": torch.tensor(step, dtype=torch.int64),
+            "step": step_tensor,
             "exp_avg": exp_avg,
             "exp_avg_sq": exp_avg_sq,
         }
@@ -113,9 +115,13 @@ def state_to_tensors(theta: torch.Tensor, state: dict[str, torch.Tensor]) -> dic
     return tensors
 
 
-def state_from_tensors(tensors: dict[str, torch.Tensor]) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
-    theta = tensors["theta"].detach().cpu().float()
-    state = {key: value.detach().cpu() for key, value in tensors.items() if key != "theta"}
+def state_from_tensors(
+    tensors: dict[str, torch.Tensor],
+    *,
+    device: torch.device | str = "cpu",
+) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+    theta = tensors["theta"].detach().to(device=device, dtype=torch.float32)
+    state = {key: value.detach().to(device=device) for key, value in tensors.items() if key != "theta"}
     if "step" not in state:
-        state["step"] = torch.tensor(0, dtype=torch.int64)
+        state["step"] = torch.tensor(0, dtype=torch.int64, device=device)
     return theta, state

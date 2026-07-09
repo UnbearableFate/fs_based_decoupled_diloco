@@ -46,25 +46,34 @@ def save_update_vector(path: str | Path, flat: torch.Tensor, *, dtype: torch.dty
     return save_safetensors_atomic(path, {"local_params": flat.detach().cpu().to(dtype=dtype).contiguous()})
 
 
-def load_update_vector(path: str | Path) -> torch.Tensor:
-    tensors = load_safetensors(path)
+def load_update_vector(path: str | Path, *, device: str | torch.device = "cpu") -> torch.Tensor:
+    tensors = load_safetensors(path, device=device)
     if "local_params" not in tensors:
         raise ValueError(f"{path} does not contain local_params")
-    return tensors["local_params"].detach().cpu().float()
+    return tensors["local_params"].detach().to(device=device, dtype=torch.float32)
 
 
 def save_global_weights(path: str | Path, theta: torch.Tensor, param_index: dict) -> Path:
     return save_safetensors_atomic(path, flat_to_named_tensors(theta.detach().cpu(), param_index))
 
 
-def load_global_weights_flat(path: str | Path, param_index: dict) -> torch.Tensor:
-    tensors = load_safetensors(path)
-    return named_tensors_to_flat(tensors, param_index)
+def load_global_weights_flat(
+    path: str | Path,
+    param_index: dict,
+    *,
+    device: str | torch.device = "cpu",
+) -> torch.Tensor:
+    tensors = load_safetensors(path, device=device)
+    return named_tensors_to_flat(tensors, param_index, device=device)
 
 
 def save_outer_state(path: str | Path, theta: torch.Tensor, state: dict[str, torch.Tensor]) -> Path:
     return save_safetensors_atomic(path, state_to_tensors(theta, state))
 
 
-def load_outer_state(path: str | Path) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
-    return state_from_tensors(load_safetensors(path))
+def load_outer_state(
+    path: str | Path,
+    *,
+    device: str | torch.device = "cpu",
+) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+    return state_from_tensors(load_safetensors(path, device=device), device=device)

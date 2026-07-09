@@ -149,6 +149,16 @@ English: Detailed YAML config groups and parameter meanings.
 | `upload_skip_probability` | 训练 interval 但跳过 upload 的概率。 |
 | `crash_probability` | interval 边界故意异常退出概率。 |
 
+### `wandb`
+
+| 参数 | 含义 |
+| --- | --- |
+| `enabled` | 是否启用 syncer 侧 W&B 记录；默认 true。 |
+| `mode` | W&B mode；默认 `offline`，可用环境变量 `WANDB_MODE=online` 覆盖。 |
+| `entity` | 可选 W&B entity。 |
+| `group` | 可选 W&B group；为空时使用 `run.name`。 |
+| `tags` | 附加 tags。Project name 固定为 `fs-diloco-miyabi-syncer`，run name 由时间戳、模型/数据集、learner 数、quorum、inner batch/accumulation 和 outer optimizer 超参数自动生成，不依赖 CLI 参数。 |
+
 ---
 
 # English
@@ -291,3 +301,13 @@ English: Detailed YAML config groups and parameter meanings.
 | `sleep_jitter_seconds` | Random sleep at interval boundaries. |
 | `upload_skip_probability` | Probability of skipping upload after an interval. |
 | `crash_probability` | Probability of intentional crash at interval boundaries. |
+
+### `wandb`
+
+| Parameter | Meaning |
+| --- | --- |
+| `enabled` | Enable syncer-side W&B logging. Default is true. |
+| `mode` | W&B mode. Default is `offline`; override with `WANDB_MODE=online`. |
+| `entity` | Optional W&B entity. |
+| `group` | Optional W&B group; defaults to `run.name`. |
+| `tags` | Extra tags. The project name is `fs-diloco-miyabi-syncer`, and the run name is generated from timestamp, model/dataset, learner count, quorum, inner batch/accumulation, and outer optimizer hyperparameters instead of CLI arguments. |

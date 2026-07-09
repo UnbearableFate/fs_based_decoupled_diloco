@@ -97,7 +97,7 @@ stale_updates_dropped
 - SQLite 主库只应在 syncer-local storage 上使用，不应直接放在 Lustre 上作为高并发 DB。
 - 当前 learner inner optimizer 只支持 AdamW。
 - `quorum_policy=fixed` 不会因 learner dead 自动降低 quorum。
-- 9-node 脚本会占用一个 GPU 节点给 CPU-only syncer，这是 Milestone 1 可接受的资源浪费。
+- 9-node 脚本会占用一个 GPU 节点给 syncer；syncer 会使用该节点本地 GPU 做聚合和 outer optimizer。
 
 ---
 
@@ -181,4 +181,4 @@ stale_updates_dropped
 - The SQLite primary DB must remain syncer-local, not on Lustre as a shared concurrent DB.
 - Learner inner optimizer support is currently AdamW.
 - Fixed quorum does not automatically shrink when learners die.
-- The 9-node script uses one GPU node for the CPU-only syncer, which is acceptable for this prototype.
+- The 9-node script uses one GPU node for the syncer; the syncer uses that node's local GPU for aggregation and outer optimization.

@@ -70,9 +70,9 @@ def flatten_trainable_params(
         tensor = param.detach().reshape(-1)
         if dtype is not None:
             tensor = tensor.to(dtype=dtype)
-        chunks.append(tensor.to(device=device, non_blocking=False).cpu())
+        chunks.append(tensor.to(device=device, non_blocking=False))
     if not chunks:
-        return torch.empty(0, dtype=dtype or torch.float32)
+        return torch.empty(0, dtype=dtype or torch.float32, device=device)
     return torch.cat(chunks, dim=0).contiguous()
 
 
@@ -109,15 +109,20 @@ def flat_to_named_tensors(flat: torch.Tensor, param_index: dict[str, Any]) -> di
     return tensors
 
 
-def named_tensors_to_flat(named_tensors: dict[str, torch.Tensor], param_index: dict[str, Any]) -> torch.Tensor:
+def named_tensors_to_flat(
+    named_tensors: dict[str, torch.Tensor],
+    param_index: dict[str, Any],
+    *,
+    device: torch.device | str = "cpu",
+) -> torch.Tensor:
     chunks = []
     for entry in param_index["params"]:
-        tensor = named_tensors[entry["name"]].detach().cpu().reshape(-1).float()
+        tensor = named_tensors[entry["name"]].detach().to(device=device).reshape(-1).float()
         if int(tensor.numel()) != int(entry["numel"]):
             raise ValueError(f"tensor size mismatch for {entry['name']}")
         chunks.append(tensor)
     if not chunks:
-        return torch.empty(0, dtype=torch.float32)
+        return torch.empty(0, dtype=torch.float32, device=device)
     return torch.cat(chunks).contiguous()
 
 

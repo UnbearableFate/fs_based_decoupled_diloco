@@ -15,6 +15,8 @@ CONFIG="${CONFIG:-$PROJECT_ROOT/configs/fs_diloco_gpt2_wikitext2_1l_debug.yaml}"
 RUN_ID="${RUN_ID:-$(date +%Y%m%d_%H%M%S)_fs_diloco_1node_debug}"
 SHARED_ROOT="${SHARED_ROOT:-$PROJECT_ROOT/runs/fs_diloco/$RUN_ID}"
 SYNCER_DB_DIR="${SYNCER_DB_DIR:-${TMPDIR:-/tmp}/fs_diloco/$RUN_ID}"
+SYNCER_CUDA_VISIBLE_DEVICES="${SYNCER_CUDA_VISIBLE_DEVICES:-0}"
+LEARNER_CUDA_VISIBLE_DEVICES="${LEARNER_CUDA_VISIBLE_DEVICES:-0}"
 NUM_LEARNERS=1
 
 cd "$PROJECT_ROOT"
@@ -27,9 +29,11 @@ echo "PROJECT_ROOT=$PROJECT_ROOT"
 echo "CONFIG=$CONFIG"
 echo "SHARED_ROOT=$SHARED_ROOT"
 echo "SYNCER_DB_DIR=$SYNCER_DB_DIR"
+echo "SYNCER_CUDA_VISIBLE_DEVICES=$SYNCER_CUDA_VISIBLE_DEVICES"
+echo "LEARNER_CUDA_VISIBLE_DEVICES=$LEARNER_CUDA_VISIBLE_DEVICES"
 echo "HOST=$(hostname)"
 
-CUDA_VISIBLE_DEVICES="" "$PYTHON_BIN" -m fs_diloco.syncer \
+CUDA_VISIBLE_DEVICES="$SYNCER_CUDA_VISIBLE_DEVICES" "$PYTHON_BIN" -m fs_diloco.syncer \
   --config "$CONFIG" \
   --run-id "$RUN_ID" \
   --shared-root "$SHARED_ROOT" \
@@ -40,7 +44,7 @@ syncer_pid=$!
 
 sleep 5
 
-CUDA_VISIBLE_DEVICES=0 "$PYTHON_BIN" -m fs_diloco.learner \
+CUDA_VISIBLE_DEVICES="$LEARNER_CUDA_VISIBLE_DEVICES" "$PYTHON_BIN" -m fs_diloco.learner \
   --config "$CONFIG" \
   --run-id "$RUN_ID" \
   --shared-root "$SHARED_ROOT" \

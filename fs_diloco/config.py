@@ -148,6 +148,15 @@ class FailureSimSection:
 
 
 @dataclass
+class WandbSection:
+    enabled: bool = True
+    mode: str | None = "offline"
+    entity: str | None = None
+    group: str | None = None
+    tags: list[str] = field(default_factory=list)
+
+
+@dataclass
 class Config:
     run: RunSection = field(default_factory=RunSection)
     init: InitSection = field(default_factory=InitSection)
@@ -161,6 +170,7 @@ class Config:
     io: IOSection = field(default_factory=IOSection)
     learner: LearnerSection = field(default_factory=LearnerSection)
     failure_sim: FailureSimSection = field(default_factory=FailureSimSection)
+    wandb: WandbSection = field(default_factory=WandbSection)
 
 
 def _coerce_scalar(value: Any, target_type: Any) -> Any:

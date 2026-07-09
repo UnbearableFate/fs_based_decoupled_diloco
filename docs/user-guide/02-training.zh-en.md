@@ -31,8 +31,8 @@ qsub scripts/miyabi/run_1node_debug.pbs
 
 这个脚本在一个 compute node 上启动两个后台进程：
 
-- syncer：CPU-only；
-- `learner_000`：使用 GPU 0。
+- syncer：使用 `${SYNCER_CUDA_VISIBLE_DEVICES:-0}`，默认 GPU 0；
+- `learner_000`：使用 `${LEARNER_CUDA_VISIBLE_DEVICES:-0}`，默认 GPU 0。
 
 默认配置为 `configs/fs_diloco_gpt2_wikitext2_1l_debug.yaml`，训练步数很小，目标是验证真实模型、真实数据、文件系统通信和 global publish 流程。
 
@@ -61,8 +61,8 @@ qsub scripts/miyabi/run_2node_debug.pbs
 
 脚本使用 MPI 作为 PBS 多节点进程启动器，但训练通信仍完全依赖共享文件系统：
 
-- rank 0：syncer，运行在第一个节点，`CUDA_VISIBLE_DEVICES=""`；
-- rank 1：`learner_000`，运行在第二个节点，`CUDA_VISIBLE_DEVICES=0`。
+- rank 0：syncer，运行在第一个节点，`CUDA_VISIBLE_DEVICES=${SYNCER_CUDA_VISIBLE_DEVICES:-0}`；
+- rank 1：`learner_000`，运行在第二个节点，`CUDA_VISIBLE_DEVICES=${LEARNER_CUDA_VISIBLE_DEVICES:-0}`。
 
 这个测试验证跨节点共享文件系统 update exchange、heartbeat、metadata ingest 和 global publish。
 
@@ -129,7 +129,7 @@ RUN_ID=manual_debug
 SHARED_ROOT=$PWD/runs/fs_diloco/$RUN_ID
 SQLITE_DIR=${TMPDIR:-/tmp}/fs_diloco/$RUN_ID
 
-CUDA_VISIBLE_DEVICES="" .venv/bin/python -m fs_diloco.syncer \
+CUDA_VISIBLE_DEVICES=0 .venv/bin/python -m fs_diloco.syncer \
   --config configs/fs_diloco_gpt2_wikitext2_1l_debug.yaml \
   --run-id "$RUN_ID" \
   --shared-root "$SHARED_ROOT" \
@@ -194,7 +194,7 @@ python -m py_compile fs_diloco/*.py
 qsub scripts/miyabi/run_1node_debug.pbs
 ```
 
-The script starts a CPU-only syncer and `learner_000` with GPU 0 on the same compute node. It uses `configs/fs_diloco_gpt2_wikitext2_1l_debug.yaml`.
+The script starts a GPU-backed syncer and `learner_000` with GPU 0 on the same compute node. It uses `configs/fs_diloco_gpt2_wikitext2_1l_debug.yaml`.
 
 Inspect:
 
@@ -266,7 +266,7 @@ RUN_ID=manual_debug
 SHARED_ROOT=$PWD/runs/fs_diloco/$RUN_ID
 SQLITE_DIR=${TMPDIR:-/tmp}/fs_diloco/$RUN_ID
 
-CUDA_VISIBLE_DEVICES="" .venv/bin/python -m fs_diloco.syncer \
+CUDA_VISIBLE_DEVICES=0 .venv/bin/python -m fs_diloco.syncer \
   --config configs/fs_diloco_gpt2_wikitext2_1l_debug.yaml \
   --run-id "$RUN_ID" \
   --shared-root "$SHARED_ROOT" \

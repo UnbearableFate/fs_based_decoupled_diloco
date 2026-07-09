@@ -15,7 +15,7 @@ import torch
 from .atomic_io import atomic_write_json, read_json, safe_read_json
 from .config import Config, config_to_dict, resolve_config, write_resolved_config
 from .constants import FORMAT_VERSION, GLOBAL_STATUS_COMMITTED, learner_id_from_index
-from .hf_model import load_causal_lm_and_tokenizer
+from .hf_model import choose_device, load_causal_lm_and_tokenizer
 from .liveness import ingest_heartbeats, no_progress_timed_out, update_liveness_statuses
 from .logging_utils import JsonlLogger, log_uncaught_exception
 from .merge import normalized_update_weights, select_one_per_learner, weighted_average_tensors
@@ -35,6 +35,14 @@ from .tensor_codec import (
     load_update_vector,
     save_global_weights,
     save_outer_state,
+)
+from .wandb_logging import (
+    selected_update_summary,
+    syncer_wandb_project_name,
+    syncer_wandb_run_name,
+    syncer_wandb_tags,
+    wandb_config,
+    wandb_is_disabled,
 )
 
 
@@ -122,12 +130,15 @@ def initialize_run(
     paths: RunPaths,
     store: SQLiteStore,
     logger: JsonlLogger,
+    *,
+    device: torch.device | str = "cpu",
 ) -> tuple[int, torch.Tensor, dict[str, torch.Tensor], dict[str, Any], int]:
     if paths.latest_json.exists() and not config.init.allow_overwrite_existing_run:
         raise FileExistsError(f"{paths.latest_json} exists; set init.resume or allow overwrite")
     model, _tokenizer = load_causal_lm_and_tokenizer(config.model)
+    model.to(device)
     param_index = build_param_index(model, model_name_or_path=config.model.name_or_path)
-    theta = flatten_trainable_params(model, param_index).float()
+    theta = flatten_trainable_params(model, param_index, device=device).float()
     outer_state = init_outer_state(theta, config.outer_optimizer)
     atomic_write_json(paths.param_index_json, param_index)
     write_resolved_config(config, paths.resolved_config_yaml)
@@ -174,14 +185,16 @@ def resume_run(
     paths: RunPaths,
     store: SQLiteStore,
     logger: JsonlLogger,
+    *,
+    device: torch.device | str = "cpu",
 ) -> tuple[int, torch.Tensor, dict[str, torch.Tensor], dict[str, Any], int]:
     latest = _resume_latest_payload(config, paths)
     param_index = load_param_index(latest["param_index_path"])
     model, _tokenizer = load_causal_lm_and_tokenizer(config.model)
     current_index = build_param_index(model, model_name_or_path=config.model.name_or_path)
     validate_compatible_index(current_index, param_index)
-    theta = load_global_weights_flat(latest["weight_path"], param_index)
-    optim_theta, outer_state = load_outer_state(latest["optim_path"])
+    theta = load_global_weights_flat(latest["weight_path"], param_index, device=device)
+    optim_theta, outer_state = load_outer_state(latest["optim_path"], device=device)
     if optim_theta.numel() == theta.numel():
         theta = optim_theta.float()
 
@@ -204,7 +217,7 @@ def resume_run(
         notes="resumed",
     )
     logger.event("run_resumed", version=int(latest["version"]), db_dump=str(dump) if dump else None)
-    return int(latest["version"]), theta.float(), outer_state, param_index, total_seen_tokens
+    return int(latest["version"]), theta.float().to(device), outer_state, param_index, total_seen_tokens
 
 
 def validate_update_metadata(payload: dict[str, Any], *, config: Config, paths: RunPaths) -> bool:
@@ -310,6 +323,58 @@ def dump_db(store: SQLiteStore, paths: RunPaths, version: int, logger: JsonlLogg
     logger.event("db_dumped", version=version, path=str(path))
 
 
+def init_wandb_run(
+    *,
+    config: Config,
+    paths: RunPaths,
+    logger: JsonlLogger,
+    device: torch.device,
+    hostname: str,
+) -> Any | None:
+    if wandb_is_disabled(config):
+        logger.event("wandb_disabled")
+        return None
+    try:
+        import wandb
+    except Exception as exc:
+        logger.event("wandb_unavailable", error=repr(exc))
+        return None
+
+    project_name = syncer_wandb_project_name(config)
+    run_name = syncer_wandb_run_name(config)
+    mode = os.environ.get("WANDB_MODE") or config.wandb.mode
+    run_id = f"syncer-{config.run.run_id}" if config.run.run_id else None
+    kwargs: dict[str, Any] = {
+        "project": project_name,
+        "name": run_name,
+        "id": run_id,
+        "resume": "allow",
+        "config": wandb_config(
+            config,
+            device=str(device),
+            hostname=hostname,
+            shared_root=str(paths.shared_root),
+        ),
+        "tags": syncer_wandb_tags(config),
+        "dir": str(paths.logs),
+    }
+    if mode:
+        kwargs["mode"] = mode
+    if config.wandb.entity:
+        kwargs["entity"] = config.wandb.entity
+    kwargs["group"] = config.wandb.group or config.run.name
+
+    try:
+        run = wandb.init(**kwargs)
+        wandb.define_metric("syncer/version")
+        wandb.define_metric("*", step_metric="syncer/version")
+    except Exception as exc:
+        logger.event("wandb_init_failed", project=project_name, run_name=run_name, error=repr(exc))
+        return None
+    logger.event("wandb_initialized", project=project_name, run_name=run_name, mode=mode)
+    return run
+
+
 def publish_stop(
     paths: RunPaths,
     *,
@@ -337,12 +402,23 @@ def run_syncer(config: Config) -> None:
     store = SQLiteStore(sqlite_path(config))
     logger = JsonlLogger(paths.logs / "syncer.jsonl", "syncer")
     log_uncaught_exception(logger)
+    device = choose_device()
+    hostname = socket.gethostname()
     logger.event(
         "process_start",
         run_id=config.run.run_id,
         shared_root=str(paths.shared_root),
         sqlite_path=str(store.path),
-        hostname=socket.gethostname(),
+        hostname=hostname,
+        device=str(device),
+        cuda_visible_devices=os.environ.get("CUDA_VISIBLE_DEVICES"),
+    )
+    wandb_run = init_wandb_run(
+        config=config,
+        paths=paths,
+        logger=logger,
+        device=device,
+        hostname=hostname,
     )
     if config.init.resume:
         version, theta, outer_state, param_index, total_seen_tokens = resume_run(
@@ -350,6 +426,7 @@ def run_syncer(config: Config) -> None:
             paths,
             store,
             logger,
+            device=device,
         )
     else:
         version, theta, outer_state, param_index, total_seen_tokens = initialize_run(
@@ -357,6 +434,7 @@ def run_syncer(config: Config) -> None:
             paths,
             store,
             logger,
+            device=device,
         )
 
     last_progress_time = time.time()
@@ -419,7 +497,7 @@ def run_syncer(config: Config) -> None:
             )
 
             read_start = time.monotonic()
-            vectors = [load_update_vector(row["file_path"]) for row in selected]
+            vectors = [load_update_vector(row["file_path"], device=device) for row in selected]
             read_seconds = time.monotonic() - read_start
 
             weights_by_update = normalized_update_weights(
@@ -480,6 +558,23 @@ def run_syncer(config: Config) -> None:
                 },
                 SYNCER_METRIC_FIELDS,
             )
+            if wandb_run is not None:
+                wandb_run.log(
+                    {
+                        "syncer/version": new_version,
+                        "syncer/selected_count": len(selected),
+                        "syncer/total_update_tokens": total_update_tokens,
+                        "syncer/total_seen_tokens": total_seen_tokens,
+                        "syncer/read_seconds": read_seconds,
+                        "syncer/aggregation_seconds": aggregation_seconds,
+                        "syncer/outer_step_seconds": outer_seconds,
+                        "syncer/publish_seconds": publish_seconds,
+                        "syncer/stale_updates_dropped": dropped,
+                        "syncer/global_interval_seconds": time.time() - last_global_time,
+                        **selected_update_summary(selected, current_version=version),
+                    },
+                    step=new_version,
+                )
             logger.event(
                 "outer_step_applied",
                 version=new_version,
@@ -494,20 +589,31 @@ def run_syncer(config: Config) -> None:
             last_progress_time = time.time()
             last_global_time = last_progress_time
     except Exception:
+        stop_reason = "error"
         logger.exception("error", version=version)
         raise
     finally:
-        publish_stop(
-            paths,
-            config=config,
-            reason=stop_reason,
-            version=version,
-            total_seen_tokens=total_seen_tokens,
-        )
-        logger.event("stop_published", reason=stop_reason, version=version)
-        dump_db(store, paths, version, logger)
-        logger.event("process_exit", reason=stop_reason, version=version)
-        store.close()
+        try:
+            publish_stop(
+                paths,
+                config=config,
+                reason=stop_reason,
+                version=version,
+                total_seen_tokens=total_seen_tokens,
+            )
+            logger.event("stop_published", reason=stop_reason, version=version)
+            dump_db(store, paths, version, logger)
+            if wandb_run is not None:
+                wandb_run.summary["stop_reason"] = stop_reason
+                wandb_run.summary["final_version"] = version
+                wandb_run.summary["total_seen_tokens"] = total_seen_tokens
+            logger.event("process_exit", reason=stop_reason, version=version)
+        finally:
+            try:
+                if wandb_run is not None:
+                    wandb_run.finish(exit_code=1 if stop_reason == "error" else 0)
+            finally:
+                store.close()
 
 
 def main(argv: list[str] | None = None) -> None:

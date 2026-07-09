@@ -23,7 +23,7 @@ Submit:
 qsub scripts/miyabi/run_1node_debug.pbs
 ```
 
-The script starts a CPU-only syncer and one GPU learner on the same compute node using `configs/fs_diloco_gpt2_wikitext2_1l_debug.yaml`. Acceptance evidence is:
+The script starts a GPU-backed syncer and one GPU learner on the same compute node using `configs/fs_diloco_gpt2_wikitext2_1l_debug.yaml`. Acceptance evidence is:
 
 - `control/latest.json` reports version `1` or higher;
 - `weights/global_v000001.safetensors` exists;
@@ -39,7 +39,7 @@ Submit:
 qsub scripts/miyabi/run_2node_debug.pbs
 ```
 
-Rank 0 runs the syncer with `CUDA_VISIBLE_DEVICES=""`; rank 1 runs `learner_000` with `CUDA_VISIBLE_DEVICES=0`. MPI is used only as a process launcher and environment is passed with `/usr/bin/env`, not `mpirun -x`.
+Rank 0 runs the syncer with `CUDA_VISIBLE_DEVICES=${SYNCER_CUDA_VISIBLE_DEVICES:-0}`; rank 1 runs `learner_000` with `CUDA_VISIBLE_DEVICES=${LEARNER_CUDA_VISIBLE_DEVICES:-0}`. MPI is used only as a process launcher and environment is passed with `/usr/bin/env`, not `mpirun -x`.
 
 ## 9-Node Acceptance
 

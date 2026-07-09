@@ -15,6 +15,8 @@ CONFIG="${CONFIG:-$PROJECT_ROOT/configs/fs_diloco_gpt2_wikitext2_8l.yaml}"
 RUN_ID="${RUN_ID:-$(date +%Y%m%d_%H%M%S)_fs_diloco_gpt2_wikitext2_8l}"
 SHARED_ROOT="${SHARED_ROOT:-$PROJECT_ROOT/runs/fs_diloco/$RUN_ID}"
 SYNCER_DB_DIR="${SYNCER_DB_DIR:-${TMPDIR:-/tmp}/fs_diloco/$RUN_ID}"
+SYNCER_CUDA_VISIBLE_DEVICES="${SYNCER_CUDA_VISIBLE_DEVICES:-0}"
+LEARNER_CUDA_VISIBLE_DEVICES="${LEARNER_CUDA_VISIBLE_DEVICES:-0}"
 
 : "${PBS_NODEFILE:?PBS_NODEFILE is not set}"
 cd "$PROJECT_ROOT"
@@ -38,6 +40,8 @@ MPI_ENV_ARGS=(
   "RUN_ID=$RUN_ID"
   "SHARED_ROOT=$SHARED_ROOT"
   "SYNCER_DB_DIR=$SYNCER_DB_DIR"
+  "SYNCER_CUDA_VISIBLE_DEVICES=$SYNCER_CUDA_VISIBLE_DEVICES"
+  "LEARNER_CUDA_VISIBLE_DEVICES=$LEARNER_CUDA_VISIBLE_DEVICES"
   "NUM_LEARNERS=8"
 )
 
@@ -46,6 +50,8 @@ echo "PROJECT_ROOT=$PROJECT_ROOT"
 echo "CONFIG=$CONFIG"
 echo "SHARED_ROOT=$SHARED_ROOT"
 echo "SYNCER_DB_DIR=$SYNCER_DB_DIR"
+echo "SYNCER_CUDA_VISIBLE_DEVICES=$SYNCER_CUDA_VISIBLE_DEVICES"
+echo "LEARNER_CUDA_VISIBLE_DEVICES=$LEARNER_CUDA_VISIBLE_DEVICES"
 echo "NNODES=$NNODES"
 printf 'HOST %s\n' "${HOSTS[@]}"
 
@@ -61,7 +67,7 @@ mpirun \
     host="$(hostname)"
     echo "[launcher] rank=${rank} host=${host}"
     if [[ "$rank" -eq 0 ]]; then
-      export CUDA_VISIBLE_DEVICES=""
+      export CUDA_VISIBLE_DEVICES="$SYNCER_CUDA_VISIBLE_DEVICES"
       exec "$PYTHON_BIN" -m fs_diloco.syncer \
         --config "$CONFIG" \
         --run-id "$RUN_ID" \
@@ -71,7 +77,7 @@ mpirun \
     else
       learner_num=$((rank - 1))
       learner_id=$(printf "learner_%03d" "$learner_num")
-      export CUDA_VISIBLE_DEVICES="0"
+      export CUDA_VISIBLE_DEVICES="$LEARNER_CUDA_VISIBLE_DEVICES"
       exec "$PYTHON_BIN" -m fs_diloco.learner \
         --config "$CONFIG" \
         --run-id "$RUN_ID" \
