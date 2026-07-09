@@ -33,6 +33,26 @@ def normalized_update_weights(
     return {update_id: weight / total for update_id, weight in raw.items()}
 
 
+def normalized_fragment_update_weights(
+    updates: list[dict[str, Any]],
+    *,
+    current_fragment_version: int,
+    staleness_lambda: float,
+) -> dict[str, float]:
+    raw: dict[str, float] = {}
+    for update in updates:
+        s = staleness(current_fragment_version, int(update["base_fragment_version"]))
+        raw[update["update_id"]] = raw_update_weight(
+            int(update["tokens_this_update"]),
+            s,
+            staleness_lambda,
+        )
+    total = sum(raw.values())
+    if total <= 0:
+        raise ValueError("selected fragment updates have non-positive total merge weight")
+    return {update_id: weight / total for update_id, weight in raw.items()}
+
+
 def select_one_per_learner(
     updates: list[dict[str, Any]],
     *,
@@ -76,6 +96,19 @@ def stale_update_ids(
         update["update_id"]
         for update in updates
         if staleness(current_version, int(update["base_global_version"])) > max_staleness_versions
+    ]
+
+
+def stale_fragment_update_ids(
+    updates: list[dict[str, Any]],
+    *,
+    current_fragment_version: int,
+    max_staleness_versions: int,
+) -> list[str]:
+    return [
+        update["update_id"]
+        for update in updates
+        if staleness(current_fragment_version, int(update["base_fragment_version"])) > max_staleness_versions
     ]
 
 

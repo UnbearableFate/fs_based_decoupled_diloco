@@ -38,6 +38,18 @@ class RunPaths:
         return self.shared_root / "updates" / "dropped"
 
     @property
+    def fragments(self) -> Path:
+        return self.shared_root / "fragments"
+
+    @property
+    def fragment_weights(self) -> Path:
+        return self.fragments / "weights"
+
+    @property
+    def fragment_optim(self) -> Path:
+        return self.fragments / "optim"
+
+    @property
     def heartbeats(self) -> Path:
         return self.shared_root / "heartbeats"
 
@@ -66,6 +78,10 @@ class RunPaths:
         return self.control / "param_index.json"
 
     @property
+    def fragment_index_json(self) -> Path:
+        return self.fragments / "fragment_index.json"
+
+    @property
     def resolved_config_yaml(self) -> Path:
         return self.control / "run_config.resolved.yaml"
 
@@ -74,6 +90,12 @@ class RunPaths:
 
     def outer_optim_path(self, version: int) -> Path:
         return self.optim / OUTER_OPTIM_TEMPLATE.format(version=version)
+
+    def fragment_weight_path(self, fragment_id: int, version: int) -> Path:
+        return self.fragment_weights / f"fragment_{fragment_id:03d}" / f"v{version:06d}.safetensors"
+
+    def fragment_outer_optim_path(self, fragment_id: int, version: int) -> Path:
+        return self.fragment_optim / f"fragment_{fragment_id:03d}" / f"v{version:06d}.safetensors"
 
     def db_dump_path(self, timestamp: str, version: int) -> Path:
         return self.db_dumps / DB_DUMP_TEMPLATE.format(timestamp=timestamp, version=version)
@@ -87,6 +109,9 @@ def prepare_run_dirs(paths: RunPaths, num_learners: int) -> None:
         paths.updates_pending,
         paths.updates_processed,
         paths.updates_dropped,
+        paths.fragments,
+        paths.fragment_weights,
+        paths.fragment_optim,
         paths.heartbeats,
         paths.db_dumps,
         paths.logs,

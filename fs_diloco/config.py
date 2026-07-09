@@ -142,6 +142,17 @@ class LearnerSection:
 
 
 @dataclass
+class FragmentSection:
+    enabled: bool = False
+    strategy: str = "full"
+    num_fragments: int = 1
+    schedule: str = "round_robin_global"
+    fragments_per_update: int = 1
+    reset_inner_optimizer_on_fragment_adopt: bool = True
+    materialize_full_every_events: int | None = None
+
+
+@dataclass
 class FailureSimSection:
     enabled: bool = False
     sleep_jitter_seconds: float = 0.0
@@ -171,6 +182,7 @@ class Config:
     outer_optimizer: OuterOptimizerSection = field(default_factory=OuterOptimizerSection)
     io: IOSection = field(default_factory=IOSection)
     learner: LearnerSection = field(default_factory=LearnerSection)
+    fragments: FragmentSection = field(default_factory=FragmentSection)
     failure_sim: FailureSimSection = field(default_factory=FailureSimSection)
     wandb: WandbSection = field(default_factory=WandbSection)
 
@@ -191,6 +203,11 @@ def _coerce_scalar(value: Any, target_type: Any) -> Any:
 
 def _from_dict(cls: type[T], data: dict[str, Any]) -> T:
     type_hints = get_type_hints(cls)
+    field_names = {field_info.name for field_info in dataclasses.fields(cls)}
+    unknown = sorted(set(data) - field_names)
+    if unknown:
+        joined = ", ".join(unknown)
+        raise ValueError(f"unknown config key(s) for {cls.__name__}: {joined}")
     kwargs: dict[str, Any] = {}
     for field_info in dataclasses.fields(cls):
         if field_info.name not in data:
@@ -248,6 +265,15 @@ def resolve_config(
         config.sync.num_learners = int(num_learners)
         config.sync.quorum_max = min(config.sync.quorum_max, config.sync.num_learners)
         config.sync.quorum_min = min(config.sync.quorum_min, config.sync.num_learners)
+    if config.fragments.enabled:
+        if config.fragments.num_fragments < 1:
+            raise ValueError("fragments.num_fragments must be >= 1")
+        if config.fragments.fragments_per_update != 1:
+            raise ValueError("only fragments.fragments_per_update=1 is supported")
+        if config.fragments.schedule != "round_robin_global":
+            raise ValueError(f"unsupported fragments.schedule: {config.fragments.schedule}")
+        if config.fragments.strategy not in {"full", "balanced_tensor"}:
+            raise ValueError(f"unsupported fragments.strategy: {config.fragments.strategy}")
     config.training.block_size = config.data.block_size
     return config
 

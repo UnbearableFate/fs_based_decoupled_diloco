@@ -63,6 +63,67 @@ CREATE TABLE IF NOT EXISTS updates (
     UNIQUE(learner_id, local_step_end, base_global_version)
 );
 
+CREATE TABLE IF NOT EXISTS fragments (
+    fragment_id INTEGER PRIMARY KEY,
+    strategy TEXT NOT NULL,
+    numel INTEGER NOT NULL,
+    size_bytes INTEGER NOT NULL,
+    slices_json TEXT NOT NULL,
+    created_at REAL NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS fragment_versions (
+    fragment_id INTEGER NOT NULL,
+    version INTEGER NOT NULL,
+    global_merge_event INTEGER NOT NULL,
+    weight_path TEXT NOT NULL,
+    optim_path TEXT NOT NULL,
+    created_at REAL NOT NULL,
+    num_updates INTEGER NOT NULL,
+    total_update_tokens INTEGER NOT NULL,
+    total_seen_tokens INTEGER NOT NULL,
+    outer_optimizer TEXT NOT NULL,
+    status TEXT NOT NULL,
+    notes TEXT,
+    PRIMARY KEY (fragment_id, version)
+);
+
+CREATE TABLE IF NOT EXISTS fragment_updates (
+    update_id TEXT PRIMARY KEY,
+    learner_id TEXT NOT NULL,
+    hostname TEXT,
+    fragment_id INTEGER NOT NULL,
+    base_fragment_version INTEGER NOT NULL,
+    base_global_merge_event INTEGER NOT NULL,
+    local_step_start INTEGER NOT NULL,
+    local_step_end INTEGER NOT NULL,
+    inner_steps INTEGER NOT NULL,
+    tokens_this_update INTEGER NOT NULL,
+    tokens_since_fragment_load INTEGER NOT NULL,
+    num_examples_this_update INTEGER,
+    train_loss REAL,
+    grad_norm REAL,
+    param_norm REAL,
+    fragment_norm REAL,
+    file_path TEXT NOT NULL,
+    file_size_bytes INTEGER,
+    sha256 TEXT,
+    created_at REAL NOT NULL,
+    committed_at REAL NOT NULL,
+    ingested_at REAL,
+    selected_at REAL,
+    applied_at REAL,
+    status TEXT NOT NULL,
+    selected_by_run TEXT,
+    applied_fragment_version INTEGER,
+    applied_global_merge_event INTEGER,
+    staleness_fragment_versions INTEGER,
+    staleness_global_events INTEGER,
+    effective_weight REAL,
+    drop_reason TEXT,
+    UNIQUE(learner_id, fragment_id, local_step_end, base_fragment_version)
+);
+
 CREATE TABLE IF NOT EXISTS events (
     event_id INTEGER PRIMARY KEY AUTOINCREMENT,
     timestamp REAL NOT NULL,
@@ -86,3 +147,7 @@ CREATE INDEX IF NOT EXISTS idx_updates_status ON updates(status);
 CREATE INDEX IF NOT EXISTS idx_updates_learner_status ON updates(learner_id, status);
 CREATE INDEX IF NOT EXISTS idx_updates_base_global_version ON updates(base_global_version);
 CREATE INDEX IF NOT EXISTS idx_learners_status ON learners(status);
+CREATE INDEX IF NOT EXISTS idx_fragment_updates_status ON fragment_updates(status);
+CREATE INDEX IF NOT EXISTS idx_fragment_updates_target
+  ON fragment_updates(fragment_id, status, base_fragment_version);
+CREATE INDEX IF NOT EXISTS idx_fragment_versions_event ON fragment_versions(global_merge_event);

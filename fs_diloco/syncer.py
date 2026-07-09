@@ -18,7 +18,20 @@ from .constants import FORMAT_VERSION, GLOBAL_STATUS_COMMITTED, learner_id_from_
 from .hf_model import choose_device, load_causal_lm_and_tokenizer
 from .liveness import ingest_heartbeats, no_progress_timed_out, update_liveness_statuses
 from .logging_utils import JsonlLogger, log_uncaught_exception
-from .merge import normalized_update_weights, select_one_per_learner, weighted_average_tensors
+from .fragment_codec import (
+    extract_fragment,
+    load_fragment_update,
+    materialize_full_from_fragments,
+    save_fragment_weight,
+)
+from .fragment_index import build_fragment_index, load_fragment_index, save_fragment_index
+from .fragment_scheduler import select_fragment
+from .merge import (
+    normalized_fragment_update_weights,
+    normalized_update_weights,
+    select_one_per_learner,
+    weighted_average_tensors,
+)
 from .metrics import SYNCER_METRIC_FIELDS, append_csv_row
 from .outer_optim import init_outer_state, outer_optimizer_step
 from .param_index import (
@@ -126,6 +139,88 @@ def publish_global(
     )
 
 
+def fragment_latest_payload(
+    *,
+    config: Config,
+    paths: RunPaths,
+    global_merge_event: int,
+    fragment_versions: dict[int, int],
+    fragment_updated_events: dict[int, int],
+    total_seen_tokens: int,
+    materialized_weight_path: Path,
+) -> dict[str, Any]:
+    fragments: dict[str, dict[str, Any]] = {}
+    for fragment_id, version in sorted(fragment_versions.items()):
+        fragments[str(fragment_id)] = {
+            "version": int(version),
+            "weight_path": str(paths.fragment_weight_path(fragment_id, version)),
+            "optim_path": str(paths.fragment_outer_optim_path(fragment_id, version)),
+            "updated_at_global_merge_event": int(fragment_updated_events.get(fragment_id, 0)),
+        }
+    return {
+        "format_version": FORMAT_VERSION,
+        "latest_kind": "fragment",
+        "latest_layout_version": 2,
+        "run_id": config.run.run_id,
+        "version": int(global_merge_event),
+        "global_merge_event": int(global_merge_event),
+        "param_index_path": str(paths.param_index_json),
+        "fragment_index_path": str(paths.fragment_index_json),
+        "materialized_weight_path": str(materialized_weight_path),
+        "created_at": time.time(),
+        "total_seen_tokens": int(total_seen_tokens),
+        "fragments": fragments,
+    }
+
+
+def should_materialize_fragment_full(config: Config, global_merge_event: int) -> bool:
+    interval = config.fragments.materialize_full_every_events
+    target = config.sync.stop_after_outer_steps
+    if global_merge_event == 0:
+        return True
+    if target is not None and global_merge_event >= int(target):
+        return True
+    if interval is None or int(interval) <= 0:
+        return True
+    return global_merge_event % int(interval) == 0
+
+
+def publish_fragment_latest(
+    *,
+    config: Config,
+    paths: RunPaths,
+    param_index: dict[str, Any],
+    fragment_index: dict[str, Any],
+    fragment_thetas: dict[int, torch.Tensor],
+    fragment_versions: dict[int, int],
+    fragment_updated_events: dict[int, int],
+    total_seen_tokens: int,
+    global_merge_event: int,
+    previous_materialized_weight_path: Path | None = None,
+) -> tuple[Path, float]:
+    materialize_seconds = 0.0
+    materialized_weight_path = previous_materialized_weight_path
+    if materialized_weight_path is None or should_materialize_fragment_full(config, global_merge_event):
+        materialize_start = time.monotonic()
+        full = materialize_full_from_fragments(fragment_thetas, fragment_index, int(param_index["total_numel"]))
+        materialized_weight_path = paths.global_weight_path(global_merge_event)
+        save_global_weights(materialized_weight_path, full, param_index)
+        materialize_seconds = time.monotonic() - materialize_start
+    atomic_write_json(
+        paths.latest_json,
+        fragment_latest_payload(
+            config=config,
+            paths=paths,
+            global_merge_event=global_merge_event,
+            fragment_versions=fragment_versions,
+            fragment_updated_events=fragment_updated_events,
+            total_seen_tokens=total_seen_tokens,
+            materialized_weight_path=materialized_weight_path,
+        ),
+    )
+    return materialized_weight_path, materialize_seconds
+
+
 def initialize_run(
     config: Config,
     paths: RunPaths,
@@ -159,6 +254,105 @@ def initialize_run(
     store.insert_event("syncer", "run_initialized", global_version=0)
     logger.event("run_initialized", version=0, total_numel=int(theta.numel()))
     return 0, theta, outer_state, param_index, 0
+
+
+def initialize_fragment_run(
+    config: Config,
+    paths: RunPaths,
+    store: SQLiteStore,
+    logger: JsonlLogger,
+    *,
+    device: torch.device | str = "cpu",
+) -> tuple[
+    int,
+    dict[int, torch.Tensor],
+    dict[int, dict[str, torch.Tensor]],
+    dict[str, Any],
+    dict[str, Any],
+    dict[int, int],
+    dict[int, int],
+    int,
+    Path,
+]:
+    if paths.latest_json.exists() and not config.init.allow_overwrite_existing_run:
+        raise FileExistsError(f"{paths.latest_json} exists; set init.resume or allow overwrite")
+    model, _tokenizer = load_causal_lm_and_tokenizer(config.model)
+    model.to(device)
+    param_index = build_param_index(model, model_name_or_path=config.model.name_or_path)
+    theta = flatten_trainable_params(model, param_index, device=device).float()
+    fragment_index = build_fragment_index(
+        param_index,
+        strategy=config.fragments.strategy,
+        num_fragments=config.fragments.num_fragments,
+        source_param_index_path=paths.param_index_json,
+    )
+    atomic_write_json(paths.param_index_json, param_index)
+    save_fragment_index(fragment_index, paths.fragment_index_json)
+    write_resolved_config(config, paths.resolved_config_yaml)
+
+    fragment_thetas: dict[int, torch.Tensor] = {}
+    outer_states: dict[int, dict[str, torch.Tensor]] = {}
+    fragment_versions: dict[int, int] = {}
+    fragment_updated_events: dict[int, int] = {}
+    for fragment in fragment_index["fragments"]:
+        fragment_id = int(fragment["fragment_id"])
+        theta_f = extract_fragment(theta, fragment_index, fragment_id).to(device=device, dtype=torch.float32)
+        state_f = init_outer_state(theta_f, config.outer_optimizer)
+        weight_path = paths.fragment_weight_path(fragment_id, 0)
+        optim_path = paths.fragment_outer_optim_path(fragment_id, 0)
+        save_fragment_weight(weight_path, theta_f)
+        save_outer_state(optim_path, theta_f, state_f)
+        store.upsert_fragment_definition(fragment, strategy=config.fragments.strategy)
+        store.upsert_fragment_version(
+            fragment_id=fragment_id,
+            version=0,
+            global_merge_event=0,
+            weight_path=str(weight_path),
+            optim_path=str(optim_path),
+            num_updates=0,
+            total_update_tokens=0,
+            total_seen_tokens=0,
+            outer_optimizer=config.outer_optimizer.name,
+            status=GLOBAL_STATUS_COMMITTED,
+            notes="initialized",
+        )
+        fragment_thetas[fragment_id] = theta_f
+        outer_states[fragment_id] = state_f
+        fragment_versions[fragment_id] = 0
+        fragment_updated_events[fragment_id] = 0
+
+    materialized_weight_path, _materialize_seconds = publish_fragment_latest(
+        config=config,
+        paths=paths,
+        param_index=param_index,
+        fragment_index=fragment_index,
+        fragment_thetas=fragment_thetas,
+        fragment_versions=fragment_versions,
+        fragment_updated_events=fragment_updated_events,
+        total_seen_tokens=0,
+        global_merge_event=0,
+        previous_materialized_weight_path=None,
+    )
+    store.set_run_state("config", config_to_dict(config))
+    store.insert_event("syncer", "fragment_run_initialized", global_version=0)
+    logger.event(
+        "fragment_run_initialized",
+        global_merge_event=0,
+        total_numel=int(theta.numel()),
+        num_fragments=int(fragment_index["num_fragments"]),
+        strategy=fragment_index["strategy"],
+    )
+    return (
+        0,
+        fragment_thetas,
+        outer_states,
+        param_index,
+        fragment_index,
+        fragment_versions,
+        fragment_updated_events,
+        0,
+        materialized_weight_path,
+    )
 
 
 def _resume_latest_payload(config: Config, paths: RunPaths) -> dict[str, Any]:
@@ -226,6 +420,20 @@ def validate_update_metadata(payload: dict[str, Any], *, config: Config, paths: 
         return False
     if payload.get("run_id") != config.run.run_id:
         return False
+    if config.fragments.enabled:
+        if payload.get("update_kind") != "fragment":
+            return False
+        try:
+            fragment_id = int(payload.get("fragment_id"))
+        except (TypeError, ValueError):
+            return False
+        if fragment_id < 0 or fragment_id >= int(config.fragments.num_fragments):
+            return False
+        required = ["base_fragment_version", "base_global_merge_event", "tokens_since_fragment_load"]
+        if any(key not in payload for key in required):
+            return False
+    elif payload.get("update_kind") == "fragment":
+        return False
     valid_ids = {learner_id_from_index(i) for i in range(config.sync.num_learners)}
     if payload.get("learner_id") not in valid_ids:
         return False
@@ -250,7 +458,12 @@ def ingest_update_metadata(
         payload = safe_read_json(path)
         if payload is None or not validate_update_metadata(payload, config=config, paths=paths):
             continue
-        if store.insert_update_metadata(payload):
+        inserted_payload = (
+            store.insert_fragment_update_metadata(payload)
+            if config.fragments.enabled
+            else store.insert_update_metadata(payload)
+        )
+        if inserted_payload:
             inserted += 1
             store.insert_event(
                 "syncer",
@@ -328,6 +541,54 @@ def drop_missing_update_files(
         logger.event("updates_dropped_missing_files", count=len(missing), update_ids=missing)
     missing_ids = set(missing)
     return [row for row in updates if row["update_id"] not in missing_ids]
+
+
+def drop_missing_fragment_update_files(
+    store: SQLiteStore,
+    updates: list[dict[str, Any]],
+    logger: JsonlLogger,
+) -> list[dict[str, Any]]:
+    missing = [row["update_id"] for row in updates if not Path(row["file_path"]).exists()]
+    if missing:
+        store.drop_fragment_updates(missing, "missing_file")
+        logger.event("fragment_updates_dropped_missing_files", count=len(missing), update_ids=missing)
+    missing_ids = set(missing)
+    return [row for row in updates if row["update_id"] not in missing_ids]
+
+
+def collect_fragment_with_grace_window(
+    store: SQLiteStore,
+    paths: RunPaths,
+    config: Config,
+    logger: JsonlLogger,
+    *,
+    fragment_id: int,
+    current_fragment_version: int,
+) -> list[dict[str, Any]]:
+    deadline = time.monotonic() + min(
+        config.sync.grace_window.fixed_seconds,
+        config.sync.grace_window.max_seconds,
+    )
+    selected: list[dict[str, Any]] = []
+    while True:
+        eligible = store.eligible_fragment_updates(
+            fragment_id=fragment_id,
+            current_fragment_version=current_fragment_version,
+            max_staleness_versions=config.sync.max_staleness_versions,
+        )
+        eligible = drop_missing_fragment_update_files(store, eligible, logger)
+        selected = select_one_per_learner(
+            eligible,
+            policy=config.sync.selection_policy,
+            quorum_max=config.sync.quorum_max,
+        )
+        if len(selected) >= config.sync.quorum_max:
+            break
+        if time.monotonic() >= deadline:
+            break
+        time.sleep(min(config.sync.scan_interval_seconds, max(0.0, deadline - time.monotonic())))
+        sync_liveness_and_metadata(store, paths, config, logger)
+    return selected
 
 
 def finite_local_training_complete(store: SQLiteStore, config: Config) -> bool:
@@ -457,6 +718,341 @@ def publish_stop(
     )
 
 
+def _fragment_staleness_stats(selected: list[dict[str, Any]], current_fragment_version: int) -> dict[str, float | int]:
+    values = [
+        max(0, int(current_fragment_version) - int(row["base_fragment_version"]))
+        for row in selected
+    ]
+    if not values:
+        return {"min": 0, "mean": 0.0, "max": 0}
+    return {
+        "min": min(values),
+        "mean": sum(values) / len(values),
+        "max": max(values),
+    }
+
+
+def run_fragment_syncer(
+    *,
+    config: Config,
+    paths: RunPaths,
+    store: SQLiteStore,
+    logger: JsonlLogger,
+    device: torch.device,
+    wandb_run: Any | None,
+) -> None:
+    if config.init.resume:
+        raise NotImplementedError("fragment mode resume is not implemented yet")
+    (
+        global_merge_event,
+        fragment_thetas,
+        outer_states,
+        param_index,
+        fragment_index,
+        fragment_versions,
+        fragment_updated_events,
+        total_seen_tokens,
+        materialized_weight_path,
+    ) = initialize_fragment_run(config, paths, store, logger, device=device)
+
+    last_progress_time = time.time()
+    last_global_time = last_progress_time
+    stop_reason = "completed"
+    try:
+        while True:
+            if (
+                config.sync.stop_after_outer_steps is not None
+                and global_merge_event >= int(config.sync.stop_after_outer_steps)
+            ):
+                stop_reason = "stop_after_outer_steps"
+                break
+            if (
+                config.sync.stop_after_global_tokens is not None
+                and total_seen_tokens >= config.sync.stop_after_global_tokens
+            ):
+                stop_reason = "stop_after_global_tokens"
+                break
+
+            target_fragment = select_fragment(
+                global_merge_event,
+                int(fragment_index["num_fragments"]),
+                schedule=config.fragments.schedule,
+            )
+            current_fragment_version = int(fragment_versions[target_fragment])
+            sync_liveness_and_metadata(store, paths, config, logger)
+            eligible = store.eligible_fragment_updates(
+                fragment_id=target_fragment,
+                current_fragment_version=current_fragment_version,
+                max_staleness_versions=config.sync.max_staleness_versions,
+            )
+            eligible = drop_missing_fragment_update_files(store, eligible, logger)
+            one_per_learner = select_one_per_learner(
+                eligible,
+                policy=config.sync.selection_policy,
+                quorum_max=config.sync.quorum_max,
+            )
+            if len(one_per_learner) < config.sync.quorum_min:
+                logger.event(
+                    "fragment_quorum_wait",
+                    eligible=len(one_per_learner),
+                    quorum_min=config.sync.quorum_min,
+                    global_merge_event=global_merge_event,
+                    fragment_id=target_fragment,
+                    fragment_version=current_fragment_version,
+                )
+                if no_progress_timed_out(
+                    last_progress_time,
+                    config.liveness.no_progress_timeout_seconds,
+                ):
+                    stop_reason = "no_progress_timeout"
+                    logger.event(
+                        "no_progress_timeout",
+                        global_merge_event=global_merge_event,
+                        fragment_id=target_fragment,
+                    )
+                    break
+                time.sleep(config.sync.scan_interval_seconds)
+                continue
+
+            selected = collect_fragment_with_grace_window(
+                store,
+                paths,
+                config,
+                logger,
+                fragment_id=target_fragment,
+                current_fragment_version=current_fragment_version,
+            )
+            if len(selected) < config.sync.quorum_min:
+                logger.event(
+                    "fragment_quorum_wait",
+                    eligible=len(selected),
+                    quorum_min=config.sync.quorum_min,
+                    global_merge_event=global_merge_event,
+                    fragment_id=target_fragment,
+                    fragment_version=current_fragment_version,
+                )
+                continue
+
+            run_selection_id = (
+                f"{config.run.run_id}_g{global_merge_event + 1:06d}_f{target_fragment:03d}"
+            )
+            store.mark_fragment_updates_selected([row["update_id"] for row in selected], run_selection_id)
+            logger.event(
+                "fragment_updates_selected",
+                global_merge_event=global_merge_event,
+                fragment_id=target_fragment,
+                fragment_version=current_fragment_version,
+                update_ids=[row["update_id"] for row in selected],
+                learners=[row["learner_id"] for row in selected],
+            )
+
+            read_start = time.monotonic()
+            missing_after_select = [row["update_id"] for row in selected if not Path(row["file_path"]).exists()]
+            if missing_after_select:
+                missing_ids = set(missing_after_select)
+                store.drop_fragment_updates(missing_after_select, "missing_file")
+                store.reset_fragment_selected_to_pending(
+                    [row["update_id"] for row in selected if row["update_id"] not in missing_ids]
+                )
+                logger.event("selected_fragment_updates_missing_files", count=len(missing_after_select))
+                continue
+            try:
+                vectors = [load_fragment_update(row["file_path"], device=device) for row in selected]
+            except FileNotFoundError:
+                missing = [row["update_id"] for row in selected if not Path(row["file_path"]).exists()]
+                if missing:
+                    missing_ids = set(missing)
+                    store.drop_fragment_updates(missing, "missing_file")
+                    store.reset_fragment_selected_to_pending(
+                        [row["update_id"] for row in selected if row["update_id"] not in missing_ids]
+                    )
+                    logger.event("selected_fragment_updates_missing_files", count=len(missing))
+                    continue
+                raise
+            read_seconds = time.monotonic() - read_start
+
+            weights_by_update = normalized_fragment_update_weights(
+                selected,
+                current_fragment_version=current_fragment_version,
+                staleness_lambda=config.sync.staleness_lambda,
+            )
+            weights = [weights_by_update[row["update_id"]] for row in selected]
+            aggregation_start = time.monotonic()
+            p_bar = weighted_average_tensors(vectors, weights)
+            theta_f = fragment_thetas[target_fragment]
+            grad = theta_f - p_bar
+            aggregation_seconds = time.monotonic() - aggregation_start
+
+            outer_start = time.monotonic()
+            theta_f, outer_state_f = outer_optimizer_step(
+                theta_f,
+                grad,
+                outer_states[target_fragment],
+                config.outer_optimizer,
+            )
+            outer_seconds = time.monotonic() - outer_start
+
+            new_fragment_version = current_fragment_version + 1
+            new_global_merge_event = global_merge_event + 1
+            total_update_tokens = sum(int(row["tokens_this_update"]) for row in selected)
+            total_seen_tokens += total_update_tokens
+            fragment_thetas[target_fragment] = theta_f
+            outer_states[target_fragment] = outer_state_f
+            fragment_versions[target_fragment] = new_fragment_version
+            fragment_updated_events[target_fragment] = new_global_merge_event
+
+            publish_start = time.monotonic()
+            weight_path = paths.fragment_weight_path(target_fragment, new_fragment_version)
+            optim_path = paths.fragment_outer_optim_path(target_fragment, new_fragment_version)
+            save_fragment_weight(weight_path, theta_f)
+            save_outer_state(optim_path, theta_f, outer_state_f)
+            store.upsert_fragment_version(
+                fragment_id=target_fragment,
+                version=new_fragment_version,
+                global_merge_event=new_global_merge_event,
+                weight_path=str(weight_path),
+                optim_path=str(optim_path),
+                num_updates=len(selected),
+                total_update_tokens=total_update_tokens,
+                total_seen_tokens=total_seen_tokens,
+                outer_optimizer=config.outer_optimizer.name,
+                status=GLOBAL_STATUS_COMMITTED,
+            )
+            materialized_weight_path, materialize_seconds = publish_fragment_latest(
+                config=config,
+                paths=paths,
+                param_index=param_index,
+                fragment_index=fragment_index,
+                fragment_thetas=fragment_thetas,
+                fragment_versions=fragment_versions,
+                fragment_updated_events=fragment_updated_events,
+                total_seen_tokens=total_seen_tokens,
+                global_merge_event=new_global_merge_event,
+                previous_materialized_weight_path=materialized_weight_path,
+            )
+            cleanup_global_artifacts(paths, keep_last=config.io.keep_last_global_versions, logger=logger)
+            publish_seconds = time.monotonic() - publish_start
+
+            store.mark_fragment_updates_applied(
+                selected,
+                applied_fragment_version=new_fragment_version,
+                applied_global_merge_event=new_global_merge_event,
+                effective_weights=weights_by_update,
+            )
+            dropped = store.drop_superseded_fragment_updates(selected)
+            dropped += store.drop_obsolete_fragment_updates(
+                fragment_id=target_fragment,
+                current_fragment_version=new_fragment_version,
+                max_staleness_versions=config.sync.max_staleness_versions,
+            )
+            if config.sync.db_dump_every_versions and new_global_merge_event % config.sync.db_dump_every_versions == 0:
+                dump_db(store, paths, new_global_merge_event, logger)
+
+            stale_stats = _fragment_staleness_stats(selected, current_fragment_version)
+            append_csv_row(
+                paths.metrics / "syncer_metrics.csv",
+                {
+                    "timestamp": time.time(),
+                    "version": new_global_merge_event,
+                    "global_merge_event": new_global_merge_event,
+                    "fragment_id": target_fragment,
+                    "fragment_version": new_fragment_version,
+                    "selected_count": len(selected),
+                    "total_update_tokens": total_update_tokens,
+                    "read_seconds": read_seconds,
+                    "fragment_read_seconds": read_seconds,
+                    "aggregation_seconds": aggregation_seconds,
+                    "fragment_aggregation_seconds": aggregation_seconds,
+                    "outer_step_seconds": outer_seconds,
+                    "publish_seconds": publish_seconds,
+                    "materialize_full_seconds": materialize_seconds,
+                    "fragment_staleness_min": stale_stats["min"],
+                    "fragment_staleness_mean": stale_stats["mean"],
+                    "fragment_staleness_max": stale_stats["max"],
+                    "stale_updates_dropped": dropped,
+                    "global_interval_seconds": time.time() - last_global_time,
+                },
+                SYNCER_METRIC_FIELDS,
+            )
+            if wandb_run is not None:
+                wandb_run.log(
+                    {
+                        "syncer/version": new_global_merge_event,
+                        "syncer/global_merge_event": new_global_merge_event,
+                        "syncer/fragment_id": target_fragment,
+                        "syncer/fragment_version": new_fragment_version,
+                        "syncer/selected_count": len(selected),
+                        "syncer/total_update_tokens": total_update_tokens,
+                        "syncer/total_seen_tokens": total_seen_tokens,
+                        "syncer/read_seconds": read_seconds,
+                        "syncer/aggregation_seconds": aggregation_seconds,
+                        "syncer/outer_step_seconds": outer_seconds,
+                        "syncer/publish_seconds": publish_seconds,
+                        "syncer/materialize_full_seconds": materialize_seconds,
+                        "syncer/stale_updates_dropped": dropped,
+                    },
+                    step=new_global_merge_event,
+                )
+            logger.event(
+                "fragment_outer_step_applied",
+                global_merge_event=new_global_merge_event,
+                fragment_id=target_fragment,
+                fragment_version=new_fragment_version,
+                selected_count=len(selected),
+                total_update_tokens=total_update_tokens,
+            )
+            logger.event("fragment_latest_published", global_merge_event=new_global_merge_event)
+            if dropped:
+                logger.event(
+                    "fragment_updates_dropped",
+                    global_merge_event=new_global_merge_event,
+                    fragment_id=target_fragment,
+                    count=dropped,
+                )
+            global_merge_event = new_global_merge_event
+            last_progress_time = time.time()
+            last_global_time = last_progress_time
+    except Exception:
+        stop_reason = "error"
+        logger.exception("error", global_merge_event=global_merge_event)
+        raise
+    finally:
+        try:
+            if stop_reason != "error":
+                materialized_weight_path, _seconds = publish_fragment_latest(
+                    config=config,
+                    paths=paths,
+                    param_index=param_index,
+                    fragment_index=fragment_index,
+                    fragment_thetas=fragment_thetas,
+                    fragment_versions=fragment_versions,
+                    fragment_updated_events=fragment_updated_events,
+                    total_seen_tokens=total_seen_tokens,
+                    global_merge_event=global_merge_event,
+                    previous_materialized_weight_path=None,
+                )
+            publish_stop(
+                paths,
+                config=config,
+                reason=stop_reason,
+                version=global_merge_event,
+                total_seen_tokens=total_seen_tokens,
+            )
+            logger.event("stop_published", reason=stop_reason, version=global_merge_event)
+            dump_db(store, paths, global_merge_event, logger)
+            if wandb_run is not None:
+                wandb_run.summary["stop_reason"] = stop_reason
+                wandb_run.summary["final_version"] = global_merge_event
+                wandb_run.summary["total_seen_tokens"] = total_seen_tokens
+            logger.event("process_exit", reason=stop_reason, version=global_merge_event)
+        finally:
+            try:
+                if wandb_run is not None:
+                    wandb_run.finish(exit_code=1 if stop_reason == "error" else 0)
+            finally:
+                store.close()
+
+
 def run_syncer(config: Config) -> None:
     paths = RunPaths(Path(config.run.shared_root or "."))
     prepare_run_dirs(paths, config.sync.num_learners)
@@ -481,6 +1077,16 @@ def run_syncer(config: Config) -> None:
         device=device,
         hostname=hostname,
     )
+    if config.fragments.enabled:
+        run_fragment_syncer(
+            config=config,
+            paths=paths,
+            store=store,
+            logger=logger,
+            device=device,
+            wandb_run=wandb_run,
+        )
+        return
     if config.init.resume:
         version, theta, outer_state, param_index, total_seen_tokens = resume_run(
             config,

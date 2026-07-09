@@ -430,3 +430,322 @@ class SQLiteStore:
     def get_global_version(self, version: int) -> dict[str, Any] | None:
         row = self.conn.execute("SELECT * FROM global_versions WHERE version = ?", (version,)).fetchone()
         return row_to_dict(row)
+
+    def upsert_fragment_definition(self, fragment: dict[str, Any], *, strategy: str) -> None:
+        self.conn.execute(
+            """
+            INSERT INTO fragments(fragment_id, strategy, numel, size_bytes, slices_json, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(fragment_id) DO UPDATE SET
+                strategy=excluded.strategy,
+                numel=excluded.numel,
+                size_bytes=excluded.size_bytes,
+                slices_json=excluded.slices_json
+            """,
+            (
+                int(fragment["fragment_id"]),
+                strategy,
+                int(fragment["numel"]),
+                int(fragment.get("size_bytes_float32") or int(fragment["numel"]) * 4),
+                json.dumps(fragment.get("slices") or [], sort_keys=True),
+                time.time(),
+            ),
+        )
+        self.conn.commit()
+
+    def upsert_fragment_version(
+        self,
+        *,
+        fragment_id: int,
+        version: int,
+        global_merge_event: int,
+        weight_path: str,
+        optim_path: str,
+        num_updates: int = 0,
+        total_update_tokens: int = 0,
+        total_seen_tokens: int = 0,
+        outer_optimizer: str,
+        status: str = GLOBAL_STATUS_COMMITTED,
+        notes: str | None = None,
+    ) -> None:
+        self.conn.execute(
+            """
+            INSERT INTO fragment_versions(
+                fragment_id, version, global_merge_event, weight_path, optim_path,
+                created_at, num_updates, total_update_tokens, total_seen_tokens,
+                outer_optimizer, status, notes
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(fragment_id, version) DO UPDATE SET
+                global_merge_event=excluded.global_merge_event,
+                weight_path=excluded.weight_path,
+                optim_path=excluded.optim_path,
+                num_updates=excluded.num_updates,
+                total_update_tokens=excluded.total_update_tokens,
+                total_seen_tokens=excluded.total_seen_tokens,
+                outer_optimizer=excluded.outer_optimizer,
+                status=excluded.status,
+                notes=excluded.notes
+            """,
+            (
+                int(fragment_id),
+                int(version),
+                int(global_merge_event),
+                weight_path,
+                optim_path,
+                time.time(),
+                int(num_updates),
+                int(total_update_tokens),
+                int(total_seen_tokens),
+                outer_optimizer,
+                status,
+                notes,
+            ),
+        )
+        self.conn.commit()
+
+    def insert_fragment_update_metadata(self, metadata: dict[str, Any], *, ingested_at: float | None = None) -> bool:
+        ingested_at = time.time() if ingested_at is None else ingested_at
+        params = {
+            "update_id": metadata["update_id"],
+            "learner_id": metadata["learner_id"],
+            "hostname": metadata.get("hostname"),
+            "fragment_id": metadata["fragment_id"],
+            "base_fragment_version": metadata["base_fragment_version"],
+            "base_global_merge_event": metadata["base_global_merge_event"],
+            "local_step_start": metadata["local_step_start"],
+            "local_step_end": metadata["local_step_end"],
+            "inner_steps": metadata["inner_steps"],
+            "tokens_this_update": metadata["tokens_this_update"],
+            "tokens_since_fragment_load": metadata["tokens_since_fragment_load"],
+            "num_examples_this_update": metadata.get("num_examples_this_update"),
+            "train_loss": metadata.get("train_loss"),
+            "grad_norm": metadata.get("grad_norm"),
+            "param_norm": metadata.get("param_norm"),
+            "fragment_norm": metadata.get("fragment_norm"),
+            "file_path": metadata["file_path"],
+            "file_size_bytes": metadata.get("file_size_bytes"),
+            "sha256": metadata.get("sha256"),
+            "created_at": metadata["created_at"],
+            "committed_at": metadata["committed_at"],
+            "ingested_at": ingested_at,
+            "status": UPDATE_STATUS_PENDING,
+        }
+        cur = self.conn.execute(
+            """
+            INSERT OR IGNORE INTO fragment_updates(
+                update_id, learner_id, hostname, fragment_id, base_fragment_version,
+                base_global_merge_event, local_step_start, local_step_end, inner_steps,
+                tokens_this_update, tokens_since_fragment_load, num_examples_this_update,
+                train_loss, grad_norm, param_norm, fragment_norm, file_path,
+                file_size_bytes, sha256, created_at, committed_at, ingested_at, status
+            )
+            VALUES (
+                :update_id, :learner_id, :hostname, :fragment_id, :base_fragment_version,
+                :base_global_merge_event, :local_step_start, :local_step_end, :inner_steps,
+                :tokens_this_update, :tokens_since_fragment_load, :num_examples_this_update,
+                :train_loss, :grad_norm, :param_norm, :fragment_norm, :file_path,
+                :file_size_bytes, :sha256, :created_at, :committed_at, :ingested_at,
+                :status
+            )
+            """,
+            params,
+        )
+        self.conn.commit()
+        return cur.rowcount > 0
+
+    def pending_fragment_updates(self, *, fragment_id: int | None = None) -> list[dict[str, Any]]:
+        if fragment_id is None:
+            rows = self.conn.execute(
+                "SELECT * FROM fragment_updates WHERE status = ? ORDER BY committed_at ASC",
+                (UPDATE_STATUS_PENDING,),
+            ).fetchall()
+        else:
+            rows = self.conn.execute(
+                """
+                SELECT * FROM fragment_updates
+                WHERE status = ? AND fragment_id = ?
+                ORDER BY committed_at ASC
+                """,
+                (UPDATE_STATUS_PENDING, int(fragment_id)),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
+    def eligible_fragment_updates(
+        self,
+        *,
+        fragment_id: int,
+        current_fragment_version: int,
+        max_staleness_versions: int,
+    ) -> list[dict[str, Any]]:
+        rows = self.conn.execute(
+            """
+            SELECT * FROM fragment_updates
+            WHERE status = ?
+              AND fragment_id = ?
+              AND (? - base_fragment_version) <= ?
+            ORDER BY committed_at ASC
+            """,
+            (
+                UPDATE_STATUS_PENDING,
+                int(fragment_id),
+                int(current_fragment_version),
+                int(max_staleness_versions),
+            ),
+        ).fetchall()
+        return [dict(row) for row in rows]
+
+    def mark_fragment_updates_selected(self, update_ids: list[str], selected_by_run: str) -> None:
+        if not update_ids:
+            return
+        self.conn.executemany(
+            """
+            UPDATE fragment_updates
+            SET status = ?, selected_at = ?, selected_by_run = ?
+            WHERE update_id = ? AND status = ?
+            """,
+            [
+                (UPDATE_STATUS_SELECTED, time.time(), selected_by_run, update_id, UPDATE_STATUS_PENDING)
+                for update_id in update_ids
+            ],
+        )
+        self.conn.commit()
+
+    def mark_fragment_updates_applied(
+        self,
+        updates: list[dict[str, Any]],
+        *,
+        applied_fragment_version: int,
+        applied_global_merge_event: int,
+        effective_weights: dict[str, float],
+    ) -> None:
+        now = time.time()
+        self.conn.executemany(
+            """
+            UPDATE fragment_updates
+            SET status = ?, applied_at = ?, applied_fragment_version = ?,
+                applied_global_merge_event = ?, staleness_fragment_versions = ?,
+                staleness_global_events = ?, effective_weight = ?
+            WHERE update_id = ?
+            """,
+            [
+                (
+                    UPDATE_STATUS_APPLIED,
+                    now,
+                    int(applied_fragment_version),
+                    int(applied_global_merge_event),
+                    int(applied_fragment_version) - 1 - int(update["base_fragment_version"]),
+                    int(applied_global_merge_event) - 1 - int(update["base_global_merge_event"]),
+                    effective_weights.get(update["update_id"]),
+                    update["update_id"],
+                )
+                for update in updates
+            ],
+        )
+        self.conn.commit()
+
+    def reset_fragment_selected_to_pending(self, update_ids: list[str]) -> None:
+        if not update_ids:
+            return
+        self.conn.executemany(
+            "UPDATE fragment_updates SET status = ?, selected_at = NULL WHERE update_id = ? AND status = ?",
+            [(UPDATE_STATUS_PENDING, update_id, UPDATE_STATUS_SELECTED) for update_id in update_ids],
+        )
+        self.conn.commit()
+
+    def drop_fragment_updates(self, update_ids: list[str], reason: str) -> None:
+        if not update_ids:
+            return
+        self.conn.executemany(
+            """
+            UPDATE fragment_updates
+            SET status = ?, drop_reason = ?
+            WHERE update_id = ? AND status IN (?, ?)
+            """,
+            [
+                (
+                    UPDATE_STATUS_DROPPED,
+                    reason,
+                    update_id,
+                    UPDATE_STATUS_PENDING,
+                    UPDATE_STATUS_SELECTED,
+                )
+                for update_id in update_ids
+            ],
+        )
+        self.conn.commit()
+
+    def drop_obsolete_fragment_updates(
+        self,
+        *,
+        fragment_id: int,
+        current_fragment_version: int,
+        max_staleness_versions: int,
+    ) -> int:
+        cur = self.conn.execute(
+            """
+            UPDATE fragment_updates
+            SET status = ?, drop_reason = ?
+            WHERE status = ?
+              AND fragment_id = ?
+              AND (? - base_fragment_version) > ?
+            """,
+            (
+                UPDATE_STATUS_DROPPED,
+                "stale",
+                UPDATE_STATUS_PENDING,
+                int(fragment_id),
+                int(current_fragment_version),
+                int(max_staleness_versions),
+            ),
+        )
+        self.conn.commit()
+        return cur.rowcount
+
+    def drop_superseded_fragment_updates(
+        self,
+        selected_updates: list[dict[str, Any]],
+        reason: str = "superseded",
+    ) -> int:
+        if not selected_updates:
+            return 0
+        total = 0
+        for update in selected_updates:
+            cur = self.conn.execute(
+                """
+                UPDATE fragment_updates
+                SET status = ?, drop_reason = ?
+                WHERE status = ?
+                  AND learner_id = ?
+                  AND fragment_id = ?
+                  AND update_id != ?
+                  AND (
+                    local_step_end <= ?
+                    OR (local_step_end = ? AND committed_at <= ?)
+                  )
+                """,
+                (
+                    UPDATE_STATUS_DROPPED,
+                    reason,
+                    UPDATE_STATUS_PENDING,
+                    update["learner_id"],
+                    int(update["fragment_id"]),
+                    update["update_id"],
+                    update["local_step_end"],
+                    update["local_step_end"],
+                    update["committed_at"],
+                ),
+            )
+            total += cur.rowcount
+        self.conn.commit()
+        return total
+
+    def get_fragment_update(self, update_id: str) -> dict[str, Any] | None:
+        row = self.conn.execute("SELECT * FROM fragment_updates WHERE update_id = ?", (update_id,)).fetchone()
+        return row_to_dict(row)
+
+    def list_fragment_versions(self) -> list[dict[str, Any]]:
+        rows = self.conn.execute(
+            "SELECT * FROM fragment_versions ORDER BY fragment_id, version",
+        ).fetchall()
+        return [dict(row) for row in rows]
