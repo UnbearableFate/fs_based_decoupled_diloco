@@ -29,6 +29,7 @@ from .param_index import (
     validate_compatible_index,
 )
 from .paths import RunPaths, prepare_run_dirs
+from .retention import cleanup_learner_update_artifacts
 from .tensor_codec import dtype_from_name, load_global_weights_flat, save_update_vector
 
 
@@ -375,6 +376,11 @@ def run_learner(config: Config, learner_id: str) -> None:
                 grad_norm=grad_norm,
                 param_norm=param_norm,
                 flat=flat,
+            )
+            cleanup_learner_update_artifacts(
+                paths.updates_pending / learner_id,
+                keep_last=config.io.keep_last_learner_update_versions,
+                logger=logger,
             )
             write_seconds = time.monotonic() - write_start
             last_update_id = update_id

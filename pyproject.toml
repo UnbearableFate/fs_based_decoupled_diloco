@@ -21,11 +21,15 @@ dev = [
     "pytest",
     "ruff",
 ]
+eval = [
+    "lm-eval[hf]>=0.4.12",
+]
 
 [project.scripts]
 fs-diloco-syncer = "fs_diloco.syncer:main"
 fs-diloco-learner = "fs_diloco.learner:main"
 fs-diloco-inspect = "fs_diloco.analysis:main"
+fs-diloco-lm-eval = "fs_diloco.eval_lm_harness:main"
 
 [tool.ruff]
 line-length = 100

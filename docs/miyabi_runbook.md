@@ -59,6 +59,18 @@ qsub -v CONFIG=$PWD/configs/fs_diloco_gpt2_wikitext2_8l_acceptance.yaml scripts/
 
 Rank 0 is the syncer. Ranks 1-8 are `learner_000` through `learner_007`. The default config uses quorum 4 and max quorum 8. For acceptance, set `sync.stop_after_outer_steps` to at least `3` and verify at least three committed global versions, at least four selected learners per outer step, and no duplicate applied update IDs.
 
+## 1-Node LM Evaluation
+
+Submit a smoke evaluation job for the fixed 5000-step checkpoint:
+
+```bash
+qsub -v CHECKPOINT=$PWD/runs/fs_diloco/20260709_142811_fs_diloco_gpt2_wikitext2_8l_5000steps/weights/global_v000047.safetensors,TASK_SUITE=smoke,EVAL_LIMIT=20 scripts/miyabi/run_1node_lm_eval.pbs
+```
+
+The job runs only on a compute node. It exports the FS DiLoCo global weights to a HuggingFace checkpoint directory, runs `lm_eval` with the HuggingFace backend, and writes summary metrics to `runs/lm_eval/<EVAL_ID>/metrics.csv`.
+
+Use `TASK_SUITE=full` for `wikitext,lambada_openai,hellaswag,piqa,arc_easy,arc_challenge,winogrande,openbookqa`. You can also override `TASKS`, `CHECKPOINT`, `RUN_ROOT`, `BATCH_SIZE`, and `MODEL_DTYPE`.
+
 ## Inspection
 
 ```bash

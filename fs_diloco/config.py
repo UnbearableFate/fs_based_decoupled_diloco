@@ -130,6 +130,8 @@ class IOSection:
     compute_sha256: bool = False
     keep_processed_updates: bool = True
     cleanup_applied_after_versions: int | None = None
+    keep_last_global_versions: int | None = 3
+    keep_last_learner_update_versions: int | None = 3
     sqlite_local_dir: str | None = None
 
 

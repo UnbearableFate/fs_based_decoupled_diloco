@@ -86,6 +86,8 @@ io:
   compute_sha256: false
   keep_processed_updates: true
   cleanup_applied_after_versions: null
+  keep_last_global_versions: 3
+  keep_last_learner_update_versions: 3
   sqlite_local_dir: null
 
 learner:

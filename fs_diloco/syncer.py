@@ -28,6 +28,7 @@ from .param_index import (
     validate_compatible_index,
 )
 from .paths import RunPaths, prepare_run_dirs
+from .retention import cleanup_global_artifacts
 from .sqlite_store import SQLiteStore
 from .tensor_codec import (
     load_global_weights_flat,
@@ -301,7 +302,7 @@ def collect_with_grace_window(
     selected: list[dict[str, Any]] = []
     while True:
         eligible = store.eligible_updates(current_version, config.sync.max_staleness_versions)
-        eligible = [row for row in eligible if Path(row["file_path"]).exists()]
+        eligible = drop_missing_update_files(store, eligible, logger)
         selected = select_one_per_learner(
             eligible,
             policy=config.sync.selection_policy,
@@ -313,6 +314,66 @@ def collect_with_grace_window(
             break
         time.sleep(min(config.sync.scan_interval_seconds, max(0.0, deadline - time.monotonic())))
         sync_liveness_and_metadata(store, paths, config, logger)
+    return selected
+
+
+def drop_missing_update_files(
+    store: SQLiteStore,
+    updates: list[dict[str, Any]],
+    logger: JsonlLogger,
+) -> list[dict[str, Any]]:
+    missing = [row["update_id"] for row in updates if not Path(row["file_path"]).exists()]
+    if missing:
+        store.drop_updates(missing, "missing_file")
+        logger.event("updates_dropped_missing_files", count=len(missing), update_ids=missing)
+    missing_ids = set(missing)
+    return [row for row in updates if row["update_id"] not in missing_ids]
+
+
+def finite_local_training_complete(store: SQLiteStore, config: Config) -> bool:
+    if config.training.max_local_steps is None:
+        return False
+    learners = store.list_learners()
+    if len(learners) < config.sync.num_learners:
+        return False
+    max_local_steps = int(config.training.max_local_steps)
+    complete = 0
+    for learner in learners:
+        last_local_step = int(learner.get("last_local_step") or 0)
+        if last_local_step >= max_local_steps:
+            complete += 1
+    return complete >= config.sync.num_learners
+
+
+def select_terminal_drain_updates(
+    store: SQLiteStore,
+    paths: RunPaths,
+    config: Config,
+    logger: JsonlLogger,
+    *,
+    current_version: int,
+) -> list[dict[str, Any]]:
+    target = config.sync.stop_after_outer_steps
+    if target is None or current_version >= target:
+        return []
+    if not finite_local_training_complete(store, config):
+        return []
+    pending = drop_missing_update_files(store, store.pending_updates(), logger)
+    selected = select_one_per_learner(
+        pending,
+        policy="oldest_pending",
+        quorum_max=config.sync.quorum_max,
+    )
+    if selected:
+        logger.event(
+            "terminal_drain_selected",
+            version=current_version,
+            selected_count=len(selected),
+            remaining_outer_steps=int(target) - current_version,
+            learners=[row["learner_id"] for row in selected],
+        )
+    elif paths.stop_json.exists():
+        logger.event("terminal_drain_no_pending_updates", version=current_version)
     return selected
 
 
@@ -454,37 +515,69 @@ def run_syncer(config: Config) -> None:
 
             sync_liveness_and_metadata(store, paths, config, logger)
             eligible = store.eligible_updates(version, config.sync.max_staleness_versions)
-            eligible = [row for row in eligible if Path(row["file_path"]).exists()]
+            eligible = drop_missing_update_files(store, eligible, logger)
             one_per_learner = select_one_per_learner(
                 eligible,
                 policy=config.sync.selection_policy,
                 quorum_max=config.sync.quorum_max,
             )
+            selected: list[dict[str, Any]]
+            terminal_drain = False
             if len(one_per_learner) < config.sync.quorum_min:
+                terminal_selected = select_terminal_drain_updates(
+                    store,
+                    paths,
+                    config,
+                    logger,
+                    current_version=version,
+                )
+                if terminal_selected:
+                    selected = terminal_selected
+                    terminal_drain = True
+                else:
+                    logger.event(
+                        "quorum_wait",
+                        eligible=len(one_per_learner),
+                        quorum_min=config.sync.quorum_min,
+                        version=version,
+                    )
+                    if no_progress_timed_out(
+                        last_progress_time,
+                        config.liveness.no_progress_timeout_seconds,
+                    ):
+                        stop_reason = "no_progress_timeout"
+                        logger.event("no_progress_timeout", version=version)
+                        break
+                    time.sleep(config.sync.scan_interval_seconds)
+                    continue
+            else:
+                selected = collect_with_grace_window(
+                    store,
+                    paths,
+                    config,
+                    logger,
+                    current_version=version,
+                )
+                if len(selected) < config.sync.quorum_min:
+                    terminal_selected = select_terminal_drain_updates(
+                        store,
+                        paths,
+                        config,
+                        logger,
+                        current_version=version,
+                    )
+                    if not terminal_selected:
+                        continue
+                    selected = terminal_selected
+                    terminal_drain = True
+
+            if not terminal_drain and len(selected) < config.sync.quorum_min:
                 logger.event(
                     "quorum_wait",
-                    eligible=len(one_per_learner),
+                    eligible=len(selected),
                     quorum_min=config.sync.quorum_min,
                     version=version,
                 )
-                if no_progress_timed_out(
-                    last_progress_time,
-                    config.liveness.no_progress_timeout_seconds,
-                ):
-                    stop_reason = "no_progress_timeout"
-                    logger.event("no_progress_timeout", version=version)
-                    break
-                time.sleep(config.sync.scan_interval_seconds)
-                continue
-
-            selected = collect_with_grace_window(
-                store,
-                paths,
-                config,
-                logger,
-                current_version=version,
-            )
-            if len(selected) < config.sync.quorum_min:
                 continue
 
             run_selection_id = f"{config.run.run_id}_v{version + 1:06d}"
@@ -497,7 +590,26 @@ def run_syncer(config: Config) -> None:
             )
 
             read_start = time.monotonic()
-            vectors = [load_update_vector(row["file_path"], device=device) for row in selected]
+            missing_after_select = [row["update_id"] for row in selected if not Path(row["file_path"]).exists()]
+            if missing_after_select:
+                store.drop_updates(missing_after_select, "missing_file")
+                store.reset_selected_to_pending(
+                    [row["update_id"] for row in selected if row["update_id"] not in set(missing_after_select)]
+                )
+                logger.event("selected_updates_missing_files", count=len(missing_after_select))
+                continue
+            try:
+                vectors = [load_update_vector(row["file_path"], device=device) for row in selected]
+            except FileNotFoundError:
+                missing = [row["update_id"] for row in selected if not Path(row["file_path"]).exists()]
+                if missing:
+                    store.drop_updates(missing, "missing_file")
+                    store.reset_selected_to_pending(
+                        [row["update_id"] for row in selected if row["update_id"] not in set(missing)]
+                    )
+                    logger.event("selected_updates_missing_files", count=len(missing))
+                    continue
+                raise
             read_seconds = time.monotonic() - read_start
 
             weights_by_update = normalized_update_weights(
@@ -531,6 +643,7 @@ def run_syncer(config: Config) -> None:
                 total_update_tokens=total_update_tokens,
                 total_seen_tokens=total_seen_tokens,
             )
+            cleanup_global_artifacts(paths, keep_last=config.io.keep_last_global_versions, logger=logger)
             publish_seconds = time.monotonic() - publish_start
 
             store.mark_updates_applied(
@@ -539,7 +652,8 @@ def run_syncer(config: Config) -> None:
                 effective_weights=weights_by_update,
             )
             dropped = store.drop_superseded_updates(selected)
-            dropped += store.drop_obsolete_updates(new_version, config.sync.max_staleness_versions)
+            if not terminal_drain:
+                dropped += store.drop_obsolete_updates(new_version, config.sync.max_staleness_versions)
             if config.sync.db_dump_every_versions and new_version % config.sync.db_dump_every_versions == 0:
                 dump_db(store, paths, new_version, logger)
             append_csv_row(
