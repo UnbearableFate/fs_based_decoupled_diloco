@@ -13,7 +13,15 @@ The implementation intentionally does not use `torch.distributed`, NCCL, RPC, Ra
 - `scripts/miyabi/`: PBS launch and inspection scripts.
 - `scripts/local/`: synthetic CPU smoke helpers.
 - `tests/`: focused unit and integration tests.
-- `docs/`: design notes, Miyabi runbook, and experiment plan.
+- `docs/`: split bilingual user guide, design notes, Miyabi runbook, and experiment plan.
+
+## Documentation
+
+- [Bilingual documentation index](docs/user-guide/00-README.zh-en.md): Chinese and English docs split by overview, training, dataflow, storage/schema, modules, configuration, and operations.
+- [Compatibility guide entry](docs/USER_GUIDE.zh-en.md): short redirect for the original single-file guide path.
+- [Miyabi runbook](docs/miyabi_runbook.md): node policy and PBS launch commands.
+- [Design notes](docs/design.md): protocol-level design summary.
+- [Experiments](docs/experiments.md): suggested correctness, optimizer, and resilience matrices.
 
 ## Quick Commands
 
