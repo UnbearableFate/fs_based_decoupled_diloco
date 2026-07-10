@@ -1,0 +1,172 @@
+#!/bin/bash
+#PBS -N duraloco_m00_2n
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=2:mpiprocs=1
+#PBS -l walltime=00:12:00
+#PBS -j oe
+#PBS -m ae
+
+set -eEuo pipefail
+trap 'echo "[ERROR] M00 2-node gate failed at line $LINENO" >&2' ERR
+
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat
+REQUIRED_MODULES=()
+for module_name in "${REQUIRED_MODULES[@]}"; do
+  module load "$module_name"
+done
+module list 2>&1 | cat
+
+: "${PBS_NODEFILE:?PBS_NODEFILE is required}"
+PROJECT_ROOT="${PROJECT_ROOT:-${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}}"
+PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
+RUN_ID="${RUN_ID:-$(date +%Y%m%d_%H%M%S)_m00_2node}"
+PARENT_RUN_ID="${PARENT_RUN_ID:-}"
+ARTIFACT_ROOT="${ARTIFACT_ROOT:-$PROJECT_ROOT/artifacts/duraloco/M00/$RUN_ID}"
+STORAGE_ROOT="${STORAGE_ROOT:-$PROJECT_ROOT/runs/duraloco/M00/$RUN_ID}"
+BACKEND_ROUNDS="${BACKEND_ROUNDS:-100}"
+TRANSACTION_ROUNDS="${TRANSACTION_ROUNDS:-20}"
+source "$PROJECT_ROOT/scripts/lib/project_paths.sh"
+require_project_paths "$PROJECT_ROOT" "$ARTIFACT_ROOT" "$STORAGE_ROOT"
+
+if [[ ! -x "$PYTHON_BIN" ]]; then
+  echo "Python executable not found: $PYTHON_BIN" >&2
+  exit 2
+fi
+cd "$PROJECT_ROOT"
+mkdir -p "$ARTIFACT_ROOT/backend_ranks" "$ARTIFACT_ROOT/transaction_ranks" \
+  "$ARTIFACT_ROOT/takeover_ranks" "$STORAGE_ROOT"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+
+sort -u "$PBS_NODEFILE" | tee "$ARTIFACT_ROOT/hosts.log"
+printf 'PBS_JOBID=%s\nPBS_NODEFILE=%s\nSTORAGE_ROOT=%s\nBACKEND_ROUNDS=%s\nTRANSACTION_ROUNDS=%s\n' \
+  "${PBS_JOBID:-}" "$PBS_NODEFILE" "$STORAGE_ROOT" "$BACKEND_ROUNDS" \
+  "$TRANSACTION_ROUNDS" | tee "$ARTIFACT_ROOT/pbs_environment.log"
+"$PYTHON_BIN" --version 2>&1 | tee "$ARTIFACT_ROOT/python_version.log"
+git status --short --branch | tee "$ARTIFACT_ROOT/git_status.log"
+git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"
+findmnt -T "$STORAGE_ROOT" 2>&1 | tee "$ARTIFACT_ROOT/mount.log" || true
+if command -v lfs >/dev/null 2>&1; then
+  lfs getstripe "$STORAGE_ROOT" 2>&1 | tee "$ARTIFACT_ROOT/stripe.log" || true
+else
+  printf 'lfs unavailable\n' | tee "$ARTIFACT_ROOT/stripe.log"
+fi
+"$PYTHON_BIN" scripts/agent/check_no_embedded_database.py --root "$PROJECT_ROOT" \
+  --output "$ARTIFACT_ROOT/forbidden_surface.json"
+
+run_mpi_worker() {
+  local module_name="$1"
+  shift
+  local command=(
+    mpirun
+    --mca mpi_abort_print_stack 1
+    --report-bindings
+    --bind-to none
+    --map-by ppr:1:node
+    -np 2
+    /usr/bin/env
+    "PROJECT_ROOT=$PROJECT_ROOT"
+    "PYTHON_BIN=$PYTHON_BIN"
+    bash -lc
+    'cd "$PROJECT_ROOT"; export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"; exec "$PYTHON_BIN" -m '"$module_name"' "$@"'
+    bash "$@"
+  )
+  printf -v command_text '%q ' "${command[@]}"
+  printf '%s\n' "${command_text% }" >> "$ARTIFACT_ROOT/commands.log"
+  "${command[@]}"
+}
+
+run_mpi_worker fs_diloco.storage.miyabi_contract_worker \
+  --root "$STORAGE_ROOT/backend" --prefix "runs/$RUN_ID-backend" \
+  --rounds "$BACKEND_ROUNDS" --output-dir "$ARTIFACT_ROOT/backend_ranks" \
+  2>&1 | tee "$ARTIFACT_ROOT/backend_races.log"
+
+run_mpi_worker fs_diloco.log.miyabi_worker two-node \
+  --root "$STORAGE_ROOT/transaction" --run-id "$RUN_ID-transaction" \
+  --rounds "$TRANSACTION_ROUNDS" --output-dir "$ARTIFACT_ROOT/transaction_ranks" \
+  2>&1 | tee "$ARTIFACT_ROOT/transaction_races.log"
+
+run_mpi_worker fs_diloco.log.m00_miyabi_worker \
+  --root "$STORAGE_ROOT/takeover" --run-id "$RUN_ID-takeover" \
+  --output-dir "$ARTIFACT_ROOT/takeover_ranks" \
+  2>&1 | tee "$ARTIFACT_ROOT/production_takeover.log"
+
+"$PYTHON_BIN" - "$ARTIFACT_ROOT" "$BACKEND_ROUNDS" "$TRANSACTION_ROUNDS" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+artifact_root = Path(sys.argv[1])
+backend_rounds = int(sys.argv[2])
+transaction_rounds = int(sys.argv[3])
+backend = [json.loads((artifact_root / "backend_ranks" / f"rank_{rank}.json").read_text()) for rank in range(2)]
+transactions = [json.loads((artifact_root / "transaction_ranks" / f"rank_{rank}.json").read_text()) for rank in range(2)]
+takeover = [json.loads((artifact_root / "takeover_ranks" / f"rank_{rank}.json").read_text()) for rank in range(2)]
+
+hosts = {item["hostname"] for reports in (backend, transactions, takeover) for item in reports}
+assert len(hosts) == 2
+assert backend_rounds >= 100
+assert all(item["rounds"] == backend_rounds for item in backend)
+assert all(item["double_winner_rounds"] == 0 for item in backend)
+assert all(item["visibility_failures"] == 0 for item in backend)
+assert all(item["stale_lock_takeover"] == "pass" for item in backend)
+assert transaction_rounds >= 20
+assert all(item["status"] == "PASS" for item in transactions)
+assert all(item["rounds"] == transaction_rounds for item in transactions)
+assert all(item["double_winners"] == 0 for item in transactions)
+assert all(item["double_inclusions"] == 0 for item in transactions)
+assert len({item["committed_state_digest"] for item in transactions}) == 1
+assert sum(item["wins"] for item in transactions) == transaction_rounds
+assert takeover[0]["role"] == "initial_process"
+assert takeover[0]["process_exits_before_takeover"] is True
+assert takeover[1]["role"] == "takeover_process"
+assert takeover[1]["recovered_predecessor_digest"] == takeover[0]["runtime_view_digest_at_exit"]
+assert takeover[1]["final_commit_seq"] == 2
+assert takeover[1]["double_inclusions"] == 0
+assert takeover[1]["local_database_files"] == []
+
+summary = {
+    "status": "PASS",
+    "hosts": sorted(hosts),
+    "backend_rounds": backend_rounds,
+    "backend_double_winners": 0,
+    "backend_visibility_failures": 0,
+    "transaction_rounds": transaction_rounds,
+    "transaction_double_winners": 0,
+    "transaction_double_inclusions": 0,
+    "transaction_committed_state_digest": transactions[0]["committed_state_digest"],
+    "production_takeover": True,
+    "production_final_commit_seq": takeover[1]["final_commit_seq"],
+    "production_final_runtime_view_digest": takeover[1]["final_runtime_view_digest"],
+    "local_database_files": [],
+}
+(artifact_root / "two_node_summary.json").write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
+print(json.dumps(summary, sort_keys=True))
+PY
+
+qstat "$PBS_JOBID" | tee "$ARTIFACT_ROOT/qstat_final.log"
+cat "$ARTIFACT_ROOT/backend_races.log" "$ARTIFACT_ROOT/transaction_races.log" \
+  "$ARTIFACT_ROOT/production_takeover.log" > "$ARTIFACT_ROOT/stdout.log"
+: > "$ARTIFACT_ROOT/stderr.log"
+MANIFEST_ARGS=(
+  --root "$PROJECT_ROOT"
+  --output "$ARTIFACT_ROOT/manifest.json"
+  --phase M00
+  --purpose contract
+  --run-id "$RUN_ID"
+  --backend lustre
+  --config scripts/miyabi/run_duraloco_m00_2node.pbs
+  --commands-log commands.log
+  --stdout stdout.log
+  --stderr stderr.log
+  --exit-code 0
+  --result pass
+  --assertion "100 two-node backend races had one winner and cross-node visibility"
+  --assertion "20 same-parent transaction races had one commit and zero double inclusion"
+  --assertion "a fresh production process on the second node recovered and extended committed authority without a local database"
+)
+if [[ -n "$PARENT_RUN_ID" ]]; then
+  MANIFEST_ARGS+=(--parent-run-id "$PARENT_RUN_ID")
+fi
+"$PYTHON_BIN" scripts/agent/create_run_manifest.py "${MANIFEST_ARGS[@]}"
+"$PYTHON_BIN" scripts/agent/check_run_manifest.py "$ARTIFACT_ROOT/manifest.json" --root "$PROJECT_ROOT"
