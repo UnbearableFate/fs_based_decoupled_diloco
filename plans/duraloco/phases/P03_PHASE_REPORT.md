@@ -8,11 +8,12 @@
 - Branch: `codex/duraloco-p03-posix-storage`
 - Base: `codex/duraloco-p02-reference-model` at
   `5f03afae833712706814a9c295970a5800a8f04e`
-- State: `checking`; implementation and independent gates passed
+- Checked persistence commit: `d60ad26dfcf00a060caeadea8cc468977d8c2272`
+- State: `completed`; final Checker authorized `checking -> completed`
 - Verified implementation: `952b39b5fef0fc06e4d28d75bbded24baa5f655f`
 - Maker evidence: PBS `2357905.opbs` (1 node) and `2357912.opbs` (2 nodes)
 - Completed targets: P03-A01 through P03-A08
-- Open target: final persisted-state audit
+- Open target: none
 - Checker verdict: `PASS`; `required_gate_followups: none`
 
 ### Acceptance summary
@@ -75,8 +76,8 @@
 
 ### Next action
 
-Persist this checked state and its clean/checker artifacts, obtain final
-persistence authorization, then complete the P03 archival commit before P04.
+Start P04 from the completed P03 feature-branch tip; do not merge `main`
+automatically.
 
 ## 中文
 
@@ -86,11 +87,12 @@ persistence authorization, then complete the P03 archival commit before P04.
 - 分支：`codex/duraloco-p03-posix-storage`
 - 基线：`codex/duraloco-p02-reference-model`，提交
   `5f03afae833712706814a9c295970a5800a8f04e`
-- 状态：`checking`；实现和独立 gate 已通过
+- 已复核持久化提交：`d60ad26dfcf00a060caeadea8cc468977d8c2272`
+- 状态：`completed`；最终 Checker 已授权 `checking -> completed`
 - 已验证实现：`952b39b5fef0fc06e4d28d75bbded24baa5f655f`
 - Maker 证据：PBS `2357905.opbs`（单节点）和 `2357912.opbs`（双节点）
 - 已完成 targets：P03-A01 至 P03-A08
-- 未完成 target：最终持久化状态复核
+- 未完成 target：无
 - Checker 结论：`PASS`；`required_gate_followups: none`
 
 ### 验收摘要
@@ -150,5 +152,4 @@ persistence authorization, then complete the P03 archival commit before P04.
 
 ### 下一动作
 
-持久化 checked state 与 clean/checker artifacts，取得最终 persistence
-授权，然后在 P04 前完成 P03 archival commit。
+从已完成的 P03 feature-branch tip 开始 P04；不得自动合并 `main`。

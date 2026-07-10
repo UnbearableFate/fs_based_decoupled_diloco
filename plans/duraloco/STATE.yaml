@@ -1,12 +1,12 @@
 phase: P03
-status: checking
+status: completed
 planning_basis_branch: codex/fs-diloco-miyabi
 planning_basis_commit: afc50a1e179c64321645b278b2497ea3ab3fe24d
 actual_base_branch: codex/duraloco-p02-reference-model
 actual_base_commit: 5f03afae833712706814a9c295970a5800a8f04e
 feature_branch: codex/duraloco-p03-posix-storage
 current_loop: 4
-current_goal: "persist independently checked P03 Lustre contract evidence"
+current_goal: "P03 semantic storage API and POSIX/Lustre contract completed"
 attempts_for_current_failure: 0
 last_verified_commit: 952b39b5fef0fc06e4d28d75bbded24baa5f655f
 checks:
@@ -32,7 +32,7 @@ artifacts:
   - artifacts/duraloco/P03/20260711_clean_p03_952b39b_2node
   - artifacts/duraloco/P03/20260711_checker_p03_0a4896e_1node
   - artifacts/duraloco/P03/20260711_checker_p03_952b39b_1node
-next_action: "independent checker audits persisted P03 checking state, then mark completed"
+next_action: "start P04 transactional fragment log from the completed P03 branch tip"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
