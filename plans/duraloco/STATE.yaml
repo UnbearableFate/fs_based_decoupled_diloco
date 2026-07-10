@@ -1,35 +1,38 @@
 phase: P04
-status: in_progress
+status: checking
 planning_basis_branch: codex/fs-diloco-miyabi
 planning_basis_commit: afc50a1e179c64321645b278b2497ea3ab3fe24d
 actual_base_branch: codex/duraloco-p03-posix-storage
 actual_base_commit: a93633d8d41bdb0e184711c4efaa132f211aa5e9
 feature_branch: codex/duraloco-p04-transaction-log
-current_loop: 1
-current_goal: "resolve P04 response-loss retry outcome classification"
-attempts_for_current_failure: 1
-last_verified_commit: null
+current_loop: 4
+current_goal: "independent Checker audits the P04 one-CAS proof and terminal 9-node gate"
+attempts_for_current_failure: 0
+last_verified_commit: 79373ecab4e051b4c9ff2ba128250d8612b9ab8b
 checks:
-  local_static: not_run
-  local_runtime: not_run
-  miyabi_login_static: not_run
-  miyabi_1node: not_run
-  miyabi_2node: not_run
-  miyabi_9node: not_run
+  local_static: static_pass
+  local_runtime: contract_pass
+  miyabi_login_static: static_pass
+  miyabi_1node: miyabi_1node_pass
+  miyabi_2node: miyabi_2node_pass
+  miyabi_9node: miyabi_9node_pass
 acceptance:
-  P04-A01: {result: not_run, evidence: []}
-  P04-A02: {result: not_run, evidence: []}
-  P04-A03: {result: not_run, evidence: []}
-  P04-A04: {result: not_run, evidence: []}
-  P04-A05: {result: not_run, evidence: []}
-  P04-A06: {result: not_run, evidence: []}
-  P04-A07: {result: not_run, evidence: []}
-  P04-A08: {result: not_run, evidence: []}
+  P04-A01: {result: pass, evidence: [fs_diloco/log/commit.py, docs/duraloco/transaction_log.md, artifacts/duraloco/P04/20260711_p04_79373ec_gpt2_9n_50x10/terminal_gate_report.json]}
+  P04-A02: {result: pass, evidence: [tests/log/test_commit_crash_matrix.py, artifacts/duraloco/P04/20260711_p04_79373ec_1node/p04_1node_report.json]}
+  P04-A03: {result: pass, evidence: [tests/log/test_cas_conflict.py, artifacts/duraloco/P04/20260711_p04_79373ec_2node/two_node_summary.json]}
+  P04-A04: {result: pass, evidence: [tests/log/test_cas_conflict.py, artifacts/duraloco/P04/20260711_p04_79373ec_2node/two_node_summary.json]}
+  P04-A05: {result: pass, evidence: [fs_diloco/log/replay.py, tests/log/test_commit_happy_path.py, artifacts/duraloco/P04/20260711_p04_79373ec_gpt2_9n_50x10/terminal_gate_report.json]}
+  P04-A06: {result: pass, evidence: [fs_diloco/log/cache.py, tests/log/test_cache_rebuild.py, artifacts/duraloco/P04/20260711_p04_79373ec_1node/p04_1node_report.json]}
+  P04-A07: {result: pass, evidence: [tests/log/test_replay_prefix.py, artifacts/duraloco/P04/20260711_p04_79373ec_1node/p04_1node_report.json, artifacts/duraloco/P04/20260711_p04_79373ec_gpt2_9n_50x10/terminal_gate_report.json]}
+  P04-A08: {result: pass, evidence: [fs_diloco/log/inspect_cli.py, tests/log/test_inspect_cli.py, artifacts/duraloco/P04/20260711_p04_79373ec_gpt2_9n_50x10/inspect_verify.json]}
   P04-A09: {result: not_run, evidence: []}
 open_decisions: []
 open_blockers: []
-artifacts: []
-next_action: "rerun the P04 1-node gate after the response-loss status fix"
+artifacts:
+  - artifacts/duraloco/P04/20260711_p04_79373ec_1node
+  - artifacts/duraloco/P04/20260711_p04_79373ec_2node
+  - artifacts/duraloco/P04/20260711_p04_79373ec_gpt2_9n_50x10
+next_action: "persist maker evidence, run independent Checker counterexamples, then complete P04"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

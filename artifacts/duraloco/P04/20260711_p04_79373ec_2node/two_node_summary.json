@@ -1,0 +1,21 @@
+{
+  "committed_state_digest": "2f7aa4693098dd1cb1ff0065fd36ddef507fc8bc0a0d88461604991b1ee32657",
+  "conflicts": {
+    "0": 1,
+    "1": 19
+  },
+  "double_inclusions": 0,
+  "double_winners": 0,
+  "hosts": [
+    "mg0003",
+    "mg0004"
+  ],
+  "response_loss_recovered": true,
+  "rounds": 20,
+  "second_node_takeover": true,
+  "status": "PASS",
+  "wins": {
+    "0": 19,
+    "1": 1
+  }
+}

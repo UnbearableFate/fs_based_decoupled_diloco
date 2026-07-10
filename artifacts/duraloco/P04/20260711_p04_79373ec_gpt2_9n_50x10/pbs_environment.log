@@ -1,0 +1,6 @@
+PBS_JOBID=2358093.opbs
+PBS_NODEFILE=/var/spool/pbs/aux/2358093.opbs
+PHASE=P04
+RUN_ID=20260711_p04_79373ec_gpt2_9n_50x10
+SHARED_ROOT=/work/xg24i002/x10041/duraloco_training_runtime/20260711_p04_79373ec_gpt2_9n_50x10
+P04_STORAGE_ROOT=/work/xg24i002/x10041/duraloco_p04_runtime/20260711_p04_79373ec_gpt2_9n_50x10_terminal

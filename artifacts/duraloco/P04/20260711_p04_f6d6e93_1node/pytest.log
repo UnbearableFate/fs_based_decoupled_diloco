@@ -1,0 +1,32 @@
+..F..................................................................... [ 26%]
+........................................................................ [ 53%]
+....s................................................................... [ 79%]
+.......................................................                  [100%]
+=================================== FAILURES ===================================
+__________ test_same_logical_prepare_and_response_loss_are_idempotent __________
+
+    def test_same_logical_prepare_and_response_loss_are_idempotent():
+        backend = InMemoryStorageBackend()
+        log = initialize(backend, "response-loss")
+        item = proposal(log, learner="learner-a", sequence=1)
+        first = log.prepare_transition(
+            fragment_id=0, selected_proposal_ids=(item.proposal_id,)
+        )
+        duplicate = log.prepare_transition(
+            fragment_id=0, selected_proposal_ids=(item.proposal_id,)
+        )
+        assert first.commit == duplicate.commit
+        backend.inject_failure(FailureRule("conditional_replace", "after"))
+        recovered = log.commit_prepared(first)
+        assert recovered.status == "already_committed"
+        again = log.commit_prepared(duplicate)
+>       assert again.status == "already_committed"
+E       AssertionError: assert 'committed' == 'already_committed'
+E
+E         - already_committed
+E         + committed
+
+tests/log/test_cas_conflict.py:45: AssertionError
+=========================== short test summary info ============================
+FAILED tests/log/test_cas_conflict.py::test_same_logical_prepare_and_response_loss_are_idempotent
+1 failed, 269 passed, 1 skipped in 18.02s
