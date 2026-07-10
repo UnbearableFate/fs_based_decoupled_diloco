@@ -30,6 +30,21 @@ class TensorHeader:
     end: int
 
 
+def _reject_excessive_json_depth(value: Any, *, maximum: int = 128) -> None:
+    stack: list[tuple[Any, int]] = [(value, 0)]
+    while stack:
+        item, depth = stack.pop()
+        if depth > maximum:
+            raise ProtocolError(
+                "SAFETENSORS_HEADER",
+                f"header JSON nesting exceeds supported depth {maximum}",
+            )
+        if isinstance(item, dict):
+            stack.extend((child, depth + 1) for child in item.values())
+        elif isinstance(item, list):
+            stack.extend((child, depth + 1) for child in item)
+
+
 def _pairs_no_duplicates(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for key, value in pairs:
@@ -54,6 +69,7 @@ def parse_safetensors(payload: bytes) -> tuple[dict[str, TensorHeader], bytes]:
         raise ProtocolError("SAFETENSORS_HEADER", f"invalid header JSON: {exc}") from exc
     if not isinstance(raw, dict):
         raise ProtocolError("SAFETENSORS_HEADER", "header root must be an object")
+    _reject_excessive_json_depth(raw)
     data = payload[8 + header_size :]
     tensors: dict[str, TensorHeader] = {}
     ranges: list[tuple[int, int, str]] = []
