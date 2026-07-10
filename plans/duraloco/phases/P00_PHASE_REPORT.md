@@ -80,7 +80,7 @@ the additive Protocol v2 work.
 
 - Worktree clean at runtime: yes
 - Branch pushed: yes
-- Phase completed: pending the final legal `checking -> completed` state commit
-- Next phase automatically started: pending phase archival commit
+- Phase completed: yes; independent checker authorized `checking -> completed`
+- Next phase automatically started: authorized immediately after this archival commit
 - Ready to merge: no; feature branch only
 - External-risk approval still required: none

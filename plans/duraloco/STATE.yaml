@@ -1,12 +1,12 @@
 phase: P00
-status: checking
+status: completed
 planning_basis_branch: codex/fs-diloco-miyabi
 planning_basis_commit: afc50a1e179c64321645b278b2497ea3ab3fe24d
 actual_base_branch: main
 actual_base_commit: afc50a1e179c64321645b278b2497ea3ab3fe24d
 feature_branch: codex/duraloco-p00-contract
 current_loop: 4
-current_goal: "archive independently checked baseline and research contract evidence"
+current_goal: "P00 baseline and research contract completed"
 attempts_for_current_failure: 0
 last_verified_commit: 993accda722d5792fe687da2158365fbd353776d
 checks:
@@ -31,7 +31,7 @@ artifacts:
   - artifacts/duraloco/P00/20260710_clean_p00_993accd
   - artifacts/duraloco/P00/20260710_clean_p00_32e84da
   - artifacts/duraloco/P00/20260710_221500_contract_static/baseline_manifest.json
-next_action: "persist checker-confirmed completed state, then start P01"
+next_action: "start P01 Protocol v2 schemas and validation"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
