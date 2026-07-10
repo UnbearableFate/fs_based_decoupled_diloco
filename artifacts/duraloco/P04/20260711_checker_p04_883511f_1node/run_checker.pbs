@@ -1,0 +1,91 @@
+#!/bin/bash
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:10:00
+#PBS -j oe
+
+set -uo pipefail
+
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat
+PROJECT_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco_p04
+ARTIFACT_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P04/20260711_checker_p04_883511f_1node
+PYTHON_BIN=/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python
+RUNTIME_ROOT=/work/xg24i002/x10041/duraloco_p04_runtime/20260711_checker_p04_883511f_1node
+OLD_CHECKER="$PROJECT_ROOT/artifacts/duraloco/P04/20260711_checker_p04_79373ec_1node/checker_counterexamples.py"
+
+cd "$PROJECT_ROOT" || exit 2
+mkdir -p "$RUNTIME_ROOT"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+module list > "$ARTIFACT_ROOT/module_list.log" 2>&1
+hostname > "$ARTIFACT_ROOT/hostname.log"
+git rev-parse HEAD > "$ARTIFACT_ROOT/git_commit.log"
+git status --short --branch > "$ARTIFACT_ROOT/git_status.log"
+"$PYTHON_BIN" --version > "$ARTIFACT_ROOT/python_version.log" 2>&1
+printf 'PBS_JOBID=%s\nPBS_NODEFILE=%s\nRUNTIME_ROOT=%s\n' \
+  "${PBS_JOBID:-}" "${PBS_NODEFILE:-}" "$RUNTIME_ROOT" \
+  > "$ARTIFACT_ROOT/pbs_environment.log"
+
+printf '%s\n' \
+  "$PYTHON_BIN -m pytest -q tests/log" \
+  "$PYTHON_BIN $OLD_CHECKER $RUNTIME_ROOT $ARTIFACT_ROOT/counterexamples_raw.json" \
+  "$PYTHON_BIN $ARTIFACT_ROOT/final_audit.py $PROJECT_ROOT $ARTIFACT_ROOT" \
+  > "$ARTIFACT_ROOT/commands.log"
+
+"$PYTHON_BIN" -m pytest -q tests/log \
+  > "$ARTIFACT_ROOT/current_log_pytest.log" \
+  2> "$ARTIFACT_ROOT/current_log_pytest_stderr.log"
+pytest_rc=$?
+printf '%s\n' "$pytest_rc" > "$ARTIFACT_ROOT/current_log_pytest_exit_code.log"
+
+"$PYTHON_BIN" "$OLD_CHECKER" \
+  "$RUNTIME_ROOT" "$ARTIFACT_ROOT/counterexamples_raw.json" \
+  > "$ARTIFACT_ROOT/counterexamples_stdout.log" \
+  2> "$ARTIFACT_ROOT/counterexamples_stderr.log"
+counterexample_rc=$?
+printf '%s\n' "$counterexample_rc" > "$ARTIFACT_ROOT/counterexamples_exit_code.log"
+
+"$PYTHON_BIN" "$ARTIFACT_ROOT/final_audit.py" \
+  "$PROJECT_ROOT" "$ARTIFACT_ROOT" \
+  > "$ARTIFACT_ROOT/stdout.log" \
+  2> "$ARTIFACT_ROOT/final_audit_stderr.log"
+audit_rc=$?
+printf '%s\n' "$audit_rc" > "$ARTIFACT_ROOT/checker_exit_code.log"
+cat \
+  "$ARTIFACT_ROOT/current_log_pytest_stderr.log" \
+  "$ARTIFACT_ROOT/counterexamples_stderr.log" \
+  "$ARTIFACT_ROOT/final_audit_stderr.log" \
+  > "$ARTIFACT_ROOT/stderr.log"
+
+overall_rc=0
+if [[ "$pytest_rc" -ne 0 || "$counterexample_rc" -ne 0 || "$audit_rc" -ne 0 ]]; then
+  overall_rc=1
+fi
+result=pass
+if [[ "$overall_rc" -ne 0 ]]; then
+  result=fail
+fi
+
+MANIFEST_ARGS=(
+  --root "$PROJECT_ROOT"
+  --output "$ARTIFACT_ROOT/manifest.json"
+  --phase P04
+  --purpose contract
+  --run-id 20260711_checker_p04_883511f_1node
+  --parent-run-id 20260711_checker_p04_79373ec_1node
+  --backend lustre
+  --config "$ARTIFACT_ROOT/run_checker.pbs"
+  --commands-log commands.log
+  --stdout stdout.log
+  --stderr stderr.log
+  --exit-code "$overall_rc"
+  --result "$result"
+  --assertion "current persisted tests/log lifecycle suite is green"
+  --assertion "five independent P04 one-CAS counterexamples pass"
+  --assertion "parent-linked 1/2/9-node maker evidence and terminal 50x10 gate are consistent"
+  --assertion "P04 checking-to-completed transition is independently authorized"
+)
+"$PYTHON_BIN" scripts/agent/create_run_manifest.py "${MANIFEST_ARGS[@]}"
+"$PYTHON_BIN" scripts/agent/check_run_manifest.py \
+  "$ARTIFACT_ROOT/manifest.json" --root "$PROJECT_ROOT"
+exit "$overall_rc"

@@ -1,0 +1,118 @@
+{
+  "P04-A09": "PASS",
+  "checker_hostname": "mg0004",
+  "checker_pbs_job_id": "2358203.opbs",
+  "checking_to_completed": "AUTHORIZED",
+  "checks": {
+    "clean_persistence_provenance": {
+      "dirty_paths": [],
+      "head": "883511f36b0a298bbacae1ead3bb787fa4cf9bf2",
+      "pass": true
+    },
+    "current_persisted_tests_log": {
+      "exit_code": 0,
+      "pass": true,
+      "summary": "26 passed in 2.71s"
+    },
+    "maker_one_node_contract": {
+      "pass": true
+    },
+    "maker_terminal_real_9node_50x10": {
+      "all_assertions": true,
+      "checkpoint_count": 11,
+      "dataset": "wikitext-2-raw-v1",
+      "finite_loss_count": 109,
+      "hosts": [
+        "mg0003",
+        "mg0004",
+        "mg0007",
+        "mg0008",
+        "mg0010",
+        "mg0011",
+        "mg0012",
+        "mg0013",
+        "mg0014"
+      ],
+      "inner_steps": 50,
+      "learners": 8,
+      "model": "gpt2",
+      "observed_qstat_elapsed": "00:00:47",
+      "outer_transitions": 10,
+      "pass": true,
+      "pbs_job_id": "2358179.opbs"
+    },
+    "maker_two_node_contract": {
+      "double_inclusions": 0,
+      "double_winners": 0,
+      "hosts": [
+        "mg0003",
+        "mg0004"
+      ],
+      "pass": true,
+      "rounds": 20
+    },
+    "p04_a09_five_counterexamples": {
+      "cases": {
+        "corrupt_cache_rebuilds_from_authoritative_log": true,
+        "corrupt_middle_commit_localizes_first_bad_sequence": true,
+        "identical_writers_are_one_logical_commit_and_one_cas": true,
+        "losing_writer_never_resolves_as_committed_ancestor": true,
+        "lost_response_retry_after_successor_progress": true
+      },
+      "pass": true
+    },
+    "parent_linked_maker_manifests": {
+      "nine_node": {
+        "dirty_tree": false,
+        "exit_code": 0,
+        "git_commit": "a655413cea6ebe9bc368b5827318efd766683b5a",
+        "parent_run_id": "20260711_p04_79373ec_gpt2_9n_50x10",
+        "pass": true,
+        "pbs_job_id": "2358179.opbs",
+        "run_id": "20260711_p04_a655413_gpt2_9n_50x10"
+      },
+      "one_node": {
+        "dirty_tree": false,
+        "exit_code": 0,
+        "git_commit": "a655413cea6ebe9bc368b5827318efd766683b5a",
+        "parent_run_id": "20260711_p04_f6d6e93_1node",
+        "pass": true,
+        "pbs_job_id": "2358166.opbs",
+        "run_id": "20260711_p04_a655413_1node"
+      },
+      "two_node": {
+        "dirty_tree": false,
+        "exit_code": 0,
+        "git_commit": "a655413cea6ebe9bc368b5827318efd766683b5a",
+        "parent_run_id": "20260711_p04_79373ec_2node",
+        "pass": true,
+        "pbs_job_id": "2358168.opbs",
+        "run_id": "20260711_p04_a655413_2node"
+      }
+    },
+    "state_report_lifecycle_and_failure_history": {
+      "acceptance": {
+        "P04-A01": "pass",
+        "P04-A02": "pass",
+        "P04-A03": "pass",
+        "P04-A04": "pass",
+        "P04-A05": "pass",
+        "P04-A06": "pass",
+        "P04-A07": "pass",
+        "P04-A08": "pass",
+        "P04-A09": "pass"
+      },
+      "bilingual": true,
+      "last_verified_commit": "a655413cea6ebe9bc368b5827318efd766683b5a",
+      "marker_50x10_count": 4,
+      "pass": true,
+      "status": "checking"
+    }
+  },
+  "persistence_commit": "883511f36b0a298bbacae1ead3bb787fa4cf9bf2",
+  "required_failures": [],
+  "required_gate_followups": "none",
+  "schema_version": 1,
+  "verdict": "PASS",
+  "verified_implementation": "a655413cea6ebe9bc368b5827318efd766683b5a"
+}

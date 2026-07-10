@@ -7,12 +7,15 @@
 - Phase: P04 — transactional fragment log and prefix recovery
 - Branch: `codex/duraloco-p04-transaction-log`
 - Base: completed P03 commit `a93633d8d41bdb0e184711c4efaa132f211aa5e9`
+- Checked persistence commit: `883511f36b0a298bbacae1ead3bb787fa4cf9bf2`
 - Verified implementation: `a655413cea6ebe9bc368b5827318efd766683b5a`
-- State: `checking`; Maker gates P04-A01 through P04-A08 and the independent
-  P04-A09 counterexample audit passed
-- Open target: independent Checker persistence/lineage re-authorization
+- State: `completed`; final Checker authorized `checking -> completed`
+- Completed targets: P04-A01 through P04-A09
+- Open target: none
 - Parent-linked Maker PBS: `2358166.opbs` (1 node), `2358168.opbs` (2 nodes),
   and `2358179.opbs` (terminal 9 nodes)
+- Final Checker: PBS `2358203.opbs`; `Verdict: PASS`,
+  `required_gate_followups: none`
 
 ### Acceptance summary
 
@@ -51,7 +54,7 @@
 
 ### Verification failure history
 
-#### Independent Checker `2db8a73` / PBS `2358154` — blocked, resolved for recheck
+#### Independent Checker `2db8a73` / PBS `2358154` — blocked, resolved
 
 - Phenomenon: all five new transactional counterexamples passed, but the
   persisted `tests/log` slice passed 24 and failed 2. The milestone-state test
@@ -67,8 +70,9 @@
 - Resolution: `a655413` made the state test lifecycle-aware and added the exact
   bilingual marker. Parent-linked PBS `2358166`, `2358168`, and `2358179`
   then passed at that clean commit; their manifests bind the failed f6 attempt
-  or the previous corresponding successful run. Final Checker re-authorization
-  remains pending.
+  or the previous corresponding successful run. Independent PBS `2358203`
+  passed 26 persisted log tests, reran all five counterexamples, validated the
+  lineage, and authorized completion with no follow-up.
 
 #### 1-node `f6d6e93` / PBS `2358012` — resolved
 
@@ -101,9 +105,8 @@ integration.
 
 ### Next action
 
-Persist the fixed Maker evidence, obtain independent Checker
-persistence/lineage re-authorization, then archive the bilingual completed
-report and milestone commit.
+Start P05 syncer lease fencing and failover from this completed P04
+feature-branch tip; do not merge `main` automatically.
 
 ## 中文
 
@@ -112,12 +115,15 @@ report and milestone commit.
 - 阶段：P04 — transactional fragment log 与 prefix recovery
 - 分支：`codex/duraloco-p04-transaction-log`
 - 基线：已完成的 P03 提交 `a93633d8d41bdb0e184711c4efaa132f211aa5e9`
+- 已复核持久化提交：`883511f36b0a298bbacae1ead3bb787fa4cf9bf2`
 - 已验证实现：`a655413cea6ebe9bc368b5827318efd766683b5a`
-- 状态：`checking`；Maker gates P04-A01 至 P04-A08 与独立 P04-A09
-  反例审查已通过
-- 未完成 target：独立 Checker persistence/lineage 重新授权
+- 状态：`completed`；最终 Checker 已授权 `checking -> completed`
+- 已完成 targets：P04-A01 至 P04-A09
+- 未完成 target：无
 - 带 parent lineage 的 Maker PBS：`2358166.opbs`（单节点）、
   `2358168.opbs`（双节点）、`2358179.opbs`（最终九节点）
+- 最终 Checker：PBS `2358203.opbs`；`Verdict: PASS`，
+  `required_gate_followups: none`
 
 ### 验收摘要
 
@@ -154,7 +160,7 @@ report and milestone commit.
 
 ### 验证失败历史
 
-#### 独立 Checker `2db8a73` / PBS `2358154` — 阻塞，已修复待复审
+#### 独立 Checker `2db8a73` / PBS `2358154` — 阻塞，已解决
 
 - 现象：五个新增 transactional 反例全部通过，但 persisted `tests/log` slice
   24 项通过、2 项失败。milestone state test 仍期待 `in_progress`/`not_run`，
@@ -168,7 +174,8 @@ report and milestone commit.
 - 解决：`a655413` 让 state test 识别生命周期并加入精确双语 marker；
   带 parent lineage 的 PBS `2358166`、`2358168`、`2358179` 随后在该 clean
   commit 上全部通过，manifest 已绑定 f6 失败尝试或上一个对应的成功作业。
-  最终 Checker 重新授权尚待完成。
+  独立 PBS `2358203` 随后通过 26 项 persisted log tests，重跑全部五个
+  反例，验证 lineage，并在无 follow-up 的情况下授权完成。
 
 #### 单节点 `f6d6e93` / PBS `2358012` — 已解决
 
@@ -196,5 +203,5 @@ P05。最终 probe 把确定性 P04 projection 与真实 checkpoint hashes 绑�
 
 ### 下一动作
 
-持久化修复后 Maker evidence，取得独立 Checker 的 persistence/lineage 重新授权，
-然后归档双语 completed report 和 milestone commit。
+从已完成的 P04 feature branch tip 启动 P05 syncer lease fencing 与 failover；
+不自动合并 `main`。

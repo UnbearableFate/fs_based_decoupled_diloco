@@ -1,12 +1,12 @@
 phase: P04
-status: checking
+status: completed
 planning_basis_branch: codex/fs-diloco-miyabi
 planning_basis_commit: afc50a1e179c64321645b278b2497ea3ab3fe24d
 actual_base_branch: codex/duraloco-p03-posix-storage
 actual_base_commit: a93633d8d41bdb0e184711c4efaa132f211aa5e9
 feature_branch: codex/duraloco-p04-transaction-log
 current_loop: 4
-current_goal: "obtain independent Checker persistence and lineage authorization"
+current_goal: "P04 transactional fragment log and prefix recovery completed"
 attempts_for_current_failure: 0
 last_verified_commit: a655413cea6ebe9bc368b5827318efd766683b5a
 checks:
@@ -25,7 +25,7 @@ acceptance:
   P04-A06: {result: pass, evidence: [fs_diloco/log/cache.py, tests/log/test_cache_rebuild.py, artifacts/duraloco/P04/20260711_p04_a655413_1node/p04_1node_report.json]}
   P04-A07: {result: pass, evidence: [tests/log/test_replay_prefix.py, artifacts/duraloco/P04/20260711_p04_a655413_1node/p04_1node_report.json, artifacts/duraloco/P04/20260711_p04_a655413_gpt2_9n_50x10/terminal_gate_report.json]}
   P04-A08: {result: pass, evidence: [fs_diloco/log/inspect_cli.py, tests/log/test_inspect_cli.py, artifacts/duraloco/P04/20260711_p04_a655413_gpt2_9n_50x10/inspect_verify.json]}
-  P04-A09: {result: pass, evidence: [artifacts/duraloco/P04/20260711_checker_p04_79373ec_1node/checker_report.md, artifacts/duraloco/P04/20260711_checker_p04_79373ec_1node/checker_results.json]}
+  P04-A09: {result: pass, evidence: [artifacts/duraloco/P04/20260711_checker_p04_883511f_1node/checker_report.md, artifacts/duraloco/P04/20260711_checker_p04_883511f_1node/checker_results.json]}
 open_decisions: []
 open_blockers: []
 artifacts:
@@ -33,8 +33,9 @@ artifacts:
   - artifacts/duraloco/P04/20260711_p04_a655413_2node
   - artifacts/duraloco/P04/20260711_p04_a655413_gpt2_9n_50x10
   - artifacts/duraloco/P04/20260711_checker_p04_79373ec_1node
-next_action: "persist parent-linked Maker evidence and rerun the independent Checker"
+  - artifacts/duraloco/P04/20260711_checker_p04_883511f_1node
+next_action: "start P05 syncer lease fencing and failover from the completed P04 branch tip"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
-checker_report: artifacts/duraloco/P04/20260711_checker_p04_79373ec_1node/checker_report.md
+checker_report: artifacts/duraloco/P04/20260711_checker_p04_883511f_1node/checker_report.md
