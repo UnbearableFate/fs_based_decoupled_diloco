@@ -67,7 +67,9 @@ digests and an independent event fold verify every stored prefix.
 Seeded traces cover publication (including before/after-effect crashes),
 selection/commit, rejected illegal selections, crash, and restart. Rejected
 transitions must leave the durable state unchanged, and replay must produce the
-same state digest. The quick gate runs 1,000 traces; the
+same state digest. Commit trace events call the same oldest-first
+`select_quorum` policy as the transition specification; proposal-ID ordering
+cannot bypass learner-lineage ordering. The quick gate runs 1,000 traces; the
 explicit suite runs 10,000. The minimizer removes irrelevant events from a
 failing trace. Deliberate double-apply, wrong-parent, parameter/outer-state
 pairing, and canonical-but-numerically-wrong transition mutants must be

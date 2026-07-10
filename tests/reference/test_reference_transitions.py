@@ -167,7 +167,7 @@ def test_committed_learner_lineage_rejects_sequence_rollback():
     rollback = proposal_for(state, learner=0, sequence=1)
     state = state.publish(rollback)
     assert not state.eligible(rollback)
-    with pytest.raises(Exception, match="ineligible"):
+    with pytest.raises(TransitionError, match="ineligible"):
         prepare_transition(
             state,
             fragment_id=0,

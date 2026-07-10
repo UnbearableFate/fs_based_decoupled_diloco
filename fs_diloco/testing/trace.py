@@ -12,6 +12,7 @@ from fs_diloco.log.model import (
     TransitionError,
     assert_invariants,
     prepare_transition,
+    select_quorum,
 )
 from fs_diloco.protocol.canonical_json import canonical_digest
 from fs_diloco.testing.reference_simulator import (
@@ -132,15 +133,16 @@ def replay_trace(trace: Trace) -> SystemState:
             simulator.attempt_publish(proposal, crash_at=event.crash_point)
         elif event.action == "commit":
             state = simulator.durable_state
-            eligible = sorted(
-                proposal.proposal_id
-                for proposal in state.proposals.values()
-                if proposal.fragment_id == event.fragment and state.eligible(proposal)
+            selected = select_quorum(
+                state,
+                fragment_id=event.fragment,
+                quorum_min=1,
+                quorum_max=1,
             )
-            if eligible:
+            if selected:
                 simulator.attempt_commit(
                     fragment_id=event.fragment,
-                    selected_proposal_ids=(eligible[0],),
+                    selected_proposal_ids=selected,
                     crash_at=event.crash_point,
                 )
         elif event.action == "restart":

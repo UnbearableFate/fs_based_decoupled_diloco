@@ -1,6 +1,6 @@
 ---
 title: "DuraLoCo Codex Loop Operating Contract"
-version: "1.2"
+version: "1.3"
 date: "2026-07-10"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
 planning_basis: "codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d"
@@ -99,7 +99,8 @@ git log -5 --oneline
 3. 设计至少一个 Maker 未运行的反例；
 4. 检查测试是否误把 mock 成功当作真实 backend 成功；
 5. 检查是否在 Miyabi 登录节点进行了 runtime 工作；
-6. 输出结构化 checker report。
+6. 输出结构化 checker report；
+7. 若 milestone Checker 未通过，明确记录失败现象、预期与实际、证据和原因；原因尚未证实时必须写 `unknown`，不得把推测写成 root cause。
 
 写密集型任务不得由多个 subagent 并行修改同一核心目录。适合并行的工作仅限独立的文献核查、测试设计、日志分析、静态审查和互不重叠的 backend 实现。
 
@@ -114,11 +115,34 @@ plans/duraloco/BLOCKERS.md
 artifacts/duraloco/<phase>/<run_id>/manifest.json
 artifacts/duraloco/<phase>/<run_id>/commands.log
 artifacts/duraloco/<phase>/<run_id>/checker_report.md
+plans/duraloco/phases/<phase>_PHASE_REPORT.md
 ```
 
 `STATE.yaml` 必须能让一个全新的 Codex 会话在不依赖聊天历史的情况下恢复：当前阶段、当前 loop、通过/失败 gate、下一动作和仅限外部风险操作所需的审批。
 
-### 2.7 自动目标与阶段推进
+### 2.7 双语里程碑与 Checker 失败报告
+
+这里的 milestone 指每个 `PXX` 阶段（`P00`–`P12`）的 gate 结果。阶段首次进入 `checking`，以及随后到达 `completed` 或 `blocked` 时，Maker 必须创建或更新：
+
+```text
+plans/duraloco/phases/PXX_PHASE_REPORT.md
+```
+
+该 Markdown 报告必须在同一文件中包含 `## English` 和 `## 中文`，两部分陈述相同事实，至少包括：milestone/phase、当前状态、已完成与未完成的 acceptance targets、branch/commit、验证命令或 job/run IDs、Checker verdict、已知限制和下一动作。只翻译标题、不翻译正文不算双语报告。
+
+当 Checker 给出 `FAIL`、`BLOCKED`，或带有阻塞必需 gate 的 `PASS_WITH_FOLLOWUPS` 时，agent 必须在修复或重试前，把以下内容追加到该报告的 Checker failure history，并同步写入对应 artifact 的 `checker_report.md`：
+
+- failure attempt、时间和 Checker identity；
+- **phenomenon / 现象**：可观察到的失败、最小复现、expected vs actual；
+- **reason / 原因**：已证实的 root cause；若尚未证实则明确标记 `unknown` 并列出待验证假设；
+- 受影响的 acceptance IDs/invariants、证据路径、job/run IDs；
+- 修复动作、重试 lineage（新 run ID 和 `parent_run_id`）及当前结果。
+
+失败历史是 append-only evidence。后续通过不得删除、覆盖或改写早先失败；只能追加 resolution。阶段不得在双语报告未反映最终 Checker 结果时标记 `completed` 或开始下一阶段。
+
+当一个新的 `PXX` target 通过全部必需 gate 和独立 Checker 后，agent 必须创建一个 milestone archival Git commit，提交该阶段实现、最终 `STATE.yaml`、双语 phase report 和受版本控制的 evidence references，并把该 commit SHA 写回报告/状态。archival commit 成功前不得把下一 `PXX` 标记为已开始。此规则只要求 feature-branch commit，不授权 merge `main`。
+
+### 2.8 自动目标与阶段推进
 
 - 一个 loop/goal 的必需 acceptance gates 全部有证据且独立 Checker 结论为 `PASS`，或 `PASS_WITH_FOLLOWUPS` 且 follow-up 不影响必需 gate 时，agent 立即把该 goal 标记为完成并自动进入下一个 goal，无需用户复核。
 - 一个 phase 的全部必需 acceptance IDs 通过后，agent 把 phase 标记为 `completed`，持久化报告和 verified commit，并按照依赖图自动创建/切换到下一 phase 分支继续执行；阶段之间不设置人工审核或等待状态。

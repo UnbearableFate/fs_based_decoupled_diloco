@@ -4,6 +4,7 @@ import os
 
 import pytest
 
+from fs_diloco.log.model import ReferenceProposal
 from fs_diloco.testing.model_checker import run_seeded_traces
 from fs_diloco.testing.trace import Trace, TraceEvent, generate_trace, minimize_failure, replay_trace
 
@@ -24,6 +25,66 @@ def test_nightly_suite_covers_ten_thousand_traces():
 def test_trace_replay_digest_is_stable():
     trace = generate_trace(20260710, steps=30)
     assert replay_trace(trace).state_digest() == replay_trace(trace).state_digest()
+
+
+def test_trace_commit_uses_oldest_first_quorum_policy_not_proposal_id_order():
+    older = ReferenceProposal.create(
+        learner_id="learner-000",
+        session_id="session-000",
+        sequence=0,
+        fragment_id=0,
+        base_commit_id="genesis",
+        base_commit_seq=0,
+        base_fragment_version=0,
+        target_tokens=10,
+        values=(1.0, 0.0),
+    )
+    newer = next(
+        candidate
+        for index in range(2, 1000)
+        if (
+            candidate := ReferenceProposal.create(
+                learner_id="learner-000",
+                session_id="session-000",
+                sequence=1,
+                fragment_id=0,
+                base_commit_id="genesis",
+                base_commit_seq=0,
+                base_fragment_version=0,
+                target_tokens=10,
+                values=(float(index), 0.0),
+            )
+        ).proposal_id
+        < older.proposal_id
+    )
+    trace = Trace(
+        seed=4242,
+        events=(
+            TraceEvent(
+                action="publish",
+                learner=0,
+                fragment=0,
+                sequence=older.sequence,
+                tokens=older.target_tokens,
+                value_hex=tuple(value.hex() for value in older.values),
+            ),
+            TraceEvent(
+                action="publish",
+                learner=0,
+                fragment=0,
+                sequence=newer.sequence,
+                tokens=newer.target_tokens,
+                value_hex=tuple(value.hex() for value in newer.values),
+            ),
+            TraceEvent(action="commit", fragment=0),
+        ),
+    )
+
+    replayed = replay_trace(trace)
+
+    assert replayed.commits[0].selected_proposal_ids == (older.proposal_id,)
+    assert newer.proposal_id not in replayed.consumed_proposal_ids
+    assert newer.proposal_id not in replayed.dropped_proposal_ids
 
 
 def test_failure_minimizer_removes_irrelevant_events():
