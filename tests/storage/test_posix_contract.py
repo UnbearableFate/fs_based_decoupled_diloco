@@ -10,6 +10,7 @@ from fs_diloco.storage import (
     InvalidKey,
     PosixStorageBackend,
     PreconditionFailed,
+    StorageIOError,
 )
 
 
@@ -129,3 +130,30 @@ def test_posix_capability_records_parent_fsync_and_locking(tmp_path):
     assert backend.capabilities.advisory_lock
     assert backend.capabilities.atomic_replace
     assert os.path.samefile(backend.root, tmp_path / "store")
+
+
+def test_posix_temp_creation_and_lock_errors_are_translated(tmp_path, monkeypatch):
+    import errno
+    import fs_diloco.storage.posix as posix_module
+
+    backend = PosixStorageBackend(tmp_path / "store-errors")
+
+    def fail_temp(*args, **kwargs):
+        raise OSError(errno.ENOSPC, "injected no space")
+
+    monkeypatch.setattr(posix_module.tempfile, "mkstemp", fail_temp)
+    with pytest.raises(StorageIOError) as temp_error:
+        backend.put_immutable("objects/temp", b"x")
+    assert temp_error.value.errno == errno.ENOSPC
+    assert not temp_error.value.retryable
+
+    monkeypatch.undo()
+
+    def fail_lock(*args, **kwargs):
+        raise OSError(errno.ESTALE, "injected stale handle")
+
+    monkeypatch.setattr(posix_module.fcntl, "flock", fail_lock)
+    with pytest.raises(StorageIOError) as lock_error:
+        backend.put_immutable("objects/lock", b"x")
+    assert lock_error.value.errno == errno.ESTALE
+    assert lock_error.value.retryable

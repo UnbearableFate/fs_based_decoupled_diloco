@@ -70,12 +70,22 @@ class PosixStorageBackend:
     ) -> None:
         if lock_timeout_seconds <= 0:
             raise ValueError("lock_timeout_seconds must be positive")
-        self.root = Path(root).expanduser().resolve(strict=False)
-        self.root.mkdir(parents=True, exist_ok=True)
+        try:
+            self.root = Path(root).expanduser().resolve(strict=False)
+            self.root.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            raise StorageIOError.from_oserror(exc, operation="initialize_root", key=".") from exc
         if self.root.is_symlink() or not self.root.is_dir():
             raise CapabilityError("POSIX backend root must be a real directory")
         self._lock_root = self.root / RESERVED_ROOT
-        self._lock_root.mkdir(mode=0o700, exist_ok=True)
+        try:
+            self._lock_root.mkdir(mode=0o700, exist_ok=True)
+        except OSError as exc:
+            raise StorageIOError.from_oserror(
+                exc,
+                operation="initialize_lock_root",
+                key=RESERVED_ROOT,
+            ) from exc
         self._lock_timeout_seconds = float(lock_timeout_seconds)
         self._stage_hook = stage_hook
         self._history: list[OperationRecord] = []
@@ -158,16 +168,29 @@ class PosixStorageBackend:
         current = self.root
         for part in relative.parts:
             child = current / part
-            if child.exists():
-                if child.is_symlink() or not child.is_dir():
-                    raise CapabilityError(f"object parent is not a real directory: {child}")
-            else:
-                try:
-                    child.mkdir(mode=0o755)
-                except FileExistsError:
+            try:
+                if child.exists():
                     if child.is_symlink() or not child.is_dir():
-                        raise CapabilityError(f"object parent raced with non-directory: {child}")
-                self._fsync_directory(current)
+                        raise CapabilityError(
+                            f"object parent is not a real directory: {child}"
+                        )
+                else:
+                    child.mkdir(mode=0o755)
+                    self._fsync_directory(current)
+            except FileExistsError:
+                if child.is_symlink() or not child.is_dir():
+                    raise CapabilityError(
+                        f"object parent raced with non-directory: {child}"
+                    )
+            except StorageError:
+                raise
+            except OSError as exc:
+                key = path.relative_to(self.root).as_posix()
+                raise StorageIOError.from_oserror(
+                    exc,
+                    operation="ensure_parent",
+                    key=key,
+                ) from exc
             current = child
 
     def _lock_path(self, key: str) -> Path:
@@ -182,10 +205,12 @@ class PosixStorageBackend:
         except OSError as exc:
             raise StorageIOError.from_oserror(exc, operation="open_lock", key=key) from exc
         deadline = time.monotonic() + self._lock_timeout_seconds
+        acquired = False
         try:
             while True:
                 try:
                     fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    acquired = True
                     break
                 except BlockingIOError as exc:
                     if time.monotonic() >= deadline:
@@ -195,12 +220,32 @@ class PosixStorageBackend:
                             key=key,
                         ) from exc
                     time.sleep(0.01)
+                except OSError as exc:
+                    raise StorageIOError.from_oserror(
+                        exc,
+                        operation="acquire_lock",
+                        key=key,
+                    ) from exc
             yield
         finally:
             try:
-                fcntl.flock(descriptor, fcntl.LOCK_UN)
+                if acquired:
+                    fcntl.flock(descriptor, fcntl.LOCK_UN)
+            except OSError as exc:
+                raise StorageIOError.from_oserror(
+                    exc,
+                    operation="release_lock",
+                    key=key,
+                ) from exc
             finally:
-                os.close(descriptor)
+                try:
+                    os.close(descriptor)
+                except OSError as exc:
+                    raise StorageIOError.from_oserror(
+                        exc,
+                        operation="close_lock",
+                        key=key,
+                    ) from exc
 
     @staticmethod
     def _new_version() -> str:
@@ -306,12 +351,22 @@ class PosixStorageBackend:
         return self._read_path(contained_path(self.root, key), key)
 
     def _publish(self, path: Path, envelope: bytes, *, replace: bool) -> None:
-        self._ensure_parent(path)
-        descriptor, temp_name = tempfile.mkstemp(
-            prefix=f".{path.name}.",
-            suffix=".duraloco-tmp",
-            dir=path.parent,
-        )
+        key = str(path.relative_to(self.root))
+        try:
+            self._ensure_parent(path)
+            descriptor, temp_name = tempfile.mkstemp(
+                prefix=f".{path.name}.",
+                suffix=".duraloco-tmp",
+                dir=path.parent,
+            )
+        except StorageError:
+            raise
+        except OSError as exc:
+            raise StorageIOError.from_oserror(
+                exc,
+                operation="create_temp",
+                key=key,
+            ) from exc
         temp_path = Path(temp_name)
         published = False
         try:
@@ -337,7 +392,7 @@ class PosixStorageBackend:
             raise StorageIOError.from_oserror(
                 exc,
                 operation="replace" if replace else "create",
-                key=str(path.relative_to(self.root)),
+                key=key,
             ) from exc
         finally:
             if not published or temp_path.exists():

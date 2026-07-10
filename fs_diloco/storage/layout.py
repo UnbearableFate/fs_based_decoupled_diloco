@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from pathlib import Path, PurePosixPath
+import stat
 
-from .errors import InvalidKey
+from .errors import InvalidKey, StorageIOError
 
 
 RESERVED_ROOT = ".duraloco-locks"
@@ -53,11 +54,19 @@ def contained_path(root: Path, key: str) -> Path:
     candidate = root.joinpath(*PurePosixPath(normalized).parts)
     try:
         candidate.resolve(strict=False).relative_to(root)
-    except (OSError, RuntimeError, ValueError) as exc:
+    except OSError as exc:
+        raise StorageIOError.from_oserror(exc, operation="resolve_key", key=key) from exc
+    except (RuntimeError, ValueError) as exc:
         raise InvalidKey(f"storage key escapes backend root: {key!r}") from exc
     current = root
     for part in PurePosixPath(normalized).parts:
         current = current / part
-        if current.exists() and current.is_symlink():
+        try:
+            mode = current.lstat().st_mode
+        except FileNotFoundError:
+            continue
+        except OSError as exc:
+            raise StorageIOError.from_oserror(exc, operation="lstat_key", key=key) from exc
+        if stat.S_ISLNK(mode):
             raise InvalidKey(f"storage key traverses a symbolic link: {key!r}")
     return candidate
