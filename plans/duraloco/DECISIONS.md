@@ -241,7 +241,7 @@ run generation plus an explicit compatibility amendment.
 
 - Context: retries and independent backends must produce the same logical transition.
 - Candidates: random commit IDs; timestamps/listing order; canonical parent, selection, weights, outputs, and implementation digest.
-- Choice: proposal IDs are sorted, normalized float weights use exact `float.hex`, payloads use canonical JSON, and commit identity binds the parent head version plus both output refs and optimizer implementation digest; observational timestamps are excluded.
+- Choice: proposal IDs are sorted, normalized float weights use exact `float.hex`, payloads use canonical JSON, and commit identity binds the canonical parent-head byte digest plus both output refs and optimizer implementation digest; observational timestamps and backend generation tokens are excluded. The opaque backend generation remains the CAS precondition only.
 - Rejected: random or observational inputs prevent deterministic retry and cross-backend equivalence.
 - Compatibility: the frozen P01 identities and P02 numeric oracle are reused.
 - Reversibility: identity changes require a new run generation/protocol version.

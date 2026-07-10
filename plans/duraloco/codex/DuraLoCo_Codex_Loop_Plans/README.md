@@ -1,6 +1,6 @@
 ---
 title: "DuraLoCo Codex Loop-Engineering Implementation Plans"
-version: "1.2"
+version: "1.4"
 date: "2026-07-10"
 planning_basis: "codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d"
 ---
@@ -16,6 +16,7 @@ planning_basis: "codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe2
 - maker–checker 交接；
 - Miyabi 本地→登录节点→1 节点→2 节点→9 节点验证阶梯；
 - 自动 goal/phase 推进、外部风险审批与停止条件；
+- P04 起每个 milestone 的真实 9-node GPT-2/WikiText-2 50 local-step × 10 outer-transition terminal gate；
 - 可直接复制给 Codex 的启动 prompt。
 
 ## 1. 规划基线

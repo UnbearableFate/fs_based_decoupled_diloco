@@ -1,0 +1,150 @@
+#!/bin/bash
+#PBS -N duraloco_p04_9n
+#PBS -q regular-g
+#PBS -W group_list=xg24i002
+#PBS -l select=9:mpiprocs=1
+#PBS -l walltime=00:15:00
+#PBS -j oe
+#PBS -m ae
+
+set -eEuo pipefail
+trap 'echo "[ERROR] terminal 9-node 50x10 gate failed at line $LINENO" >&2' ERR
+
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat
+REQUIRED_MODULES=()
+for module_name in "${REQUIRED_MODULES[@]}"; do
+  module load "$module_name"
+done
+module list 2>&1 | cat
+
+: "${PBS_NODEFILE:?PBS_NODEFILE is required}"
+PROJECT_ROOT="${PROJECT_ROOT:-${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}}"
+PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
+CONFIG="${CONFIG:-$PROJECT_ROOT/configs/duraloco_milestone_gpt2_9node_50x10.yaml}"
+PHASE="${PHASE:-P04}"
+RUN_ID="${RUN_ID:-$(date +%Y%m%d_%H%M%S)_${PHASE,,}_gpt2_9n_50x10}"
+PARENT_RUN_ID="${PARENT_RUN_ID:-}"
+SHARED_ROOT="${SHARED_ROOT:-$PROJECT_ROOT/runs/fs_diloco/$RUN_ID}"
+ARTIFACT_ROOT="${ARTIFACT_ROOT:-$PROJECT_ROOT/artifacts/duraloco/$PHASE/$RUN_ID}"
+P04_STORAGE_ROOT="${P04_STORAGE_ROOT:-$(dirname "$PROJECT_ROOT")/duraloco_p04_runtime/${RUN_ID}_terminal}"
+SYNCER_DB_DIR="${SYNCER_DB_DIR:-${TMPDIR:-/tmp}/fs_diloco/$RUN_ID}"
+CACHE_ROOT="${CACHE_ROOT:-$PROJECT_ROOT/.cache/fs_diloco}"
+HF_HOME="${HF_HOME:-$CACHE_ROOT/huggingface}"
+HF_DATASETS_CACHE="${HF_DATASETS_CACHE:-$HF_HOME/datasets}"
+HF_HUB_CACHE="${HF_HUB_CACHE:-$HF_HOME/hub}"
+NUM_LEARNERS=8
+OMP_NUM_THREADS="${OMP_NUM_THREADS:-8}"
+TOKENIZERS_PARALLELISM=false
+WANDB_MODE=disabled
+
+if [[ ! -x "$PYTHON_BIN" ]]; then
+  echo "Python executable not found: $PYTHON_BIN" >&2
+  exit 2
+fi
+cd "$PROJECT_ROOT"
+mapfile -t HOSTS < <(sort -u "$PBS_NODEFILE")
+if [[ "${#HOSTS[@]}" -ne 9 ]]; then
+  echo "Expected 9 unique nodes, got ${#HOSTS[@]}" >&2
+  exit 2
+fi
+mkdir -p \
+  "$SHARED_ROOT" \
+  "$ARTIFACT_ROOT" \
+  "$P04_STORAGE_ROOT" \
+  "$HF_DATASETS_CACHE" \
+  "$HF_HUB_CACHE"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+
+sort -u "$PBS_NODEFILE" | tee "$ARTIFACT_ROOT/hosts.log"
+printf 'PBS_JOBID=%s\nPBS_NODEFILE=%s\nPHASE=%s\nRUN_ID=%s\nSHARED_ROOT=%s\nP04_STORAGE_ROOT=%s\n' \
+  "${PBS_JOBID:-}" "$PBS_NODEFILE" "$PHASE" "$RUN_ID" "$SHARED_ROOT" "$P04_STORAGE_ROOT" \
+  | tee "$ARTIFACT_ROOT/pbs_environment.log"
+"$PYTHON_BIN" --version 2>&1 | tee "$ARTIFACT_ROOT/python_version.log"
+git status --short --branch | tee "$ARTIFACT_ROOT/git_status.log"
+git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"
+sha256sum "$CONFIG" | tee "$ARTIFACT_ROOT/config_sha256.log"
+findmnt -T "$SHARED_ROOT" 2>&1 | tee "$ARTIFACT_ROOT/mount.log" || true
+if command -v lfs >/dev/null 2>&1; then
+  lfs getstripe "$SHARED_ROOT" 2>&1 | tee "$ARTIFACT_ROOT/stripe.log" || true
+else
+  printf 'lfs unavailable\n' | tee "$ARTIFACT_ROOT/stripe.log"
+fi
+
+MPI_ENV_ARGS=(
+  "PROJECT_ROOT=$PROJECT_ROOT"
+  "PYTHON_BIN=$PYTHON_BIN"
+  "CONFIG=$CONFIG"
+  "RUN_ID=$RUN_ID"
+  "SHARED_ROOT=$SHARED_ROOT"
+  "SYNCER_DB_DIR=$SYNCER_DB_DIR"
+  "HF_HOME=$HF_HOME"
+  "HF_DATASETS_CACHE=$HF_DATASETS_CACHE"
+  "HF_HUB_CACHE=$HF_HUB_CACHE"
+  "WANDB_MODE=$WANDB_MODE"
+  "NUM_LEARNERS=$NUM_LEARNERS"
+  "OMP_NUM_THREADS=$OMP_NUM_THREADS"
+  "TOKENIZERS_PARALLELISM=$TOKENIZERS_PARALLELISM"
+)
+TRAIN_COMMAND=(
+  mpirun
+  --mca mpi_abort_print_stack 1
+  --report-bindings
+  --bind-to core
+  -np 9
+  /usr/bin/env "${MPI_ENV_ARGS[@]}"
+  bash -lc
+  'set -eEuo pipefail; cd "$PROJECT_ROOT"; export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"; rank="${OMPI_COMM_WORLD_RANK:?missing rank}"; if [[ "$rank" -eq 0 ]]; then export CUDA_VISIBLE_DEVICES=0; exec "$PYTHON_BIN" -m fs_diloco.syncer --config "$CONFIG" --run-id "$RUN_ID" --shared-root "$SHARED_ROOT" --sqlite-local-dir "$SYNCER_DB_DIR" --num-learners "$NUM_LEARNERS"; else learner_id=$(printf "learner_%03d" $((rank - 1))); export CUDA_VISIBLE_DEVICES=0; exec "$PYTHON_BIN" -m fs_diloco.learner --config "$CONFIG" --run-id "$RUN_ID" --shared-root "$SHARED_ROOT" --learner-id "$learner_id" --num-learners "$NUM_LEARNERS"; fi'
+)
+printf -v TRAIN_TEXT '%q ' "${TRAIN_COMMAND[@]}"
+printf '%s\n' "${TRAIN_TEXT% }" | tee "$ARTIFACT_ROOT/commands.log"
+"${TRAIN_COMMAND[@]}" 2>&1 | tee "$ARTIFACT_ROOT/training.log"
+
+SUMMARY=("$PYTHON_BIN" -m fs_diloco.analysis summary "$SHARED_ROOT" --json)
+printf -v SUMMARY_TEXT '%q ' "${SUMMARY[@]}"
+printf '%s\n' "${SUMMARY_TEXT% }" | tee -a "$ARTIFACT_ROOT/commands.log"
+"${SUMMARY[@]}" | tee "$ARTIFACT_ROOT/training_summary.json"
+
+PROBE=(
+  "$PYTHON_BIN" -m fs_diloco.log.training_probe
+  --training-root "$SHARED_ROOT"
+  --config "$CONFIG"
+  --storage-root "$P04_STORAGE_ROOT"
+  --run-id "$RUN_ID"
+  --artifact-root "$ARTIFACT_ROOT"
+  --output "$ARTIFACT_ROOT/terminal_gate_report.json"
+)
+printf -v PROBE_TEXT '%q ' "${PROBE[@]}"
+printf '%s\n' "${PROBE_TEXT% }" | tee -a "$ARTIFACT_ROOT/commands.log"
+"${PROBE[@]}" 2>&1 | tee "$ARTIFACT_ROOT/p04_probe.log"
+
+TESTS=("$PYTHON_BIN" -m pytest -q tests/log --junitxml "$ARTIFACT_ROOT/p04_junit.xml")
+printf -v TEST_TEXT '%q ' "${TESTS[@]}"
+printf '%s\n' "${TEST_TEXT% }" | tee -a "$ARTIFACT_ROOT/commands.log"
+"${TESTS[@]}" 2>&1 | tee "$ARTIFACT_ROOT/p04_pytest.log"
+
+qstat "$PBS_JOBID" | tee "$ARTIFACT_ROOT/qstat_final.log"
+cp "$ARTIFACT_ROOT/training.log" "$ARTIFACT_ROOT/stdout.log"
+: > "$ARTIFACT_ROOT/stderr.log"
+MANIFEST_ARGS=(
+  --root "$PROJECT_ROOT"
+  --output "$ARTIFACT_ROOT/manifest.json"
+  --phase "$PHASE"
+  --purpose training
+  --run-id "$RUN_ID"
+  --backend lustre
+  --config configs/duraloco_milestone_gpt2_9node_50x10.yaml
+  --commands-log commands.log
+  --stdout stdout.log
+  --stderr stderr.log
+  --exit-code 0
+  --result pass
+  --assertion "real GPT-2 WikiText-2 used one syncer and eight learners on nine nodes"
+  --assertion "all learners completed at least 50 local steps and exactly 10 outer transitions committed"
+  --assertion "losses were finite and eleven global checkpoints were retained and hashed"
+  --assertion "P04 commit replay cache orphan crash matrix and CLI probes passed"
+)
+if [[ -n "$PARENT_RUN_ID" ]]; then
+  MANIFEST_ARGS+=(--parent-run-id "$PARENT_RUN_ID")
+fi
+"$PYTHON_BIN" scripts/agent/create_run_manifest.py "${MANIFEST_ARGS[@]}"
+"$PYTHON_BIN" scripts/agent/check_run_manifest.py "$ARTIFACT_ROOT/manifest.json" --root "$PROJECT_ROOT"

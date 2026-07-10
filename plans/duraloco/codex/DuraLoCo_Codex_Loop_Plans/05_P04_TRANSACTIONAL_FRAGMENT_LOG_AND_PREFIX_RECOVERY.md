@@ -272,7 +272,7 @@ tests/log/
 | 本地 reference/unit | 必须：完整 crash matrix、two-writer threads/processes。 |
 | Miyabi 1-node | 必须：Lustre commit/replay 与 cache rebuild。 |
 | Miyabi 2-node | 必须：two-writer same-parent CAS、response-loss/takeover simulation。 |
-| 9-node | 不要求。 |
+| Miyabi 9-node | **必须**：以 `qsub` 提交且 `walltime=00:15:00`；真实 `gpt2` + WikiText-2，1 syncer + 8 learners，`inner_steps=50`，恰好 10 个 global outer transitions；在同一 verified commit 上运行 P04 commit/replay/cache/orphan/CLI assertions 并保存 manifest。15 分钟未完成视为失败信号。 |
 
 ## 10. Maker–Checker 交接
 
@@ -285,6 +285,7 @@ tests/log/
 - 每条验收标准对应的证据路径；
 - 已知限制、跳过的验证及原因；
 - `git status --short --branch` 与 `git rev-parse HEAD` 输出。
+- terminal 9-node GPT-2 50×10 run 的 PBS job、9 hosts、config digest、finite-loss、10-transition、checkpoint 和 P04 feature assertion 证据。
 
 ### Checker 必须独立检查
 

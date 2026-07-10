@@ -1,0 +1,124 @@
+#!/bin/bash
+#PBS -N duraloco_p04_2n
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=2:mpiprocs=1
+#PBS -l walltime=00:10:00
+#PBS -j oe
+#PBS -m ae
+
+set -eEuo pipefail
+trap 'echo "[ERROR] P04 2-node gate failed at line $LINENO" >&2' ERR
+
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat
+REQUIRED_MODULES=()
+for module_name in "${REQUIRED_MODULES[@]}"; do
+  module load "$module_name"
+done
+module list 2>&1 | cat
+
+: "${PBS_NODEFILE:?PBS_NODEFILE is required}"
+PROJECT_ROOT="${PROJECT_ROOT:-${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}}"
+PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
+RUN_ID="${RUN_ID:-$(date +%Y%m%d_%H%M%S)_p04_2node}"
+PARENT_RUN_ID="${PARENT_RUN_ID:-}"
+ARTIFACT_ROOT="${ARTIFACT_ROOT:-$PROJECT_ROOT/artifacts/duraloco/P04/$RUN_ID}"
+STORAGE_ROOT="${STORAGE_ROOT:-$(dirname "$PROJECT_ROOT")/duraloco_p04_runtime/$RUN_ID}"
+ROUNDS="${ROUNDS:-20}"
+
+if [[ ! -x "$PYTHON_BIN" ]]; then
+  echo "Python executable not found: $PYTHON_BIN" >&2
+  exit 2
+fi
+cd "$PROJECT_ROOT"
+mkdir -p "$ARTIFACT_ROOT/ranks" "$STORAGE_ROOT"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+
+sort -u "$PBS_NODEFILE" | tee "$ARTIFACT_ROOT/hosts.log"
+printf 'PBS_JOBID=%s\nPBS_NODEFILE=%s\nSTORAGE_ROOT=%s\nROUNDS=%s\n' \
+  "${PBS_JOBID:-}" "$PBS_NODEFILE" "$STORAGE_ROOT" "$ROUNDS" \
+  | tee "$ARTIFACT_ROOT/pbs_environment.log"
+"$PYTHON_BIN" --version 2>&1 | tee "$ARTIFACT_ROOT/python_version.log"
+git status --short --branch | tee "$ARTIFACT_ROOT/git_status.log"
+git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"
+findmnt -T "$STORAGE_ROOT" 2>&1 | tee "$ARTIFACT_ROOT/mount.log" || true
+if command -v lfs >/dev/null 2>&1; then
+  lfs getstripe "$STORAGE_ROOT" 2>&1 | tee "$ARTIFACT_ROOT/stripe.log" || true
+else
+  printf 'lfs unavailable\n' | tee "$ARTIFACT_ROOT/stripe.log"
+fi
+
+MPI_COMMAND=(
+  mpirun
+  --mca mpi_abort_print_stack 1
+  --report-bindings
+  --bind-to none
+  --map-by ppr:1:node
+  -np 2
+  /usr/bin/env
+  "PROJECT_ROOT=$PROJECT_ROOT"
+  "PYTHON_BIN=$PYTHON_BIN"
+  "STORAGE_ROOT=$STORAGE_ROOT"
+  "ARTIFACT_ROOT=$ARTIFACT_ROOT"
+  "RUN_ID=$RUN_ID"
+  "ROUNDS=$ROUNDS"
+  bash -lc
+  'cd "$PROJECT_ROOT"; export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"; exec "$PYTHON_BIN" -m fs_diloco.log.miyabi_worker two-node --root "$STORAGE_ROOT" --run-id "$RUN_ID" --rounds "$ROUNDS" --output-dir "$ARTIFACT_ROOT/ranks"'
+)
+printf -v MPI_TEXT '%q ' "${MPI_COMMAND[@]}"
+printf '%s\n' "${MPI_TEXT% }" | tee "$ARTIFACT_ROOT/commands.log"
+"${MPI_COMMAND[@]}" 2>&1 | tee "$ARTIFACT_ROOT/two_node.log"
+
+"$PYTHON_BIN" - "$ARTIFACT_ROOT/ranks" "$ARTIFACT_ROOT/two_node_summary.json" <<'PY'
+import json
+from pathlib import Path
+import sys
+
+rank_dir, output = map(Path, sys.argv[1:])
+reports = [json.loads((rank_dir / f"rank_{rank}.json").read_text()) for rank in range(2)]
+assert {report["rank"] for report in reports} == {0, 1}
+assert len({report["hostname"] for report in reports}) == 2
+assert all(report["status"] == "PASS" for report in reports)
+assert all(report["rounds"] >= 10 for report in reports)
+assert all(report["double_winners"] == 0 for report in reports)
+assert all(report["double_inclusions"] == 0 for report in reports)
+assert len({report["committed_state_digest"] for report in reports}) == 1
+assert sum(report["wins"] for report in reports) == reports[0]["rounds"]
+summary = {
+    "status": "PASS",
+    "hosts": sorted(report["hostname"] for report in reports),
+    "rounds": reports[0]["rounds"],
+    "wins": {str(report["rank"]): report["wins"] for report in reports},
+    "conflicts": {str(report["rank"]): report["conflicts"] for report in reports},
+    "double_winners": 0,
+    "double_inclusions": 0,
+    "committed_state_digest": reports[0]["committed_state_digest"],
+}
+output.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
+print(json.dumps(summary, sort_keys=True))
+PY
+
+qstat "$PBS_JOBID" | tee "$ARTIFACT_ROOT/qstat_final.log"
+cp "$ARTIFACT_ROOT/two_node.log" "$ARTIFACT_ROOT/stdout.log"
+: > "$ARTIFACT_ROOT/stderr.log"
+MANIFEST_ARGS=(
+  --root "$PROJECT_ROOT"
+  --output "$ARTIFACT_ROOT/manifest.json"
+  --phase P04
+  --purpose contract
+  --run-id "$RUN_ID"
+  --backend lustre
+  --config scripts/miyabi/run_duraloco_p04_log_2node.pbs
+  --commands-log commands.log
+  --stdout stdout.log
+  --stderr stderr.log
+  --exit-code 0
+  --result pass
+  --assertion "every two-node same-parent race committed exactly one transition"
+  --assertion "both nodes replayed one identical committed prefix with zero double inclusion"
+)
+if [[ -n "$PARENT_RUN_ID" ]]; then
+  MANIFEST_ARGS+=(--parent-run-id "$PARENT_RUN_ID")
+fi
+"$PYTHON_BIN" scripts/agent/create_run_manifest.py "${MANIFEST_ARGS[@]}"
+"$PYTHON_BIN" scripts/agent/check_run_manifest.py "$ARTIFACT_ROOT/manifest.json" --root "$PROJECT_ROOT"

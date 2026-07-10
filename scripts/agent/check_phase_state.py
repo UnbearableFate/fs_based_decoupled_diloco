@@ -184,6 +184,8 @@ def validate(payload: dict[str, Any], *, root: Path) -> None:
             raise StateError("completed phase cannot have open blockers")
         if any(value in {"not_run", "failed", "blocked"} for value in checks.values()):
             raise StateError("completed phase contains an unresolved check status")
+        if _phase_number(payload["phase"]) >= 4 and checks.get("miyabi_9node") != "miyabi_9node_pass":
+            raise StateError("P04+ completion requires the terminal Miyabi 9-node GPT-2 gate")
     if payload["requires_human_approval"] and not payload["approval_reason"]:
         raise StateError("requires_human_approval needs approval_reason")
 

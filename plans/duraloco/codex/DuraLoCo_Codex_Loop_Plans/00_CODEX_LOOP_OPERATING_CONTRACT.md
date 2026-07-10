@@ -1,6 +1,6 @@
 ---
 title: "DuraLoCo Codex Loop Operating Contract"
-version: "1.3"
+version: "1.4"
 date: "2026-07-10"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
 planning_basis: "codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d"
@@ -373,6 +373,22 @@ mpirun ... /usr/bin/env "KEY=value" ... bash -lc '...'
 5. branch 已 push，工作树干净；
 6. 结果中没有未解释的 NaN、重复 apply、split-brain、live-object deletion 或状态漂移；
 7. 未自动 merge `main`；阶段推进使用 verified phase/integration commit，不等待 main merge。
+8. 从 P04 起，每个尚未归档的 PXX milestone 必须以一次真实 Miyabi 9-node
+   GPT-2 + WikiText-2 训练作为 terminal gate：1 个 syncer、8 个 learner，
+   `training.inner_steps=50`，并且恰好提交 10 个 global/outer optimizer
+   transitions。synthetic、tiny model、少节点或仅 pytest 结果不得替代。
+9. 该 9-node 作业必须在相同 verified commit 上执行本阶段全部新增功能的
+   runtime/probe；artifact 必须记录 PBS job ID、9 个 hostname、config digest、
+   50×10 计数、stop reason、loss finite 检查、checkpoint/head/replay 结果和
+   feature-specific assertions。任一 assertion 未通过时不得完成 milestone，
+   Checker 报告必须记录现象和简短原因。
+   作业必须通过 `qsub` 提交且 `#PBS -l walltime=00:15:00`；15 分钟内未完成
+   50×10 和全部 assertions 即视为真实性能/活性失败信号，不得把 walltime
+   超时当作可忽略的排队或基础设施成功，也不得用延长 walltime 伪装通过。
+10. 到达 milestone 时生成 English/中文双语 Markdown phase report，并在
+    Checker 授权后提交独立 milestone Git commit。P00–P03 是本规则加入前
+    已归档的历史阶段；P04 terminal run 必须以累计方式覆盖当前 harness 可见的
+    P00–P04 功能，P05 及以后不得再使用该历史豁免。
 
 ## 11. 共同启动指令
 
