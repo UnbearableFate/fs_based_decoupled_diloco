@@ -23,9 +23,12 @@ previous version, size, SHA-256, and original payload. A mutation uses:
 
 Payload and version therefore become visible together. Random opaque versions
 prevent an A→B→A ABA cycle from revalidating an old CAS token. A retry after a
-lost successful CAS response is idempotent only while the current envelope
-names the caller's expected version as its direct predecessor and contains the
-same new bytes.
+lost successful CAS response is idempotent only when it supplies the same
+explicit request ID and the current envelope names the caller's expected
+version as its direct predecessor with the same new bytes. Independent clients
+with identical expected version and bytes use distinct request IDs, so at most
+one reports success. Omitting a request ID disables ambiguous stale-call
+idempotency and fails closed.
 
 The persistent lock inode is not lock ownership. POSIX releases `flock` when a
 process exits, so a later process/node can take over without deleting or aging

@@ -29,7 +29,13 @@ from .errors import (
     StorageError,
     StorageIOError,
 )
-from .layout import RESERVED_ROOT, contained_path, normalize_key, normalize_prefix
+from .layout import (
+    RESERVED_ROOT,
+    contained_path,
+    normalize_key,
+    normalize_prefix,
+    normalize_request_id,
+)
 
 
 _MAGIC = b"FSDILOCO-STORAGE-V1\n"
@@ -43,6 +49,7 @@ class _DecodedObject:
     data: bytes
     metadata: ObjectMetadata
     previous_version: str | None
+    request_id: str | None
 
 
 class PosixStorageBackend:
@@ -200,10 +207,17 @@ class PosixStorageBackend:
         return "pv1-" + secrets.token_hex(16)
 
     @staticmethod
-    def _encode(data: bytes, *, version: str, previous_version: str | None) -> bytes:
+    def _encode(
+        data: bytes,
+        *,
+        version: str,
+        previous_version: str | None,
+        request_id: str | None,
+    ) -> bytes:
         header = json.dumps(
             {
                 "previous_version": previous_version,
+                "request_id": request_id,
                 "sha256": hashlib.sha256(data).hexdigest(),
                 "size": len(data),
                 "version": version,
@@ -255,6 +269,7 @@ class PosixStorageBackend:
             raise IntegrityError(f"invalid storage envelope JSON: {key}", key=key) from exc
         if not isinstance(header, dict) or set(header) != {
             "previous_version",
+            "request_id",
             "sha256",
             "size",
             "version",
@@ -262,12 +277,14 @@ class PosixStorageBackend:
             raise IntegrityError(f"invalid storage envelope fields: {key}", key=key)
         version = header["version"]
         previous_version = header["previous_version"]
+        request_id = header["request_id"]
         size = header["size"]
         digest = header["sha256"]
         if (
             not isinstance(version, str)
             or not version.startswith("pv1-")
             or (previous_version is not None and not isinstance(previous_version, str))
+            or (request_id is not None and not isinstance(request_id, str))
             or type(size) is not int
             or size < 0
             or not isinstance(digest, str)
@@ -281,6 +298,7 @@ class PosixStorageBackend:
             data=data,
             metadata=ObjectMetadata(key, size, digest, version),
             previous_version=previous_version,
+            request_id=request_id,
         )
 
     def _read(self, key: str) -> _DecodedObject:
@@ -358,7 +376,12 @@ class PosixStorageBackend:
                 self._record(operation, key, "idempotent", existing.metadata.version)
                 return existing.metadata
             version = self._new_version()
-            envelope = self._encode(data, version=version, previous_version=None)
+            envelope = self._encode(
+                data,
+                version=version,
+                previous_version=None,
+                request_id=None,
+            )
             try:
                 self._publish(path, envelope, replace=False)
             except StorageIOError as exc:
@@ -386,17 +409,24 @@ class PosixStorageBackend:
         *,
         expected_version: str,
         data: BytesLike,
+        request_id: str | None = None,
     ) -> ObjectMetadata:
         operation = "conditional_replace"
         key = normalize_key(key)
         if not isinstance(expected_version, str) or not expected_version:
             raise ValueError("expected_version must be a non-empty string")
+        request_id = normalize_request_id(request_id)
         data = self._snapshot_bytes(data)
         path = contained_path(self.root, key)
         with self._locked(key):
             existing = self._read_path(path, key)
             if existing.metadata.version != expected_version:
-                if existing.previous_version == expected_version and existing.data == data:
+                if (
+                    request_id is not None
+                    and existing.previous_version == expected_version
+                    and existing.request_id == request_id
+                    and existing.data == data
+                ):
                     self._record(
                         operation,
                         key,
@@ -411,7 +441,12 @@ class PosixStorageBackend:
                     key=key,
                 )
             version = self._new_version()
-            envelope = self._encode(data, version=version, previous_version=expected_version)
+            envelope = self._encode(
+                data,
+                version=version,
+                previous_version=expected_version,
+                request_id=request_id,
+            )
             self._publish(path, envelope, replace=True)
             metadata = ObjectMetadata(key, len(data), hashlib.sha256(data).hexdigest(), version)
             self._record(operation, key, "replaced", version)

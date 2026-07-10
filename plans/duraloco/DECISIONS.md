@@ -160,7 +160,7 @@ run generation plus an explicit compatibility amendment.
 
 - Context: P03 needs linearizable single-key conditional replace without an external lock service and without relying on mtime.
 - Candidates: mtime/inode tokens; sidecar generations; one atomic envelope plus a stable advisory lock file.
-- Choice: store payload, a random version token, previous-version token, size, and SHA-256 in one checksummed envelope; serialize mutations with `flock` on a stable SHA-256-derived lock path; publish with same-directory temp write, file fsync, atomic replace, and parent fsync.
+- Choice: store payload, a random version token, previous-version token, explicit mutation request ID, size, and SHA-256 in one checksummed envelope; serialize mutations with `flock` on a stable SHA-256-derived lock path; publish with same-directory temp write, file fsync, atomic replace, and parent fsync. Only the same request ID may classify a stale same-data call as an after-effect retry; independent identical CAS calls still have at most one success.
 - Rejected: mtime/inode tokens admit aliasing; a separately replaced sidecar creates a two-file atomicity gap.
 - Compatibility: the semantic API returns original payload bytes and opaque versions; legacy runtime paths remain untouched.
 - Reversibility: another backend may use provider generations/ETags if it passes the same conformance and race gates.

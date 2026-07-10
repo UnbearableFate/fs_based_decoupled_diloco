@@ -68,6 +68,7 @@ def probe_backend(
         head_key,
         expected_version=control.version,
         data=b"one",
+        request_id="capability-probe-winner",
     )
     stale_rejected = False
     try:
@@ -75,6 +76,7 @@ def probe_backend(
             head_key,
             expected_version=control.version,
             data=b"two",
+            request_id="capability-probe-stale",
         )
     except PreconditionFailed:
         stale_rejected = True

@@ -70,11 +70,17 @@ def test_before_effect_timeout_has_no_effect_and_after_effect_retry_is_idempoten
     backend.inject_failure(FailureRule("conditional_replace", "after"))
     with pytest.raises(InjectedTimeout):
         backend.conditional_replace(
-            "control/head", expected_version=initial.version, data=b"one"
+            "control/head",
+            expected_version=initial.version,
+            data=b"one",
+            request_id="reference-after-effect-retry",
         )
     backend.clear_failures()
     retry = backend.conditional_replace(
-        "control/head", expected_version=initial.version, data=b"one"
+        "control/head",
+        expected_version=initial.version,
+        data=b"one",
+        request_id="reference-after-effect-retry",
     )
     assert retry.sha256 == hashlib.sha256(b"one").hexdigest()
     assert backend.get("control/head") == b"one"

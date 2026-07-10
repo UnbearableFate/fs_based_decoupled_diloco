@@ -36,10 +36,16 @@ def test_after_effect_timeout_retry_is_idempotent():
     backend = FaultInjectingBackend(base, schedule)
     with pytest.raises(InjectedTimeout):
         backend.conditional_replace(
-            "control/head", expected_version=initial.version, data=b"one"
+            "control/head",
+            expected_version=initial.version,
+            data=b"one",
+            request_id="fault-after-effect-retry",
         )
     retry = backend.conditional_replace(
-        "control/head", expected_version=initial.version, data=b"one"
+        "control/head",
+        expected_version=initial.version,
+        data=b"one",
+        request_id="fault-after-effect-retry",
     )
     assert base.get("control/head", expected_version=retry.version) == b"one"
 
@@ -80,4 +86,3 @@ def test_listing_omission_never_controls_head_or_cas():
         "control/head", expected_version=initial.version, data=b"one"
     )
     assert backend.get("control/head", expected_version=updated.version) == b"one"
-

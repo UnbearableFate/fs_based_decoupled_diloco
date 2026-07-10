@@ -34,6 +34,19 @@ def normalize_prefix(prefix: str) -> str:
     return normalize_key(prefix)
 
 
+def normalize_request_id(request_id: str | None) -> str | None:
+    if request_id is None:
+        return None
+    if (
+        not isinstance(request_id, str)
+        or not request_id
+        or len(request_id) > 128
+        or any(ord(char) < 33 or ord(char) > 126 for char in request_id)
+    ):
+        raise ValueError("request_id must be 1..128 visible ASCII characters")
+    return request_id
+
+
 def contained_path(root: Path, key: str) -> Path:
     normalized = normalize_key(key)
     root = root.resolve(strict=False)
@@ -48,4 +61,3 @@ def contained_path(root: Path, key: str) -> Path:
         if current.exists() and current.is_symlink():
             raise InvalidKey(f"storage key traverses a symbolic link: {key!r}")
     return candidate
-

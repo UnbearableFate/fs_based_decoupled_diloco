@@ -78,6 +78,7 @@ def run_contract(
                 head_key,
                 expected_version=current.version,
                 data=f"base:{round_index}".encode("ascii"),
+                request_id=f"base-round-{round_index}",
             )
             backend.put_immutable(f"{round_prefix}/ready", base.version.encode("ascii"))
         expected_version = _wait_for_key(backend, f"{round_prefix}/ready").decode("ascii")
@@ -95,6 +96,7 @@ def run_contract(
                 head_key,
                 expected_version=expected_version,
                 data=value,
+                request_id=f"race-round-{round_index}-rank-{rank}",
             )
         except PreconditionFailed:
             result = {"rank": rank, "status": "conflict", "value": value.decode("ascii")}
@@ -142,6 +144,7 @@ def run_contract(
             head_key,
             expected_version=current.version,
             data=b"stale-lock-takeover-rank-1",
+            request_id="stale-lock-takeover-rank-1",
         )
         backend.put_immutable(
             f"{stale_prefix}/takeover",

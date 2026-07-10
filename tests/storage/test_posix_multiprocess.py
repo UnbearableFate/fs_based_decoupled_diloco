@@ -7,7 +7,14 @@ from pathlib import Path
 from fs_diloco.storage import PosixStorageBackend, PreconditionFailed
 
 
-def _cas_worker(root: str, expected: str, value: bytes, start, results) -> None:
+def _cas_worker(
+    root: str,
+    expected: str,
+    value: bytes,
+    request_id: str,
+    start,
+    results,
+) -> None:
     backend = PosixStorageBackend(root)
     start.wait(10)
     try:
@@ -15,6 +22,7 @@ def _cas_worker(root: str, expected: str, value: bytes, start, results) -> None:
             "control/head",
             expected_version=expected,
             data=value,
+            request_id=request_id,
         )
     except PreconditionFailed:
         results.put(("conflict", value, None))
@@ -48,7 +56,7 @@ def test_competing_processes_with_one_expected_version_have_one_winner(tmp_path)
     workers = [
         context.Process(
             target=_cas_worker,
-            args=(root, initial.version, f"w{i}".encode(), start, results),
+            args=(root, initial.version, f"w{i}".encode(), f"distinct-{i}", start, results),
         )
         for i in range(8)
     ]
@@ -62,6 +70,31 @@ def test_competing_processes_with_one_expected_version_have_one_winner(tmp_path)
     winners = [item for item in observed if item[0] == "winner"]
     assert len(winners) == 1
     assert backend.get("control/head") == winners[0][1]
+
+
+def test_independent_identical_cas_requests_still_have_one_winner(tmp_path):
+    root = str(tmp_path / "store-identical")
+    backend = PosixStorageBackend(root)
+    initial = backend.put_if_absent("control/head", b"zero")
+    context = multiprocessing.get_context("spawn")
+    start = context.Event()
+    results = context.Queue()
+    workers = [
+        context.Process(
+            target=_cas_worker,
+            args=(root, initial.version, b"identical", f"independent-{i}", start, results),
+        )
+        for i in range(8)
+    ]
+    for worker in workers:
+        worker.start()
+    start.set()
+    observed = [results.get(timeout=20) for _ in workers]
+    for worker in workers:
+        worker.join(20)
+        assert worker.exitcode == 0
+    assert sum(item[0] == "winner" for item in observed) == 1
+    assert backend.get("control/head") == b"identical"
 
 
 def test_process_exit_releases_advisory_lock_for_takeover(tmp_path):

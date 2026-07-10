@@ -8,7 +8,7 @@ from typing import Iterable
 
 from .base import BytesLike, DeleteTarget, ObjectMetadata, OperationRecord, StorageCapabilities
 from .errors import InjectedTimeout, ImmutableConflict, NotFound, PreconditionFailed
-from .layout import normalize_key, normalize_prefix
+from .layout import normalize_key, normalize_prefix, normalize_request_id
 
 
 @dataclass
@@ -30,6 +30,7 @@ class _StoredObject:
     data: bytes
     metadata: ObjectMetadata
     previous_version: str | None
+    request_id: str | None
 
 
 class InMemoryStorageBackend:
@@ -129,7 +130,7 @@ class InMemoryStorageBackend:
         else:
             version = self._next_version(data)
             metadata = self._metadata(key, data, version)
-            self._objects[key] = _StoredObject(data, metadata, None)
+            self._objects[key] = _StoredObject(data, metadata, None, None)
             self._record(operation, key, "created", version)
         self._maybe_fail(operation, "after", key)
         return metadata
@@ -145,8 +146,10 @@ class InMemoryStorageBackend:
         *,
         expected_version: str,
         data: BytesLike,
+        request_id: str | None = None,
     ) -> ObjectMetadata:
         key = normalize_key(key)
+        request_id = normalize_request_id(request_id)
         operation = "conditional_replace"
         self._maybe_fail(operation, "before", key)
         data = self._snapshot_bytes(data)
@@ -157,7 +160,12 @@ class InMemoryStorageBackend:
         if existing.metadata.version != expected_version:
             # A retry after an after-effect timeout is idempotent when it sends
             # the exact same bytes and old version token.
-            if existing.previous_version == expected_version and existing.data == data:
+            if (
+                request_id is not None
+                and existing.previous_version == expected_version
+                and existing.request_id == request_id
+                and existing.data == data
+            ):
                 self._record(operation, key, "idempotent_after_effect", existing.metadata.version)
                 self._maybe_fail(operation, "after", key)
                 return existing.metadata
@@ -167,7 +175,7 @@ class InMemoryStorageBackend:
             )
         version = self._next_version(data)
         metadata = self._metadata(key, data, version)
-        self._objects[key] = _StoredObject(data, metadata, expected_version)
+        self._objects[key] = _StoredObject(data, metadata, expected_version, request_id)
         self._record(operation, key, "replaced", version)
         self._maybe_fail(operation, "after", key)
         return metadata

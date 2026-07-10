@@ -80,6 +80,31 @@ def test_posix_opaque_versions_detect_aba_and_do_not_use_mtime(tmp_path):
         )
 
 
+def test_posix_idempotent_retry_requires_the_same_explicit_request_id(tmp_path):
+    backend = PosixStorageBackend(tmp_path / "store-idempotency")
+    initial = backend.put_if_absent("control/head", b"zero")
+    winner = backend.conditional_replace(
+        "control/head",
+        expected_version=initial.version,
+        data=b"same",
+        request_id="request-a",
+    )
+    retry = backend.conditional_replace(
+        "control/head",
+        expected_version=initial.version,
+        data=b"same",
+        request_id="request-a",
+    )
+    assert retry == winner
+    with pytest.raises(PreconditionFailed):
+        backend.conditional_replace(
+            "control/head",
+            expected_version=initial.version,
+            data=b"same",
+            request_id="independent-request-b",
+        )
+
+
 def test_posix_object_ref_delete_fails_closed_on_wrong_version(tmp_path):
     from dataclasses import replace
 

@@ -199,6 +199,7 @@ class FaultInjectingBackend:
         *,
         expected_version: str,
         data: BytesLike,
+        request_id: str | None = None,
     ) -> ObjectMetadata:
         operation = "conditional_replace"
         self._before(operation, key)
@@ -206,6 +207,7 @@ class FaultInjectingBackend:
             key,
             expected_version=expected_version,
             data=data,
+            request_id=request_id,
         )
         self._after(operation, key)
         return result
@@ -247,4 +249,3 @@ class FaultInjectingBackend:
         result = self.backend.list_prefix(prefix)
         event = self._after(operation, prefix)
         return () if event is not None and event.kind == "omit_list" else result
-
