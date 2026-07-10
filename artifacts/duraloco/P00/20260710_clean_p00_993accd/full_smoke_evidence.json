@@ -1,0 +1,119 @@
+{
+  "assertions": {
+    "committed_version_positive": true,
+    "finite_loss_count_positive": true,
+    "invalid_log_lines_zero": true,
+    "nonfinite_loss_count_zero": true,
+    "required_event_groups_present": true,
+    "required_events_present": true,
+    "sqlite_nonempty": true,
+    "stop_reason_accepted": true
+  },
+  "events": {
+    "db_dumped": 2,
+    "final_cleanup_skipped": 1,
+    "global_published": 1,
+    "heartbeat_written": 8,
+    "heartbeats_ingested": 147,
+    "inner_optimizer_reset": 2,
+    "inner_step_summary": 16,
+    "latest_polled": 8,
+    "learner_liveness_updated": 147,
+    "loaded_global": 2,
+    "metadata_ingested": 1,
+    "no_progress_timeout": 1,
+    "outer_step_applied": 1,
+    "process_exit": 3,
+    "process_start": 3,
+    "quorum_wait": 160,
+    "run_initialized": 1,
+    "stop_published": 1,
+    "update_written": 8,
+    "updates_dropped": 1,
+    "updates_marked_applied": 1,
+    "updates_selected": 1,
+    "wandb_initialized": 1
+  },
+  "finite_loss_events": 24,
+  "invalid_log_lines": 0,
+  "kind": "legacy-run-sample",
+  "latest": {
+    "created_at": 1783690956.4752076,
+    "format_version": 1,
+    "optim_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco_p00/runs/fs_diloco/20260710_clean_p00_993accd_full/optim/outer_v000001.safetensors",
+    "param_index_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco_p00/runs/fs_diloco/20260710_clean_p00_993accd_full/control/param_index.json",
+    "run_id": "20260710_clean_p00_993accd_full",
+    "total_seen_tokens": 128,
+    "version": 1,
+    "weight_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco_p00/runs/fs_diloco/20260710_clean_p00_993accd_full/weights/global_v000001.safetensors"
+  },
+  "limitations": [
+    "legacy run is observational baseline, not Protocol v2 authority evidence",
+    "only representative control/log/DB/tensor artifacts are hashed"
+  ],
+  "nonfinite_loss_events": 0,
+  "run_root": "/work/xg24i002/x10041/fs_based_decoupled_diloco_p00/runs/fs_diloco/20260710_clean_p00_993accd_full",
+  "sampled_artifacts": [
+    {
+      "path": "control/latest.json",
+      "sha256": "2a441802ccf9f120d96423e33d7eca3d1ffde4486e74e546926223b0761687b4",
+      "size": 606
+    },
+    {
+      "path": "control/stop.json",
+      "sha256": "8f700695233a674fa99deaf1a82a547280239c2a041e5bec425923ab13e2540d",
+      "size": 187
+    },
+    {
+      "path": "control/run_config.resolved.yaml",
+      "sha256": "a1f68fa2cdee88de768d0506e14c548cdb90ac2249ab61ffadb34eb306e6ad2f",
+      "size": 2557
+    },
+    {
+      "path": "control/param_index.json",
+      "sha256": "484a1c57255be54d6e387d6e71b0144db46ed7a2a217e2a935835e822c73da9e",
+      "size": 466
+    },
+    {
+      "path": "logs/learner_000.jsonl",
+      "sha256": "103e7d0a63dda4348da5b69056d7de9f3c7523d590398cdeaf22bfe4596f4764",
+      "size": 4886
+    },
+    {
+      "path": "logs/syncer.jsonl",
+      "sha256": "a44394c484713b4b68429bef6ac9e8884451f66824e372a5e04cd2cbb0554bb7",
+      "size": 69605
+    },
+    {
+      "path": "weights/global_v000001.safetensors",
+      "sha256": "9f7e8b255cc45f6ba916c38e26e8c0c28b6dffc37ca62e4e039c829b91796a88",
+      "size": 8352
+    },
+    {
+      "path": "db_dumps/metadata_20260710_224306_v000001.db",
+      "sha256": "bb9c6957d7a2e9a6dfb93c779b371acad964ce5656590639b332d2bc37130a8a",
+      "size": 110592
+    }
+  ],
+  "schema_version": 1,
+  "sqlite_tables": {
+    "db_dumps": 1,
+    "events": 9,
+    "fragment_updates": 0,
+    "fragment_versions": 0,
+    "fragments": 0,
+    "global_versions": 2,
+    "learners": 2,
+    "run_state": 1,
+    "sqlite_sequence": 2,
+    "updates": 8
+  },
+  "stop": {
+    "format_version": 1,
+    "reason": "no_progress_timeout",
+    "run_id": "20260710_clean_p00_993accd_full",
+    "timestamp": 1783690986.5367293,
+    "total_seen_tokens": 128,
+    "version": 1
+  }
+}

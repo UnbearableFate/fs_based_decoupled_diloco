@@ -1,35 +1,38 @@
 phase: P00
-status: in_progress
+status: checking
 planning_basis_branch: codex/fs-diloco-miyabi
 planning_basis_commit: afc50a1e179c64321645b278b2497ea3ab3fe24d
 actual_base_branch: main
 actual_base_commit: afc50a1e179c64321645b278b2497ea3ab3fe24d
 feature_branch: codex/duraloco-p00-contract
-current_loop: 1
-current_goal: "capture the dirty planning-basis baseline and freeze the research contract"
+current_loop: 4
+current_goal: "archive independently checked baseline and research contract evidence"
 attempts_for_current_failure: 0
-last_verified_commit: null
+last_verified_commit: 993accda722d5792fe687da2158365fbd353776d
 checks:
-  local_static: not_run
-  local_runtime: not_run
-  miyabi_login_static: not_run
-  miyabi_1node: not_run
+  local_static: static_pass
+  local_runtime: unit_pass
+  miyabi_login_static: static_pass
+  miyabi_1node: miyabi_1node_pass
   miyabi_2node: skipped_not_required
   miyabi_9node: skipped_not_required
 acceptance:
-  P00-A01: {result: not_run, evidence: []}
-  P00-A02: {result: not_run, evidence: []}
-  P00-A03: {result: not_run, evidence: []}
-  P00-A04: {result: not_run, evidence: []}
-  P00-A05: {result: not_run, evidence: []}
-  P00-A06: {result: not_run, evidence: []}
-  P00-A07: {result: not_run, evidence: []}
-  P00-A08: {result: not_run, evidence: []}
+  P00-A01: {result: pass, evidence: [docs/duraloco/baseline_inventory.md, docs/duraloco/migration_map.md]}
+  P00-A02: {result: pass, evidence: [docs/duraloco/research_contract.md, docs/duraloco/failure_model.md, docs/duraloco/numeric_contract.md]}
+  P00-A03: {result: pass, evidence: [docs/duraloco/invariants.md, plans/duraloco/TRACEABILITY.md]}
+  P00-A04: {result: pass, evidence: [scripts/agent/check_phase_state.py, tests/test_agent_state_contract.py]}
+  P00-A05: {result: pass, evidence: [artifacts/duraloco/P00/20260710_clean_p00_993accd/manifest.json, docs/duraloco/baseline_limitations.md]}
+  P00-A06: {result: pass, evidence: [artifacts/duraloco/P00/20260710_clean_p00_993accd/pytest.log, docs/duraloco/baseline_inventory.md]}
+  P00-A07: {result: pass, evidence: [artifacts/duraloco/P00/20260710_clean_p00_993accd/checker_report.md]}
+  P00-A08: {result: pass, evidence: [artifacts/duraloco/P00/20260710_clean_p00_993accd/checker_report.md, plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/01_P00_BASELINE_AND_RESEARCH_CONTRACT.md]}
 open_decisions: []
 open_blockers: []
-artifacts: []
-next_action: "complete P00 maker checks and independent contract review"
+artifacts:
+  - artifacts/duraloco/P00/20260710_clean_p00_993accd
+  - artifacts/duraloco/P00/20260710_clean_p00_32e84da
+  - artifacts/duraloco/P00/20260710_221500_contract_static/baseline_manifest.json
+next_action: "persist checker-confirmed completed state, then start P01"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
-checker_report: null
+checker_report: artifacts/duraloco/P00/20260710_clean_p00_993accd/checker_report.md
