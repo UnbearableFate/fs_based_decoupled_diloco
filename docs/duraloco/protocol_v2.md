@@ -26,13 +26,23 @@ fragment and causal base, nonzero local steps/tokens, payload kind/key/tensor
 metadata, payload size/SHA-256, and parameter/layout/outer-schema digests. The
 run manifest freezes the accepted payload kind and digests.
 
-Validation is layered:
+Validation is layered. A report records `validation_level`; only a report with
+`eligible=true` (full tensor verification plus full finite scan) may enter an
+eligibility set. Metadata-only and finite-scan-disabled reports can be useful
+for diagnostics but are never eligible.
+
+The frontier schema stores copied read-only fragment and scheduler mappings.
+P01 freezes scheduler state to the exact non-negative
+`next_fragment_cursor` field so a verified frontier cannot be mutated behind
+its self-digest.
+
+Validation layers are:
 
 1. strict JSON/schema/canonical identity;
 2. run/generation/layout/optimizer/payload-kind contract;
 3. identity uniqueness and sequence monotonicity;
-4. committed ancestry, exact base-commit/frontier pairing, future-base
-   rejection, and global/fragment staleness;
+4. committed ancestry, exact base-commit/frontier/fragment-version pairing,
+   future-base rejection, and global/fragment staleness;
 5. namespace containment, file existence, size, and SHA-256;
 6. dependency-free safetensors header/key/shape/dtype/offset verification;
 7. full finite-value scan in correctness mode.
@@ -44,7 +54,8 @@ bad manifest never needs to become an uncaught scanner exception.
 
 ## Namespace and compatibility
 
-`payload_key` is a normalized relative object key. Absolute paths, `.`/`..`,
+`payload_key` must equal its normalized POSIX spelling. Absolute paths,
+repeated separators, `.`/`..`,
 and any resolved path outside the configured run namespace are rejected before
 reading. Protocol v1 manifests can be parsed by the read-only adapter. An
 explicit conversion context may construct a v2 object in an isolated new

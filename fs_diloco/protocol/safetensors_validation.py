@@ -48,7 +48,9 @@ def parse_safetensors(payload: bytes) -> tuple[dict[str, TensorHeader], bytes]:
     header_bytes = payload[8 : 8 + header_size]
     try:
         raw = json.loads(header_bytes, object_pairs_hook=_pairs_no_duplicates)
-    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+    except ProtocolError:
+        raise
+    except (UnicodeDecodeError, RecursionError, ValueError) as exc:
         raise ProtocolError("SAFETENSORS_HEADER", f"invalid header JSON: {exc}") from exc
     if not isinstance(raw, dict):
         raise ProtocolError("SAFETENSORS_HEADER", "header root must be an object")

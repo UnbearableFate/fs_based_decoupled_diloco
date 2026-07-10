@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import math
+from types import MappingProxyType
 from typing import Any, ClassVar, Mapping
 
 from .canonical_json import canonical_bytes, canonical_digest
@@ -78,6 +79,9 @@ class ObjectRef:
         if self.version is not None:
             payload["version"] = self.version
         return payload
+
+    def canonical_bytes(self) -> bytes:
+        return canonical_bytes(self.to_dict())
 
 
 @dataclass(frozen=True)
@@ -337,7 +341,7 @@ class CommitManifest:
     run_generation: int
     commit_seq: int
     commit_id: str
-    parent_commit_id: str | None
+    parent_commit_id: str
     parent_head_version: str
     fencing_epoch: int
     fragment_id: int
@@ -377,9 +381,7 @@ class CommitManifest:
         selected = payload["selected_proposals"]
         if not isinstance(selected, list) or not selected:
             raise _error("SCHEMA_SELECTION", "selected_proposals must be non-empty")
-        parent = payload["parent_commit_id"]
-        if parent is not None:
-            parent = _string(parent, "parent_commit_id")
+        parent = _string(payload["parent_commit_id"], "parent_commit_id")
         created_at = payload.get("created_at")
         if created_at is not None:
             created_at = _string(created_at, "created_at")
@@ -387,7 +389,7 @@ class CommitManifest:
             protocol_version=_protocol(payload["protocol_version"]),
             run_id=_string(payload["run_id"], "run_id"),
             run_generation=_integer(payload["run_generation"], "run_generation"),
-            commit_seq=_integer(payload["commit_seq"], "commit_seq"),
+            commit_seq=_integer(payload["commit_seq"], "commit_seq", minimum=1),
             commit_id=_string(payload["commit_id"], "commit_id"),
             parent_commit_id=parent,
             parent_head_version=_string(payload["parent_head_version"], "parent_head_version"),
@@ -485,8 +487,8 @@ class FrontierManifest:
     commit_id: str
     parent_frontier_sha256: str | None
     fencing_epoch: int
-    fragments: dict[int, FragmentState]
-    scheduler_state: dict[str, Any]
+    fragments: Mapping[int, FragmentState]
+    scheduler_state: Mapping[str, int]
     consumed_proposal_ids: tuple[str, ...]
     frontier_sha256: str
 
@@ -521,8 +523,10 @@ class FrontierManifest:
                 raise _error("SCHEMA_FRAGMENT_ID", "duplicate normalized fragment ID")
             fragments[fragment_id] = FragmentState.from_dict(state)
         scheduler = payload["scheduler_state"]
-        if not isinstance(scheduler, dict):
-            raise _error("SCHEMA_TYPE", "scheduler_state must be a mapping")
+        _strict_fields(scheduler, {"next_fragment_cursor"})
+        next_fragment_cursor = _integer(
+            scheduler["next_fragment_cursor"], "next_fragment_cursor"
+        )
         consumed = payload["consumed_proposal_ids"]
         if not isinstance(consumed, list) or not all(isinstance(item, str) and item for item in consumed):
             raise _error("SCHEMA_TYPE", "consumed_proposal_ids must be a string list")
@@ -539,8 +543,10 @@ class FrontierManifest:
             commit_id=_string(payload["commit_id"], "commit_id"),
             parent_frontier_sha256=parent_digest,
             fencing_epoch=_integer(payload["fencing_epoch"], "fencing_epoch"),
-            fragments=fragments,
-            scheduler_state=scheduler,
+            fragments=MappingProxyType(dict(fragments)),
+            scheduler_state=MappingProxyType(
+                {"next_fragment_cursor": next_fragment_cursor}
+            ),
             consumed_proposal_ids=tuple(consumed),
             frontier_sha256=_sha(payload["frontier_sha256"], "frontier_sha256"),
         )
@@ -566,7 +572,7 @@ class FrontierManifest:
             "fragments": {
                 str(key): value.to_dict() for key, value in sorted(self.fragments.items())
             },
-            "scheduler_state": self.scheduler_state,
+            "scheduler_state": dict(self.scheduler_state),
             "consumed_proposal_ids": list(self.consumed_proposal_ids),
             "frontier_sha256": self.frontier_sha256,
         }

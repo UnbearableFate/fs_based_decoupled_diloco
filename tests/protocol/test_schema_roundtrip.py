@@ -158,6 +158,32 @@ def test_object_ref_required_fields_and_optional_version():
             ObjectRef.from_dict(candidate)
 
 
+def test_frontier_nested_authority_mappings_are_immutable(tmp_path):
+    proposal = make_proposal(tmp_path)
+    commit = CommitManifest.from_dict(_commit_dict(proposal))
+    frontier = FrontierManifest.from_dict(
+        _frontier_dict(commit.commit_id, proposal.proposal_id)
+    )
+    original = dump_manifest(frontier)
+    with pytest.raises(TypeError):
+        frontier.fragments[0] = frontier.fragments[0]
+    with pytest.raises(TypeError):
+        frontier.scheduler_state["next_fragment_cursor"] = 1
+    assert dump_manifest(frontier) == original
+
+
+def test_frontier_scheduler_state_has_an_exact_schema(tmp_path):
+    proposal = make_proposal(tmp_path)
+    commit = CommitManifest.from_dict(_commit_dict(proposal))
+    payload = _frontier_dict(commit.commit_id, proposal.proposal_id)
+    payload["scheduler_state"]["unexpected"] = 1
+    payload["frontier_sha256"] = frontier_digest_for(
+        {key: value for key, value in payload.items() if key != "frontier_sha256"}
+    )
+    with pytest.raises(Exception, match="unknown fields"):
+        FrontierManifest.from_dict(payload)
+
+
 @pytest.mark.parametrize("field", ["run_id", "payload_key", "shape", "payload_sha256"])
 def test_proposal_required_fields_are_enforced(tmp_path, field):
     payload = make_proposal(tmp_path).to_dict()
@@ -195,4 +221,13 @@ def test_commit_weights_require_exact_canonical_float_hex(tmp_path, spelling):
     payload = _commit_dict(proposal)
     payload["selected_proposals"][0]["weight_fp64_hex"] = spelling
     with pytest.raises(Exception, match="canonical float.hex"):
+        CommitManifest.from_dict(payload)
+
+
+@pytest.mark.parametrize(("field", "value"), [("commit_seq", 0), ("parent_commit_id", None)])
+def test_non_genesis_commit_requires_positive_sequence_and_parent(tmp_path, field, value):
+    proposal = make_proposal(tmp_path)
+    payload = _commit_dict(proposal)
+    payload[field] = value
+    with pytest.raises(Exception):
         CommitManifest.from_dict(payload)

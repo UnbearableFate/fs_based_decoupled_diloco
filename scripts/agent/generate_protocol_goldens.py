@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from fs_diloco.protocol.canonical_json import canonical_bytes
 from fs_diloco.protocol.identities import commit_id_for, frontier_digest_for
 from fs_diloco.protocol.manifests import dump_manifest
 from fs_diloco.protocol.schemas import (
@@ -20,6 +21,7 @@ from fs_diloco.protocol.schemas import (
     DropDecision,
     FrontierManifest,
     HeadManifest,
+    ObjectRef,
     ProposalManifest,
 )
 
@@ -139,14 +141,19 @@ def _objects() -> list[object]:
             "decided_at_commit_seq": 1,
         }
     )
-    return [proposal, commit, frontier, head, drop]
+    return [ObjectRef.from_dict(_ref("standalone-object")), proposal, commit, frontier, head, drop]
 
 
 def main() -> int:
     vectors = {}
     for manifest in _objects():
-        encoded = dump_manifest(manifest)
-        vectors[manifest.MANIFEST_TYPE] = {
+        if isinstance(manifest, ObjectRef):
+            encoded = canonical_bytes(manifest.to_dict())
+            manifest_type = "object_ref"
+        else:
+            encoded = dump_manifest(manifest)
+            manifest_type = manifest.MANIFEST_TYPE
+        vectors[manifest_type] = {
             "canonical": encoded.decode(),
             "sha256": hashlib.sha256(encoded).hexdigest(),
         }

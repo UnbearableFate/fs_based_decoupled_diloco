@@ -4,6 +4,7 @@ import hashlib
 import math
 from pathlib import Path
 import random
+import struct
 
 import pytest
 
@@ -32,6 +33,7 @@ def _context(root: Path, **overrides: object) -> ValidationContext:
         "fragment_layout_digest": "c" * 64,
         "outer_optimizer_schema_digest": "d" * 64,
         "frontier_digests_by_commit": {"genesis": "a" * 64},
+        "fragment_versions_by_commit": {"genesis": {0: 0}},
         "namespace_root": root,
     }
     values.update(overrides)
@@ -47,6 +49,8 @@ def test_valid_payload_passes_all_layers(tmp_path):
     proposal = make_proposal(tmp_path)
     report = validate_proposal(proposal, _context(tmp_path))
     assert report.valid
+    assert report.eligible
+    assert report.validation_level == "full"
     assert {"schema", "causal_ancestry", "path_containment", "finite"} <= set(report.checks)
 
 
@@ -89,6 +93,19 @@ def test_metadata_and_causal_rejection_matrix(
 
 def test_path_escape_is_rejected_before_read(tmp_path):
     proposal = make_proposal(tmp_path, payload_key="../escape.safetensors")
+    assert _error_code(validate_proposal(proposal, _context(tmp_path))) == "PAYLOAD_PATH_ESCAPE"
+
+
+@pytest.mark.parametrize(
+    "alias",
+    [
+        "immutable//proposals/payload.safetensors",
+        "immutable/proposals/./payload.safetensors",
+        "immutable/proposals/payload.safetensors/",
+    ],
+)
+def test_noncanonical_payload_key_aliases_are_rejected(tmp_path, alias):
+    proposal = make_proposal(tmp_path, payload_key=alias)
     assert _error_code(validate_proposal(proposal, _context(tmp_path))) == "PAYLOAD_PATH_ESCAPE"
 
 
@@ -148,8 +165,8 @@ def test_sequence_rollback_is_typed_not_an_uncaught_key_error(tmp_path):
     context = _context(tmp_path)
     newer = make_proposal(tmp_path, sequence=2)
     older = make_proposal(tmp_path, sequence=1)
-    assert validate_proposal(newer, context, validate_tensor=False).valid
-    assert _error_code(validate_proposal(older, context, validate_tensor=False)) == "SEQUENCE_ROLLBACK"
+    assert validate_proposal(newer, context).eligible
+    assert _error_code(validate_proposal(older, context)) == "SEQUENCE_ROLLBACK"
 
 
 def test_invalid_future_proposal_does_not_poison_later_valid_sequence(tmp_path):
@@ -169,8 +186,8 @@ def test_same_session_sequence_cannot_name_different_content(tmp_path):
     context = _context(tmp_path)
     first = make_proposal(tmp_path, sequence=7, target_tokens_since_base=100)
     conflicting = make_proposal(tmp_path, sequence=7, target_tokens_since_base=101)
-    assert validate_proposal(first, context, validate_tensor=False).valid
-    report = validate_proposal(conflicting, context, validate_tensor=False)
+    assert validate_proposal(first, context).eligible
+    report = validate_proposal(conflicting, context)
     assert _error_code(report) == "SEQUENCE_CONTENT_CONFLICT"
     assert report.errors[0]["category"] == "fatal"
 
@@ -229,6 +246,30 @@ def test_extreme_nesting_becomes_typed_quarantine_not_recursion_error(tmp_path):
     assert record is not None
 
 
+def test_extreme_safetensors_metadata_nesting_is_typed_quarantine(tmp_path):
+    nested = b"[" * 2000 + b"0" + b"]" * 2000
+    header = b'{"__metadata__":{"nested":' + nested + b"}}"
+    payload = struct.pack("<Q", len(header)) + header
+    relative = "immutable/proposals/deep-header.safetensors"
+    path = tmp_path / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(payload)
+    proposal = ProposalManifest.with_computed_id(
+        proposal_dict(
+            tmp_path,
+            payload=payload,
+            relative=relative,
+        )
+    )
+    report, record = validate_candidate_bytes(
+        proposal.canonical_bytes(),
+        _context(tmp_path),
+        QuarantineRegistry(),
+    )
+    assert _error_code(report) == "SAFETENSORS_HEADER"
+    assert record is not None
+
+
 def test_missing_payload_is_retryable_and_not_quarantined(tmp_path):
     proposal = make_proposal(tmp_path, payload_key="immutable/proposals/missing.safetensors")
     report, record = validate_candidate_bytes(
@@ -239,6 +280,53 @@ def test_missing_payload_is_retryable_and_not_quarantined(tmp_path):
     assert _error_code(report) == "PAYLOAD_MISSING"
     assert report.errors[0]["category"] == "retryable"
     assert record is None
+
+
+def test_partial_validation_levels_can_never_enter_eligibility(tmp_path):
+    missing = make_proposal(
+        tmp_path,
+        payload_key="immutable/proposals/not-present.safetensors",
+    )
+    metadata_only = validate_proposal(missing, _context(tmp_path), validate_tensor=False)
+    assert metadata_only.valid
+    assert not metadata_only.eligible
+    assert metadata_only.validation_level == "metadata_causal"
+
+    path, payload = write_payload(tmp_path, values=(1.0, float("nan")))
+    nonfinite = ProposalManifest.with_computed_id(
+        proposal_dict(
+            tmp_path,
+            payload=payload,
+            relative=path.relative_to(tmp_path).as_posix(),
+        )
+    )
+    unchecked = validate_proposal(
+        nonfinite,
+        _context(tmp_path),
+        require_finite=False,
+    )
+    assert unchecked.valid
+    assert not unchecked.eligible
+    assert unchecked.validation_level == "payload_without_finite"
+    assert "finite" not in unchecked.checks
+    assert unchecked.metadata["finite_checked"] is False
+
+
+def test_partial_validation_does_not_poison_full_sequence_state(tmp_path):
+    context = _context(tmp_path)
+    partial = make_proposal(tmp_path, sequence=100)
+    full = make_proposal(tmp_path, sequence=1)
+    report = validate_proposal(partial, context, validate_tensor=False)
+    assert report.valid and not report.eligible
+    assert validate_proposal(full, context).eligible
+
+
+def test_fragment_base_version_must_match_the_named_base_frontier(tmp_path):
+    proposal = make_proposal(tmp_path, base_fragment_version=5)
+    context = _context(tmp_path, fragment_versions={0: 5})
+    assert _error_code(validate_proposal(proposal, context, validate_tensor=False)) == (
+        "BASE_FRAGMENT_VERSION_MISMATCH"
+    )
 
 
 def test_payload_key_not_filename_supplies_the_validated_location(tmp_path):

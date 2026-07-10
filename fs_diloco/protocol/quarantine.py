@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Mapping
 
 from .canonical_json import canonical_digest
-from .errors import ErrorCategory, ProtocolError
+from .errors import ErrorCategory, ProtocolError, freeze_json, thaw_json
 
 
 @dataclass(frozen=True)
@@ -16,7 +16,7 @@ class QuarantineRecord:
     content_sha256: str
     error_code: str
     category: str
-    details: dict[str, Any]
+    details: Mapping[str, Any]
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -25,7 +25,7 @@ class QuarantineRecord:
             "content_sha256": self.content_sha256,
             "error_code": self.error_code,
             "category": self.category,
-            "details": self.details,
+            "details": thaw_json(self.details),
         }
 
 
@@ -59,5 +59,12 @@ class QuarantineRegistry:
             "details": error.details,
         }
         record_id = "q-" + canonical_digest(body)
-        record = QuarantineRecord(record_id=record_id, **body)
+        record = QuarantineRecord(
+            record_id=record_id,
+            observed_identity=observed_identity,
+            content_sha256=content_sha256,
+            error_code=error.code,
+            category=error.category.value,
+            details=freeze_json(error.details),
+        )
         return self.records.setdefault(record_id, record)
