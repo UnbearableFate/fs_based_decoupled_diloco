@@ -26,6 +26,7 @@ class CapabilityReport:
     hostname: str
     filesystem_id: int | None
     filesystem_block_size: int | None
+    operation_trace: tuple[dict[str, object], ...]
 
     @property
     def passed(self) -> bool:
@@ -99,6 +100,7 @@ def probe_backend(
         hostname=platform.node(),
         filesystem_id=getattr(stat, "f_fsid", None) if stat is not None else None,
         filesystem_block_size=stat.f_bsize if stat is not None else None,
+        operation_trace=tuple(asdict(record) for record in backend.history),
     )
 
 

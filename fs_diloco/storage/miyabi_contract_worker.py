@@ -162,8 +162,26 @@ def run_contract(
         "stale_lock_takeover": "pass",
         "operation_count": len(backend.history),
         "capabilities": backend.capabilities.to_dict(),
+        "operation_trace": f"rank_{rank}_operations.jsonl",
     }
     output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / f"rank_{rank}_operations.jsonl").write_text(
+        "".join(
+            json.dumps(
+                {
+                    "sequence": record.sequence,
+                    "operation": record.operation,
+                    "key": record.key,
+                    "outcome": record.outcome,
+                    "version": record.version,
+                },
+                sort_keys=True,
+            )
+            + "\n"
+            for record in backend.history
+        ),
+        encoding="utf-8",
+    )
     (output_dir / f"rank_{rank}.json").write_text(
         json.dumps(report, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
@@ -196,4 +214,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

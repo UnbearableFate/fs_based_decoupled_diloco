@@ -62,5 +62,9 @@ boundary. The two-node Miyabi worker performs at least 100 same-version CAS
 races, verifies exactly one winner and cross-node visibility in every round,
 and checks takeover after a lock-owning process exits.
 
+Each Lustre probe and MPI rank persists its semantic operation trace alongside
+the mount, stripe, hostname, PBS, capability, and winner summaries. These
+traces make failure-window and visibility conclusions independently auditable.
+
 The existing learner and syncer continue using their legacy `atomic_io` and
 SQLite paths. P03 does not activate the new backend as a runtime default.
