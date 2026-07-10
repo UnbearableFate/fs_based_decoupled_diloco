@@ -111,6 +111,28 @@ two-node and nine-node compute qualification remain in progress.
   No local database file was created.
 - Evidence: `artifacts/duraloco/M00/20260711_m00_81b442c_2node/manifest.json`,
   `two_node_summary.json`, rank reports, and operation traces.
+
+#### Nine-node attempt 1 — `20260711_m00_dec182e_gpt2_9n_50x10`
+
+- Time/identity: PBS `2359108.opbs`, nine compute hosts led by `mg0888`,
+  implementation `dec182eaefd20c02a6eea79fb0493cd0d41d9bd2`.
+- Phenomenon: all real GPT-2/WikiText-2 processes initialized and each learner
+  published its first 50-step proposal, but no transition completed before the
+  learners resumed from the unchanged committed base. At operator termination,
+  64 same-base metadata/payload pairs occupied about 32 GB.
+- Expected/actual: after publishing an interval, a learner must wait for a
+  committed successor before opening another interval. The bounded one-scan
+  adoption wait expired while the syncer was validating multi-gigabyte payloads,
+  so learners repeatedly produced proposals from commit sequence 0.
+- Reason: confirmed. The small synthetic gate hid the payload-validation
+  latency. The catalog also read already-consumed payloads before applying its
+  cheap committed-interval rejection, which would scale poorly after recovery.
+- Impact: M00-A11 only; no head CAS occurred and no committed prefix was
+  corrupted. The operator terminated the job deliberately (`Exit_status=271`).
+- Evidence: `artifacts/duraloco/M00/20260711_m00_dec182e_gpt2_9n_50x10/manifest.json`,
+  `training.log`, and `qstat_final.log`.
+- Repair: make post-upload adoption wait through the no-progress budget or a
+  stop marker, and reject known consumed interval bases before payload reads.
 - Impact: M00-A03, M00-A04, M00-A09, P02-A04, and P04 replay requalification.
 - Evidence: `artifacts/duraloco/M00/20260711_m00_04da7ee_1node/manifest.json`,
   `one_node_contract.json`, full syncer/learner logs, and `stdout.log`.
@@ -225,6 +247,25 @@ generation metadata 与 M00 静态/运行 harness。源码、配置、脚本与�
   未产生任何本地数据库文件。
 - 证据：`artifacts/duraloco/M00/20260711_m00_81b442c_2node/manifest.json`、
   `two_node_summary.json`、各 rank 报告与 operation traces。
+
+#### 九节点第 1 次尝试 — `20260711_m00_dec182e_gpt2_9n_50x10`
+
+- 时间/身份：PBS `2359108.opbs`，以 `mg0888` 为首的九个 compute nodes，实现提交
+  `dec182eaefd20c02a6eea79fb0493cd0d41d9bd2`。
+- 现象：真实 GPT-2/WikiText-2 的全部进程均完成初始化，每个 learner 也发布了首个
+  50-step proposal；但在 transition 完成前，learner 已从未改变的 committed base
+  继续训练。人工终止时共有 64 组 same-base metadata/payload，约占 32 GB。
+- 预期/实际：learner 发布一个 interval 后必须等到 committed successor 才能开启下个
+  interval。实际 bounded one-scan adoption wait 在 syncer 校验多 GB payload 时超时，
+  learner 因而反复从 commit sequence 0 产生 proposal。
+- 原因：已证实。小型 synthetic gate 未暴露 payload-validation latency；catalog 也在
+  进行廉价的 committed-interval rejection 前读取已消费 payload，恢复后的扩展性不足。
+- 影响：仅 M00-A11；未发生 head CAS，也未损坏 committed prefix。该 job 由 operator
+  主动终止（`Exit_status=271`）。
+- 证据：`artifacts/duraloco/M00/20260711_m00_dec182e_gpt2_9n_50x10/manifest.json`、
+  `training.log` 与 `qstat_final.log`。
+- 修复：post-upload adoption 等待延长至 no-progress budget 或 stop marker；并在读取
+  payload 前拒绝已知 consumed interval base。
 
 ### 限制与下一动作
 

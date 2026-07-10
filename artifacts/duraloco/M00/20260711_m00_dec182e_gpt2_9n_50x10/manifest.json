@@ -1,0 +1,33 @@
+{
+  "assertions": [
+    "terminated after proposal production outran committed successor adoption and created 64 same-base payloads",
+    "no transition committed before operator termination; this run is retained as failed lineage evidence"
+  ],
+  "backend": "lustre",
+  "commands_log": "commands.log",
+  "config_digest": "962fc3a9a52d6485982ebb0a61bf947153e1e5902f825c75ee8381d70f6f4744",
+  "config_path": "configs/duraloco_milestone_gpt2_9node_50x10.yaml",
+  "dataset_revision": "wikitext-2-raw-v1",
+  "dirty_paths": [],
+  "dirty_tree": false,
+  "ended_at_utc": "2026-07-10T23:51:33Z",
+  "exit_code": 271,
+  "git_branch": "codex/duraloco-m00-sqlite-free-rebase",
+  "git_commit": "dec182eaefd20c02a6eea79fb0493cd0d41d9bd2",
+  "hostname": "mg0888",
+  "manifest_sha256": "50f2a185264dee5a148a2b70c1e4cbf9c81bb6dce8ba1b11fd65431d2bfef140",
+  "model_revision": "gpt2",
+  "parent_run_id": "20260711_m00_81b442c_2node",
+  "pbs_job_id": "2359108.opbs",
+  "pbs_nodefile_digest": "0cc5869b37fac0e8d380608b99204e96687ccdb4635c223c2d4823703f64ab8c",
+  "phase": "M00",
+  "purpose": "experiment",
+  "python_version": "3.13.13",
+  "result": "fail",
+  "run_id": "20260711_m00_dec182e_gpt2_9n_50x10",
+  "schema_version": 1,
+  "seed": null,
+  "started_at_utc": "2026-07-10T23:48:44Z",
+  "stderr": "stderr.log",
+  "stdout": "stdout.log"
+}
