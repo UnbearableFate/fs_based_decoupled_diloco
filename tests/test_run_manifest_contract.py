@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 import subprocess
 import sys
@@ -15,6 +16,8 @@ def _create(tmp_path: Path) -> Path:
     for name in ("commands.log", "stdout.log", "stderr.log"):
         (tmp_path / name).write_text(name + "\n")
     output = tmp_path / "manifest.json"
+    config = tmp_path / "test-config.yaml"
+    config.write_text("test: true\n")
     result = subprocess.run(
         [
             sys.executable,
@@ -27,6 +30,8 @@ def _create(tmp_path: Path) -> Path:
             "P00",
             "--purpose",
             "unit",
+            "--config",
+            str(config),
             "--commands-log",
             "commands.log",
             "--stdout",
@@ -64,4 +69,17 @@ def test_run_manifest_mutation_and_missing_evidence_fail_closed(tmp_path):
     output.unlink()
     output = _create(tmp_path)
     (tmp_path / "commands.log").unlink()
+    assert subprocess.run([sys.executable, str(CHECK), str(output)]).returncode != 0
+
+
+def test_run_manifest_without_config_binding_is_rejected(tmp_path):
+    output = _create(tmp_path)
+    payload = json.loads(output.read_text())
+    payload["config_path"] = None
+    payload["config_digest"] = None
+    body = dict(payload)
+    body.pop("manifest_sha256")
+    encoded = json.dumps(body, sort_keys=True, separators=(",", ":")).encode()
+    payload["manifest_sha256"] = hashlib.sha256(encoded).hexdigest()
+    output.write_text(json.dumps(payload))
     assert subprocess.run([sys.executable, str(CHECK), str(output)]).returncode != 0

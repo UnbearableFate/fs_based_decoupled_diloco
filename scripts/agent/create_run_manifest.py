@@ -44,7 +44,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--run-id")
     parser.add_argument("--parent-run-id")
-    parser.add_argument("--config", type=Path)
+    parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--backend", default="memory")
     parser.add_argument("--seed", type=int)
     parser.add_argument("--dataset-revision")
@@ -76,15 +76,12 @@ def main(argv: list[str] | None = None) -> int:
     nodefile = os.environ.get("PBS_NODEFILE")
     if nodefile and Path(nodefile).is_file():
         nodefile_digest = _sha256(Path(nodefile))
-    config_path = None
-    config_digest = None
-    if args.config:
-        config = args.config if args.config.is_absolute() else root / args.config
-        if not config.is_file():
-            print(f"config does not exist: {config}", file=sys.stderr)
-            return 2
-        config_path = config.relative_to(root).as_posix() if config.is_relative_to(root) else str(config)
-        config_digest = _sha256(config)
+    config = args.config if args.config.is_absolute() else root / args.config
+    if not config.is_file():
+        print(f"config does not exist: {config}", file=sys.stderr)
+        return 2
+    config_path = config.relative_to(root).as_posix() if config.is_relative_to(root) else str(config)
+    config_digest = _sha256(config)
     payload = {
         "schema_version": 1,
         "run_id": args.run_id or str(uuid.uuid4()),

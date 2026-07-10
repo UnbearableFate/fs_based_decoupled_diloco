@@ -55,7 +55,20 @@ def _digest(payload: dict[str, Any]) -> str:
     return hashlib.sha256(encoded).hexdigest()
 
 
-def validate(path: Path, *, require_evidence_files: bool = True) -> None:
+def _file_digest(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def validate(
+    path: Path,
+    *,
+    root: Path,
+    require_evidence_files: bool = True,
+) -> None:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise ManifestError("manifest root must be an object")
@@ -78,10 +91,16 @@ def validate(path: Path, *, require_evidence_files: bool = True) -> None:
             raise ManifestError("pass result requires assertions")
     if payload["manifest_sha256"] != _digest(payload):
         raise ManifestError("manifest self-digest mismatch")
-    if payload["config_path"] is None and payload["config_digest"] is not None:
-        raise ManifestError("config_digest requires config_path")
-    if payload["config_path"] is not None and payload["config_digest"] is None:
-        raise ManifestError("config_path requires config_digest")
+    if not isinstance(payload["config_path"], str) or not payload["config_path"]:
+        raise ManifestError("config_path must bind every run to a configuration")
+    if not re.fullmatch(r"[0-9a-f]{64}", str(payload["config_digest"])):
+        raise ManifestError("config_digest must be 64 lowercase hex")
+    config = Path(payload["config_path"])
+    config = config if config.is_absolute() else root / config
+    if not config.is_file():
+        raise ManifestError(f"bound config does not exist: {payload['config_path']}")
+    if _file_digest(config) != payload["config_digest"]:
+        raise ManifestError("bound config digest does not match its bytes")
     if require_evidence_files:
         for field in ("commands_log", "stdout", "stderr"):
             relative = payload[field]
@@ -96,11 +115,13 @@ def validate(path: Path, *, require_evidence_files: bool = True) -> None:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("manifest", type=Path)
+    parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--allow-missing-evidence-files", action="store_true")
     args = parser.parse_args(argv)
     try:
         validate(
             args.manifest,
+            root=args.root.resolve(),
             require_evidence_files=not args.allow_missing_evidence_files,
         )
         return 0

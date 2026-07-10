@@ -31,6 +31,8 @@ fi
 
 cd "$PROJECT_ROOT"
 mkdir -p "$ARTIFACT_ROOT"
+sha256sum -c configs/duraloco_p00_baseline_bundle.sha256 \
+  | tee "$ARTIFACT_ROOT/config_bundle_check.log"
 hostname | tee "$ARTIFACT_ROOT/hostname.log"
 printf 'PBS_JOBID=%s\nPBS_NODEFILE=%s\n' "${PBS_JOBID:-}" "${PBS_NODEFILE:-}" \
   | tee "$ARTIFACT_ROOT/pbs_environment.log"
@@ -96,6 +98,7 @@ cp "$ARTIFACT_ROOT/pytest.log" "$ARTIFACT_ROOT/stdout.log"
   --phase P00 \
   --purpose smoke \
   --backend lustre \
+  --config configs/duraloco_p00_baseline_bundle.sha256 \
   --dataset-revision synthetic-v1 \
   --model-revision synthetic-tiny-v1 \
   --commands-log commands.log \
