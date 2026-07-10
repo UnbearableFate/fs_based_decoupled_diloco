@@ -1,0 +1,91 @@
+#!/bin/bash
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:10:00
+#PBS -j oe
+#PBS -m ae
+
+set -eEuo pipefail
+trap 'echo "[ERROR] P03 1-node contract failed at line $LINENO" >&2' ERR
+
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat
+REQUIRED_MODULES=()
+for module_name in "${REQUIRED_MODULES[@]}"; do
+  module load "$module_name"
+done
+module list 2>&1 | cat
+
+PROJECT_ROOT="${PROJECT_ROOT:-${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}}"
+PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
+RUN_ID="${RUN_ID:-$(date +%Y%m%d_%H%M%S)_duraloco_p03_1node}"
+PARENT_RUN_ID="${PARENT_RUN_ID:-}"
+ARTIFACT_ROOT="${ARTIFACT_ROOT:-$PROJECT_ROOT/artifacts/duraloco/P03/$RUN_ID}"
+STORAGE_ROOT="${STORAGE_ROOT:-$(dirname "$PROJECT_ROOT")/duraloco_p03_runtime/$RUN_ID}"
+
+if [[ ! -x "$PYTHON_BIN" ]]; then
+  echo "Python executable not found: $PYTHON_BIN" >&2
+  exit 2
+fi
+
+cd "$PROJECT_ROOT"
+mkdir -p "$ARTIFACT_ROOT" "$STORAGE_ROOT"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+
+hostname | tee "$ARTIFACT_ROOT/hostname.log"
+printf 'PBS_JOBID=%s\nPBS_NODEFILE=%s\nSTORAGE_ROOT=%s\n' \
+  "${PBS_JOBID:-}" "${PBS_NODEFILE:-}" "$STORAGE_ROOT" \
+  | tee "$ARTIFACT_ROOT/pbs_environment.log"
+"$PYTHON_BIN" --version 2>&1 | tee "$ARTIFACT_ROOT/python_version.log"
+git status --short --branch | tee "$ARTIFACT_ROOT/git_status.log"
+git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"
+findmnt -T "$STORAGE_ROOT" 2>&1 | tee "$ARTIFACT_ROOT/mount.log" || true
+if command -v lfs >/dev/null 2>&1; then
+  lfs getstripe "$STORAGE_ROOT" 2>&1 | tee "$ARTIFACT_ROOT/stripe.log" || true
+else
+  printf 'lfs unavailable\n' | tee "$ARTIFACT_ROOT/stripe.log"
+fi
+
+PROBE_COMMAND=(
+  "$PYTHON_BIN" -m fs_diloco.storage.capability_probe
+  --root "$STORAGE_ROOT"
+  --prefix "runs/$RUN_ID/probe"
+  --output "$ARTIFACT_ROOT/capability_report.json"
+)
+printf -v PROBE_TEXT '%q ' "${PROBE_COMMAND[@]}"
+printf '%s\n' "${PROBE_TEXT% }" | tee "$ARTIFACT_ROOT/commands.log"
+"${PROBE_COMMAND[@]}" 2>&1 | tee "$ARTIFACT_ROOT/capability_probe.log"
+
+TEST_COMMAND=("$PYTHON_BIN" -m pytest -q tests --junitxml "$ARTIFACT_ROOT/junit.xml")
+printf -v TEST_TEXT '%q ' "${TEST_COMMAND[@]}"
+printf '%s\n' "${TEST_TEXT% }" | tee -a "$ARTIFACT_ROOT/commands.log"
+"${TEST_COMMAND[@]}" 2>&1 | tee "$ARTIFACT_ROOT/pytest.log"
+
+qstat "$PBS_JOBID" | tee "$ARTIFACT_ROOT/qstat_final.log"
+cp "$ARTIFACT_ROOT/pytest.log" "$ARTIFACT_ROOT/stdout.log"
+: > "$ARTIFACT_ROOT/stderr.log"
+
+MANIFEST_ARGS=(
+  --root "$PROJECT_ROOT"
+  --output "$ARTIFACT_ROOT/manifest.json"
+  --phase P03
+  --purpose contract
+  --run-id "$RUN_ID"
+  --backend lustre
+  --config scripts/miyabi/run_duraloco_p03_storage_1node.pbs
+  --commands-log commands.log
+  --stdout stdout.log
+  --stderr stderr.log
+  --exit-code 0
+  --result pass
+  --assertion "memory and POSIX passed the same semantic conformance suite"
+  --assertion "verified reads immutable conflicts path containment and process-kill windows passed"
+  --assertion "observed Lustre capabilities were recorded and required capabilities passed"
+)
+if [[ -n "$PARENT_RUN_ID" ]]; then
+  MANIFEST_ARGS+=(--parent-run-id "$PARENT_RUN_ID")
+fi
+"$PYTHON_BIN" scripts/agent/create_run_manifest.py "${MANIFEST_ARGS[@]}"
+"$PYTHON_BIN" scripts/agent/check_run_manifest.py "$ARTIFACT_ROOT/manifest.json" \
+  --root "$PROJECT_ROOT"
+

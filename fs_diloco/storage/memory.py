@@ -6,45 +6,9 @@ from dataclasses import dataclass
 import hashlib
 from typing import Iterable
 
-
-class StorageError(RuntimeError):
-    pass
-
-
-class NotFound(StorageError):
-    pass
-
-
-class ImmutableConflict(StorageError):
-    pass
-
-
-class PreconditionFailed(StorageError):
-    pass
-
-
-class InjectedTimeout(StorageError):
-    def __init__(self, operation: str, timing: str) -> None:
-        super().__init__(f"injected {timing}-effect timeout for {operation}")
-        self.operation = operation
-        self.timing = timing
-
-
-@dataclass(frozen=True)
-class ObjectMetadata:
-    key: str
-    size: int
-    sha256: str
-    version: str
-
-
-@dataclass(frozen=True)
-class OperationRecord:
-    sequence: int
-    operation: str
-    key: str
-    outcome: str
-    version: str | None
+from .base import BytesLike, DeleteTarget, ObjectMetadata, OperationRecord, StorageCapabilities
+from .errors import InjectedTimeout, ImmutableConflict, NotFound, PreconditionFailed
+from .layout import normalize_key, normalize_prefix
 
 
 @dataclass
@@ -83,6 +47,21 @@ class InMemoryStorageBackend:
     def history(self) -> tuple[OperationRecord, ...]:
         return tuple(self._history)
 
+    @property
+    def capabilities(self) -> StorageCapabilities:
+        return StorageCapabilities(
+            backend="memory",
+            immutable_create=True,
+            conditional_replace=True,
+            verified_reads=True,
+            range_reads=True,
+            batch_delete=True,
+            listing=True,
+            atomic_replace=True,
+            advisory_lock=False,
+            directory_fsync=False,
+        )
+
     def inject_failure(self, rule: FailureRule) -> None:
         self._failures.append(rule)
 
@@ -94,7 +73,7 @@ class InMemoryStorageBackend:
         return f"v{self._version_counter:08d}-{hashlib.sha256(data).hexdigest()[:16]}"
 
     @staticmethod
-    def _snapshot_bytes(data: bytes | bytearray | memoryview) -> bytes:
+    def _snapshot_bytes(data: BytesLike) -> bytes:
         if not isinstance(data, (bytes, bytearray, memoryview)):
             raise TypeError("storage payload must be bytes-like")
         return bytes(data)
@@ -125,7 +104,14 @@ class InMemoryStorageBackend:
                 self._record(operation, key, f"timeout_{timing}", None)
                 raise InjectedTimeout(operation, timing)
 
-    def put_immutable(self, key: str, data: bytes, *, sha256: str | None = None) -> ObjectMetadata:
+    def put_immutable(
+        self,
+        key: str,
+        data: BytesLike,
+        *,
+        sha256: str | None = None,
+    ) -> ObjectMetadata:
+        key = normalize_key(key)
         operation = "put_immutable"
         self._maybe_fail(operation, "before", key)
         data = self._snapshot_bytes(data)
@@ -148,16 +134,19 @@ class InMemoryStorageBackend:
         self._maybe_fail(operation, "after", key)
         return metadata
 
-    def put_if_absent(self, key: str, data: bytes) -> ObjectMetadata:
+    def put_if_absent(self, key: str, data: BytesLike) -> ObjectMetadata:
         return self.put_immutable(key, data)
+
+    create_if_absent = put_if_absent
 
     def conditional_replace(
         self,
         key: str,
         *,
         expected_version: str,
-        data: bytes,
+        data: BytesLike,
     ) -> ObjectMetadata:
+        key = normalize_key(key)
         operation = "conditional_replace"
         self._maybe_fail(operation, "before", key)
         data = self._snapshot_bytes(data)
@@ -183,7 +172,10 @@ class InMemoryStorageBackend:
         self._maybe_fail(operation, "after", key)
         return metadata
 
+    compare_and_swap = conditional_replace
+
     def get(self, key: str, *, expected_version: str | None = None) -> bytes:
+        key = normalize_key(key)
         operation = "get"
         self._maybe_fail(operation, "before", key)
         existing = self._objects.get(key)
@@ -198,6 +190,7 @@ class InMemoryStorageBackend:
         return bytes(existing.data)
 
     def head(self, key: str) -> ObjectMetadata:
+        key = normalize_key(key)
         operation = "head"
         self._maybe_fail(operation, "before", key)
         existing = self._objects.get(key)
@@ -209,13 +202,15 @@ class InMemoryStorageBackend:
         return existing.metadata
 
     def range_get(self, key: str, start: int, end: int | None = None) -> bytes:
+        key = normalize_key(key)
         if start < 0 or (end is not None and end < start):
             raise ValueError("invalid byte range")
         return self.get(key)[start:end]
 
-    def delete_batch(self, keys: Iterable[str]) -> dict[str, str]:
+    def delete_batch(self, keys: Iterable[DeleteTarget]) -> dict[str, str]:
         results: dict[str, str] = {}
-        for key in keys:
+        for target in keys:
+            key = normalize_key(target if isinstance(target, str) else target.key)
             operation = "delete"
             self._maybe_fail(operation, "before", key)
             existing = self._objects.pop(key, None)
@@ -227,6 +222,7 @@ class InMemoryStorageBackend:
         return results
 
     def list_prefix(self, prefix: str) -> tuple[str, ...]:
+        prefix = normalize_prefix(prefix)
         # Sorted output is convenient for tests, but protocol correctness never
         # consumes this method.
         return tuple(sorted(key for key in self._objects if key.startswith(prefix)))
