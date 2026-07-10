@@ -1,0 +1,33 @@
+{
+  "assertions": [
+    "100 two-node same-version CAS races had exactly one winner each",
+    "both nodes observed every winning head and stale-lock takeover passed"
+  ],
+  "backend": "lustre",
+  "commands_log": "commands.log",
+  "config_digest": "730d31db46b289cc9f01ae4052630c436ae5150a3d3a769d2c716f58a1cb86fd",
+  "config_path": "scripts/miyabi/run_duraloco_p03_storage_2node.pbs",
+  "dataset_revision": null,
+  "dirty_paths": [],
+  "dirty_tree": false,
+  "ended_at_utc": "2026-07-10T15:40:34.893887Z",
+  "exit_code": 0,
+  "git_branch": "",
+  "git_commit": "952b39b5fef0fc06e4d28d75bbded24baa5f655f",
+  "hostname": "mg0025",
+  "manifest_sha256": "f215014631c2fe3c44705dfec826ad1b5c48603e86ee030b7816c517d50b573a",
+  "model_revision": null,
+  "parent_run_id": "20260711_clean_p03_952b39b_1node",
+  "pbs_job_id": "2357912.opbs",
+  "pbs_nodefile_digest": "2087e575bec39a1ac3a0b05491774757684a2678cce01435ae53b72ae175bbb7",
+  "phase": "P03",
+  "purpose": "contract",
+  "python_version": "3.13.13",
+  "result": "pass",
+  "run_id": "20260711_clean_p03_952b39b_2node",
+  "schema_version": 1,
+  "seed": null,
+  "started_at_utc": "2026-07-10T15:40:34.893887Z",
+  "stderr": "stderr.log",
+  "stdout": "stdout.log"
+}

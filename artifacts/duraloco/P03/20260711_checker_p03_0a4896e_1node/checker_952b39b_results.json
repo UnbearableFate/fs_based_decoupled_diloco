@@ -1,0 +1,144 @@
+{
+  "checks": {
+    "all_read_forms_detect_integrity_failure": {
+      "detected": [
+        "get",
+        "head",
+        "range_get"
+      ],
+      "pass": true
+    },
+    "cas_process_kill_old_or_new_verified": {
+      "pass": true,
+      "stages": {
+        "after_file_fsync": "old",
+        "after_parent_fsync": "new",
+        "after_publish": "new",
+        "after_temp_write": "old",
+        "before_parent_fsync": "new",
+        "before_publish": "old"
+      }
+    },
+    "dead_lock_owner_takeover": {
+      "pass": true
+    },
+    "directory_fsync_downgrade_fail_closed_and_reported": {
+      "audit_capability": false,
+      "pass": true,
+      "required_constructor_failed": true,
+      "required_probe_failed": true
+    },
+    "errno_retry_classification": {
+      "pass": true,
+      "retryable_by_errno": {
+        "116": true,
+        "122": false,
+        "13": false,
+        "28": false,
+        "5": true
+      }
+    },
+    "fault_schedule_seed_replay": {
+      "digest": "0310b07c79c79ed315275cdc3e265c6c4b91e0e0d3f44ad22aaebce74f505601",
+      "pass": true,
+      "schedule": {
+        "events": [
+          {
+            "kind": "eio",
+            "occurrence": 1,
+            "operation": "conditional_replace",
+            "timing": "before"
+          },
+          {
+            "kind": "eio",
+            "occurrence": 1,
+            "operation": "get",
+            "timing": "before"
+          },
+          {
+            "kind": "timeout",
+            "occurrence": 1,
+            "operation": "list_prefix",
+            "timing": "before"
+          },
+          {
+            "kind": "timeout",
+            "occurrence": 1,
+            "operation": "put_immutable",
+            "timing": "before"
+          }
+        ],
+        "seed": 20260711
+      }
+    },
+    "immutable_conflict_detected": {
+      "pass": true
+    },
+    "listing_omission_independent_head_and_cas": {
+      "pass": true
+    },
+    "preexisting_symlink_traversal_rejected": {
+      "pass": true
+    },
+    "request_id_disambiguates_retry_from_independent_call": {
+      "distinct_id_rejected": true,
+      "missing_id_rejected": true,
+      "pass": true,
+      "same_id_retry_version": "pv1-8cc27dad13ea6fa5d6335fe0be794cf7"
+    },
+    "same_expected_same_payload_cas_at_most_one_success": {
+      "contender_count": 8,
+      "distinct_returned_versions": [
+        "pv1-ab9d7102893f54a922fea1e72a7ff1ca"
+      ],
+      "observations": [
+        [
+          "success",
+          "pv1-ab9d7102893f54a922fea1e72a7ff1ca",
+          "identical"
+        ],
+        [
+          "error",
+          "PreconditionFailed",
+          "current version pv1-ab9d7102893f54a922fea1e72a7ff1ca != expected pv1-c513255ddf85a676163644a6eeaf53a7"
+        ],
+        [
+          "error",
+          "PreconditionFailed",
+          "current version pv1-ab9d7102893f54a922fea1e72a7ff1ca != expected pv1-c513255ddf85a676163644a6eeaf53a7"
+        ],
+        [
+          "error",
+          "PreconditionFailed",
+          "current version pv1-ab9d7102893f54a922fea1e72a7ff1ca != expected pv1-c513255ddf85a676163644a6eeaf53a7"
+        ],
+        [
+          "error",
+          "PreconditionFailed",
+          "current version pv1-ab9d7102893f54a922fea1e72a7ff1ca != expected pv1-c513255ddf85a676163644a6eeaf53a7"
+        ],
+        [
+          "error",
+          "PreconditionFailed",
+          "current version pv1-ab9d7102893f54a922fea1e72a7ff1ca != expected pv1-c513255ddf85a676163644a6eeaf53a7"
+        ],
+        [
+          "error",
+          "PreconditionFailed",
+          "current version pv1-ab9d7102893f54a922fea1e72a7ff1ca != expected pv1-c513255ddf85a676163644a6eeaf53a7"
+        ],
+        [
+          "error",
+          "PreconditionFailed",
+          "current version pv1-ab9d7102893f54a922fea1e72a7ff1ca != expected pv1-c513255ddf85a676163644a6eeaf53a7"
+        ]
+      ],
+      "pass": true,
+      "success_count": 1
+    }
+  },
+  "followups": [],
+  "hostname": "mg0027",
+  "required_failures": [],
+  "target_commit": "952b39b5fef0fc06e4d28d75bbded24baa5f655f"
+}

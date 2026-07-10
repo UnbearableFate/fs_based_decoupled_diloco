@@ -1,0 +1,34 @@
+#!/bin/bash
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:10:00
+#PBS -j oe
+
+set -uo pipefail
+
+PROJECT_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco_p03
+ARTIFACT_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P03/20260711_checker_p03_0a4896e_1node
+PYTHON_BIN=/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python
+RUNTIME_ROOT=/work/xg24i002/x10041/duraloco_p03_runtime/20260711_checker_p03_0a4896e_1node
+
+cd "$PROJECT_ROOT" || exit 2
+mkdir -p "$RUNTIME_ROOT"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+hostname > "$ARTIFACT_ROOT/hostname.log"
+git rev-parse HEAD > "$ARTIFACT_ROOT/git_commit.log"
+git status --short --branch > "$ARTIFACT_ROOT/git_status.log"
+printf 'PBS_JOBID=%s\nPBS_NODEFILE=%s\nRUNTIME_ROOT=%s\n' \
+  "${PBS_JOBID:-}" "${PBS_NODEFILE:-}" "$RUNTIME_ROOT" \
+  > "$ARTIFACT_ROOT/pbs_environment.log"
+findmnt -T "$RUNTIME_ROOT" > "$ARTIFACT_ROOT/mount.log" 2>&1 || true
+if command -v lfs >/dev/null 2>&1; then
+  lfs getstripe "$RUNTIME_ROOT" > "$ARTIFACT_ROOT/stripe.log" 2>&1 || true
+fi
+
+"$PYTHON_BIN" "$ARTIFACT_ROOT/checker_counterexamples.py" \
+  "$RUNTIME_ROOT" "$ARTIFACT_ROOT/results.json" \
+  > "$ARTIFACT_ROOT/stdout.log" 2> "$ARTIFACT_ROOT/stderr.log"
+rc=$?
+printf '%s\n' "$rc" > "$ARTIFACT_ROOT/exit_code.log"
+exit "$rc"

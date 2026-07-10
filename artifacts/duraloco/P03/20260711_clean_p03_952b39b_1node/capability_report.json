@@ -1,0 +1,95 @@
+{
+  "assertions": {
+    "head_matches_get": true,
+    "immutable_conflict_detected": true,
+    "immutable_idempotent": true,
+    "listing_discovers_objects": true,
+    "range_get": true,
+    "stale_cas_rejected": true,
+    "verified_get": true
+  },
+  "backend": "posix",
+  "capabilities": {
+    "advisory_lock": true,
+    "atomic_replace": true,
+    "backend": "posix",
+    "batch_delete": true,
+    "conditional_replace": true,
+    "directory_fsync": true,
+    "immutable_create": true,
+    "listing": true,
+    "range_reads": true,
+    "verified_reads": true
+  },
+  "filesystem_block_size": 4096,
+  "filesystem_id": 743766374,
+  "hostname": "mg0003",
+  "operation_trace": [
+    {
+      "key": "runs/20260711_clean_p03_952b39b_1node/probe/immutable",
+      "operation": "put_immutable",
+      "outcome": "created",
+      "sequence": 1,
+      "version": "pv1-8da505d38211b85b3ad50094f86b7642"
+    },
+    {
+      "key": "runs/20260711_clean_p03_952b39b_1node/probe/immutable",
+      "operation": "put_immutable",
+      "outcome": "idempotent",
+      "sequence": 2,
+      "version": "pv1-8da505d38211b85b3ad50094f86b7642"
+    },
+    {
+      "key": "runs/20260711_clean_p03_952b39b_1node/probe/immutable",
+      "operation": "put_immutable",
+      "outcome": "immutable_conflict",
+      "sequence": 3,
+      "version": "pv1-8da505d38211b85b3ad50094f86b7642"
+    },
+    {
+      "key": "runs/20260711_clean_p03_952b39b_1node/probe/control/head",
+      "operation": "put_immutable",
+      "outcome": "created",
+      "sequence": 4,
+      "version": "pv1-7e1228978b80e87385275e0528fca1d4"
+    },
+    {
+      "key": "runs/20260711_clean_p03_952b39b_1node/probe/control/head",
+      "operation": "conditional_replace",
+      "outcome": "replaced",
+      "sequence": 5,
+      "version": "pv1-2361956f3ed0bfb90c0148b0185b98b2"
+    },
+    {
+      "key": "runs/20260711_clean_p03_952b39b_1node/probe/control/head",
+      "operation": "conditional_replace",
+      "outcome": "precondition_failed",
+      "sequence": 6,
+      "version": "pv1-2361956f3ed0bfb90c0148b0185b98b2"
+    },
+    {
+      "key": "runs/20260711_clean_p03_952b39b_1node/probe/immutable",
+      "operation": "get",
+      "outcome": "read",
+      "sequence": 7,
+      "version": "pv1-8da505d38211b85b3ad50094f86b7642"
+    },
+    {
+      "key": "runs/20260711_clean_p03_952b39b_1node/probe/control/head",
+      "operation": "head",
+      "outcome": "read",
+      "sequence": 8,
+      "version": "pv1-2361956f3ed0bfb90c0148b0185b98b2"
+    },
+    {
+      "key": "runs/20260711_clean_p03_952b39b_1node/probe/immutable",
+      "operation": "get",
+      "outcome": "read",
+      "sequence": 9,
+      "version": "pv1-8da505d38211b85b3ad50094f86b7642"
+    }
+  ],
+  "passed": true,
+  "prefix": "runs/20260711_clean_p03_952b39b_1node/probe",
+  "schema_version": 1
+}

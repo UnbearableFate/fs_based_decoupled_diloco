@@ -1,35 +1,39 @@
 phase: P03
-status: in_progress
+status: checking
 planning_basis_branch: codex/fs-diloco-miyabi
 planning_basis_commit: afc50a1e179c64321645b278b2497ea3ab3fe24d
 actual_base_branch: codex/duraloco-p02-reference-model
 actual_base_commit: 5f03afae833712706814a9c295970a5800a8f04e
 feature_branch: codex/duraloco-p03-posix-storage
-current_loop: 1
-current_goal: "define the backend-neutral storage API and reusable conformance suite"
+current_loop: 4
+current_goal: "persist independently checked P03 Lustre contract evidence"
 attempts_for_current_failure: 0
-last_verified_commit: null
+last_verified_commit: 952b39b5fef0fc06e4d28d75bbded24baa5f655f
 checks:
-  local_static: not_run
-  local_runtime: not_run
-  miyabi_login_static: not_run
-  miyabi_1node: not_run
-  miyabi_2node: not_run
+  local_static: static_pass
+  local_runtime: contract_pass
+  miyabi_login_static: static_pass
+  miyabi_1node: miyabi_1node_pass
+  miyabi_2node: miyabi_2node_pass
   miyabi_9node: skipped_not_required
 acceptance:
-  P03-A01: {result: not_run, evidence: []}
-  P03-A02: {result: not_run, evidence: []}
-  P03-A03: {result: not_run, evidence: []}
-  P03-A04: {result: not_run, evidence: []}
-  P03-A05: {result: not_run, evidence: []}
-  P03-A06: {result: not_run, evidence: []}
-  P03-A07: {result: not_run, evidence: []}
-  P03-A08: {result: not_run, evidence: []}
+  P03-A01: {result: pass, evidence: [tests/storage/contract.py, artifacts/duraloco/P03/20260711_clean_p03_952b39b_1node/junit.xml]}
+  P03-A02: {result: pass, evidence: [tests/storage/test_conformance.py, artifacts/duraloco/P03/20260711_clean_p03_952b39b_1node/capability_report.json]}
+  P03-A03: {result: pass, evidence: [artifacts/duraloco/P03/20260711_clean_p03_952b39b_2node/two_node_summary.json, artifacts/duraloco/P03/20260711_checker_p03_0a4896e_1node/checker_952b39b_results.json]}
+  P03-A04: {result: pass, evidence: [tests/storage/test_fault_injection.py, artifacts/duraloco/P03/20260711_checker_p03_0a4896e_1node/checker_952b39b_results.json]}
+  P03-A05: {result: pass, evidence: [docs/duraloco/storage_contract.md, artifacts/duraloco/P03/20260711_clean_p03_952b39b_1node/capability_report.json, artifacts/duraloco/P03/20260711_clean_p03_952b39b_1node/mount.log]}
+  P03-A06: {result: pass, evidence: [tests/storage/test_fault_injection.py, artifacts/duraloco/P03/20260711_checker_p03_0a4896e_1node/checker_952b39b_results.json]}
+  P03-A07: {result: pass, evidence: [tests/storage/test_capability_probe.py, artifacts/duraloco/P03/20260711_clean_p03_952b39b_1node/pytest.log]}
+  P03-A08: {result: pass, evidence: [artifacts/duraloco/P03/20260711_checker_p03_952b39b_1node/checker_report.md, artifacts/duraloco/P03/20260711_checker_p03_0a4896e_1node/error_paths_952b39b_results.json]}
 open_decisions: []
 open_blockers: []
-artifacts: []
-next_action: "write failing backend conformance and POSIX race/fault specifications"
+artifacts:
+  - artifacts/duraloco/P03/20260711_clean_p03_952b39b_1node
+  - artifacts/duraloco/P03/20260711_clean_p03_952b39b_2node
+  - artifacts/duraloco/P03/20260711_checker_p03_0a4896e_1node
+  - artifacts/duraloco/P03/20260711_checker_p03_952b39b_1node
+next_action: "independent checker audits persisted P03 checking state, then mark completed"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
-checker_report: null
+checker_report: artifacts/duraloco/P03/20260711_checker_p03_952b39b_1node/checker_report.md

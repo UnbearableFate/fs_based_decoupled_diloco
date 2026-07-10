@@ -1,0 +1,14 @@
+{
+  "double_winner_rounds": 0,
+  "hosts": [
+    "mg0025",
+    "mg0026"
+  ],
+  "rounds": 100,
+  "stale_lock_takeover": "pass",
+  "visibility_failures": 0,
+  "winner_counts": {
+    "0": 93,
+    "1": 7
+  }
+}

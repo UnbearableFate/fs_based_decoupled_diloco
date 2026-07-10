@@ -1,0 +1,29 @@
+#!/bin/bash
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:10:00
+#PBS -j oe
+
+set -uo pipefail
+
+PROJECT_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco_p03
+ARTIFACT_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P03/20260711_checker_p03_0a4896e_1node
+PYTHON_BIN=/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python
+RUNTIME_ROOT=/work/xg24i002/x10041/duraloco_p03_runtime/20260711_checker_p03_952b39b_1node
+TARGET_COMMIT=952b39b5fef0fc06e4d28d75bbded24baa5f655f
+
+cd "$PROJECT_ROOT" || exit 2
+mkdir -p "$RUNTIME_ROOT"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+printf 'PBS_JOBID=%s\nPBS_NODEFILE=%s\nRUNTIME_ROOT=%s\nTARGET_COMMIT=%s\n' \
+  "${PBS_JOBID:-}" "${PBS_NODEFILE:-}" "$RUNTIME_ROOT" "$TARGET_COMMIT" \
+  > "$ARTIFACT_ROOT/checker_952b39b_pbs_environment.log"
+"$PYTHON_BIN" "$ARTIFACT_ROOT/checker_counterexamples.py" \
+  "$RUNTIME_ROOT" "$ARTIFACT_ROOT/checker_952b39b_results.json" \
+  "$TARGET_COMMIT" \
+  > "$ARTIFACT_ROOT/checker_952b39b_stdout.log" \
+  2> "$ARTIFACT_ROOT/checker_952b39b_stderr.log"
+rc=$?
+printf '%s\n' "$rc" > "$ARTIFACT_ROOT/checker_952b39b_exit_code.log"
+exit "$rc"

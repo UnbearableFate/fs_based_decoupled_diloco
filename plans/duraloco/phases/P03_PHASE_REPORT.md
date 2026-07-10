@@ -8,12 +8,24 @@
 - Branch: `codex/duraloco-p03-posix-storage`
 - Base: `codex/duraloco-p02-reference-model` at
   `5f03afae833712706814a9c295970a5800a8f04e`
-- State: `in_progress`
-- Current implementation: `0a4896e38748cbe33aaefe0d51451df1496b0db7`
-- Maker evidence: PBS `2357882.opbs` (1 node) and `2357886.opbs` (2 nodes)
-- Completed targets: maker evidence for P03-A01 through P03-A08
-- Open target: final independent Checker verdict and persistence audit
-- Checker verdict: pending; independent PBS `2357892.opbs` passed its counterexamples
+- State: `checking`; implementation and independent gates passed
+- Verified implementation: `952b39b5fef0fc06e4d28d75bbded24baa5f655f`
+- Maker evidence: PBS `2357905.opbs` (1 node) and `2357912.opbs` (2 nodes)
+- Completed targets: P03-A01 through P03-A08
+- Open target: final persisted-state audit
+- Checker verdict: `PASS`; `required_gate_followups: none`
+
+### Acceptance summary
+
+| Target | Result | Evidence summary |
+|---|---|---|
+| P03-A01–A02 | PASS | shared memory/POSIX conformance and immutable conflict evidence |
+| P03-A03 | PASS | 100 two-node races; zero double winners and visibility failures |
+| P03-A04 | PASS | listing omission did not affect direct head/CAS/get |
+| P03-A05 | PASS | Lustre mount/stripe and `directory_fsync=true` capability report |
+| P03-A06 | PASS | stable seeded fault schedule/replay digest |
+| P03-A07 | PASS | legacy learner/syncer default remained unchanged |
+| P03-A08 | PASS | independent publication/error-window audit |
 
 ### Checker failure history
 
@@ -34,7 +46,7 @@
   retry; eight identical-data contenders with distinct IDs produced one
   success in independent PBS `2357892.opbs`.
 
-#### Attempt at `0a4896e` — open
+#### Attempt at `0a4896e` — resolved
 
 - Phenomenon: independent PBS `2357895.opbs` injected EIO, ESTALE, EACCES,
   ENOSPC, and EDQUOT at temp-file and lock setup. Those paths returned raw
@@ -45,14 +57,26 @@
   handler, while non-contention `flock` errors were not caught.
 - Impact: D-0305, the mandatory P03 fault matrix, and P03-A08.
 - Evidence: `artifacts/duraloco/P03/20260711_checker_p03_0a4896e_1node/error_paths_results.json`.
-- Required resolution: translate root/parent/temp/lock setup and cleanup errors,
-  add regressions for infrastructure errno classes, then rerun clean maker and
-  independent Checker evidence.
+- Resolution: `952b39b5fef0fc06e4d28d75bbded24baa5f655f` translates
+  root/parent/temp/lock setup and cleanup failures. Exact independent PBS
+  `2357909.opbs` and full independent PBS `2357913.opbs` passed; clean maker
+  PBS `2357905.opbs` passed 246 tests with one explicit nightly skip.
+
+### Lustre evidence and limitations
+
+- One-node host `mg0003`: real `/work` Lustre probe passed; directory fsync,
+  advisory lock, atomic replace, verified reads, and operation tracing were
+  observed.
+- Two-node hosts `mg0025` and `mg0026`: 100 races, winner counts 93/7, zero
+  double winners, zero visibility failures, and stale-lock takeover passed.
+- The evidence does not claim survival of permanent provider loss, every
+  controller/MDS failure, or physical durability beyond the documented
+  process/OS crash sequence.
 
 ### Next action
 
-Obtain the structured independent Checker verdict, persist the bilingual
-acceptance report and clean artifacts, then complete the P03 archival commit.
+Persist this checked state and its clean/checker artifacts, obtain final
+persistence authorization, then complete the P03 archival commit before P04.
 
 ## 中文
 
@@ -62,12 +86,24 @@ acceptance report and clean artifacts, then complete the P03 archival commit.
 - 分支：`codex/duraloco-p03-posix-storage`
 - 基线：`codex/duraloco-p02-reference-model`，提交
   `5f03afae833712706814a9c295970a5800a8f04e`
-- 状态：`in_progress`
-- 当前实现：`0a4896e38748cbe33aaefe0d51451df1496b0db7`
-- Maker 证据：PBS `2357882.opbs`（单节点）和 `2357886.opbs`（双节点）
-- 已完成 targets：P03-A01 至 P03-A08 的 Maker 证据
-- 未完成 target：独立 Checker 最终结论与持久化复核
-- Checker 结论：待定；独立 PBS `2357892.opbs` 已通过其反例
+- 状态：`checking`；实现和独立 gate 已通过
+- 已验证实现：`952b39b5fef0fc06e4d28d75bbded24baa5f655f`
+- Maker 证据：PBS `2357905.opbs`（单节点）和 `2357912.opbs`（双节点）
+- 已完成 targets：P03-A01 至 P03-A08
+- 未完成 target：最终持久化状态复核
+- Checker 结论：`PASS`；`required_gate_followups: none`
+
+### 验收摘要
+
+| Target | 结果 | 证据摘要 |
+|---|---|---|
+| P03-A01–A02 | PASS | memory/POSIX 共用 conformance 与 immutable conflict 证据 |
+| P03-A03 | PASS | 100 轮双节点 race；无 double winner 和 visibility failure |
+| P03-A04 | PASS | listing omission 不影响直接 head/CAS/get |
+| P03-A05 | PASS | Lustre mount/stripe 与 `directory_fsync=true` capability report |
+| P03-A06 | PASS | 稳定的 seeded fault schedule/replay digest |
+| P03-A07 | PASS | legacy learner/syncer 默认路径未改变 |
+| P03-A08 | PASS | 独立 publication/error-window 审查 |
 
 ### Checker 失败历史
 
@@ -87,7 +123,7 @@ acceptance report and clean artifacts, then complete the P03 archival commit.
   显式 request ID。只有同一 request ID 可被识别为重试；独立 PBS
   `2357892.opbs` 中八个相同数据、不同 ID 的 contender 只有一个成功。
 
-#### `0a4896e` 尝试 — 未解决
+#### `0a4896e` 尝试 — 已解决
 
 - 现象：独立 PBS `2357895.opbs` 在 temp-file 和 lock setup 注入 EIO、
   ESTALE、EACCES、ENOSPC、EDQUOT；这些路径返回了原始 `OSError`/
@@ -98,10 +134,21 @@ acceptance report and clean artifacts, then complete the P03 archival commit.
   之外，非 contention 的 `flock` error 也未捕获。
 - 影响：D-0305、P03 必需 fault matrix 和 P03-A08。
 - 证据：`artifacts/duraloco/P03/20260711_checker_p03_0a4896e_1node/error_paths_results.json`。
-- 必需修复：转换 root/parent/temp/lock setup 与 cleanup error，增加
-  infrastructure errno 回归测试，然后重新运行 clean Maker 和独立 Checker。
+- 解决：`952b39b5fef0fc06e4d28d75bbded24baa5f655f` 转换
+  root/parent/temp/lock setup 与 cleanup failure。精确独立 PBS `2357909.opbs`
+  和完整独立 PBS `2357913.opbs` 均通过；clean Maker PBS `2357905.opbs`
+  通过 246 项测试，仅有一个显式 nightly skip。
+
+### Lustre 证据与限制
+
+- 单节点 `mg0003`：真实 `/work` Lustre probe 通过；观测到 directory fsync、
+  advisory lock、atomic replace、verified read 和 operation trace。
+- 双节点 `mg0025`、`mg0026`：100 轮 race，winner 数 93/7，无 double
+  winner、无 visibility failure，stale-lock takeover 通过。
+- 该证据不声称可承受永久 provider loss、所有 controller/MDS failure，
+  也不把物理 durability 扩展到文档所述 process/OS crash sequence 之外。
 
 ### 下一动作
 
-取得结构化独立 Checker 结论，持久化双语验收报告和 clean artifacts，
-然后完成 P03 archival commit。
+持久化 checked state 与 clean/checker artifacts，取得最终 persistence
+授权，然后在 P04 前完成 P03 archival commit。

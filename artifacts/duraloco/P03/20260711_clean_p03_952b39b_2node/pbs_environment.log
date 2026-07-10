@@ -1,0 +1,4 @@
+PBS_JOBID=2357912.opbs
+PBS_NODEFILE=/var/spool/pbs/aux/2357912.opbs
+STORAGE_ROOT=/work/xg24i002/x10041/duraloco_p03_runtime/20260711_clean_p03_952b39b_2node
+ROUNDS=100
