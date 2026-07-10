@@ -7,7 +7,8 @@
 - Phase: P02 — deterministic reference simulator and in-memory backend
 - Branch: `codex/duraloco-p02-reference-model`
 - Verified implementation commit: `7e12997ca0a9fe4e48bb96cfe6391e0e8d1bf773`
-- State: `checking`; implementation gates passed and persistence is under final review
+- Checked persistence commit: `b413673aec6caed7541d85c0a1dad11a11ffd256`
+- State: `completed`; final Checker authorized `checking -> completed`
 - Maker evidence: PBS `2357761.opbs` on `mg0011`, 213 passed and 1 skipped;
   explicit 10,000 traces produced 10,000 unique state digests
 - Checker evidence: PBS `2357765.opbs` on `mg0013`
@@ -15,8 +16,8 @@
 
 The reference storage, immutable transition system, optimizer oracle, crash
 matrix, deterministic replay/minimizer, seeded traces, and five safety mutants
-are implemented. P02-A01 through P02-A08 passed. The final remaining action is
-to persist this checked state and archive the milestone commit.
+are implemented. P02-A01 through P02-A08 passed, the checked state is persisted,
+and the milestone is archived on its feature branch.
 
 ### Acceptance summary
 
@@ -64,8 +65,8 @@ to persist this checked state and archive the milestone commit.
 
 ### Next action
 
-Complete the persistence audit, mark P02 `completed`, create the required
-milestone archival commit, and only then start P03.
+Start P03 from the completed P02 feature-branch tip; do not merge `main`
+automatically.
 
 ## 中文
 
@@ -74,7 +75,8 @@ milestone archival commit, and only then start P03.
 - 阶段：P02 — 确定性参考模拟器与内存后端
 - 分支：`codex/duraloco-p02-reference-model`
 - 已验证实现提交：`7e12997ca0a9fe4e48bb96cfe6391e0e8d1bf773`
-- 状态：`checking`；实现 gate 已通过，正在进行最终持久化复核
+- 已复核持久化提交：`b413673aec6caed7541d85c0a1dad11a11ffd256`
+- 状态：`completed`；最终 Checker 已授权 `checking -> completed`
 - Maker 证据：PBS `2357761.opbs`，运行于 `mg0011`，213 项通过、1 项跳过；
   显式 10,000 traces 产生 10,000 个唯一 state digest
 - Checker 证据：PBS `2357765.opbs`，运行于 `mg0013`
@@ -82,8 +84,8 @@ milestone archival commit, and only then start P03.
 
 参考存储、不可变状态转换、优化器 oracle、故障矩阵、确定性
 replay/minimizer、seeded traces 和五个安全 mutant 已实现。只有 trace
-runner 已使用冻结的 quorum 策略，P02-A01 至 P02-A08 全部通过。当前只需
-持久化 checked state 并创建 milestone archival commit。
+runner 已使用冻结的 quorum 策略，P02-A01 至 P02-A08 全部通过，checked
+state 已持久化，milestone 已在 feature branch 归档。
 
 ### 验收摘要
 
@@ -127,5 +129,4 @@ runner 已使用冻结的 quorum 策略，P02-A01 至 P02-A08 全部通过。当
 
 ### 下一动作
 
-完成 persistence audit，把 P02 标记为 `completed`，创建要求的 milestone
-archival commit，然后才能开始 P03。
+从已完成的 P02 feature-branch tip 开始 P03；不得自动合并 `main`。
