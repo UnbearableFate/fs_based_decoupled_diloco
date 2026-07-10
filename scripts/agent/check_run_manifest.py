@@ -78,7 +78,9 @@ def validate(
         raise ManifestError(f"schema fields differ: missing={sorted(missing)} extra={sorted(unknown)}")
     if payload["schema_version"] != 1:
         raise ManifestError("unsupported schema_version")
-    if not re.fullmatch(r"P(0[0-9]|1[0-2])", str(payload["phase"])):
+    if str(payload["phase"]) != "M00" and not re.fullmatch(
+        r"P(0[0-9]|1[0-2])", str(payload["phase"])
+    ):
         raise ManifestError("invalid phase")
     if not re.fullmatch(r"[0-9a-f]{40}", str(payload["git_commit"])):
         raise ManifestError("git_commit must be 40 lowercase hex")

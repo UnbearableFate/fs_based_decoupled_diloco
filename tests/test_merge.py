@@ -29,6 +29,6 @@ def test_selection_one_update_per_learner_and_stale_drop():
         {"update_id": "new", "learner_id": "learner_000", "local_step_end": 2, "committed_at": 2.0, "base_global_version": 1},
         {"update_id": "other", "learner_id": "learner_001", "local_step_end": 1, "committed_at": 3.0, "base_global_version": 3},
     ]
-    selected = select_one_per_learner(updates, policy="most_recent_per_learner")
-    assert [row["update_id"] for row in selected] == ["new", "other"]
+    selected = select_one_per_learner(updates, policy="oldest_pending")
+    assert [row["update_id"] for row in selected] == ["old", "other"]
     assert stale_update_ids(updates, current_version=3, max_staleness_versions=2) == ["old"]

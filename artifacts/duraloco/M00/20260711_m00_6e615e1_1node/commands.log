@@ -1,0 +1,2 @@
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python scripts/agent/check_no_embedded_database.py --root /work/xg24i002/x10041/fs_based_decoupled_diloco --output /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/M00/20260711_m00_6e615e1_1node/forbidden_surface.json 
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python -m pytest -q tests --junitxml /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/M00/20260711_m00_6e615e1_1node/junit.xml 

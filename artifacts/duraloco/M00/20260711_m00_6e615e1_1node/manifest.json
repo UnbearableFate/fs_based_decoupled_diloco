@@ -1,0 +1,33 @@
+{
+  "assertions": [
+    "forbidden-surface scan passed",
+    "dependency-complete suite exposed seven failures before process smoke"
+  ],
+  "backend": "lustre",
+  "commands_log": "commands.log",
+  "config_digest": "b8878a42399d38bc2d0f09acef342dd67970f710751f9b5aad7a8d96903728c0",
+  "config_path": "scripts/miyabi/run_duraloco_m00_1node.pbs",
+  "dataset_revision": null,
+  "dirty_paths": [],
+  "dirty_tree": false,
+  "ended_at_utc": "2026-07-10T23:31:40.350615Z",
+  "exit_code": 1,
+  "git_branch": "codex/duraloco-m00-sqlite-free-rebase",
+  "git_commit": "6e615e1421ccbc23eb303c9e9f8a3e3d61b6fddf",
+  "hostname": "mg0025",
+  "manifest_sha256": "34227b24685ae351a8db88315ae042670e8102e3622012b0b31e29d63c494301",
+  "model_revision": null,
+  "parent_run_id": null,
+  "pbs_job_id": "2359070.opbs",
+  "pbs_nodefile_digest": null,
+  "phase": "M00",
+  "purpose": "contract",
+  "python_version": "3.13.13",
+  "result": "fail",
+  "run_id": "20260711_m00_6e615e1_1node",
+  "schema_version": 1,
+  "seed": null,
+  "started_at_utc": "2026-07-10T23:31:40.350615Z",
+  "stderr": "stderr.log",
+  "stdout": "stdout.log"
+}

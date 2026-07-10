@@ -28,11 +28,12 @@ def test_required_capability_check_fails_closed():
         require_capabilities(report, ("directory_fsync",))
 
 
-def test_legacy_runtime_has_no_posix_backend_default_switch():
+def test_m00_runtime_uses_the_verified_posix_backend_for_authority():
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[2]
-    for relative in ("fs_diloco/learner.py", "fs_diloco/syncer.py", "fs_diloco/config.py"):
-        source = (root / relative).read_text(encoding="utf-8")
-        assert "PosixStorageBackend" not in source
-
+    syncer = (root / "fs_diloco/syncer.py").read_text(encoding="utf-8")
+    learner = (root / "fs_diloco/learner.py").read_text(encoding="utf-8")
+    assert "PosixStorageBackend(paths.authority)" in syncer
+    assert "PosixStorageBackend" not in learner
+    assert "ProductionTransactionalLog" in syncer

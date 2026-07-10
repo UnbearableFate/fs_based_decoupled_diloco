@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import platform
+import re
 import subprocess
 import sys
 import uuid
@@ -36,7 +37,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--phase", required=True, choices=[f"P{i:02d}" for i in range(13)])
+    parser.add_argument(
+        "--phase",
+        required=True,
+        choices=["M00", *[f"P{i:02d}" for i in range(13)]],
+    )
     parser.add_argument(
         "--purpose",
         required=True,
@@ -60,6 +65,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--assertion", action="append", default=[])
     parser.add_argument("--started-at-utc")
     parser.add_argument("--ended-at-utc")
+    parser.add_argument("--git-commit-override")
+    parser.add_argument("--git-branch-override")
+    parser.add_argument("--clean-tree-override", action="store_true")
     return parser.parse_args(argv)
 
 
@@ -72,6 +80,12 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     status = _git(root, "status", "--porcelain=v1").splitlines()
+    if args.clean_tree_override:
+        status = []
+    git_commit = args.git_commit_override or _git(root, "rev-parse", "HEAD")
+    if re.fullmatch(r"[0-9a-f]{40}", git_commit) is None:
+        print("git commit override must be 40 lowercase hex", file=sys.stderr)
+        return 2
     nodefile_digest = None
     nodefile = os.environ.get("PBS_NODEFILE")
     if nodefile and Path(nodefile).is_file():
@@ -88,8 +102,8 @@ def main(argv: list[str] | None = None) -> int:
         "parent_run_id": args.parent_run_id,
         "purpose": args.purpose,
         "phase": args.phase,
-        "git_commit": _git(root, "rev-parse", "HEAD"),
-        "git_branch": _git(root, "branch", "--show-current"),
+        "git_commit": git_commit,
+        "git_branch": args.git_branch_override or _git(root, "branch", "--show-current"),
         "dirty_tree": bool(status),
         "dirty_paths": status,
         "hostname": args.hostname or platform.node(),

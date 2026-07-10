@@ -11,7 +11,7 @@ from typing import Any, Iterator
 from .errors import ProtocolError
 
 
-DTYPE_BYTES = {"F16": 2, "BF16": 2, "F32": 4, "F64": 8}
+DTYPE_BYTES = {"F16": 2, "BF16": 2, "F32": 4, "F64": 8, "I64": 8}
 PROTOCOL_TO_SAFE = {
     "float16": "F16",
     "bfloat16": "BF16",

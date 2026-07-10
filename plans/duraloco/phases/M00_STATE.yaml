@@ -7,7 +7,7 @@ actual_base_commit: f32b9ddf3fd6443947c178aee667029df1c7f86d
 feature_branch: codex/duraloco-m00-sqlite-free-rebase
 current_loop: 1
 current_goal: "remove every embedded-database runtime surface and rebase production sync through the committed log"
-attempts_for_current_failure: 0
+attempts_for_current_failure: 1
 last_verified_commit: null
 checks:
   local_static: static_pass
@@ -31,8 +31,9 @@ acceptance:
   M00-A12: {result: not_run, evidence: []}
 open_decisions: []
 open_blockers: []
-artifacts: []
-next_action: "finish production/catalog/recovery hardening, then run the clean 1-node M00 gate"
+artifacts:
+  - artifacts/duraloco/M00/20260711_m00_6e615e1_1node
+next_action: "commit the I64 decoder and stale-test repair, then run a parent-linked clean 1-node retry"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
