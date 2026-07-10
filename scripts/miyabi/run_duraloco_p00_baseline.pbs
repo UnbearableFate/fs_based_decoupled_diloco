@@ -19,6 +19,7 @@ module list 2>&1 | cat
 PROJECT_ROOT="${PROJECT_ROOT:-${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}}"
 PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
 RUN_ID="${RUN_ID:-$(date +%Y%m%d_%H%M%S)_duraloco_p00_baseline}"
+PARENT_RUN_ID="${PARENT_RUN_ID:-}"
 ARTIFACT_ROOT="${ARTIFACT_ROOT:-$PROJECT_ROOT/artifacts/duraloco/P00/$RUN_ID}"
 FULL_RUN_ID="${RUN_ID}_full"
 FRAGMENT_RUN_ID="${RUN_ID}_fragment"
@@ -92,22 +93,28 @@ qstat "$PBS_JOBID" | tee "$ARTIFACT_ROOT/qstat_final.log"
 # Preserve separate stdout/stderr paths required by the run-manifest schema.
 cp "$ARTIFACT_ROOT/pytest.log" "$ARTIFACT_ROOT/stdout.log"
 : > "$ARTIFACT_ROOT/stderr.log"
-"$PYTHON_BIN" scripts/agent/create_run_manifest.py \
-  --root "$PROJECT_ROOT" \
-  --output "$ARTIFACT_ROOT/manifest.json" \
-  --phase P00 \
-  --purpose smoke \
-  --backend lustre \
-  --config configs/duraloco_p00_baseline_bundle.sha256 \
-  --dataset-revision synthetic-v1 \
-  --model-revision synthetic-tiny-v1 \
-  --commands-log commands.log \
-  --stdout stdout.log \
-  --stderr stderr.log \
-  --exit-code 0 \
-  --result pass \
-  --assertion "full dependency-complete pytest suite passed" \
-  --assertion "full-vector tiny smoke finite evidence was preserved with BASE-001 limitation" \
-  --assertion "fragment tiny smoke produced finite loss and complete artifacts" \
+MANIFEST_ARGS=(
+  --root "$PROJECT_ROOT"
+  --output "$ARTIFACT_ROOT/manifest.json"
+  --phase P00
+  --purpose smoke
+  --run-id "$RUN_ID"
+  --backend lustre
+  --config configs/duraloco_p00_baseline_bundle.sha256
+  --dataset-revision synthetic-v1
+  --model-revision synthetic-tiny-v1
+  --commands-log commands.log
+  --stdout stdout.log
+  --stderr stderr.log
+  --exit-code 0
+  --result pass
+  --assertion "full dependency-complete pytest suite passed"
+  --assertion "full-vector tiny smoke finite evidence was preserved with BASE-001 limitation"
+  --assertion "fragment tiny smoke produced finite loss and complete artifacts"
   --assertion "representative legacy run sample passed evidence checks"
+)
+if [[ -n "$PARENT_RUN_ID" ]]; then
+  MANIFEST_ARGS+=(--parent-run-id "$PARENT_RUN_ID")
+fi
+"$PYTHON_BIN" scripts/agent/create_run_manifest.py "${MANIFEST_ARGS[@]}"
 "$PYTHON_BIN" scripts/agent/check_run_manifest.py "$ARTIFACT_ROOT/manifest.json"
