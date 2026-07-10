@@ -247,7 +247,7 @@ def test_extreme_nesting_becomes_typed_quarantine_not_recursion_error(tmp_path):
 
 
 def test_extreme_safetensors_metadata_nesting_is_typed_quarantine(tmp_path):
-    nested = b"[" * 2000 + b"0" + b"]" * 2000
+    nested = b'{"x":' * 2000 + b"0" + b"}" * 2000
     header = b'{"__metadata__":{"nested":' + nested + b"}}"
     payload = struct.pack("<Q", len(header)) + header
     relative = "immutable/proposals/deep-header.safetensors"
