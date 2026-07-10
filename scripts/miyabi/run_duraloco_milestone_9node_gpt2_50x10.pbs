@@ -129,9 +129,11 @@ MANIFEST_ARGS=(
   --root "$PROJECT_ROOT"
   --output "$ARTIFACT_ROOT/manifest.json"
   --phase "$PHASE"
-  --purpose training
+  --purpose experiment
   --run-id "$RUN_ID"
   --backend lustre
+  --model-revision gpt2
+  --dataset-revision wikitext-2-raw-v1
   --config configs/duraloco_milestone_gpt2_9node_50x10.yaml
   --commands-log commands.log
   --stdout stdout.log

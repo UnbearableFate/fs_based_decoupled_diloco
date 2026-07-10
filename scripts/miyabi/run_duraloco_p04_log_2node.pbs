@@ -82,6 +82,8 @@ assert all(report["status"] == "PASS" for report in reports)
 assert all(report["rounds"] >= 10 for report in reports)
 assert all(report["double_winners"] == 0 for report in reports)
 assert all(report["double_inclusions"] == 0 for report in reports)
+assert all(report["response_loss_recovered"] for report in reports)
+assert all(report["second_node_takeover"] for report in reports)
 assert len({report["committed_state_digest"] for report in reports}) == 1
 assert sum(report["wins"] for report in reports) == reports[0]["rounds"]
 summary = {
@@ -92,6 +94,8 @@ summary = {
     "conflicts": {str(report["rank"]): report["conflicts"] for report in reports},
     "double_winners": 0,
     "double_inclusions": 0,
+    "response_loss_recovered": True,
+    "second_node_takeover": True,
     "committed_state_digest": reports[0]["committed_state_digest"],
 }
 output.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n")
@@ -116,6 +120,7 @@ MANIFEST_ARGS=(
   --result pass
   --assertion "every two-node same-parent race committed exactly one transition"
   --assertion "both nodes replayed one identical committed prefix with zero double inclusion"
+  --assertion "a lost CAS-success response was recovered and the second node took over"
 )
 if [[ -n "$PARENT_RUN_ID" ]]; then
   MANIFEST_ARGS+=(--parent-run-id "$PARENT_RUN_ID")

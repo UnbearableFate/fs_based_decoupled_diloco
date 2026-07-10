@@ -238,7 +238,47 @@ def run_two_node(
             backend.put_immutable(f"{barrier}/rounds/{round_index:03d}/complete", b"ok")
         _wait(backend, f"{barrier}/rounds/{round_index:03d}/complete")
 
+    if rank == 0:
+        lost = _proposal(
+            log,
+            learner="response-loss-writer",
+            sequence=1,
+            fragment_id=0,
+            values=(7.0, -7.0),
+        )
+        prepared = log.prepare_transition(
+            fragment_id=0, selected_proposal_ids=(lost.proposal_id,)
+        )
+        try:
+            log.commit_prepared(prepared, crash_at="after_head_cas")
+        except InjectedLogCrash:
+            recovered = log.resolve_prepared(prepared)
+            if recovered is None or recovered.status != "already_committed":
+                raise AssertionError("lost CAS response was not recoverable from head")
+        else:
+            raise AssertionError("after-head-CAS crash surrogate did not fire")
+        backend.put_immutable(f"{barrier}/response-loss-committed", b"ready")
+    _wait(backend, f"{barrier}/response-loss-committed")
+    if replay_log(log).head_frontier.commit_seq != rounds + 1:
+        raise AssertionError("response-loss commit did not advance exactly once")
+    if rank == 1:
+        takeover = _proposal(
+            log,
+            learner="takeover-writer",
+            sequence=1,
+            fragment_id=1,
+            values=(8.0, -8.0),
+        )
+        outcome = log.commit_transition(
+            fragment_id=1, selected_proposal_ids=(takeover.proposal_id,)
+        )
+        if outcome.status != "committed":
+            raise AssertionError("second-node takeover did not commit")
+        backend.put_immutable(f"{barrier}/takeover-committed", b"ready")
+    _wait(backend, f"{barrier}/takeover-committed")
     final = replay_log(log)
+    if final.head_frontier.commit_seq != rounds + 2:
+        raise AssertionError("takeover prefix has an unexpected sequence")
     report = {
         "status": "PASS",
         "rank": rank,
@@ -251,6 +291,8 @@ def run_two_node(
         "committed_state_digest": final.committed_state_digest,
         "double_winners": 0,
         "double_inclusions": len(final.consumption) - len(set(final.consumption)),
+        "response_loss_recovered": True,
+        "second_node_takeover": True,
     }
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / f"rank_{rank}.json").write_text(
