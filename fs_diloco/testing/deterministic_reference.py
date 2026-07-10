@@ -20,6 +20,13 @@ class ReferenceWeightingConfig:
     staleness_lambda: float = 0.2
 
     def __post_init__(self) -> None:
+        if not isinstance(self.staleness_function, str):
+            raise ValueError("staleness_function must be a string")
+        try:
+            staleness_lambda = float(self.staleness_lambda)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ValueError("staleness_lambda must be numeric") from exc
+        object.__setattr__(self, "staleness_lambda", staleness_lambda)
         if self.staleness_function != "rational":
             raise ValueError("P02 supports only rational staleness weighting")
         if not math.isfinite(self.staleness_lambda) or self.staleness_lambda < 0.0:
@@ -43,6 +50,21 @@ class ReferenceOptimizerConfig:
     eps: float = 1.0e-8
 
     def __post_init__(self) -> None:
+        if not isinstance(self.name, str):
+            raise ValueError("optimizer name must be a string")
+        try:
+            lr = float(self.lr)
+            momentum = float(self.momentum)
+            weight_decay = float(self.weight_decay)
+            betas = tuple(float(value) for value in self.betas)
+            eps = float(self.eps)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ValueError("optimizer numeric configuration is invalid") from exc
+        object.__setattr__(self, "lr", lr)
+        object.__setattr__(self, "momentum", momentum)
+        object.__setattr__(self, "weight_decay", weight_decay)
+        object.__setattr__(self, "betas", betas)
+        object.__setattr__(self, "eps", eps)
         if self.name.lower() not in {"sgd", "momentum", "nesterov", "adamw"}:
             raise ValueError(f"unsupported optimizer: {self.name}")
         if not math.isfinite(self.lr) or self.lr <= 0.0:
@@ -81,6 +103,11 @@ class ReferenceOptimizerState:
     momentum: Vector = ()
     exp_avg: Vector = ()
     exp_avg_sq: Vector = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "momentum", tuple(self.momentum))
+        object.__setattr__(self, "exp_avg", tuple(self.exp_avg))
+        object.__setattr__(self, "exp_avg_sq", tuple(self.exp_avg_sq))
 
     def identity(self) -> dict[str, object]:
         return {

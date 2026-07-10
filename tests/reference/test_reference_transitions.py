@@ -152,6 +152,7 @@ def test_state_digest_binds_optimizer_and_weighting_contracts():
         ReferenceOptimizerConfig,
         ReferenceWeightingConfig,
     )
+    from fs_diloco.log.model import ReferenceProtocolConfig
 
     baseline = SystemState.genesis()
     different_optimizer = SystemState.genesis(
@@ -160,13 +161,25 @@ def test_state_digest_binds_optimizer_and_weighting_contracts():
     different_weighting = SystemState.genesis(
         weighting_config=ReferenceWeightingConfig(staleness_lambda=0.3)
     )
+    different_protocol = SystemState.genesis(
+        protocol_config=ReferenceProtocolConfig(max_global_staleness=2)
+    )
     assert len(
         {
             baseline.state_digest(),
             different_optimizer.state_digest(),
             different_weighting.state_digest(),
+            different_protocol.state_digest(),
         }
-    ) == 3
+    ) == 4
+
+
+def test_reference_state_nested_authority_is_immutable():
+    state = SystemState.genesis()
+    with pytest.raises(TypeError):
+        state.fragments[0] = state.fragments[0]
+    with pytest.raises(TypeError):
+        state.proposals["p"] = proposal_for(state, learner=0, sequence=0)
 
 
 def test_eligibility_requires_exact_commit_sequence_and_fragment_version_pairing():

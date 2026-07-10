@@ -20,7 +20,9 @@ correctness.
 
 `SystemState` contains one global head, per-fragment parameters/version/outer
 state, published proposals, committed consumption/drop sets, and a parent-linked
-commit sequence. Preparing a transition canonicalizes proposal IDs, validates
+commit sequence. Its state identity binds the optimizer, rational-weighting,
+and global/fragment staleness configurations. Preparing a transition
+canonicalizes proposal IDs, validates
 eligibility against authoritative state, rejects duplicate learners/IDs,
 applies the frozen rational staleness decay `tokens / (1 + 0.2 * staleness)`,
 normalizes those positive weights in float64, reduces in canonical order, and

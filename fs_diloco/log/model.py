@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 import math
-from typing import Iterable
+from types import MappingProxyType
+from typing import Iterable, Mapping
 
 from fs_diloco.protocol.canonical_json import canonical_digest
 from fs_diloco.testing.deterministic_reference import (
@@ -30,6 +31,24 @@ class TransitionConflict(TransitionError):
 
 
 @dataclass(frozen=True)
+class ReferenceProtocolConfig:
+    max_global_staleness: int = 64
+    max_fragment_staleness: int = 4
+
+    def __post_init__(self) -> None:
+        if type(self.max_global_staleness) is not int or self.max_global_staleness < 0:
+            raise ValueError("max_global_staleness must be a non-negative integer")
+        if type(self.max_fragment_staleness) is not int or self.max_fragment_staleness < 0:
+            raise ValueError("max_fragment_staleness must be a non-negative integer")
+
+    def identity(self) -> dict[str, int]:
+        return {
+            "max_global_staleness": self.max_global_staleness,
+            "max_fragment_staleness": self.max_fragment_staleness,
+        }
+
+
+@dataclass(frozen=True)
 class ReferenceProposal:
     proposal_id: str
     learner_id: str
@@ -41,6 +60,9 @@ class ReferenceProposal:
     base_fragment_version: int
     target_tokens: int
     values: Vector
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "values", tuple(self.values))
 
     @classmethod
     def create(
@@ -122,6 +144,9 @@ class FragmentState:
     params_commit_id: str
     outer_state_commit_id: str
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "params", tuple(self.params))
+
     def identity(self) -> dict[str, object]:
         return {
             "version": self.version,
@@ -146,6 +171,11 @@ class CommitEvent:
     new_outer_state: ReferenceOptimizerState
     transition_digest: str
 
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "selected_proposal_ids", tuple(self.selected_proposal_ids))
+        object.__setattr__(self, "weights_hex", tuple(tuple(item) for item in self.weights_hex))
+        object.__setattr__(self, "new_params", tuple(self.new_params))
+
     def identity_body(self) -> dict[str, object]:
         return {
             "commit_seq": self.commit_seq,
@@ -168,6 +198,9 @@ class PreparedTransition:
     fragment_id: int
     selected_proposal_ids: tuple[str, ...]
     event: CommitEvent
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "selected_proposal_ids", tuple(self.selected_proposal_ids))
 
 
 @dataclass(frozen=True)
@@ -192,15 +225,33 @@ class SystemState:
     run_generation: int
     optimizer_config: ReferenceOptimizerConfig
     weighting_config: ReferenceWeightingConfig
+    protocol_config: ReferenceProtocolConfig
     head_commit_id: str
     head_commit_seq: int
-    genesis_fragments: dict[int, FragmentState]
-    fragments: dict[int, FragmentState]
-    proposals: dict[str, ReferenceProposal]
+    genesis_fragments: Mapping[int, FragmentState]
+    fragments: Mapping[int, FragmentState]
+    proposals: Mapping[str, ReferenceProposal]
     consumed_proposal_ids: frozenset[str]
     dropped_proposal_ids: frozenset[str]
-    proposal_decisions: dict[str, ProposalDecision]
+    proposal_decisions: Mapping[str, ProposalDecision]
     commits: tuple[CommitEvent, ...]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "genesis_fragments",
+            MappingProxyType(dict(self.genesis_fragments)),
+        )
+        object.__setattr__(self, "fragments", MappingProxyType(dict(self.fragments)))
+        object.__setattr__(self, "proposals", MappingProxyType(dict(self.proposals)))
+        object.__setattr__(
+            self,
+            "proposal_decisions",
+            MappingProxyType(dict(self.proposal_decisions)),
+        )
+        object.__setattr__(self, "consumed_proposal_ids", frozenset(self.consumed_proposal_ids))
+        object.__setattr__(self, "dropped_proposal_ids", frozenset(self.dropped_proposal_ids))
+        object.__setattr__(self, "commits", tuple(self.commits))
 
     @classmethod
     def genesis(
@@ -211,6 +262,7 @@ class SystemState:
         initial_value: float = 0.0,
         optimizer_config: ReferenceOptimizerConfig | None = None,
         weighting_config: ReferenceWeightingConfig | None = None,
+        protocol_config: ReferenceProtocolConfig | None = None,
         run_id: str = "reference-run",
     ) -> "SystemState":
         if fragment_count < 1:
@@ -219,6 +271,7 @@ class SystemState:
             raise ValueError("initial_value must be finite")
         config = optimizer_config or ReferenceOptimizerConfig()
         weights = weighting_config or ReferenceWeightingConfig()
+        protocol = protocol_config or ReferenceProtocolConfig()
         fragments = {
             fragment_id: FragmentState(
                 version=0,
@@ -234,6 +287,7 @@ class SystemState:
             run_generation=0,
             optimizer_config=config,
             weighting_config=weights,
+            protocol_config=protocol,
             head_commit_id="genesis",
             head_commit_seq=0,
             genesis_fragments=dict(fragments),
@@ -265,9 +319,13 @@ class SystemState:
         self,
         proposal: ReferenceProposal,
         *,
-        max_staleness: int = 64,
-        max_fragment_staleness: int = 4,
+        max_staleness: int | None = None,
+        max_fragment_staleness: int | None = None,
     ) -> bool:
+        if max_staleness is None:
+            max_staleness = self.protocol_config.max_global_staleness
+        if max_fragment_staleness is None:
+            max_fragment_staleness = self.protocol_config.max_fragment_staleness
         if proposal.proposal_id in self.consumed_proposal_ids | self.dropped_proposal_ids:
             return False
         if proposal.fragment_id not in self.fragments:
@@ -303,6 +361,7 @@ class SystemState:
             "run_generation": self.run_generation,
             "optimizer_config": self.optimizer_config.identity(),
             "weighting_config": self.weighting_config.identity(),
+            "protocol_config": self.protocol_config.identity(),
             "head_commit_id": self.head_commit_id,
             "head_commit_seq": self.head_commit_seq,
             "genesis_fragments": {
@@ -523,9 +582,15 @@ def check_invariants(state: SystemState) -> tuple[str, ...]:
                 violations.append("I-004: selected proposal targets a different fragment")
             if proposal.base_fragment_version > event.previous_fragment_version:
                 violations.append("I-004: selected proposal has a future fragment base")
-            if event.previous_fragment_version - proposal.base_fragment_version > 4:
+            if (
+                event.previous_fragment_version - proposal.base_fragment_version
+                > state.protocol_config.max_fragment_staleness
+            ):
                 violations.append("I-004: selected proposal exceeds fragment staleness")
-            if event.commit_seq - 1 - proposal.base_commit_seq > 64:
+            if (
+                event.commit_seq - 1 - proposal.base_commit_seq
+                > state.protocol_config.max_global_staleness
+            ):
                 violations.append("I-004: selected proposal exceeds global staleness")
         if len({proposal.learner_id for proposal in selected}) != len(selected):
             violations.append("I-004: commit selects multiple proposals from one learner")

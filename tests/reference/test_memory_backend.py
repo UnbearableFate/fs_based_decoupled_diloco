@@ -71,3 +71,4 @@ def test_range_delete_and_listing_are_observable_but_not_authority():
         "a/1": "deleted",
         "missing": "missing",
     }
+    assert isinstance(backend.history, tuple)

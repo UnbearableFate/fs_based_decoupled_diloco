@@ -77,7 +77,11 @@ class InMemoryStorageBackend:
         self._operation_counter = 0
         self._operation_occurrences: dict[str, int] = {}
         self._failures: list[FailureRule] = []
-        self.history: list[OperationRecord] = []
+        self._history: list[OperationRecord] = []
+
+    @property
+    def history(self) -> tuple[OperationRecord, ...]:
+        return tuple(self._history)
 
     def inject_failure(self, rule: FailureRule) -> None:
         self._failures.append(rule)
@@ -94,7 +98,7 @@ class InMemoryStorageBackend:
 
     def _record(self, operation: str, key: str, outcome: str, version: str | None) -> None:
         self._operation_counter += 1
-        self.history.append(
+        self._history.append(
             OperationRecord(self._operation_counter, operation, key, outcome, version)
         )
 
