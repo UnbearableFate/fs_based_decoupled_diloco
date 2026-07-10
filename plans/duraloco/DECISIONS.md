@@ -155,3 +155,48 @@ run generation plus an explicit compatibility amendment.
 - Rejected: token-only does not satisfy the frozen numeric contract; exponential decay adds a platform-sensitive transcendental operation to the standard-library oracle.
 - Compatibility: fresh proposals have staleness zero and exactly preserve token-only legacy comparisons.
 - Reversibility: changing the function or lambda requires a new run generation and weighting implementation identity.
+
+## D-0301 — POSIX version tokens and locking
+
+- Context: P03 needs linearizable single-key conditional replace without an external lock service and without relying on mtime.
+- Candidates: mtime/inode tokens; sidecar generations; one atomic envelope plus a stable advisory lock file.
+- Choice: store payload, a random version token, previous-version token, size, and SHA-256 in one checksummed envelope; serialize mutations with `flock` on a stable SHA-256-derived lock path; publish with same-directory temp write, file fsync, atomic replace, and parent fsync.
+- Rejected: mtime/inode tokens admit aliasing; a separately replaced sidecar creates a two-file atomicity gap.
+- Compatibility: the semantic API returns original payload bytes and opaque versions; legacy runtime paths remain untouched.
+- Reversibility: another backend may use provider generations/ETags if it passes the same conformance and race gates.
+
+## D-0302 — Directory fsync capability downgrade
+
+- Context: parent directory fsync is required for the declared POSIX durability sequence but may be unsupported by a target filesystem.
+- Candidates: ignore errors; always fail; probe and fail closed only when required.
+- Choice: probe and record directory-fsync support; a backend configured with `require_directory_fsync=true` fails closed when unsupported, while audit-only mode reports the downgrade without extending durability claims.
+- Rejected: silently ignoring the result would overclaim durability.
+- Compatibility: P03 reports the observed Miyabi capability and scopes claims to the declared failure model.
+- Reversibility: capability policy is configuration, not object layout.
+
+## D-0303 — Verified-read correctness mode
+
+- Context: every authoritative read must detect short/corrupt objects.
+- Candidates: sampled verification; metadata-only verification; always verify.
+- Choice: P03 always parses the envelope and verifies payload size and SHA-256 for `get`, `head`, and `range_get`; performance sampling is deferred.
+- Rejected: sampling is insufficient for the correctness oracle.
+- Compatibility: callers receive typed `IntegrityError` instead of unchecked bytes.
+- Reversibility: later performance modes must remain explicit and may not be used for commit correctness without new evidence.
+
+## D-0304 — Namespace and key normalization
+
+- Context: the same logical key must map to one object inside an isolated run root.
+- Candidates: arbitrary OS paths; normalized POSIX keys; URL-like encoded keys.
+- Choice: accept only non-empty canonical relative POSIX keys; reject absolute paths, dot segments, backslashes, controls, symlink traversal, and the backend-reserved lock namespace.
+- Rejected: host-path normalization creates aliases and traversal risk.
+- Compatibility: Protocol v2 payload keys already use canonical relative POSIX spelling.
+- Reversibility: encoded object-store layouts can be added behind the same logical-key validator.
+
+## D-0305 — POSIX error classification
+
+- Context: retry policy must distinguish conflict, visibility, integrity, and infrastructure failures.
+- Candidates: expose raw `OSError`; retry every error; typed fail-closed taxonomy.
+- Choice: translate ENOENT to `NotFound`, stale versions to `PreconditionFailed`, EIO/ESTALE to retryable `StorageIOError`, permission/quota/space to non-retryable infrastructure errors, and checksum/format failures to `IntegrityError`.
+- Rejected: retry-all hides configuration failures and raw errno handling leaks backend details into protocol code.
+- Compatibility: existing P02 exception names remain re-exported from `fs_diloco.storage`.
+- Reversibility: retryability metadata may be refined without changing semantic outcomes.
