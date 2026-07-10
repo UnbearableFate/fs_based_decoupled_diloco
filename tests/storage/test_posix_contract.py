@@ -51,6 +51,19 @@ def test_posix_detects_short_or_corrupt_envelopes_on_every_read(tmp_path):
     assert metadata.sha256
 
 
+def test_posix_detects_header_corruption(tmp_path):
+    root = tmp_path / "store"
+    backend = PosixStorageBackend(root)
+    backend.put_immutable("objects/a", b"verified")
+    path = root / "objects/a"
+    payload = bytearray(path.read_bytes())
+    header_offset = len(b"FSDILOCO-STORAGE-V1\n") + 8 + 32
+    payload[header_offset + 5] ^= 1
+    path.write_bytes(payload)
+    with pytest.raises(IntegrityError, match="header checksum"):
+        backend.head("objects/a")
+
+
 def test_posix_opaque_versions_detect_aba_and_do_not_use_mtime(tmp_path):
     backend = PosixStorageBackend(tmp_path / "store")
     first = backend.put_if_absent("control/head", b"a")
@@ -91,4 +104,3 @@ def test_posix_capability_records_parent_fsync_and_locking(tmp_path):
     assert backend.capabilities.advisory_lock
     assert backend.capabilities.atomic_replace
     assert os.path.samefile(backend.root, tmp_path / "store")
-

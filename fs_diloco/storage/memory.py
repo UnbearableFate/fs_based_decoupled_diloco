@@ -203,8 +203,10 @@ class InMemoryStorageBackend:
 
     def range_get(self, key: str, start: int, end: int | None = None) -> bytes:
         key = normalize_key(key)
-        if start < 0 or (end is not None and end < start):
-            raise ValueError("invalid byte range")
+        if type(start) is not int or start < 0:
+            raise ValueError("range start must be a non-negative integer")
+        if end is not None and (type(end) is not int or end < start):
+            raise ValueError("range end must be an integer >= start")
         return self.get(key)[start:end]
 
     def delete_batch(self, keys: Iterable[DeleteTarget]) -> dict[str, str]:
@@ -213,6 +215,16 @@ class InMemoryStorageBackend:
             key = normalize_key(target if isinstance(target, str) else target.key)
             operation = "delete"
             self._maybe_fail(operation, "before", key)
+            existing = self._objects.get(key)
+            if existing is not None and not isinstance(target, str) and (
+                target.version not in {None, existing.metadata.version}
+                or target.size != existing.metadata.size
+                or target.sha256 != existing.metadata.sha256
+            ):
+                results[key] = "precondition_failed"
+                self._record(operation, key, "precondition_failed", existing.metadata.version)
+                self._maybe_fail(operation, "after", key)
+                continue
             existing = self._objects.pop(key, None)
             outcome = "deleted" if existing is not None else "missing"
             version = existing.metadata.version if existing is not None else None

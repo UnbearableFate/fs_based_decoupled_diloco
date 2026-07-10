@@ -34,6 +34,7 @@ from .layout import RESERVED_ROOT, contained_path, normalize_key, normalize_pref
 
 _MAGIC = b"FSDILOCO-STORAGE-V1\n"
 _HEADER_LENGTH = struct.Struct(">Q")
+_HEADER_DIGEST_BYTES = 32
 _MAX_HEADER_BYTES = 64 * 1024
 
 
@@ -210,7 +211,13 @@ class PosixStorageBackend:
             sort_keys=True,
             separators=(",", ":"),
         ).encode("ascii")
-        return _MAGIC + _HEADER_LENGTH.pack(len(header)) + header + data
+        return (
+            _MAGIC
+            + _HEADER_LENGTH.pack(len(header))
+            + hashlib.sha256(header).digest()
+            + header
+            + data
+        )
 
     def _read_path(self, path: Path, key: str) -> _DecodedObject:
         try:
@@ -224,9 +231,17 @@ class PosixStorageBackend:
                 header_length = _HEADER_LENGTH.unpack(raw_length)[0]
                 if header_length < 2 or header_length > _MAX_HEADER_BYTES:
                     raise IntegrityError(f"invalid storage envelope header size: {key}", key=key)
+                header_digest = handle.read(_HEADER_DIGEST_BYTES)
+                if len(header_digest) != _HEADER_DIGEST_BYTES:
+                    raise IntegrityError(f"short storage envelope header digest: {key}", key=key)
                 header_bytes = handle.read(header_length)
                 if len(header_bytes) != header_length:
                     raise IntegrityError(f"short storage envelope header: {key}", key=key)
+                if hashlib.sha256(header_bytes).digest() != header_digest:
+                    raise IntegrityError(
+                        f"storage envelope header checksum mismatch: {key}",
+                        key=key,
+                    )
                 data = handle.read()
         except FileNotFoundError as exc:
             raise NotFound(key, operation="read", key=key, errno=exc.errno) from exc
@@ -286,9 +301,9 @@ class PosixStorageBackend:
                 handle.write(envelope)
                 handle.flush()
                 self._stage("after_temp_write")
+                os.fchmod(handle.fileno(), 0o644)
                 os.fsync(handle.fileno())
                 self._stage("after_file_fsync")
-            os.chmod(temp_path, 0o644)
             self._stage("before_publish")
             if replace:
                 os.replace(temp_path, path)
@@ -487,4 +502,3 @@ class PosixStorageBackend:
         """Persistent lock inodes are harmless; ownership lives in `flock`."""
 
         return sum(1 for path in self._lock_root.iterdir() if path.is_file())
-

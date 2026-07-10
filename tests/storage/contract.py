@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from dataclasses import replace
 
 import pytest
 
@@ -48,6 +49,9 @@ def exercise_backend_contract(backend: StorageBackend) -> None:
 
     listed = backend.list_prefix("")
     assert "objects/a" in listed and "control/head" in listed
+    wrong_ref = replace(first.to_ref(), version="not-current")
+    assert backend.delete_batch([wrong_ref]) == {"objects/a": "precondition_failed"}
+    assert backend.get("objects/a") == b"immutable"
     assert backend.delete_batch([first.to_ref(), "missing/object"]) == {
         "objects/a": "deleted",
         "missing/object": "missing",
@@ -56,3 +60,5 @@ def exercise_backend_contract(backend: StorageBackend) -> None:
         backend.get("objects/a")
     assert backend.history
 
+    with pytest.raises(ValueError):
+        backend.range_get("control/head", True, None)
