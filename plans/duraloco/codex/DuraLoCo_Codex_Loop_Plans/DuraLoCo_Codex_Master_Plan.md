@@ -1,13 +1,13 @@
 ---
 title: "DuraLoCo Codex Loop-Engineering Implementation Plans"
-version: "1.4"
-date: "2026-07-10"
+version: "1.6"
+date: "2026-07-11"
 planning_basis: "codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d"
 ---
 
 # DuraLoCo Codex Loop-Engineering Implementation Plans
 
-本目录把 DuraLoCo 研究草稿拆成可交给 Codex 顺序执行的阶段计划。研究草稿原有 M0–M6 被展开为 P00–P12，以缩小每个 feature branch 的语义跨度，并为每个阶段提供：
+本目录把 DuraLoCo 研究草稿拆成可交给 Codex 顺序执行的阶段计划。必需主线为 P00–P08、P10–P12；保留原有 P09 标识符，但将其移到整体计划最后作为暂缓的可选实现，以缩小每个 feature branch 的语义跨度，并为每个阶段提供：
 
 - 明确的 research claim 与非目标；
 - 预期代码布局和设计决策；
@@ -42,10 +42,10 @@ Codex 每个阶段都必须验证真实 HEAD。若仓库已前进，产生 drift
 | [P06](07_P06_LEARNER_INTERVALS_ADOPTION_AND_RECOVERY.md) | Learner Contribution Intervals、Adoption 与 Warm Recovery | P05 | `codex/duraloco-p06-learner-protocol` |
 | [P07](08_P07_COMPACTION_GC_ACKS_AND_LEARNER_CAPSULES.md) | Compaction、Reachability GC、Ack 与 Learner Capsules | P06 | `codex/duraloco-p07-lifecycle` |
 | [P08](09_P08_DIRECT_FRAGMENT_IO_STREAMING_REDUCER_AND_TELEMETRY.md) | Direct Fragment I/O、Streaming Reducer 与 Telemetry | P06 | `codex/duraloco-p08-performance-core` |
-| [P09](10_P09_OBJECT_STORE_BACKEND_AND_HYBRID_BASELINE.md) | S3-Compatible Backend、MinIO 与 Hybrid Baseline | P06 | `codex/duraloco-p09-object-store` |
-| [P10](11_P10_SACC_AND_ALGORITHM_SYSTEM_CODESIGN.md) | Storage-Aware Commit Controller（SACC）与算法–系统协同 | P07, P08, P09 | `codex/duraloco-p10-sacc` |
+| [P10](11_P10_SACC_AND_ALGORITHM_SYSTEM_CODESIGN.md) | Storage-Aware Commit Controller（SACC）与算法–系统协同 | P07, P08 | `codex/duraloco-p10-sacc` |
 | [P11](12_P11_MIYABI_INTEGRATION_CHAOS_AND_9NODE_ACCEPTANCE.md) | Miyabi 集成、Chaos Runner 与 9 节点 Acceptance | P10 | `codex/duraloco-p11-miyabi-acceptance` |
 | [P12](13_P12_FORMAL_EXPERIMENTS_ARTIFACT_AND_PAPER_EVIDENCE.md) | 正式实验、Artifact 与论文 Claim–Evidence | P11 | `codex/duraloco-p12-evaluation` |
+| [P09（可选，暂缓）](14_P09_OBJECT_STORE_BACKEND_AND_HYBRID_BASELINE_OPTIONAL.md) | S3-Compatible Backend、MinIO 与 Hybrid Baseline | P12 | `codex/duraloco-p09-object-store` |
 
 共同执行契约：[`00_CODEX_LOOP_OPERATING_CONTRACT.md`](00_CODEX_LOOP_OPERATING_CONTRACT.md)
 
@@ -61,15 +61,14 @@ graph TD
   P05 --> P06[P06 Learner protocol]
   P06 --> P07[P07 Lifecycle]
   P06 --> P08[P08 Performance core]
-  P06 --> P09[P09 Object store]
   P07 --> P10[P10 SACC]
   P08 --> P10
-  P09 --> P10
   P10 --> P11[P11 Miyabi acceptance]
   P11 --> P12[P12 Formal evaluation]
+  P12 -. optional, explicit opt-in .-> P09[P09 Object store]
 ```
 
-P08 与 P09 在 P06 之后可以使用独立 worktree 并行开发，但不能由多个 agent 同时修改 `log/head/frontier/commit` 或 production syncer 核心。集成仍应由单 writer 完成。
+P07 与 P08 在 P06 之后可以使用独立 worktree 并行开发，但不能由多个 agent 同时修改 `log/head/frontier/commit` 或 production syncer 核心。集成仍应由单 writer 完成。P09 只在主线 P12 完成后经显式选择才执行，不参与主线自动推进。
 
 ## 4. 与研究里程碑的映射
 
@@ -78,7 +77,7 @@ P08 与 P09 在 P06 之后可以使用独立 worktree 并行开发，但不能�
 | M0 Research Contract | P00–P01 |
 | M1 Reference Protocol | P02 |
 | M2 POSIX DuraLoCo | P03–P06、P08 |
-| M3 Object-Store DuraLoCo | P09 |
+| M3 Object-Store DuraLoCo | P09（可选，暂缓） |
 | M4 Recovery and Lifecycle | P07 |
 | M5 Performance Controller | P10 |
 | M6 Formal Evaluation | P11–P12 |
@@ -114,6 +113,7 @@ P08 与 P09 在 P06 之后可以使用独立 worktree 并行开发，但不能�
 每个 goal/phase 的必需 gate 达成并通过独立 Checker 后，agent 自动标记完成并按依赖图进入下一项，无需用户审核。跨会话恢复或主动拆分新会话时提供：
 
 - 当前阶段文件；
+- `P00_P04_IMPLEMENTATION_LESSONS.md`（P05 及后续必读）；
 - 上一阶段 `PHASE_REPORT.md`；
 - 最新 `STATE.yaml`；
 - feature branch/commit；
@@ -124,7 +124,7 @@ P08 与 P09 在 P06 之后可以使用独立 worktree 并行开发，但不能�
 
 ### 5.4 双语 milestone 报告与 Checker 失败记录
 
-每到达一个新的 `PXX` milestone（`P00`–`P12` 首次进入 `checking`，或到达 `completed`/`blocked`），agent 必须创建或更新 `plans/duraloco/phases/PXX_PHASE_REPORT.md`。报告必须在同一 Markdown 文件中提供内容等价的 `## English` 与 `## 中文`，列明完成/未完成 targets、branch/commit、验证与 job/run IDs、Checker verdict、限制和下一动作。
+每到达一个新的 `PXX` milestone（必需主线 `P00`–`P08`、`P10`–`P12`，以及显式选中后的可选 `P09`，首次进入 `checking` 或到达 `completed`/`blocked`），agent 必须创建或更新 `plans/duraloco/phases/PXX_PHASE_REPORT.md`。报告必须在同一 Markdown 文件中提供内容等价的 `## English` 与 `## 中文`，列明完成/未完成 targets、branch/commit、验证与 job/run IDs、Checker verdict、限制和下一动作。
 
 若 milestone Checker 未通过，agent 必须在修复/重试前追加记录 failure phenomenon、expected vs actual、已证实原因（未知时写 `unknown`）、受影响 gate、证据和重试 lineage。失败记录不得在后来通过时删除；只能追加 resolution。详细字段与状态约束以共同执行契约 §2.7 为准。
 
@@ -144,6 +144,10 @@ P08 与 P09 在 P06 之后可以使用独立 worktree 并行开发，但不能�
 8. safe lifecycle/GC；
 9. 1-node与2-node真实运行；
 10. Miyabi 作业通过资源预检；单个作业不超过 16 节点且 walltime 不超过 2 小时。
+11. 可重试 mutation 使用持久化 request identity，response-loss 恢复覆盖 successor 已推进的 ancestry；
+12. simulator/runtime/replay/recovery 不存在未经等价性证明的重复 policy 实现；
+13. 所有失败、取消和重试尝试有 immutable manifest 与 `parent_run_id` lineage；
+14. 最终干净 commit 的当前 tests/state/双语 report/checksums 同步为绿，独立 Checker 重放历史反例后无 required-gate follow-up。
 
 任何阶段出现 proposal double logical inclusion、split-brain、fragment/outer-state unpaired、live-object deletion 或无法重建 authority state，后续性能/训练阶段全部阻塞。
 
@@ -157,6 +161,7 @@ templates/PHASE_REPORT.md
 templates/BLOCKER.md
 templates/RUN_MANIFEST.json
 references/DuraLoCo_research_draft_zh.md
+P00_P04_IMPLEMENTATION_LESSONS.md
 ```
 
 实现时应把模板复制到仓库实际 `plans/duraloco/` 和 `artifacts/duraloco/` 位置，而不是直接修改本计划模板作为运行状态。
@@ -167,14 +172,14 @@ references/DuraLoCo_research_draft_zh.md
 - P03–P06：需要 Miyabi 1/2-node contract 和 E2E。
 - P07：GC 默认 dry-run；apply 需要批准。
 - P08：需要 1-node GPU profile 和 2-node pipeline。
-- P09：MinIO；真实公共云需要凭据/预算批准。
 - P10：controller 先 shadow；动态算法参数在 shadow/guardrail/Checker gate 通过后由 agent 自动启用。
 - P11：9-node acceptance 可由 agent 自主申请和执行，无需用户批准。
 - P12：单个 Miyabi 作业在 `select<=16`、`walltime<=02:00:00` 范围内由 agent 自主决定，包括 9-node 和 multi-seed 作业；超限作业、公共云和 artifact 发布分别审批。
+- P09：可选且暂缓；当前计划完成、P10–P12 和默认运行都不要求 object-store/MinIO/hybrid 支持。未来显式启用时，真实公共云仍需凭据/预算批准。
 
 ## 9. 最终研究完成条件
 
-计划完成不等于论文一定成立。P12 必须允许得到以下三种结论之一：
+必需主线在 P12 完成；P09 不是计划完成条件。计划完成不等于论文一定成立。P12 必须允许得到以下三种结论之一：
 
 1. **Supported**：存在明确 break-even region，DuraLoCo 在 matched quality 下提高 failure goodput，并减少独立 global checkpoint 开销；
 2. **Bounded/conditional**：仅在特定 local interval、fragment size、failure rate 或 backend 下成立；
@@ -241,6 +246,7 @@ git log -5 --oneline
 
 - 根目录和当前目录链上的 `AGENTS.md`；
 - 当前阶段文件；
+- P05 及后续阶段的 `P00_P04_IMPLEMENTATION_LESSONS.md`；
 - `plans/duraloco/STATE.yaml`；
 - 尚未关闭的 `DECISIONS.md`、`BLOCKERS.md`；
 - 上一阶段 `PHASE_REPORT.md`；
@@ -317,7 +323,7 @@ plans/duraloco/phases/<phase>_PHASE_REPORT.md
 
 ### 2.7 双语里程碑与 Checker 失败报告
 
-这里的 milestone 指每个 `PXX` 阶段（`P00`–`P12`）的 gate 结果。阶段首次进入 `checking`，以及随后到达 `completed` 或 `blocked` 时，Maker 必须创建或更新：
+这里的 milestone 指必需主线 `P00`–`P08`、`P10`–`P12` 的 gate 结果，以及在显式选择后才生效的可选 `P09` gate 结果。阶段首次进入 `checking`，以及随后到达 `completed` 或 `blocked` 时，Maker 必须创建或更新：
 
 ```text
 plans/duraloco/phases/PXX_PHASE_REPORT.md
@@ -343,7 +349,30 @@ plans/duraloco/phases/PXX_PHASE_REPORT.md
 - 一个 phase 的全部必需 acceptance IDs 通过后，agent 把 phase 标记为 `completed`，持久化报告和 verified commit，并按照依赖图自动创建/切换到下一 phase 分支继续执行；阶段之间不设置人工审核或等待状态。
 - 可逆且位于既定 research contract 内的协议、默认值和实现选择由 agent 决定，写入 `DECISIONS.md`，经独立 Checker 复核后生效。
 - 自动推进不授权 merge `main`、发布 artifact/公开数据、使用真实凭据或公共云/付费资源、超过 Miyabi 自主资源范围、删除共享数据或执行 destructive lifecycle 操作；这些外部风险动作仍按明确审批门处理，但不阻止不依赖该动作的后续工作。
-- 若下一 phase 有多个依赖，只有所有依赖 phase 都 `completed` 且集成 Checker 通过后才自动进入；P08/P09 等并行分支必须按依赖图汇合，不得以单分支完成冒充集成完成。
+- 若下一 phase 有多个依赖，只有所有依赖 phase 都 `completed` 且集成 Checker 通过后才自动进入；P07/P08 等并行分支必须按依赖图汇合，不得以单分支完成冒充集成完成。可选 P09 不得阻塞 P10–P12 或主线完成，且不得被自动启动。
+
+### 2.9 P00–P04 经验驱动的后续必需 gate
+
+P05 及后续阶段必须读取并执行
+`P00_P04_IMPLEMENTATION_LESSONS.md`。以下约束来自已经发生且由独立
+Checker 复现的失败：
+
+- 所有可重试 mutation 以持久化 request identity 区分原请求重试与
+  独立的相同内容调用；
+- response-loss/takeover/restart reconciliation 检查权威 ancestry，不只比较
+  当前 head 或 cache；
+- simulator/runtime/replay/recovery 共用一个语义实现，或以对抗顺序、
+  mutant 和 digest 等价性证据证明无偏差；
+- typed fail-closed 边界覆盖 parse/validate/setup/lock/publish/cleanup/recovery 全路径，
+  做决策时使用 immutable input snapshot；
+- 每次提交或执行尝试（含 fail、inconclusive、queued-cancelled 与
+  pre-allocation cancellation）都产生 manifest；每个相同 validation shape 的
+  retry 以 `parent_run_id` 串联；
+- 仅当当前持久化套件、state、双语 report、acceptance mapping 与
+  checksum 在最终干净 target commit 上一致为绿，且独立 Checker 重放
+  历史反例后无 required-gate follow-up，才能完成 phase；
+- 真实 backend 结论必须绑定 capability/mount/stripe/module 证据和明确
+  non-claim；queue/cancel/resubmit 必须绑定相同 commit/config/gates 并记录 lineage。
 
 ## 3. 分支与 Worktree 纪律
 
@@ -424,7 +453,7 @@ approval_reason: null  # 仅用于外部风险动作，不用于 goal/phase 过�
 }
 ```
 
-禁止覆盖同一 run manifest。重试必须使用新的 run ID，并通过 `parent_run_id` 指向前一次尝试。
+禁止覆盖同一 run manifest。重试必须使用新的 run ID，并通过 `parent_run_id` 指向同一 validation shape 的前一次尝试。作业提交后即建立 manifest；即使作业在 allocation 前取消，也要记录 queue、job ID、请求资源、最后 qstat 状态、取消原因和 `result: inconclusive`（或等价的结构化状态）。
 
 ## 5. Miyabi 执行契约
 
@@ -600,6 +629,121 @@ mpirun ... /usr/bin/env "KEY=value" ... bash -lc '...'
 - OpenAI Codex worktrees：`https://developers.openai.com/codex/app/worktrees`
 - 研究草稿：`references/DuraLoCo_research_draft_zh.md`
 
+---
+
+# P00–P04 实施经验与后续阶段强化约束
+
+本文从 `plans/duraloco/phases/P00_PHASE_REPORT.md`至
+`P04_PHASE_REPORT.md`、`P04_DRIFT_REPORT.md`、阶段状态、独立 Checker
+报告以及 `artifacts/duraloco/P00`至`P04` 的 manifests/运行记录中
+提取已由实际失败和修复验证的经验。P05 及后续阶段必须把
+这些经验当作必需 gate，而不是可选建议。
+
+## 1. 幂等性必须绑定请求身份
+
+P03 曾把“相同 expected version + 相同 bytes”的独立调用错误归类为
+丢响应重试，导致多个 CAS winner。修复后，只有持久化的相同
+`request_id` 才可识别为 after-effect retry。因此：
+
+- lease acquire/renew/release、proposal publication、head CAS、delete、multipart
+  complete/abort 等每个可重试 mutation 都必须有稳定 request identity；
+- 必须同时测试“同 ID 同内容”、“不同 ID 同内容”和“同 ID 不同内容”；
+- 不允许用 payload equality、当前可见状态或调用者推测替代 request identity。
+
+## 2. 恢复必须检查权威历史，不只检查当前 head
+
+P04 曾在 successor 已推进 head 后无法识别很晚到达的 CAS 成功
+丢响应重试。修复通过验证 prepared commit/frontier 是否已在权威
+ancestry 中解决。因此后续 reconciliation 必须：
+
+- 区分当前 head equality、已提交 ancestry、未提交 orphan 和真正 conflict；
+- 覆盖“响应丢失 → 后续成功推进 → 原请求延迟重试”的反例；
+- 重启、takeover、stop、adoption 和 lifecycle 操作都不得只从可变 cache
+  或最新指针推断结果。
+
+## 3. 一种语义只能有一个可执行实现路径
+
+P02 曾出现 `select_quorum` 遵守 oldest-first，而 trace replay 使用另一套
+lexical-first 逻辑的偏差。后续阶段必须：
+
+- simulator、runtime、replay、recovery 和 Checker 共用同一 policy kernel，或用
+  双向 equivalence/mutant tests 证明两个实现一致；
+- 新增 fairness、adoption、GC roots 或 controller policy 时，必须保留一个
+  可最小化的确定性反例和稳定 replay digest；
+- 不得用“正常顺序下结果一致”替代 adversarial ordering/interleaving。
+
+## 4. fail-closed 边界必须包围整个操作
+
+P01 在 deep JSON/header、host-language container/type、nested mutability 和 byte
+snapshot 上曾出现缺口；P03 的 temp/parent/lock setup 与 cleanup 曾泄漏原始
+`OSError`。因此：
+
+- typed error/retryability 翻译必须覆盖 validation、setup、publication、lock、
+  cleanup 和 inspect/recovery，不只是 happy-path 核心调用；
+- 做决策时使用一个 immutable byte/state snapshot，防止验证与使用之间变化；
+- 每个外部边界都要注入 retryable/non-retryable infrastructure errors、
+  malformed/deep input 和 cleanup failure。
+
+## 5. 证据生命周期是 correctness gate 的一部分
+
+P04 的首次独立 Checker 虽未发现事务安全缺陷，仍因当前测试/
+状态/双语报告不同步和 retry lineage 缺失而 `BLOCKED`。P00 也曾修复
+stale evidence references、bundle checksum 和 missing retry parent。因此：
+
+- 每次已提交的 PBS/本地尝试，包括 fail、inconclusive、排队后取消和
+  未分配节点的尝试，都必须有不可变 manifest 和结果/取消原因；
+- 同一 validation shape 的重试使用新 `run_id`，并用 `parent_run_id`
+  指向前一尝试；不得仅在报告散文中提到失败前任；
+- 实现、回归测试、`STATE.yaml`、双语 report、acceptance mapping 和
+  checksums 必须在同一个最终目标提交上同步为绿；
+- 机器可读的 manifest/state 字段是主验证面；双语报告保留人类可审计
+  摘要，不应使用只存在于自由文本的脆弱标记替代结构化证据。
+
+## 6. 最终 Checker 必须针对最终干净提交重放当前套件
+
+早期的通过证据不能替代最终 target 的验证。每个后续 phase 必须：
+
+- Maker 在最终干净 commit 上重跑受影响的最小套件和必需 1/2/9-node
+  shape，不得把旧 commit 的成功结果直接冒充新 commit 证据；
+- Checker 必须从最终 commit 运行当前持久化套件，重跑至少一个
+  历史失败的精确反例和一个新反例；
+- 仅当 Checker 的结构化 verdict 无 required-gate follow-up，且最终
+  report/state/manifest 已持久化时才允许 `checking -> completed`。
+
+## 7. 真实 backend 证据必须同时记录 capability 和 non-claim
+
+P03 验证了 Lustre 上的 directory fsync、advisory lock、atomic replace 和
+两节点 race，但明确不将结论扩大到 permanent provider loss、所有 MDS/
+controller failure 或物理介质保证。后续阶段必须：
+
+- 记录 mount/filesystem/stripe/module/capability probe 与 fail-closed downgrade；
+- 把 mock、memory、POSIX/Lustre、MinIO 和 public cloud 证据分层；
+- 在 checker report 和论文 evidence 中同时写明 supported claim 和 non-claim。
+
+## 8. PBS 排队与取消也是可复现执行记录
+
+P04 的首个 9-node regular-queue 作业因预计等待超过一小时而在分配前
+取消，随后在不放宽 commit/config/walltime/assertions 的前提下切换到
+`debug-g` 完成。后续计划必须：
+
+- 保存 submission host、queue、job ID、请求资源、观测的排队状态、
+  取消原因与是否获得 allocation；
+- 切换 queue 或重提交时保持相同 verified commit/config/gates，并建立
+  `parent_run_id` lineage；
+- 资源等待不得被写成 runtime failure，runtime failure 也不得被排队切换
+  掩盖。
+
+## 9. 与后续阶段的对应
+
+| 经验 | 必须落地的阶段 |
+|---|---|
+| request identity 与 response-loss 辨识 | P05、P06、P07、可选 P09 |
+| ancestry-aware reconciliation | P05、P06、P07、P11 |
+| 单 policy kernel/replay equivalence | P06、P08、P10、P12 |
+| 全边界 typed failure 与 immutable snapshot | P05–P08、P10–P12、可选 P09 |
+| manifest retry lineage、state/report 同步、最终 commit Checker | 所有后续阶段 |
+| backend capability/non-claim | P05、P07、P08、P11、P12、可选 P09 |
+| queue/cancel/resubmit provenance | 所有 Miyabi runtime 阶段 |
 
 ---
 
@@ -2311,7 +2455,8 @@ human_approval_gates:
 > 2. `00_CODEX_LOOP_OPERATING_CONTRACT.md`；
 > 3. `miyabi-development` skill 的 `SKILL.md`；
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
-> 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
+> 6. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
 > 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
@@ -2341,8 +2486,10 @@ syncer 不再是持有不可恢复本地状态的单点；在进程崩溃或 lea
 - [ ] syncer ingest 使用 P01 validator/quarantine；
 - [ ] quorum selection 与 commit pipeline 解耦；
 - [ ] lease acquisition/renewal、monotonic fencing epoch；
+- [ ] lease/commit/stop mutation 使用持久化 request ID，区分丢响应重试与独立的相同调用；
 - [ ] head commit 检查 epoch；
 - [ ] standby startup replay/cache rebuild；
+- [ ] response-loss reconciliation 查询 committed ancestry，不只比较当前 head；
 - [ ] 取消持久 `selected` 状态；
 - [ ] stop/request/terminal 状态通过 log 提交；
 - [ ] 可控 failpoints；
@@ -2391,6 +2538,8 @@ scripts/chaos/
 - [ ] D-0503：旧 leader 在 lease 过期后如何被 head CAS fencing；
 - [ ] D-0504：stop 作为 commit event 还是 head metadata；
 - [ ] D-0505：legacy/v2 runtime selection 和 run namespace 隔离。
+- [ ] D-0506：lease/commit/stop request identity 的持久化位置、conflict 语义和 retry 结果；
+- [ ] D-0507：response-loss 在 successor head 已推进时的 ancestry-aware reconciliation 界限。
 
 每项决策必须写入 `plans/duraloco/DECISIONS.md`，包含：上下文、候选方案、所选方案、拒绝方案、兼容性影响和可逆性。不得把未决语义隐藏在实现细节中。
 
@@ -2435,6 +2584,7 @@ scripts/chaos/
 **实现任务。**
 
 - [ ] 实现 acquire/renew/release；
+- [ ] 为每个 mutation 生成并持久化 request ID；
 - [ ] epoch 写入 lease、commit、head；
 - [ ] commit 前后验证 fencing；
 - [ ] 记录 owner/session。
@@ -2444,6 +2594,7 @@ scripts/chaos/
 - [ ] 双 syncer 至多一个 active writer；
 - [ ] 旧 epoch CAS 永远失败；
 - [ ] standby 最终可 takeover。
+- [ ] 同 ID/同内容 retry 幂等；不同 ID/同内容只有一个 winner；同 ID/不同内容 fail closed。
 
 **本循环持久化输出。**
 
@@ -2465,6 +2616,7 @@ scripts/chaos/
 
 - [ ] 启动 replay；
 - [ ] 识别已提交 response-loss；
+- [ ] 在 successor commit 已推进 head 后仍能从权威 ancestry 识别原操作；
 - [ ] 忽略/记录 orphan；
 - [ ] 重建 metrics/cache；
 - [ ] 去除 selected-stuck state。
@@ -2474,6 +2626,7 @@ scripts/chaos/
 - [ ] 所有 kill points 无永久 selected；
 - [ ] 恢复后 state digest 与 reference 一致；
 - [ ] 下一 commit 可继续。
+- [ ] setup/lock/publish/cleanup/replay 的 retryable 与 non-retryable 错误都转换为 typed outcome。
 
 **本循环持久化输出。**
 
@@ -2545,6 +2698,9 @@ scripts/chaos/
 - [ ] P05-A08：Miyabi 2-node takeover 有 run artifact；
 - [ ] P05-A09：Checker 审查 lease/fencing 的 clock assumptions。
 - [ ] P05-A10：`fs-diloco-syncer` 和 `python -m fs_diloco.syncer` 的 legacy/default 行为及 v2 显式选择均通过入口兼容测试。
+- [ ] P05-A11：lease/commit/stop response-loss 测试证明 request identity 可区分原请求重试和独立的相同调用；
+- [ ] P05-A12：successor 已推进后的延迟重试从 committed ancestry 得到唯一、可重放的结果；
+- [ ] P05-A13：最终干净 commit 的 1/2-node Maker 与 Checker 证据均有完整 attempt manifests/retry lineage，当前 suite、state 和双语 report 同步为绿。
 
 ## 9. 验证矩阵
 
@@ -2620,7 +2776,6 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 现有实现：`https://github.com/UnbearableFate/fs_based_decoupled_diloco/tree/codex/fs-diloco-miyabi`
 - Miyabi skill：`https://github.com/UnbearableFate/miyabi-development`
 
-
 ---
 
 ---
@@ -2651,7 +2806,8 @@ human_approval_gates: []
 > 2. `00_CODEX_LOOP_OPERATING_CONTRACT.md`；
 > 3. `miyabi-development` skill 的 `SKILL.md`；
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
-> 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
+> 6. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
 > 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
@@ -2683,6 +2839,7 @@ DuraLoCo 的 selected proposal 表示一段唯一 local work，而不是可能�
 - [ ] local work token/step accounting；
 - [ ] proposal payload/content publication；
 - [ ] response-loss/idempotent retry；
+- [ ] publication request ID 持久化，不以 payload equality 推断 retry；
 - [ ] global adoption 仅在 interval boundary；
 - [ ] per-fragment base vector/cursor；
 - [ ] warm restart；
@@ -2731,6 +2888,8 @@ tests/learner_v2/
 - [ ] D-0604：inner optimizer reset-all/reset-fragment/preserve 的默认策略；
 - [ ] D-0605：target token 计数定义；
 - [ ] D-0606：session sequence 的 durable location。
+- [ ] D-0607：publication/adoption request identity 与 committed-ancestry reconciliation；
+- [ ] D-0608：reference、runtime 与 replay 共用的 interval/adoption policy kernel 边界。
 
 每项决策必须写入 `plans/duraloco/DECISIONS.md`，包含：上下文、候选方案、所选方案、拒绝方案、兼容性影响和可逆性。不得把未决语义隐藏在实现细节中。
 
@@ -2771,6 +2930,7 @@ tests/learner_v2/
 **先产生的失败证据或规范。**
 
 - [ ] payload 成功响应丢失；manifest 重发；same ID conflicting payload。
+- [ ] 不同 request ID 但相同 payload 的并发 publication。
 
 **实现任务。**
 
@@ -2811,6 +2971,7 @@ tests/learner_v2/
 - [ ] interval metadata 与实际 base digest 一致；
 - [ ] 未更新 fragment state 策略符合配置；
 - [ ] 策略进入 run manifest。
+- [ ] interval/adoption 选择调用与 reference/replay 相同的 policy kernel；
 
 **本循环持久化输出。**
 
@@ -2884,6 +3045,9 @@ tests/learner_v2/
 - [ ] P06-A09：Miyabi 1-node real path ≤10 step finite；
 - [ ] P06-A10：2-node learner+syncer v2 E2E。
 - [ ] P06-A11：`fs-diloco-learner` 和 `python -m fs_diloco.learner` 的 legacy/default 行为及 v2 显式选择均通过入口兼容测试。
+- [ ] P06-A12：publication response-loss 以 request identity 辨识，并覆盖同 ID/同内容、不同 ID/同内容和同 ID/冲突内容；
+- [ ] P06-A13：reference/runtime/replay 在 adversarial proposal order、restart 与 cross-session boundary 上生成相同 adoption digest；
+- [ ] P06-A14：最终 1/2-node 证据包含失败/取消/重试 manifests 和 `parent_run_id` lineage，当前 state/report/tests 一致。
 
 ## 9. 验证矩阵
 
@@ -2920,7 +3084,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 
 - [ ] inner optimizer adoption policy 默认值由 agent 按 numeric/recovery evidence 决定，记录 ADR 和 manifest，经 Checker 复核后生效；
 - [ ] v2 learner/syncer 兼容性和 1/2-node gates 通过后由 agent 自动设为默认训练路径；
-- [ ] P06 必需 gate 通过后，按依赖图自动启动 P07、P08、P09；无需人工审核。
+- [ ] P06 必需 gate 通过后，按依赖图自动启动 P07 和 P08；无需人工审核。可选 P09 不在此处启动。
 
 ## 12. 阻塞与停止规则
 
@@ -2958,7 +3122,6 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 现有实现：`https://github.com/UnbearableFate/fs_based_decoupled_diloco/tree/codex/fs-diloco-miyabi`
 - Miyabi skill：`https://github.com/UnbearableFate/miyabi-development`
 
-
 ---
 
 ---
@@ -2989,7 +3152,8 @@ human_approval_gates:
 > 2. `00_CODEX_LOOP_OPERATING_CONTRACT.md`；
 > 3. `miyabi-development` skill 的 `SKILL.md`；
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
-> 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
+> 6. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
 > 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
@@ -3139,12 +3303,14 @@ tests/lifecycle/
 **先产生的失败证据或规范。**
 
 - [ ] GC 与 restore、commit、capsule upload 并发；delete response loss；list omission。
+- [ ] root enumeration/setup/lock/delete/cleanup 注入 retryable/non-retryable 错误。
 
 **实现任务。**
 
 - [ ] mark generation；
 - [ ] revalidate head/epoch；
 - [ ] batch delete idempotency；
+- [ ] delete/batch-delete 持久化 request ID，不以 key/payload equality 推断原请求重试；
 - [ ] tombstone/audit report；
 - [ ] 审批 token。
 
@@ -3153,6 +3319,7 @@ tests/lifecycle/
 - [ ] 并发 tests 零 live deletion；
 - [ ] 重复 GC 幂等；
 - [ ] listing omission 不误删。
+- [ ] 每个删除决策绑定一个 immutable root snapshot 与可重放 digest。
 
 **本循环持久化输出。**
 
@@ -3253,6 +3420,9 @@ tests/lifecycle/
 - [ ] P07-A08：accelerated soak 显示有界 steady-state；
 - [ ] P07-A09：Checker 独立审查 reachability roots。
 - [ ] P07-A10：现有 `fs_diloco.cli` dispatcher 未被 package shadow，新增 lifecycle CLI 的 entrypoint/import 兼容测试通过。
+- [ ] P07-A11：GC delete response-loss 用 request identity 证明幂等，并将独立的相同 delete 与冲突请求分类正确；
+- [ ] P07-A12：reachability/GC 在 immutable root snapshot 上计算，listing omission、head 并发推进和 setup/cleanup 失败都不造成 live deletion；
+- [ ] P07-A13：最终 soak/1-node 与 Checker 证据包含完整 attempt lineage，当前 state/report/tests/checksums 一致。
 
 ## 9. 验证矩阵
 
@@ -3289,7 +3459,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 
 - [ ] 启用任何非 dry-run GC 前必须人工批准；
 - [ ] exact learner capsule 的存储预算/频率默认值由 agent 在自主资源范围和有界增长证据内决定，经 Checker 复核后生效；
-- [ ] P07 必需 correctness gates 可用 GC dry-run 证据完成；未获 destructive apply 批准不阻止 phase `completed`。P08/P09 也完成并通过集成 Checker 后自动进入 P10。
+- [ ] P07 必需 correctness gates 可用 GC dry-run 证据完成；未获 destructive apply 批准不阻止 phase `completed`。P08 也完成并通过集成 Checker 后自动进入 P10；不等待可选 P09。
 
 ## 12. 阻塞与停止规则
 
@@ -3327,7 +3497,6 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 现有实现：`https://github.com/UnbearableFate/fs_based_decoupled_diloco/tree/codex/fs-diloco-miyabi`
 - Miyabi skill：`https://github.com/UnbearableFate/miyabi-development`
 
-
 ---
 
 ---
@@ -3357,7 +3526,8 @@ human_approval_gates: []
 > 2. `00_CODEX_LOOP_OPERATING_CONTRACT.md`；
 > 3. `miyabi-development` skill 的 `SKILL.md`；
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
-> 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
+> 6. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
 > 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
@@ -3394,6 +3564,7 @@ Storage-native 协议的开销不是由低效 prototype 实现主导；fragment 
 - [ ] publish/read/validate/quorum/merge/commit/adopt telemetry；
 - [ ] memory/I/O/request benchmark harness；
 - [ ] legacy vs optimized 数值对照。
+- [ ] optimized/runtime/reference 共用选择与数值语义，不重复实现 policy。
 
 ### 3.2 明确不做
 
@@ -3535,6 +3706,7 @@ tests/performance_core/
 - [ ] incremental cursor；
 - [ ] key sharding；
 - [ ] prefetch queue/backpressure；
+- [ ] scanner/prefetch 对同一 immutable manifest/object snapshot 验证和使用，避免 TOCTOU；
 - [ ] 结构化 event IDs；
 - [ ] 单写者 metrics。
 
@@ -3585,6 +3757,8 @@ tests/performance_core/
 - [ ] P08-A06：每个 commit 可从 telemetry 重建 publish→select→read→merge→CAS→adopt timeline；
 - [ ] P08-A07：performance 结果保存 raw manifests，不只保留汇总；
 - [ ] P08-A08：Miyabi 1-node GPU profile 与 2-node storage pipeline evidence。
+- [ ] P08-A09：optimized/runtime/reference 在 adversarial order、restart 和并发 prefetch 下的 decision/state digest 等价，且回归能杀死一个独立 policy 实现 mutant；
+- [ ] P08-A10：profile/benchmark 的 fail、inconclusive、queued-cancelled 和 retry 都有 raw manifest lineage，最终 Checker 在最终干净 commit 重放当前等价套件。
 
 ## 9. 验证矩阵
 
@@ -3622,7 +3796,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 ## 11. 自动推进与 Agent 决策门
 
 - [ ] CUDA/C++ extension、tensor layout 或默认 precision 变更由 agent 依据 profile、numeric equivalence、portable fallback 和回滚证据决定，经 Checker 复核后生效。
-- [ ] P08 必需 gate 通过后标记 `completed`；等待依赖图中的 P07/P09 完成并通过集成 Checker 后自动进入 P10，不等待人工审核。
+- [ ] P08 必需 gate 通过后标记 `completed`；等待依赖图中的 P07 完成并通过集成 Checker 后自动进入 P10，不等待人工审核，也不等待可选 P09。
 
 ## 12. 阻塞与停止规则
 
@@ -3660,372 +3834,6 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 现有实现：`https://github.com/UnbearableFate/fs_based_decoupled_diloco/tree/codex/fs-diloco-miyabi`
 - Miyabi skill：`https://github.com/UnbearableFate/miyabi-development`
 
-
----
-
----
-plan_id: "P09"
-title: "S3-Compatible Backend、MinIO 与 Hybrid Baseline"
-status: "planned"
-date: "2026-07-10"
-repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
-planning_basis_branch: "codex/fs-diloco-miyabi"
-planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
-target_branch: "codex/duraloco-p09-object-store"
-depends_on:
-  - "P06"
-required_skill: "miyabi-development"
-execution_mode: "single-writer maker + independent checker"
-automatic_progression: true
-agent_decision_gates:
-  - "对象存储依赖策略、SDK/version 和 lockfile 由 agent 记录 ADR，经独立 Checker 复核。"
-human_approval_gates:
-  - "真实 S3/GCS/Azure 运行、凭据使用、跨区域流量或付费资源必须审批；"
-  - "新增持久化/共享服务或对外暴露端口前需审批；job-owned、隔离且随测试退出的 MinIO/临时端口由 agent 自主使用。"
----
-
-# P09 — S3-Compatible Backend、MinIO 与 Hybrid Baseline
-
-> 本文件是可直接交给 Codex 执行的阶段计划，不是背景说明。执行前必须同时读取：
->
-> 1. 仓库根目录 `AGENTS.md`；
-> 2. `00_CODEX_LOOP_OPERATING_CONTRACT.md`；
-> 3. `miyabi-development` skill 的 `SKILL.md`；
-> 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
-> 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
->
-> 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
-
-## 1. 阶段使命
-
-证明 transactional protocol 不依赖 POSIX rename/listing。实现 S3-compatible backend、MinIO contract/chaos、conditional head、multipart 和重试，并建立 metadata-control + object-payload hybrid baseline。
-
-### 1.1 本阶段支撑的研究主张
-
-DuraLoCo 是 storage-native abstraction，而不是 Lustre 特例；同一 committed-prefix correctness suite 可跨 POSIX 和 object storage，通过 conditional object updates 实现 head commit。
-
-### 1.2 完成后的系统增量
-
-新增可选 object-store extra、MinIO test environment、S3 backend 与 hybrid control-plane baseline；公共云验证保持人工 gate。
-
-## 2. 前置条件
-
-- [ ] P04 log API 完全 backend-neutral；
-- [ ] 对象存储依赖策略和 lockfile 已由 agent 决定、记录 ADR 并通过独立 Checker；
-- [ ] 本地/CI 可运行 MinIO 或提供替代 integration environment；
-- [ ] 秘密管理约定已写入 AGENTS。
-
-## 3. 范围
-
-### 3.1 必须完成
-
-- [ ] S3 immutable put/get/head/range/delete；
-- [ ] If-None-Match/If-Match conditional head；
-- [ ] ETag 与 content hash 区分；
-- [ ] multipart upload/recovery/abort；
-- [ ] retry/backoff/jitter、429/5xx/timeout；
-- [ ] response-loss idempotency；
-- [ ] strong correctness 不依赖 list；
-- [ ] MinIO conformance/crash suite；
-- [ ] hybrid metadata coordinator + object payload baseline；
-- [ ] public cloud capability harness（默认不执行）。
-
-### 3.2 明确不做
-
-- 不把 MinIO 性能写成公有云性能；
-- 不把 provider-specific strong consistency 无条件外推到所有对象存储；
-- 不自动创建付费 bucket/跨区域复制；
-- 不在本阶段实现 SACC。
-
-## 4. 预期仓库变更
-
-```text
-fs_diloco/storage/
-  s3.py
-  multipart.py
-  retry.py
-  credentials.py
-  object_capability_probe.py
-fs_diloco/hybrid/
-  metadata_service.py
-  client.py
-scripts/object_store/
-  start_minio_test.sh
-  stop_minio_test.sh
-  run_contract.sh
-  public_cloud_probe.py
-tests/storage/
-  test_s3_contract.py
-  test_s3_response_loss.py
-  test_multipart.py
-  test_listing_independence.py
-tests/hybrid/
-```
-
-在 `pyproject.toml` 中使用可选依赖组并固定版本；核心 POSIX 安装不应被迫安装云 SDK。
-
-## 5. 需要先冻结的设计决策
-
-- [ ] D-0901：SDK 与版本；
-- [ ] D-0902：conditional write token 使用 ETag/version ID；
-- [ ] D-0903：multipart threshold/part size 与 orphan cleanup；
-- [ ] D-0904：provider capability matrix 和 fail-closed 策略；
-- [ ] D-0905：hybrid baseline 的 metadata API 最小范围；
-- [ ] D-0906：public cloud region/topology 与成本预算。
-
-每项决策必须写入 `plans/duraloco/DECISIONS.md`，包含：上下文、候选方案、所选方案、拒绝方案、兼容性影响和可逆性。不得把未决语义隐藏在实现细节中。
-
-## 6. Codex 执行循环
-
-### Loop 1 — S3 semantic backend
-
-**目标。** 实现与 memory/POSIX 相同 storage contract。
-
-**先产生的失败证据或规范。**
-
-- [ ] same key same/different bytes；stale If-Match；timeout after PUT/CAS；ETag 非 MD5。
-
-**实现任务。**
-
-- [ ] 实现 immutable/conditional/get/range/delete；
-- [ ] 显式 hash metadata；
-- [ ] typed provider errors；
-- [ ] credential redaction。
-
-**本循环验证。**
-
-- [ ] 通用 conformance suite；
-- [ ] 响应丢失重试幂等；
-- [ ] 日志无 secrets。
-
-**本循环持久化输出。**
-
-- [ ] S3 backend；
-- [ ] capability matrix。
-
-**停止条件。** 上述验证全部通过，且未引入未记录的行为变化。
-
-### Loop 2 — Multipart 与重试
-
-**目标。** 支持模型 fragment 大对象且不会留下不可控 multipart state。
-
-**先产生的失败证据或规范。**
-
-- [ ] 每个 part/complete/abort 阶段 crash；throttling；retry budget exhaustion。
-
-**实现任务。**
-
-- [ ] 可恢复 multipart state；
-- [ ] content hash；
-- [ ] bounded concurrency；
-- [ ] backoff/jitter；
-- [ ] orphan report/cleanup。
-
-**本循环验证。**
-
-- [ ] crash suite；
-- [ ] 重复 complete 不破坏 identity；
-- [ ] 失败能解释并停止。
-
-**本循环持久化输出。**
-
-- [ ] multipart manager；
-- [ ] fault traces。
-
-**停止条件。** 上述验证全部通过，且未引入未记录的行为变化。
-
-### Loop 3 — MinIO E2E 与 listing independence
-
-**目标。** 在真实 object API 上运行 P04/P05/P06 的小型路径。
-
-**先产生的失败证据或规范。**
-
-- [ ] 故意隐藏/延迟 list results，同时直接 head/get 正常。
-
-**实现任务。**
-
-- [ ] 可重复启动隔离 MinIO；
-- [ ] 运行 contract、transaction、syncer/learner tiny E2E；
-- [ ] 捕获 server/client logs。
-
-**本循环验证。**
-
-- [ ] committed correctness 不受 list omission；
-- [ ] POSIX/MinIO state digest 一致。
-
-**本循环持久化输出。**
-
-- [ ] MinIO harness；
-- [ ] E2E manifests。
-
-**停止条件。** 上述验证全部通过，且未引入未记录的行为变化。
-
-### Loop 4 — Hybrid baseline
-
-**目标。** 隔离 persistent tensor payload 与 durable metadata protocol 的贡献。
-
-**先产生的失败证据或规范。**
-
-- [ ] metadata service restart；payload exists but metadata absent；duplicate request。
-
-**实现任务。**
-
-- [ ] 实现最小 metadata control service；
-- [ ] payload 仍用 storage backend；
-- [ ] run manifest 标记 transport/checkpoint mode；
-- [ ] 不复用 DuraLoCo durable head 伪装 baseline。
-
-**本循环验证。**
-
-- [ ] small E2E；
-- [ ] failure semantics 清楚；
-- [ ] metrics 可与 pure storage 对照。
-
-**本循环持久化输出。**
-
-- [ ] hybrid baseline；
-- [ ] factorized config。
-
-**停止条件。** 上述验证全部通过，且未引入未记录的行为变化。
-
-### Loop 5 — 公共云 probe（人工 gate）
-
-**目标。** 准备而非默认执行 provider capability/cost test。
-
-**先产生的失败证据或规范。**
-
-- [ ] 无凭据时必须安全跳过；错误 region/bucket 不得创建。
-
-**实现任务。**
-
-- [ ] dry-run 命令；
-- [ ] estimate request/egress；
-- [ ] explicit prefix；
-- [ ] cleanup plan。
-
-**本循环验证。**
-
-- [ ] 无 secret leak；
-- [ ] 只有 approval flag 才实际运行。
-
-**本循环持久化输出。**
-
-- [ ] probe script；
-- [ ] cost/approval checklist。
-
-**停止条件。** 上述验证全部通过，且未引入未记录的行为变化。
-
-## 7. 不变量与失败注入
-
-### 7.1 本阶段必须维护的不变量
-
-- [ ] object-store head CAS 语义与 reference contract 一致；
-- [ ] ETag 不被假设为 payload checksum；
-- [ ] listing 不参与 committed state determination；
-- [ ] multipart 未完成对象不可被 manifest 引用；
-- [ ] credentials 不进入 Git/log/artifact；
-- [ ] MinIO 与 public cloud 结果严格区分。
-
-### 7.2 必须覆盖的故障与反例
-
-- [ ] PUT/CAS response loss；
-- [ ] 429/5xx/timeout；
-- [ ] stale If-Match；
-- [ ] multipart part/complete crash；
-- [ ] list omission/duplicate；
-- [ ] metadata service restart；
-- [ ] credentials missing/expired；
-- [ ] orphan multipart。
-
-## 8. 验收标准
-
-以下条件是阶段 gate，不是建议。Maker 必须给出命令、退出码和 artifact 路径；Checker 必须逐项复核。
-
-- [ ] P09-A01：S3 backend 通过通用 storage contract；
-- [ ] P09-A02：head conditional update 在 competing writers 下单 winner；
-- [ ] P09-A03：response-loss/multipart crash 幂等恢复；
-- [ ] P09-A04：correctness 不依赖 listing；
-- [ ] P09-A05：MinIO transactional E2E 与 POSIX state digest 一致；
-- [ ] P09-A06：hybrid baseline 可独立配置和测量；
-- [ ] P09-A07：云依赖为 optional pinned extra；
-- [ ] P09-A08：无凭据和未批准时 public cloud tests 安全 skip；
-- [ ] P09-A09：Checker 检查 secret/cost/list assumptions。
-
-## 9. 验证矩阵
-
-| 层级 | 要求 |
-|---|---|
-| 本地 | SDK unit/mock + 真实 MinIO integration（环境允许时）必须。 |
-| Miyabi login | 仅静态；不得启动服务或 runtime。 |
-| Miyabi compute | 只有站点策略允许时运行 MinIO/client E2E；否则在独立环境完成。 |
-| 公共云 | 人工批准后；记录 provider/region/API consistency/cost。 |
-| 9-node | 不要求。 |
-
-## 10. Maker–Checker 交接
-
-### Maker 必须提交
-
-- 只包含本阶段范围的 feature branch；
-- 实现、测试、文档和迁移说明；
-- `plans/duraloco/STATE.yaml` 的最新状态；
-- `artifacts/duraloco/<phase>/<run_id>/manifest.json`；
-- 每条验收标准对应的证据路径；
-- 已知限制、跳过的验证及原因；
-- `git status --short --branch` 与 `git rev-parse HEAD` 输出。
-
-### Checker 必须独立检查
-
-- 从 diff 和规范反向推导是否有漏项，而不是只运行 Maker 提供的 happy-path 命令；
-- 至少增加或执行一个 Maker 未列出的反例；
-- 检查测试是否会在回退实现时真正失败；
-- 检查是否存在静默兼容性破坏、权威状态双写、错误的故障假设或不可复现结果；
-- 输出 `artifacts/duraloco/<phase>/<run_id>/checker_report.md`，结论只能是 `PASS`、`PASS_WITH_FOLLOWUPS` 或 `BLOCKED`。
-
-Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在原阶段分支修复并重新提交验证。
-
-## 11. 自动推进与外部风险审批门
-
-- [ ] 真实 S3/GCS/Azure 运行、凭据使用、跨区域流量或付费资源必须审批；
-- [ ] 新增持久化/共享服务或对外暴露端口前需审批；job-owned、隔离且随测试退出的 MinIO/临时端口由 agent 自主使用。
-- [ ] MinIO/local conformance 和默认不执行的 public-cloud harness 足以完成本 phase 的必需 gate；未获公共云批准不阻止 phase `completed`。P07/P08 也完成并通过集成 Checker 后自动进入 P10。
-
-## 12. 阻塞与停止规则
-
-- 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
-- 若实现当前目标需要调整 research contract、failure model、协议线性化点或数值语义：agent 记录 ADR、backend capability evidence 和兼容性影响，经 Checker 复核后继续；只有 materially 超出用户授权研究目标或涉及真实凭据/付费资源时才停止请求决策。
-- 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
-- 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
-- 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
-
-## 13. 阶段完成报告模板
-
-报告 backend/provider/version、contract cases、conditional winner、multipart faults、list-independence、MinIO vs POSIX digest、hybrid mode和云审批状态。
-
-## 14. 可直接复制给 Codex 的启动指令
-
-```text
-使用 miyabi-development skill 执行 P09。
-
-仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
-规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
-目标分支：codex/duraloco-p09-object-store
-阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/10_P09_OBJECT_STORE_BACKEND_AND_HYBRID_BASELINE.md
-共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
-
-先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
-
-按阶段文件中的 Loop 顺序工作。每个 Loop 都要先建立失败测试或可执行规范，再做最小实现，随后运行分层验证和独立 checker。持续更新 plans/duraloco/STATE.yaml；不要自动合并 main；不要在 Miyabi 登录节点运行 pytest、torch/transformers/datasets 导入、训练、mpirun 或其他 runtime 工作。
-
-结束时在全部必需 gate 有证据且 Checker 通过时标记 completed，并按依赖图自动启动下一个可执行 goal/phase，不等待用户审核；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
-```
-
-## 15. 参考输入
-
-- `references/DuraLoCo_research_draft_zh.md`
-- 现有实现：`https://github.com/UnbearableFate/fs_based_decoupled_diloco/tree/codex/fs-diloco-miyabi`
-- Miyabi skill：`https://github.com/UnbearableFate/miyabi-development`
-
-
 ---
 
 ---
@@ -4040,7 +3848,6 @@ target_branch: "codex/duraloco-p10-sacc"
 depends_on:
   - "P07"
   - "P08"
-  - "P09"
 required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
 automatic_progression: true
@@ -4057,7 +3864,8 @@ human_approval_gates: []
 > 2. `00_CODEX_LOOP_OPERATING_CONTRACT.md`；
 > 3. `miyabi-development` skill 的 `SKILL.md`；
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
-> 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
+> 6. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
 > 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
@@ -4067,7 +3875,7 @@ human_approval_gates: []
 
 ### 1.1 本阶段支撑的研究主张
 
-DuraLoCo 不只是把已知日志协议接到对象存储；它针对 Decoupled DiLoCo 的长 local compute 与 quorum semantics 联合控制持久化尾延迟、staleness 和存储放大，从而刻画 storage-native 的 break-even region。
+DuraLoCo 不只是把已知日志协议接到持久存储；它针对 Decoupled DiLoCo 的长 local compute 与 quorum semantics 联合控制持久化尾延迟、staleness 和存储放大，从而在当前 POSIX/Lustre 基线上刻画 storage-native 的 break-even region。该主张不要求 object-store portability。
 
 ### 1.2 完成后的系统增量
 
@@ -4076,7 +3884,7 @@ DuraLoCo 不只是把已知日志协议接到对象存储；它针对 Decoupled 
 ## 2. 前置条件
 
 - [ ] P08 telemetry 可信；
-- [ ] P09 POSIX/MinIO backend 可测；
+- [ ] P03 POSIX/Lustre backend 可测；
 - [ ] P07 lifecycle 可处理策略产生的对象；
 - [ ] 固定-policy baseline 已保存。
 
@@ -4096,6 +3904,7 @@ DuraLoCo 不只是把已知日志协议接到对象存储；它针对 Decoupled 
 - [ ] hysteresis/cooldown/guardrails；
 - [ ] controller decisions 进入 commit/replay；
 - [ ] simulator + small model ablation。
+- [ ] simulator/runtime/replay 调用同一 fairness/materialization/action policy kernel。
 
 ### 3.2 明确不做
 
@@ -4137,6 +3946,7 @@ tests/controller/
 - [ ] D-1005：fairness objective 与 max starvation；
 - [ ] D-1006：cost function 单位和 provider normalization；
 - [ ] D-1007：controller state 是否成为 frontier 的一部分。
+- [ ] D-1008：policy kernel 的唯一性、版本 digest 与 simulator/runtime/replay 等价性边界。
 
 每项决策必须写入 `plans/duraloco/DECISIONS.md`，包含：上下文、候选方案、所选方案、拒绝方案、兼容性影响和可逆性。不得把未决语义隐藏在实现细节中。
 
@@ -4317,6 +4127,9 @@ tests/controller/
 - [ ] P10-A07：enforced 初版只启用通过 shadow/guardrail/replay/Checker gates 的 actions；
 - [ ] P10-A08：small-run fixed/shadow/enforced 对照完成；
 - [ ] P10-A09：Checker 审核 replay determinism、stability 和算法语义边界。
+- [ ] P10-A10：simulator/runtime/replay 共用 policy kernel 或通过 adversarial ordering 和 mutant tests 证明完全等价；
+- [ ] P10-A11：enforced action 的 response-loss/restart 可从 committed decision ancestry 重建，且不依赖 wall-clock/cache；
+- [ ] P10-A12：fixed/shadow/enforced 每个 run 的失败、取消与重试有 manifest lineage，最终 Checker 在最终干净 commit 重放当前套件。
 
 ## 9. 验证矩阵
 
@@ -4325,7 +4138,8 @@ tests/controller/
 | 本地 simulator | 必须：arrival/latency/failure grid、determinism、stability。 |
 | Miyabi 1-node | fixed/shadow/enforced tiny real path。 |
 | Miyabi 2-node | tail delay/failure injection、fair quorum、backpressure。 |
-| MinIO/object store | 至少一个 backend trace。 |
+| POSIX/Lustre | 必须：至少一个真实 backend trace。 |
+| MinIO/object store | 可选；缺失不阻塞 P10，不得写成已支持。 |
 | 9-node | P11 acceptance 才启用已通过前置 gate 的稳定策略；资源申请无需用户批准。 |
 
 ## 10. Maker–Checker 交接
@@ -4391,7 +4205,6 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 现有实现：`https://github.com/UnbearableFate/fs_based_decoupled_diloco/tree/codex/fs-diloco-miyabi`
 - Miyabi skill：`https://github.com/UnbearableFate/miyabi-development`
 
-
 ---
 
 ---
@@ -4409,7 +4222,7 @@ required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
 automatic_progression: true
 agent_decision_gates:
-  - "P00–P10 completed branches 按依赖图由 agent 集成并经独立 Checker 复核。"
+  - "必需主线 P00–P08 与 P10 completed branches 按依赖图由 agent 集成并经独立 Checker 复核；可选 P09 不参与本 gate。"
 human_approval_gates:
   - "单个 Miyabi 作业超过 16 节点或 2 小时时必须批准；16 节点、2 小时以内（含 9 节点）由 agent 自主决定。"
   - "destructive GC 或作用于共享资源的真实故障操作必须批准。"
@@ -4423,13 +4236,14 @@ human_approval_gates:
 > 2. `00_CODEX_LOOP_OPERATING_CONTRACT.md`；
 > 3. `miyabi-development` skill 的 `SKILL.md`；
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
-> 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
+> 6. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
 > 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
 ## 1. 阶段使命
 
-把已通过 reference/local/MinIO 的系统固化为 Miyabi 可操作 artifact：1 节点、2 节点和 9 节点 PBS 路径；可重放 fault tape；运行目录隔离；自动验收和证据打包。
+把已通过 reference/local/POSIX-Lustre 的系统固化为 Miyabi 可操作 artifact：1 节点、2 节点和 9 节点 PBS 路径；可重放 fault tape；运行目录隔离；自动验收和证据打包。Object-store/MinIO/hybrid 不是本阶段的支持或验收条件。
 
 ### 1.1 本阶段支撑的研究主张
 
@@ -4441,7 +4255,7 @@ DuraLoCo 在目标 Lustre/PBS/GPU 环境中不仅通过模拟，还能在 8 lear
 
 ## 2. 前置条件
 
-- [ ] P00–P10 所有 correctness gates 通过；
+- [ ] 必需主线 P00–P08 与 P10 的所有 correctness gates 通过；可选 P09 不要求；
 - [ ] completed feature branches 已按依赖图自动集成到 acceptance branch，并通过集成 Checker；
 - [ ] Miyabi skill 已安装/可读；
 - [ ] 确认 group/project、shared root、cache paths、model/dataset availability；
@@ -4522,6 +4336,7 @@ tests/test_acceptance_checker.py
 - [ ] shell trap；
 - [ ] 禁用 module pager，在作业 shell 记录 `module list` 和项目 Python 版本；非默认 module 使用精确版本显式加载；
 - [ ] static checker。
+- [ ] 提交时即生成 attempt manifest，记录 queue/resources/job ID；queued-cancelled 也不丢失 lineage。
 
 **本循环验证。**
 
@@ -4529,6 +4344,7 @@ tests/test_acceptance_checker.py
 - [ ] dry-run command；
 - [ ] 错误输入 fail fast；
 - [ ] 无 `mpirun -x` 混用。
+- [ ] queue 切换只能重用相同 verified commit/config/assertions，并用 `parent_run_id` 连接前一尝试。
 
 **本循环持久化输出。**
 
@@ -4687,6 +4503,8 @@ tests/test_acceptance_checker.py
 - [ ] P11-A07：所有 commits 可 replay/verify；
 - [ ] P11-A08：artifact packager 在缺证据时 fail closed；
 - [ ] P11-A09：Checker 独立从 bundle 复核。
+- [ ] P11-A10：1/2/9-node 的 pass/fail/inconclusive/queued-cancelled 尝试都有 commit/config/queue/qstat 绑定的 manifest 和每个 validation shape 的 `parent_run_id` lineage；
+- [ ] P11-A11：最终 Checker 从最终干净 commit/bundle 重跑当前 persisted suite、至少一个历史反例和一个新反例，state/report/checksum 同步为绿。
 
 ## 9. 验证矩阵
 
@@ -4764,7 +4582,6 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 现有实现：`https://github.com/UnbearableFate/fs_based_decoupled_diloco/tree/codex/fs-diloco-miyabi`
 - Miyabi skill：`https://github.com/UnbearableFate/miyabi-development`
 
-
 ---
 
 ---
@@ -4796,7 +4613,8 @@ human_approval_gates:
 > 2. `00_CODEX_LOOP_OPERATING_CONTRACT.md`；
 > 3. `miyabi-development` skill 的 `SKILL.md`；
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
-> 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
+> 6. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
 > 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
@@ -4816,7 +4634,7 @@ human_approval_gates:
 
 - [ ] P11 9-node acceptance 已通过；
 - [ ] 所有 correctness invariants 无未关闭 P0；
-- [ ] resource/cost budget 已登记；范围内 Miyabi 作业由 agent 自主决定，超限或公共云预算已批准；
+- [ ] resource/cost budget 已登记；范围内 Miyabi 作业由 agent 自主决定，超限作业已批准或安全 skip，公共云默认 skip（显式选中时才要求预算批准）；
 - [ ] 模型、数据集、revision、seeds、baselines 冻结；
 - [ ] 分析脚本在 synthetic fixture 上通过。
 
@@ -4825,7 +4643,7 @@ human_approval_gates:
 ### 3.1 必须完成
 
 - [ ] 2×2 transport × checkpoint fusion baseline；
-- [ ] network/hybrid/POSIX/MinIO/公共云可选；
+- [ ] POSIX/Lustre 必需基线；network/hybrid/MinIO/公共云均为可选扩展，缺失不阻塞 P12；
 - [ ] full-vector/fragment DuraLoCo；
 - [ ] normal checkpoint+restart；
 - [ ] fixed/SACC、eager/selected-only；
@@ -4884,7 +4702,7 @@ artifact/
 - [ ] D-1203：network Decoupled baseline 的实现/公平性；
 - [ ] D-1204：checkpoint interval 和 failure distribution；
 - [ ] D-1205：统计检验/置信区间；
-- [ ] D-1206：public cloud provider/region/cost；
+- [ ] D-1206：可选 public cloud provider/region/cost；未选中时记录 `not_applicable`；
 - [ ] D-1207：run exclusion policy；
 - [ ] D-1208：artifact 中可公开的模型/数据/log。
 
@@ -4907,12 +4725,14 @@ artifact/
 - [ ] claim→experiment mapping；
 - [ ] 资源估算、自主范围判定和超限审批字段；
 - [ ] run manifest generator。
+- [ ] 将 pass/fail/inconclusive/excluded/queued-cancelled 都建模为不可变 attempt，同一 experiment cell/seed 的重试必须链接 `parent_run_id`。
 
 **本循环验证。**
 
 - [ ] registry validator pass；
 - [ ] 每个 primary claim 有实验；
 - [ ] 每个 run 都有资源估算；范围内 Miyabi 作业无需批准，超限或公共云 run 有批准。
+- [ ] exclusion/retry 不能删除前任 manifest，并且 aggregate validator 能区分 queue/capacity 与 runtime/scientific failure。
 
 **本循环持久化输出。**
 
@@ -4934,7 +4754,7 @@ artifact/
 - [ ] 随机 fault tapes；
 - [ ] syncer/learner/catastrophic restart；
 - [ ] 累计 24/72h resumable segmented soak：每个 Miyabi 作业不超过 2 小时并由 agent 自动续接；只有要求单次连续 >2h 时才走外部资源审批；
-- [ ] POSIX/MinIO/云 backend。
+- [ ] POSIX/Lustre backend；若已显式提供并选中，可附加 MinIO/云 backend，否则安全 skip 且不影响 campaign gate。
 
 **本循环验证。**
 
@@ -4960,7 +4780,7 @@ artifact/
 **实现任务。**
 
 - [ ] 扫描 local interval、fragment size/count、q、learners、backend；
-- [ ] network/hybrid/storage；
+- [ ] POSIX/Lustre storage；network/hybrid 仅在已显式提供时作为可选扩展；
 - [ ] fixed/SACC；
 - [ ] model-equivalent I/O。
 
@@ -5103,6 +4923,8 @@ artifact/
 - [ ] P12-A10：clean artifact reproduction 通过；
 - [ ] P12-A11：论文不包含虚构或超范围结论；
 - [ ] P12-A12：独立 Checker/内部审稿完成。
+- [ ] P12-A13：所有失败、取消、排除和重试 run 均保留 immutable manifest、结构化原因和 experiment-cell/seed `parent_run_id` lineage；
+- [ ] P12-A14：从最终干净 analysis commit 重建核心图表与 claim matrix，并证明 simulator/runtime/policy 的 digest 与预注册版本一致。
 
 ## 9. 验证矩阵
 
@@ -5114,8 +4936,8 @@ artifact/
 | Lustre 1/2-node micro + crash | Miyabi | debug allocation |
 | 9-node、≤2h | Miyabi | agent 自主决定并提交，无需用户批准 |
 | >2h 或 >16-node | Miyabi | 明确批准后提交 |
-| MinIO | 独立允许环境 | 无 secret；记录版本 |
-| 公共云 | approved provider/region | 凭据、预算、egress 明确批准 |
+| MinIO | 可选的独立允许环境 | 未实现 P09 时 skip；不阻塞 P12 |
+| 公共云 | 可选 approved provider/region | 未实现 P09 时 skip；使用时凭据、预算、egress 明确批准 |
 | Multi-seed model training | Miyabi/approved | registry + budget + stopping rule；单个范围内 Miyabi 作业自主提交 |
 
 分析必须先运行 `validate_runs.py`；只有 status `COMPLETE_AND_MATCHED` 的 run 可进入 primary aggregate。
@@ -5146,7 +4968,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 
 - [ ] 单个 Miyabi 作业超过 16 节点或 2 小时，以及公共云实验，须先批准资源预算；范围内的 9-node 和 multi-seed 作业由 agent 自主决定；
 - [ ] 发布 artifact 或公开数据前需审批。
-- [ ] P12 内各 campaign/goal 在 registry gate 和 Checker 通过后自动推进；全部必需 evidence gates 通过后自动标记 P12 `completed`，无需人工完成审核。未获发布批准时只保留私有 artifact，不影响研究阶段完成。
+- [ ] P12 内各 campaign/goal 在 registry gate 和 Checker 通过后自动推进；全部必需 evidence gates 通过后自动标记 P12 `completed`，无需人工完成审核。未获发布批准时只保留私有 artifact，不影响研究阶段完成。P09 不自动启动，也不是 P12 或主线完成条件。
 
 ## 12. 阻塞与停止规则
 
@@ -5169,6 +4991,380 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
 目标分支：codex/duraloco-p12-evaluation
 阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/13_P12_FORMAL_EXPERIMENTS_ARTIFACT_AND_PAPER_EVIDENCE.md
+共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
+
+先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
+
+按阶段文件中的 Loop 顺序工作。每个 Loop 都要先建立失败测试或可执行规范，再做最小实现，随后运行分层验证和独立 checker。持续更新 plans/duraloco/STATE.yaml；不要自动合并 main；不要在 Miyabi 登录节点运行 pytest、torch/transformers/datasets 导入、训练、mpirun 或其他 runtime 工作。
+
+结束时在全部必需 gate 有证据且 Checker 通过时标记 completed，并按依赖图自动启动下一个可执行 goal/phase，不等待用户审核；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
+```
+
+## 15. 参考输入
+
+- `references/DuraLoCo_research_draft_zh.md`
+- 现有实现：`https://github.com/UnbearableFate/fs_based_decoupled_diloco/tree/codex/fs-diloco-miyabi`
+- Miyabi skill：`https://github.com/UnbearableFate/miyabi-development`
+
+---
+
+---
+plan_id: "P09"
+title: "可选：S3-Compatible Backend、MinIO 与 Hybrid Baseline"
+status: "planned"
+date: "2026-07-10"
+repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
+planning_basis_branch: "codex/fs-diloco-miyabi"
+planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
+target_branch: "codex/duraloco-p09-object-store"
+depends_on:
+  - "P12"
+optional: true
+required_for_core_completion: false
+required_skill: "miyabi-development"
+execution_mode: "single-writer maker + independent checker"
+automatic_progression: false
+agent_decision_gates:
+  - "对象存储依赖策略、SDK/version 和 lockfile 由 agent 记录 ADR，经独立 Checker 复核。"
+human_approval_gates:
+  - "真实 S3/GCS/Azure 运行、凭据使用、跨区域流量或付费资源必须审批；"
+  - "新增持久化/共享服务或对外暴露端口前需审批；job-owned、隔离且随测试退出的 MinIO/临时端口由 agent 自主使用。"
+---
+
+# P09（可选，暂缓）— S3-Compatible Backend、MinIO 与 Hybrid Baseline
+
+> 本文件是可直接交给 Codex 执行的阶段计划，不是背景说明。执行前必须同时读取：
+>
+> 1. 仓库根目录 `AGENTS.md`；
+> 2. `00_CODEX_LOOP_OPERATING_CONTRACT.md`；
+> 3. `miyabi-development` skill 的 `SKILL.md`；
+> 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
+> 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
+> 6. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+>
+> 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
+
+## 1. 阶段使命
+
+> 当前必需主线到 P12 结束。本阶段仅作为未来可选实现保留，暂时不需要支持，不得自动启动，不得阻塞 P10–P12、默认运行或主线完成。只有用户未来显式选择 object-store 支持后才执行下述 gates。
+
+证明 transactional protocol 不依赖 POSIX rename/listing。实现 S3-compatible backend、MinIO contract/chaos、conditional head、multipart 和重试，并建立 metadata-control + object-payload hybrid baseline。
+
+### 1.1 本阶段支撑的研究主张
+
+DuraLoCo 是 storage-native abstraction，而不是 Lustre 特例；同一 committed-prefix correctness suite 可跨 POSIX 和 object storage，通过 conditional object updates 实现 head commit。
+
+### 1.2 完成后的系统增量
+
+新增可选 object-store extra、MinIO test environment、S3 backend 与 hybrid control-plane baseline；公共云验证保持人工 gate。
+
+## 2. 前置条件
+
+- [ ] P04 log API 完全 backend-neutral；
+- [ ] 对象存储依赖策略和 lockfile 已由 agent 决定、记录 ADR 并通过独立 Checker；
+- [ ] 本地/CI 可运行 MinIO 或提供替代 integration environment；
+- [ ] 秘密管理约定已写入 AGENTS。
+
+## 3. 范围
+
+### 3.1 必须完成
+
+- [ ] S3 immutable put/get/head/range/delete；
+- [ ] If-None-Match/If-Match conditional head；
+- [ ] ETag 与 content hash 区分；
+- [ ] multipart upload/recovery/abort；
+- [ ] retry/backoff/jitter、429/5xx/timeout；
+- [ ] response-loss idempotency；
+- [ ] strong correctness 不依赖 list；
+- [ ] MinIO conformance/crash suite；
+- [ ] hybrid metadata coordinator + object payload baseline；
+- [ ] public cloud capability harness（默认不执行）。
+
+### 3.2 明确不做
+
+- 不把 MinIO 性能写成公有云性能；
+- 不把 provider-specific strong consistency 无条件外推到所有对象存储；
+- 不自动创建付费 bucket/跨区域复制；
+- 不在本阶段实现 SACC。
+
+## 4. 预期仓库变更
+
+```text
+fs_diloco/storage/
+  s3.py
+  multipart.py
+  retry.py
+  credentials.py
+  object_capability_probe.py
+fs_diloco/hybrid/
+  metadata_service.py
+  client.py
+scripts/object_store/
+  start_minio_test.sh
+  stop_minio_test.sh
+  run_contract.sh
+  public_cloud_probe.py
+tests/storage/
+  test_s3_contract.py
+  test_s3_response_loss.py
+  test_multipart.py
+  test_listing_independence.py
+tests/hybrid/
+```
+
+在 `pyproject.toml` 中使用可选依赖组并固定版本；核心 POSIX 安装不应被迫安装云 SDK。
+
+## 5. 需要先冻结的设计决策
+
+- [ ] D-0901：SDK 与版本；
+- [ ] D-0902：conditional write token 使用 ETag/version ID；
+- [ ] D-0903：multipart threshold/part size 与 orphan cleanup；
+- [ ] D-0904：provider capability matrix 和 fail-closed 策略；
+- [ ] D-0905：hybrid baseline 的 metadata API 最小范围；
+- [ ] D-0906：public cloud region/topology 与成本预算。
+
+每项决策必须写入 `plans/duraloco/DECISIONS.md`，包含：上下文、候选方案、所选方案、拒绝方案、兼容性影响和可逆性。不得把未决语义隐藏在实现细节中。
+
+## 6. Codex 执行循环
+
+### Loop 1 — S3 semantic backend
+
+**目标。** 实现与 memory/POSIX 相同 storage contract。
+
+**先产生的失败证据或规范。**
+
+- [ ] same key same/different bytes；stale If-Match；timeout after PUT/CAS；ETag 非 MD5。
+
+**实现任务。**
+
+- [ ] 实现 immutable/conditional/get/range/delete；
+- [ ] PUT/CAS/delete/multipart complete/abort 都持久化 request ID；
+- [ ] 显式 hash metadata；
+- [ ] typed provider errors；
+- [ ] typed errors 覆盖 credential/client setup、upload、lock/conditional call、cleanup/abort 和 inspect/recovery；
+- [ ] credential redaction。
+
+**本循环验证。**
+
+- [ ] 通用 conformance suite；
+- [ ] 响应丢失重试幂等；
+- [ ] 同 ID/同内容、不同 ID/同内容和同 ID/冲突内容的结果与 POSIX contract 一致；
+- [ ] 日志无 secrets。
+
+**本循环持久化输出。**
+
+- [ ] S3 backend；
+- [ ] capability matrix。
+
+**停止条件。** 上述验证全部通过，且未引入未记录的行为变化。
+
+### Loop 2 — Multipart 与重试
+
+**目标。** 支持模型 fragment 大对象且不会留下不可控 multipart state。
+
+**先产生的失败证据或规范。**
+
+- [ ] 每个 part/complete/abort 阶段 crash；throttling；retry budget exhaustion。
+
+**实现任务。**
+
+- [ ] 可恢复 multipart state；
+- [ ] content hash；
+- [ ] bounded concurrency；
+- [ ] backoff/jitter；
+- [ ] orphan report/cleanup。
+
+**本循环验证。**
+
+- [ ] crash suite；
+- [ ] 重复 complete 不破坏 identity；
+- [ ] 失败能解释并停止。
+
+**本循环持久化输出。**
+
+- [ ] multipart manager；
+- [ ] fault traces。
+
+**停止条件。** 上述验证全部通过，且未引入未记录的行为变化。
+
+### Loop 3 — MinIO E2E 与 listing independence
+
+**目标。** 在真实 object API 上运行 P04/P05/P06 的小型路径。
+
+**先产生的失败证据或规范。**
+
+- [ ] 故意隐藏/延迟 list results，同时直接 head/get 正常。
+
+**实现任务。**
+
+- [ ] 可重复启动隔离 MinIO；
+- [ ] 运行 contract、transaction、syncer/learner tiny E2E；
+- [ ] 捕获 server/client logs。
+
+**本循环验证。**
+
+- [ ] committed correctness 不受 list omission；
+- [ ] POSIX/MinIO state digest 一致。
+
+**本循环持久化输出。**
+
+- [ ] MinIO harness；
+- [ ] E2E manifests。
+
+**停止条件。** 上述验证全部通过，且未引入未记录的行为变化。
+
+### Loop 4 — Hybrid baseline
+
+**目标。** 隔离 persistent tensor payload 与 durable metadata protocol 的贡献。
+
+**先产生的失败证据或规范。**
+
+- [ ] metadata service restart；payload exists but metadata absent；duplicate request。
+
+**实现任务。**
+
+- [ ] 实现最小 metadata control service；
+- [ ] payload 仍用 storage backend；
+- [ ] run manifest 标记 transport/checkpoint mode；
+- [ ] 不复用 DuraLoCo durable head 伪装 baseline。
+
+**本循环验证。**
+
+- [ ] small E2E；
+- [ ] failure semantics 清楚；
+- [ ] metrics 可与 pure storage 对照。
+
+**本循环持久化输出。**
+
+- [ ] hybrid baseline；
+- [ ] factorized config。
+
+**停止条件。** 上述验证全部通过，且未引入未记录的行为变化。
+
+### Loop 5 — 公共云 probe（人工 gate）
+
+**目标。** 准备而非默认执行 provider capability/cost test。
+
+**先产生的失败证据或规范。**
+
+- [ ] 无凭据时必须安全跳过；错误 region/bucket 不得创建。
+
+**实现任务。**
+
+- [ ] dry-run 命令；
+- [ ] estimate request/egress；
+- [ ] explicit prefix；
+- [ ] cleanup plan。
+
+**本循环验证。**
+
+- [ ] 无 secret leak；
+- [ ] 只有 approval flag 才实际运行。
+
+**本循环持久化输出。**
+
+- [ ] probe script；
+- [ ] cost/approval checklist。
+
+**停止条件。** 上述验证全部通过，且未引入未记录的行为变化。
+
+## 7. 不变量与失败注入
+
+### 7.1 本阶段必须维护的不变量
+
+- [ ] object-store head CAS 语义与 reference contract 一致；
+- [ ] ETag 不被假设为 payload checksum；
+- [ ] listing 不参与 committed state determination；
+- [ ] multipart 未完成对象不可被 manifest 引用；
+- [ ] credentials 不进入 Git/log/artifact；
+- [ ] MinIO 与 public cloud 结果严格区分。
+
+### 7.2 必须覆盖的故障与反例
+
+- [ ] PUT/CAS response loss；
+- [ ] 429/5xx/timeout；
+- [ ] stale If-Match；
+- [ ] multipart part/complete crash；
+- [ ] list omission/duplicate；
+- [ ] metadata service restart；
+- [ ] credentials missing/expired；
+- [ ] orphan multipart。
+
+## 8. 验收标准
+
+以下条件是阶段 gate，不是建议。Maker 必须给出命令、退出码和 artifact 路径；Checker 必须逐项复核。
+
+- [ ] P09-A01：S3 backend 通过通用 storage contract；
+- [ ] P09-A02：head conditional update 在 competing writers 下单 winner；
+- [ ] P09-A03：response-loss/multipart crash 幂等恢复；
+- [ ] P09-A04：correctness 不依赖 listing；
+- [ ] P09-A05：MinIO transactional E2E 与 POSIX state digest 一致；
+- [ ] P09-A06：hybrid baseline 可独立配置和测量；
+- [ ] P09-A07：云依赖为 optional pinned extra；
+- [ ] P09-A08：无凭据和未批准时 public cloud tests 安全 skip；
+- [ ] P09-A09：Checker 检查 secret/cost/list assumptions。
+- [ ] P09-A10：所有可重试 mutation 用 request identity 区分 after-effect retry 与独立调用，并对 SDK setup/publish/abort/cleanup 完成 typed-error matrix；
+- [ ] P09-A11：MinIO/云 probe 的 fail、inconclusive、queued-cancelled 和 retry 均保留 manifest lineage，最终 Checker 在最终干净 commit 重放 contract 和历史反例。
+
+## 9. 验证矩阵
+
+| 层级 | 要求 |
+|---|---|
+| 本地 | SDK unit/mock + 真实 MinIO integration（环境允许时）必须。 |
+| Miyabi login | 仅静态；不得启动服务或 runtime。 |
+| Miyabi compute | 只有站点策略允许时运行 MinIO/client E2E；否则在独立环境完成。 |
+| 公共云 | 人工批准后；记录 provider/region/API consistency/cost。 |
+| 9-node | 不要求。 |
+
+## 10. Maker–Checker 交接
+
+### Maker 必须提交
+
+- 只包含本阶段范围的 feature branch；
+- 实现、测试、文档和迁移说明；
+- `plans/duraloco/STATE.yaml` 的最新状态；
+- `artifacts/duraloco/<phase>/<run_id>/manifest.json`；
+- 每条验收标准对应的证据路径；
+- 已知限制、跳过的验证及原因；
+- `git status --short --branch` 与 `git rev-parse HEAD` 输出。
+
+### Checker 必须独立检查
+
+- 从 diff 和规范反向推导是否有漏项，而不是只运行 Maker 提供的 happy-path 命令；
+- 至少增加或执行一个 Maker 未列出的反例；
+- 检查测试是否会在回退实现时真正失败；
+- 检查是否存在静默兼容性破坏、权威状态双写、错误的故障假设或不可复现结果；
+- 输出 `artifacts/duraloco/<phase>/<run_id>/checker_report.md`，结论只能是 `PASS`、`PASS_WITH_FOLLOWUPS` 或 `BLOCKED`。
+
+Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在原阶段分支修复并重新提交验证。
+
+## 11. 自动推进与外部风险审批门
+
+- [ ] 真实 S3/GCS/Azure 运行、凭据使用、跨区域流量或付费资源必须审批；
+- [ ] 新增持久化/共享服务或对外暴露端口前需审批；job-owned、隔离且随测试退出的 MinIO/临时端口由 agent 自主使用。
+- [ ] 仅在用户显式选择 P09 后，MinIO/local conformance 和默认不执行的 public-cloud harness 才构成本可选 phase 的 gate；未获公共云批准不阻止已选中的 P09 `completed`。P09 完成后不自动启动其他 phase。
+
+## 12. 阻塞与停止规则
+
+- 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
+- 若实现当前目标需要调整 research contract、failure model、协议线性化点或数值语义：agent 记录 ADR、backend capability evidence 和兼容性影响，经 Checker 复核后继续；只有 materially 超出用户授权研究目标或涉及真实凭据/付费资源时才停止请求决策。
+- 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
+- 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
+- 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
+
+## 13. 阶段完成报告模板
+
+报告 backend/provider/version、contract cases、conditional winner、multipart faults、list-independence、MinIO vs POSIX digest、hybrid mode和云审批状态。
+
+## 14. 可直接复制给 Codex 的启动指令
+
+```text
+仅在用户显式选择 object-store 可选实现后，使用 miyabi-development skill 执行 P09。
+
+仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
+规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
+目标分支：codex/duraloco-p09-object-store
+阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/14_P09_OBJECT_STORE_BACKEND_AND_HYBRID_BASELINE_OPTIONAL.md
 共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。

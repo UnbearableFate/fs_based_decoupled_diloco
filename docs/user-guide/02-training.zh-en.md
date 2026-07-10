@@ -127,7 +127,7 @@ Syncer：
 ```bash
 RUN_ID=manual_debug
 SHARED_ROOT=$PWD/runs/fs_diloco/$RUN_ID
-SQLITE_DIR=${TMPDIR:-/tmp}/fs_diloco/$RUN_ID
+SQLITE_DIR=$PWD/.runtime/fs_diloco/$RUN_ID/sqlite
 
 CUDA_VISIBLE_DEVICES=0 .venv/bin/python -m fs_diloco.syncer \
   --config configs/fs_diloco_gpt2_wikitext2_1l_debug.yaml \
@@ -264,7 +264,7 @@ Use PBS scripts for normal runs. For debugging inside an already allocated compu
 ```bash
 RUN_ID=manual_debug
 SHARED_ROOT=$PWD/runs/fs_diloco/$RUN_ID
-SQLITE_DIR=${TMPDIR:-/tmp}/fs_diloco/$RUN_ID
+SQLITE_DIR=$PWD/.runtime/fs_diloco/$RUN_ID/sqlite
 
 CUDA_VISIBLE_DEVICES=0 .venv/bin/python -m fs_diloco.syncer \
   --config configs/fs_diloco_gpt2_wikitext2_1l_debug.yaml \

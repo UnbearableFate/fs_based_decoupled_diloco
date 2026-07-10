@@ -10,7 +10,6 @@ target_branch: "codex/duraloco-p10-sacc"
 depends_on:
   - "P07"
   - "P08"
-  - "P09"
 required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
 automatic_progression: true
@@ -27,7 +26,8 @@ human_approval_gates: []
 > 2. `00_CODEX_LOOP_OPERATING_CONTRACT.md`；
 > 3. `miyabi-development` skill 的 `SKILL.md`；
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
-> 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
+> 6. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
 > 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
@@ -37,7 +37,7 @@ human_approval_gates: []
 
 ### 1.1 本阶段支撑的研究主张
 
-DuraLoCo 不只是把已知日志协议接到对象存储；它针对 Decoupled DiLoCo 的长 local compute 与 quorum semantics 联合控制持久化尾延迟、staleness 和存储放大，从而刻画 storage-native 的 break-even region。
+DuraLoCo 不只是把已知日志协议接到持久存储；它针对 Decoupled DiLoCo 的长 local compute 与 quorum semantics 联合控制持久化尾延迟、staleness 和存储放大，从而在当前 POSIX/Lustre 基线上刻画 storage-native 的 break-even region。该主张不要求 object-store portability。
 
 ### 1.2 完成后的系统增量
 
@@ -46,7 +46,7 @@ DuraLoCo 不只是把已知日志协议接到对象存储；它针对 Decoupled 
 ## 2. 前置条件
 
 - [ ] P08 telemetry 可信；
-- [ ] P09 POSIX/MinIO backend 可测；
+- [ ] P03 POSIX/Lustre backend 可测；
 - [ ] P07 lifecycle 可处理策略产生的对象；
 - [ ] 固定-policy baseline 已保存。
 
@@ -66,6 +66,7 @@ DuraLoCo 不只是把已知日志协议接到对象存储；它针对 Decoupled 
 - [ ] hysteresis/cooldown/guardrails；
 - [ ] controller decisions 进入 commit/replay；
 - [ ] simulator + small model ablation。
+- [ ] simulator/runtime/replay 调用同一 fairness/materialization/action policy kernel。
 
 ### 3.2 明确不做
 
@@ -107,6 +108,7 @@ tests/controller/
 - [ ] D-1005：fairness objective 与 max starvation；
 - [ ] D-1006：cost function 单位和 provider normalization；
 - [ ] D-1007：controller state 是否成为 frontier 的一部分。
+- [ ] D-1008：policy kernel 的唯一性、版本 digest 与 simulator/runtime/replay 等价性边界。
 
 每项决策必须写入 `plans/duraloco/DECISIONS.md`，包含：上下文、候选方案、所选方案、拒绝方案、兼容性影响和可逆性。不得把未决语义隐藏在实现细节中。
 
@@ -287,6 +289,9 @@ tests/controller/
 - [ ] P10-A07：enforced 初版只启用通过 shadow/guardrail/replay/Checker gates 的 actions；
 - [ ] P10-A08：small-run fixed/shadow/enforced 对照完成；
 - [ ] P10-A09：Checker 审核 replay determinism、stability 和算法语义边界。
+- [ ] P10-A10：simulator/runtime/replay 共用 policy kernel 或通过 adversarial ordering 和 mutant tests 证明完全等价；
+- [ ] P10-A11：enforced action 的 response-loss/restart 可从 committed decision ancestry 重建，且不依赖 wall-clock/cache；
+- [ ] P10-A12：fixed/shadow/enforced 每个 run 的失败、取消与重试有 manifest lineage，最终 Checker 在最终干净 commit 重放当前套件。
 
 ## 9. 验证矩阵
 
@@ -295,7 +300,8 @@ tests/controller/
 | 本地 simulator | 必须：arrival/latency/failure grid、determinism、stability。 |
 | Miyabi 1-node | fixed/shadow/enforced tiny real path。 |
 | Miyabi 2-node | tail delay/failure injection、fair quorum、backpressure。 |
-| MinIO/object store | 至少一个 backend trace。 |
+| POSIX/Lustre | 必须：至少一个真实 backend trace。 |
+| MinIO/object store | 可选；缺失不阻塞 P10，不得写成已支持。 |
 | 9-node | P11 acceptance 才启用已通过前置 gate 的稳定策略；资源申请无需用户批准。 |
 
 ## 10. Maker–Checker 交接

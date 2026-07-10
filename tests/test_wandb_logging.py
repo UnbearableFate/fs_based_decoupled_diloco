@@ -13,6 +13,7 @@ def test_syncer_wandb_names_are_derived_from_config(tmp_path):
         shared_root=str(tmp_path / "run"),
         sqlite_local_dir=str(tmp_path / "db"),
         num_learners=2,
+        project_root=tmp_path,
     )
     run_name = syncer_wandb_run_name(config, timestamp="20260709_120000")
     assert syncer_wandb_project_name(config) == "fs-diloco-miyabi-syncer"

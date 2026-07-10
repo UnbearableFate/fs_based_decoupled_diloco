@@ -33,7 +33,7 @@ metrics/
 3. Syncer 打开本地 SQLite DB，例如：
 
 ```text
-${TMPDIR:-/tmp}/fs_diloco/<RUN_ID>/syncer_metadata.sqlite3
+$PROJECT_ROOT/.runtime/fs_diloco/<RUN_ID>/sqlite/syncer_metadata.sqlite3
 ```
 
 4. Syncer 加载模型并构造 deterministic `param_index.json`。
@@ -222,7 +222,7 @@ theta = theta - lr * m_hat / (sqrt(v_hat) + eps)
 
 1. The syncer resolves YAML config and CLI overrides.
 2. It creates the run layout under `runs/fs_diloco/<RUN_ID>/`.
-3. It opens syncer-local SQLite at `${TMPDIR:-/tmp}/fs_diloco/<RUN_ID>/syncer_metadata.sqlite3`.
+3. It opens SQLite at `$PROJECT_ROOT/.runtime/fs_diloco/<RUN_ID>/sqlite/syncer_metadata.sqlite3`.
 4. It loads the model and builds a deterministic `param_index.json`.
 5. It flattens trainable parameters into `theta_0`.
 6. It initializes the outer optimizer state.

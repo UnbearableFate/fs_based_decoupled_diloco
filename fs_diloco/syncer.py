@@ -80,7 +80,8 @@ def sqlite_path(config: Config) -> Path:
     run_id = config.run.run_id or "unknown_run"
     local_dir = config.io.sqlite_local_dir
     if local_dir is None:
-        local_dir = str(Path(os.environ.get("TMPDIR", "/tmp")) / "fs_diloco" / run_id)
+        shared_root = Path(config.run.shared_root or ".").resolve()
+        local_dir = str(shared_root.parent.parent.parent / ".runtime" / "fs_diloco" / run_id / "sqlite")
     return Path(local_dir) / "syncer_metadata.sqlite3"
 
 

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 FORMAT_VERSION = 1
 DEFAULT_RUNS_DIR = "runs/fs_diloco"
+DEFAULT_RUNTIME_DIR = ".runtime/fs_diloco"
+DEFAULT_DATA_CACHE_DIR = ".cache/fs_diloco/huggingface/datasets"
 LEARNER_ID_PREFIX = "learner_"
 
 UPDATE_STATUS_PENDING = "pending"

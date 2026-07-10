@@ -13,7 +13,7 @@ required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
 automatic_progression: true
 agent_decision_gates:
-  - "P00–P10 completed branches 按依赖图由 agent 集成并经独立 Checker 复核。"
+  - "必需主线 P00–P08 与 P10 completed branches 按依赖图由 agent 集成并经独立 Checker 复核；可选 P09 不参与本 gate。"
 human_approval_gates:
   - "单个 Miyabi 作业超过 16 节点或 2 小时时必须批准；16 节点、2 小时以内（含 9 节点）由 agent 自主决定。"
   - "destructive GC 或作用于共享资源的真实故障操作必须批准。"
@@ -27,13 +27,14 @@ human_approval_gates:
 > 2. `00_CODEX_LOOP_OPERATING_CONTRACT.md`；
 > 3. `miyabi-development` skill 的 `SKILL.md`；
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
-> 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
+> 6. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
 > 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
 ## 1. 阶段使命
 
-把已通过 reference/local/MinIO 的系统固化为 Miyabi 可操作 artifact：1 节点、2 节点和 9 节点 PBS 路径；可重放 fault tape；运行目录隔离；自动验收和证据打包。
+把已通过 reference/local/POSIX-Lustre 的系统固化为 Miyabi 可操作 artifact：1 节点、2 节点和 9 节点 PBS 路径；可重放 fault tape；运行目录隔离；自动验收和证据打包。Object-store/MinIO/hybrid 不是本阶段的支持或验收条件。
 
 ### 1.1 本阶段支撑的研究主张
 
@@ -45,7 +46,7 @@ DuraLoCo 在目标 Lustre/PBS/GPU 环境中不仅通过模拟，还能在 8 lear
 
 ## 2. 前置条件
 
-- [ ] P00–P10 所有 correctness gates 通过；
+- [ ] 必需主线 P00–P08 与 P10 的所有 correctness gates 通过；可选 P09 不要求；
 - [ ] completed feature branches 已按依赖图自动集成到 acceptance branch，并通过集成 Checker；
 - [ ] Miyabi skill 已安装/可读；
 - [ ] 确认 group/project、shared root、cache paths、model/dataset availability；
@@ -126,6 +127,7 @@ tests/test_acceptance_checker.py
 - [ ] shell trap；
 - [ ] 禁用 module pager，在作业 shell 记录 `module list` 和项目 Python 版本；非默认 module 使用精确版本显式加载；
 - [ ] static checker。
+- [ ] 提交时即生成 attempt manifest，记录 queue/resources/job ID；queued-cancelled 也不丢失 lineage。
 
 **本循环验证。**
 
@@ -133,6 +135,7 @@ tests/test_acceptance_checker.py
 - [ ] dry-run command；
 - [ ] 错误输入 fail fast；
 - [ ] 无 `mpirun -x` 混用。
+- [ ] queue 切换只能重用相同 verified commit/config/assertions，并用 `parent_run_id` 连接前一尝试。
 
 **本循环持久化输出。**
 
@@ -291,6 +294,8 @@ tests/test_acceptance_checker.py
 - [ ] P11-A07：所有 commits 可 replay/verify；
 - [ ] P11-A08：artifact packager 在缺证据时 fail closed；
 - [ ] P11-A09：Checker 独立从 bundle 复核。
+- [ ] P11-A10：1/2/9-node 的 pass/fail/inconclusive/queued-cancelled 尝试都有 commit/config/queue/qstat 绑定的 manifest 和每个 validation shape 的 `parent_run_id` lineage；
+- [ ] P11-A11：最终 Checker 从最终干净 commit/bundle 重跑当前 persisted suite、至少一个历史反例和一个新反例，state/report/checksum 同步为绿。
 
 ## 9. 验证矩阵
 

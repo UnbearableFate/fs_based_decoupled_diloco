@@ -131,7 +131,7 @@ English: Detailed YAML config groups and parameter meanings.
 | `compute_sha256` | 是否计算 update tensor SHA256；大模型下默认 false。 |
 | `keep_processed_updates` | 预留清理策略。 |
 | `cleanup_applied_after_versions` | 预留：应用后保留多少版本再清理。 |
-| `sqlite_local_dir` | syncer-local SQLite 目录；为空时用 `${TMPDIR:-/tmp}/fs_diloco/$RUN_ID`。 |
+| `sqlite_local_dir` | syncer SQLite 目录；为空时用 `$PROJECT_ROOT/.runtime/fs_diloco/$RUN_ID/sqlite`，且不得位于 project 外。 |
 
 ### `learner`
 
@@ -284,7 +284,7 @@ English: Detailed YAML config groups and parameter meanings.
 | `compute_sha256` | Whether to compute update tensor SHA256. Disabled by default for large models. |
 | `keep_processed_updates` | Reserved cleanup policy setting. |
 | `cleanup_applied_after_versions` | Reserved retention window for applied updates. |
-| `sqlite_local_dir` | Syncer-local SQLite directory; if empty, uses `${TMPDIR:-/tmp}/fs_diloco/$RUN_ID`. |
+| `sqlite_local_dir` | Syncer SQLite directory; if empty, uses `$PROJECT_ROOT/.runtime/fs_diloco/$RUN_ID/sqlite` and may not escape the project. |
 
 ### `learner`
 

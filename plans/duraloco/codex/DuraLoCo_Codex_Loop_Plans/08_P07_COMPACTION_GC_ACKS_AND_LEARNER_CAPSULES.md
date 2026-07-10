@@ -26,7 +26,8 @@ human_approval_gates:
 > 2. `00_CODEX_LOOP_OPERATING_CONTRACT.md`；
 > 3. `miyabi-development` skill 的 `SKILL.md`；
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
-> 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
+> 6. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
 > 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
@@ -176,12 +177,14 @@ tests/lifecycle/
 **先产生的失败证据或规范。**
 
 - [ ] GC 与 restore、commit、capsule upload 并发；delete response loss；list omission。
+- [ ] root enumeration/setup/lock/delete/cleanup 注入 retryable/non-retryable 错误。
 
 **实现任务。**
 
 - [ ] mark generation；
 - [ ] revalidate head/epoch；
 - [ ] batch delete idempotency；
+- [ ] delete/batch-delete 持久化 request ID，不以 key/payload equality 推断原请求重试；
 - [ ] tombstone/audit report；
 - [ ] 审批 token。
 
@@ -190,6 +193,7 @@ tests/lifecycle/
 - [ ] 并发 tests 零 live deletion；
 - [ ] 重复 GC 幂等；
 - [ ] listing omission 不误删。
+- [ ] 每个删除决策绑定一个 immutable root snapshot 与可重放 digest。
 
 **本循环持久化输出。**
 
@@ -290,6 +294,9 @@ tests/lifecycle/
 - [ ] P07-A08：accelerated soak 显示有界 steady-state；
 - [ ] P07-A09：Checker 独立审查 reachability roots。
 - [ ] P07-A10：现有 `fs_diloco.cli` dispatcher 未被 package shadow，新增 lifecycle CLI 的 entrypoint/import 兼容测试通过。
+- [ ] P07-A11：GC delete response-loss 用 request identity 证明幂等，并将独立的相同 delete 与冲突请求分类正确；
+- [ ] P07-A12：reachability/GC 在 immutable root snapshot 上计算，listing omission、head 并发推进和 setup/cleanup 失败都不造成 live deletion；
+- [ ] P07-A13：最终 soak/1-node 与 Checker 证据包含完整 attempt lineage，当前 state/report/tests/checksums 一致。
 
 ## 9. 验证矩阵
 
@@ -326,7 +333,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 
 - [ ] 启用任何非 dry-run GC 前必须人工批准；
 - [ ] exact learner capsule 的存储预算/频率默认值由 agent 在自主资源范围和有界增长证据内决定，经 Checker 复核后生效；
-- [ ] P07 必需 correctness gates 可用 GC dry-run 证据完成；未获 destructive apply 批准不阻止 phase `completed`。P08/P09 也完成并通过集成 Checker 后自动进入 P10。
+- [ ] P07 必需 correctness gates 可用 GC dry-run 证据完成；未获 destructive apply 批准不阻止 phase `completed`。P08 也完成并通过集成 Checker 后自动进入 P10；不等待可选 P09。
 
 ## 12. 阻塞与停止规则
 

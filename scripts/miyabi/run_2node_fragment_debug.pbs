@@ -22,7 +22,7 @@ PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
 CONFIG="${CONFIG:-$PROJECT_ROOT/configs/fs_diloco_gpt2_wikitext2_1l_fragment_debug.yaml}"
 RUN_ID="${RUN_ID:-$(date +%Y%m%d_%H%M%S)_fs_diloco_2node_fragment_debug}"
 SHARED_ROOT="${SHARED_ROOT:-$PROJECT_ROOT/runs/fs_diloco/$RUN_ID}"
-SYNCER_DB_DIR="${SYNCER_DB_DIR:-${TMPDIR:-/tmp}/fs_diloco/$RUN_ID}"
+SYNCER_DB_DIR="${SYNCER_DB_DIR:-$PROJECT_ROOT/.runtime/fs_diloco/$RUN_ID/sqlite}"
 CACHE_ROOT="${CACHE_ROOT:-$PROJECT_ROOT/.cache/fs_diloco}"
 HF_HOME="${HF_HOME:-$CACHE_ROOT/huggingface}"
 HF_DATASETS_CACHE="${HF_DATASETS_CACHE:-$HF_HOME/datasets}"
@@ -53,6 +53,8 @@ fi
 
 mkdir -p "$SHARED_ROOT" "$PROJECT_ROOT/logs" "$HF_DATASETS_CACHE" "$HF_HUB_CACHE"
 LOG_ROOT="$PROJECT_ROOT/logs/qsub_${RUN_ID}"
+source "$PROJECT_ROOT/scripts/lib/project_paths.sh"
+require_project_paths "$PROJECT_ROOT" "$SHARED_ROOT" "$SYNCER_DB_DIR" "$CACHE_ROOT" "$LOG_ROOT"
 mkdir -p "$LOG_ROOT"
 
 MPI_ENV_ARGS=(

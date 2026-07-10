@@ -26,7 +26,8 @@ human_approval_gates: []
 > 2. `00_CODEX_LOOP_OPERATING_CONTRACT.md`；
 > 3. `miyabi-development` skill 的 `SKILL.md`；
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
-> 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
+> 6. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
 > 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
@@ -58,6 +59,7 @@ DuraLoCo 的 selected proposal 表示一段唯一 local work，而不是可能�
 - [ ] local work token/step accounting；
 - [ ] proposal payload/content publication；
 - [ ] response-loss/idempotent retry；
+- [ ] publication request ID 持久化，不以 payload equality 推断 retry；
 - [ ] global adoption 仅在 interval boundary；
 - [ ] per-fragment base vector/cursor；
 - [ ] warm restart；
@@ -106,6 +108,8 @@ tests/learner_v2/
 - [ ] D-0604：inner optimizer reset-all/reset-fragment/preserve 的默认策略；
 - [ ] D-0605：target token 计数定义；
 - [ ] D-0606：session sequence 的 durable location。
+- [ ] D-0607：publication/adoption request identity 与 committed-ancestry reconciliation；
+- [ ] D-0608：reference、runtime 与 replay 共用的 interval/adoption policy kernel 边界。
 
 每项决策必须写入 `plans/duraloco/DECISIONS.md`，包含：上下文、候选方案、所选方案、拒绝方案、兼容性影响和可逆性。不得把未决语义隐藏在实现细节中。
 
@@ -146,6 +150,7 @@ tests/learner_v2/
 **先产生的失败证据或规范。**
 
 - [ ] payload 成功响应丢失；manifest 重发；same ID conflicting payload。
+- [ ] 不同 request ID 但相同 payload 的并发 publication。
 
 **实现任务。**
 
@@ -186,6 +191,7 @@ tests/learner_v2/
 - [ ] interval metadata 与实际 base digest 一致；
 - [ ] 未更新 fragment state 策略符合配置；
 - [ ] 策略进入 run manifest。
+- [ ] interval/adoption 选择调用与 reference/replay 相同的 policy kernel；
 
 **本循环持久化输出。**
 
@@ -259,6 +265,9 @@ tests/learner_v2/
 - [ ] P06-A09：Miyabi 1-node real path ≤10 step finite；
 - [ ] P06-A10：2-node learner+syncer v2 E2E。
 - [ ] P06-A11：`fs-diloco-learner` 和 `python -m fs_diloco.learner` 的 legacy/default 行为及 v2 显式选择均通过入口兼容测试。
+- [ ] P06-A12：publication response-loss 以 request identity 辨识，并覆盖同 ID/同内容、不同 ID/同内容和同 ID/冲突内容；
+- [ ] P06-A13：reference/runtime/replay 在 adversarial proposal order、restart 与 cross-session boundary 上生成相同 adoption digest；
+- [ ] P06-A14：最终 1/2-node 证据包含失败/取消/重试 manifests 和 `parent_run_id` lineage，当前 state/report/tests 一致。
 
 ## 9. 验证矩阵
 
@@ -295,7 +304,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 
 - [ ] inner optimizer adoption policy 默认值由 agent 按 numeric/recovery evidence 决定，记录 ADR 和 manifest，经 Checker 复核后生效；
 - [ ] v2 learner/syncer 兼容性和 1/2-node gates 通过后由 agent 自动设为默认训练路径；
-- [ ] P06 必需 gate 通过后，按依赖图自动启动 P07、P08、P09；无需人工审核。
+- [ ] P06 必需 gate 通过后，按依赖图自动启动 P07 和 P08；无需人工审核。可选 P09 不在此处启动。
 
 ## 12. 阻塞与停止规则
 

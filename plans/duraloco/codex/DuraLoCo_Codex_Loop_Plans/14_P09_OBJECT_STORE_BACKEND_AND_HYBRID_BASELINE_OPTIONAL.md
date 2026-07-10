@@ -1,6 +1,6 @@
 ---
 plan_id: "P09"
-title: "S3-Compatible Backend、MinIO 与 Hybrid Baseline"
+title: "可选：S3-Compatible Backend、MinIO 与 Hybrid Baseline"
 status: "planned"
 date: "2026-07-10"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
@@ -8,10 +8,12 @@ planning_basis_branch: "codex/fs-diloco-miyabi"
 planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
 target_branch: "codex/duraloco-p09-object-store"
 depends_on:
-  - "P06"
+  - "P12"
+optional: true
+required_for_core_completion: false
 required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
-automatic_progression: true
+automatic_progression: false
 agent_decision_gates:
   - "对象存储依赖策略、SDK/version 和 lockfile 由 agent 记录 ADR，经独立 Checker 复核。"
 human_approval_gates:
@@ -19,7 +21,7 @@ human_approval_gates:
   - "新增持久化/共享服务或对外暴露端口前需审批；job-owned、隔离且随测试退出的 MinIO/临时端口由 agent 自主使用。"
 ---
 
-# P09 — S3-Compatible Backend、MinIO 与 Hybrid Baseline
+# P09（可选，暂缓）— S3-Compatible Backend、MinIO 与 Hybrid Baseline
 
 > 本文件是可直接交给 Codex 执行的阶段计划，不是背景说明。执行前必须同时读取：
 >
@@ -27,11 +29,14 @@ human_approval_gates:
 > 2. `00_CODEX_LOOP_OPERATING_CONTRACT.md`；
 > 3. `miyabi-development` skill 的 `SKILL.md`；
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
-> 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
+> 6. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
 > 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
 ## 1. 阶段使命
+
+> 当前必需主线到 P12 结束。本阶段仅作为未来可选实现保留，暂时不需要支持，不得自动启动，不得阻塞 P10–P12、默认运行或主线完成。只有用户未来显式选择 object-store 支持后才执行下述 gates。
 
 证明 transactional protocol 不依赖 POSIX rename/listing。实现 S3-compatible backend、MinIO contract/chaos、conditional head、multipart 和重试，并建立 metadata-control + object-payload hybrid baseline。
 
@@ -123,14 +128,17 @@ tests/hybrid/
 **实现任务。**
 
 - [ ] 实现 immutable/conditional/get/range/delete；
+- [ ] PUT/CAS/delete/multipart complete/abort 都持久化 request ID；
 - [ ] 显式 hash metadata；
 - [ ] typed provider errors；
+- [ ] typed errors 覆盖 credential/client setup、upload、lock/conditional call、cleanup/abort 和 inspect/recovery；
 - [ ] credential redaction。
 
 **本循环验证。**
 
 - [ ] 通用 conformance suite；
 - [ ] 响应丢失重试幂等；
+- [ ] 同 ID/同内容、不同 ID/同内容和同 ID/冲突内容的结果与 POSIX contract 一致；
 - [ ] 日志无 secrets。
 
 **本循环持久化输出。**
@@ -285,6 +293,8 @@ tests/hybrid/
 - [ ] P09-A07：云依赖为 optional pinned extra；
 - [ ] P09-A08：无凭据和未批准时 public cloud tests 安全 skip；
 - [ ] P09-A09：Checker 检查 secret/cost/list assumptions。
+- [ ] P09-A10：所有可重试 mutation 用 request identity 区分 after-effect retry 与独立调用，并对 SDK setup/publish/abort/cleanup 完成 typed-error matrix；
+- [ ] P09-A11：MinIO/云 probe 的 fail、inconclusive、queued-cancelled 和 retry 均保留 manifest lineage，最终 Checker 在最终干净 commit 重放 contract 和历史反例。
 
 ## 9. 验证矩阵
 
@@ -322,7 +332,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 
 - [ ] 真实 S3/GCS/Azure 运行、凭据使用、跨区域流量或付费资源必须审批；
 - [ ] 新增持久化/共享服务或对外暴露端口前需审批；job-owned、隔离且随测试退出的 MinIO/临时端口由 agent 自主使用。
-- [ ] MinIO/local conformance 和默认不执行的 public-cloud harness 足以完成本 phase 的必需 gate；未获公共云批准不阻止 phase `completed`。P07/P08 也完成并通过集成 Checker 后自动进入 P10。
+- [ ] 仅在用户显式选择 P09 后，MinIO/local conformance 和默认不执行的 public-cloud harness 才构成本可选 phase 的 gate；未获公共云批准不阻止已选中的 P09 `completed`。P09 完成后不自动启动其他 phase。
 
 ## 12. 阻塞与停止规则
 
@@ -339,12 +349,12 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 ## 14. 可直接复制给 Codex 的启动指令
 
 ```text
-使用 miyabi-development skill 执行 P09。
+仅在用户显式选择 object-store 可选实现后，使用 miyabi-development skill 执行 P09。
 
 仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
 规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
 目标分支：codex/duraloco-p09-object-store
-阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/10_P09_OBJECT_STORE_BACKEND_AND_HYBRID_BASELINE.md
+阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/14_P09_OBJECT_STORE_BACKEND_AND_HYBRID_BASELINE_OPTIONAL.md
 共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。

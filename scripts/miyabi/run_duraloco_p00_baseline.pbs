@@ -24,6 +24,8 @@ ARTIFACT_ROOT="${ARTIFACT_ROOT:-$PROJECT_ROOT/artifacts/duraloco/P00/$RUN_ID}"
 FULL_RUN_ID="${RUN_ID}_full"
 FRAGMENT_RUN_ID="${RUN_ID}_fragment"
 LEGACY_RUN_ROOT="${LEGACY_RUN_ROOT:-$PROJECT_ROOT/runs/fs_diloco/20260710_013757_fs_diloco_gpt2_wikitext2_8l_fragment_5000steps}"
+source "$PROJECT_ROOT/scripts/lib/project_paths.sh"
+require_project_paths "$PROJECT_ROOT" "$ARTIFACT_ROOT" "$LEGACY_RUN_ROOT"
 
 if [[ ! -x "$PYTHON_BIN" ]]; then
   echo "Python executable not found or not executable: $PYTHON_BIN" >&2
@@ -56,7 +58,7 @@ FULL_COMMAND=(
   "CONFIG=$PROJECT_ROOT/configs/fs_diloco_tiny_local.yaml"
   "RUN_ID=$FULL_RUN_ID"
   "SHARED_ROOT=$PROJECT_ROOT/runs/fs_diloco/$FULL_RUN_ID"
-  "SYNCER_DB_DIR=${TMPDIR:-/tmp}/fs_diloco/$FULL_RUN_ID"
+  "SYNCER_DB_DIR=$PROJECT_ROOT/.runtime/fs_diloco/$FULL_RUN_ID/sqlite"
   "$PROJECT_ROOT/scripts/local/run_tiny_2proc_smoke.sh"
 )
 printf '%q ' "${FULL_COMMAND[@]}" | tee -a "$ARTIFACT_ROOT/commands.log"
@@ -70,7 +72,7 @@ FRAGMENT_COMMAND=(
   "CONFIG=$PROJECT_ROOT/configs/fs_diloco_tiny_fragment_local.yaml"
   "RUN_ID=$FRAGMENT_RUN_ID"
   "SHARED_ROOT=$PROJECT_ROOT/runs/fs_diloco/$FRAGMENT_RUN_ID"
-  "SYNCER_DB_DIR=${TMPDIR:-/tmp}/fs_diloco/$FRAGMENT_RUN_ID"
+  "SYNCER_DB_DIR=$PROJECT_ROOT/.runtime/fs_diloco/$FRAGMENT_RUN_ID/sqlite"
   "$PROJECT_ROOT/scripts/local/run_tiny_2proc_smoke.sh"
 )
 printf '%q ' "${FRAGMENT_COMMAND[@]}" | tee -a "$ARTIFACT_ROOT/commands.log"

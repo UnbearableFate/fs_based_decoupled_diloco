@@ -65,6 +65,8 @@ MANIFEST="$EVAL_DIR/manifest.json"
 METRICS_CSV="$EVAL_DIR/metrics.csv"
 JOB_LOG="$EVAL_DIR/job.log"
 LOG_ROOT="$PROJECT_ROOT/logs/qsub_${EVAL_ID}"
+source "$PROJECT_ROOT/scripts/lib/project_paths.sh"
+require_project_paths "$PROJECT_ROOT" "$CACHE_ROOT" "$EVAL_DIR" "$EXPORT_DIR" "$LMEVAL_OUTPUT_DIR" "$LOG_ROOT"
 
 mkdir -p \
   "$EVAL_DIR" \

@@ -26,7 +26,8 @@ human_approval_gates:
 > 2. `00_CODEX_LOOP_OPERATING_CONTRACT.md`；
 > 3. `miyabi-development` skill 的 `SKILL.md`；
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
-> 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
+> 6. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
 > 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
@@ -56,8 +57,10 @@ syncer 不再是持有不可恢复本地状态的单点；在进程崩溃或 lea
 - [ ] syncer ingest 使用 P01 validator/quarantine；
 - [ ] quorum selection 与 commit pipeline 解耦；
 - [ ] lease acquisition/renewal、monotonic fencing epoch；
+- [ ] lease/commit/stop mutation 使用持久化 request ID，区分丢响应重试与独立的相同调用；
 - [ ] head commit 检查 epoch；
 - [ ] standby startup replay/cache rebuild；
+- [ ] response-loss reconciliation 查询 committed ancestry，不只比较当前 head；
 - [ ] 取消持久 `selected` 状态；
 - [ ] stop/request/terminal 状态通过 log 提交；
 - [ ] 可控 failpoints；
@@ -106,6 +109,8 @@ scripts/chaos/
 - [ ] D-0503：旧 leader 在 lease 过期后如何被 head CAS fencing；
 - [ ] D-0504：stop 作为 commit event 还是 head metadata；
 - [ ] D-0505：legacy/v2 runtime selection 和 run namespace 隔离。
+- [ ] D-0506：lease/commit/stop request identity 的持久化位置、conflict 语义和 retry 结果；
+- [ ] D-0507：response-loss 在 successor head 已推进时的 ancestry-aware reconciliation 界限。
 
 每项决策必须写入 `plans/duraloco/DECISIONS.md`，包含：上下文、候选方案、所选方案、拒绝方案、兼容性影响和可逆性。不得把未决语义隐藏在实现细节中。
 
@@ -150,6 +155,7 @@ scripts/chaos/
 **实现任务。**
 
 - [ ] 实现 acquire/renew/release；
+- [ ] 为每个 mutation 生成并持久化 request ID；
 - [ ] epoch 写入 lease、commit、head；
 - [ ] commit 前后验证 fencing；
 - [ ] 记录 owner/session。
@@ -159,6 +165,7 @@ scripts/chaos/
 - [ ] 双 syncer 至多一个 active writer；
 - [ ] 旧 epoch CAS 永远失败；
 - [ ] standby 最终可 takeover。
+- [ ] 同 ID/同内容 retry 幂等；不同 ID/同内容只有一个 winner；同 ID/不同内容 fail closed。
 
 **本循环持久化输出。**
 
@@ -180,6 +187,7 @@ scripts/chaos/
 
 - [ ] 启动 replay；
 - [ ] 识别已提交 response-loss；
+- [ ] 在 successor commit 已推进 head 后仍能从权威 ancestry 识别原操作；
 - [ ] 忽略/记录 orphan；
 - [ ] 重建 metrics/cache；
 - [ ] 去除 selected-stuck state。
@@ -189,6 +197,7 @@ scripts/chaos/
 - [ ] 所有 kill points 无永久 selected；
 - [ ] 恢复后 state digest 与 reference 一致；
 - [ ] 下一 commit 可继续。
+- [ ] setup/lock/publish/cleanup/replay 的 retryable 与 non-retryable 错误都转换为 typed outcome。
 
 **本循环持久化输出。**
 
@@ -260,6 +269,9 @@ scripts/chaos/
 - [ ] P05-A08：Miyabi 2-node takeover 有 run artifact；
 - [ ] P05-A09：Checker 审查 lease/fencing 的 clock assumptions。
 - [ ] P05-A10：`fs-diloco-syncer` 和 `python -m fs_diloco.syncer` 的 legacy/default 行为及 v2 显式选择均通过入口兼容测试。
+- [ ] P05-A11：lease/commit/stop response-loss 测试证明 request identity 可区分原请求重试和独立的相同调用；
+- [ ] P05-A12：successor 已推进后的延迟重试从 committed ancestry 得到唯一、可重放的结果；
+- [ ] P05-A13：最终干净 commit 的 1/2-node Maker 与 Checker 证据均有完整 attempt manifests/retry lineage，当前 suite、state 和双语 report 同步为绿。
 
 ## 9. 验证矩阵
 

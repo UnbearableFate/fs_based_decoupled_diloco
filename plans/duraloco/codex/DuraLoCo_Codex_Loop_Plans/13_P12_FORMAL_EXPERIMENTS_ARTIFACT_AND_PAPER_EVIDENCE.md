@@ -27,7 +27,8 @@ human_approval_gates:
 > 2. `00_CODEX_LOOP_OPERATING_CONTRACT.md`；
 > 3. `miyabi-development` skill 的 `SKILL.md`；
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
-> 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
+> 6. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
 > 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
@@ -47,7 +48,7 @@ human_approval_gates:
 
 - [ ] P11 9-node acceptance 已通过；
 - [ ] 所有 correctness invariants 无未关闭 P0；
-- [ ] resource/cost budget 已登记；范围内 Miyabi 作业由 agent 自主决定，超限或公共云预算已批准；
+- [ ] resource/cost budget 已登记；范围内 Miyabi 作业由 agent 自主决定，超限作业已批准或安全 skip，公共云默认 skip（显式选中时才要求预算批准）；
 - [ ] 模型、数据集、revision、seeds、baselines 冻结；
 - [ ] 分析脚本在 synthetic fixture 上通过。
 
@@ -56,7 +57,7 @@ human_approval_gates:
 ### 3.1 必须完成
 
 - [ ] 2×2 transport × checkpoint fusion baseline；
-- [ ] network/hybrid/POSIX/MinIO/公共云可选；
+- [ ] POSIX/Lustre 必需基线；network/hybrid/MinIO/公共云均为可选扩展，缺失不阻塞 P12；
 - [ ] full-vector/fragment DuraLoCo；
 - [ ] normal checkpoint+restart；
 - [ ] fixed/SACC、eager/selected-only；
@@ -115,7 +116,7 @@ artifact/
 - [ ] D-1203：network Decoupled baseline 的实现/公平性；
 - [ ] D-1204：checkpoint interval 和 failure distribution；
 - [ ] D-1205：统计检验/置信区间；
-- [ ] D-1206：public cloud provider/region/cost；
+- [ ] D-1206：可选 public cloud provider/region/cost；未选中时记录 `not_applicable`；
 - [ ] D-1207：run exclusion policy；
 - [ ] D-1208：artifact 中可公开的模型/数据/log。
 
@@ -138,12 +139,14 @@ artifact/
 - [ ] claim→experiment mapping；
 - [ ] 资源估算、自主范围判定和超限审批字段；
 - [ ] run manifest generator。
+- [ ] 将 pass/fail/inconclusive/excluded/queued-cancelled 都建模为不可变 attempt，同一 experiment cell/seed 的重试必须链接 `parent_run_id`。
 
 **本循环验证。**
 
 - [ ] registry validator pass；
 - [ ] 每个 primary claim 有实验；
 - [ ] 每个 run 都有资源估算；范围内 Miyabi 作业无需批准，超限或公共云 run 有批准。
+- [ ] exclusion/retry 不能删除前任 manifest，并且 aggregate validator 能区分 queue/capacity 与 runtime/scientific failure。
 
 **本循环持久化输出。**
 
@@ -165,7 +168,7 @@ artifact/
 - [ ] 随机 fault tapes；
 - [ ] syncer/learner/catastrophic restart；
 - [ ] 累计 24/72h resumable segmented soak：每个 Miyabi 作业不超过 2 小时并由 agent 自动续接；只有要求单次连续 >2h 时才走外部资源审批；
-- [ ] POSIX/MinIO/云 backend。
+- [ ] POSIX/Lustre backend；若已显式提供并选中，可附加 MinIO/云 backend，否则安全 skip 且不影响 campaign gate。
 
 **本循环验证。**
 
@@ -191,7 +194,7 @@ artifact/
 **实现任务。**
 
 - [ ] 扫描 local interval、fragment size/count、q、learners、backend；
-- [ ] network/hybrid/storage；
+- [ ] POSIX/Lustre storage；network/hybrid 仅在已显式提供时作为可选扩展；
 - [ ] fixed/SACC；
 - [ ] model-equivalent I/O。
 
@@ -334,6 +337,8 @@ artifact/
 - [ ] P12-A10：clean artifact reproduction 通过；
 - [ ] P12-A11：论文不包含虚构或超范围结论；
 - [ ] P12-A12：独立 Checker/内部审稿完成。
+- [ ] P12-A13：所有失败、取消、排除和重试 run 均保留 immutable manifest、结构化原因和 experiment-cell/seed `parent_run_id` lineage；
+- [ ] P12-A14：从最终干净 analysis commit 重建核心图表与 claim matrix，并证明 simulator/runtime/policy 的 digest 与预注册版本一致。
 
 ## 9. 验证矩阵
 
@@ -345,8 +350,8 @@ artifact/
 | Lustre 1/2-node micro + crash | Miyabi | debug allocation |
 | 9-node、≤2h | Miyabi | agent 自主决定并提交，无需用户批准 |
 | >2h 或 >16-node | Miyabi | 明确批准后提交 |
-| MinIO | 独立允许环境 | 无 secret；记录版本 |
-| 公共云 | approved provider/region | 凭据、预算、egress 明确批准 |
+| MinIO | 可选的独立允许环境 | 未实现 P09 时 skip；不阻塞 P12 |
+| 公共云 | 可选 approved provider/region | 未实现 P09 时 skip；使用时凭据、预算、egress 明确批准 |
 | Multi-seed model training | Miyabi/approved | registry + budget + stopping rule；单个范围内 Miyabi 作业自主提交 |
 
 分析必须先运行 `validate_runs.py`；只有 status `COMPLETE_AND_MATCHED` 的 run 可进入 primary aggregate。
@@ -377,7 +382,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 
 - [ ] 单个 Miyabi 作业超过 16 节点或 2 小时，以及公共云实验，须先批准资源预算；范围内的 9-node 和 multi-seed 作业由 agent 自主决定；
 - [ ] 发布 artifact 或公开数据前需审批。
-- [ ] P12 内各 campaign/goal 在 registry gate 和 Checker 通过后自动推进；全部必需 evidence gates 通过后自动标记 P12 `completed`，无需人工完成审核。未获发布批准时只保留私有 artifact，不影响研究阶段完成。
+- [ ] P12 内各 campaign/goal 在 registry gate 和 Checker 通过后自动推进；全部必需 evidence gates 通过后自动标记 P12 `completed`，无需人工完成审核。未获发布批准时只保留私有 artifact，不影响研究阶段完成。P09 不自动启动，也不是 P12 或主线完成条件。
 
 ## 12. 阻塞与停止规则
 

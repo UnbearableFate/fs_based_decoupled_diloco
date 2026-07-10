@@ -11,7 +11,7 @@ from typing import Any, TypeVar, get_args, get_origin, get_type_hints
 
 import yaml
 
-from .constants import DEFAULT_RUNS_DIR
+from .constants import DEFAULT_DATA_CACHE_DIR, DEFAULT_RUNS_DIR, DEFAULT_RUNTIME_DIR
 
 T = TypeVar("T")
 
@@ -253,6 +253,7 @@ def resolve_config(
     num_learners: int | None = None,
     project_root: str | Path | None = None,
 ) -> Config:
+    root = Path(project_root or os.getcwd()).resolve()
     config = load_config(path)
     if run_id is not None:
         config.run.run_id = run_id
@@ -261,10 +262,21 @@ def resolve_config(
     if shared_root is not None:
         config.run.shared_root = shared_root
     if config.run.shared_root is None:
-        root = Path(project_root or os.getcwd())
         config.run.shared_root = str(root / DEFAULT_RUNS_DIR / config.run.run_id)
+    else:
+        config.run.shared_root = str(_project_path(config.run.shared_root, root, "run.shared_root"))
     if sqlite_local_dir is not None:
         config.io.sqlite_local_dir = sqlite_local_dir
+    if config.io.sqlite_local_dir is None:
+        config.io.sqlite_local_dir = str(root / DEFAULT_RUNTIME_DIR / config.run.run_id / "sqlite")
+    else:
+        config.io.sqlite_local_dir = str(
+            _project_path(config.io.sqlite_local_dir, root, "io.sqlite_local_dir")
+        )
+    if config.data.cache_dir is None:
+        config.data.cache_dir = str(root / DEFAULT_DATA_CACHE_DIR)
+    else:
+        config.data.cache_dir = str(_project_path(config.data.cache_dir, root, "data.cache_dir"))
     if num_learners is not None:
         config.sync.num_learners = int(num_learners)
         config.sync.quorum_max = min(config.sync.quorum_max, config.sync.num_learners)
@@ -288,6 +300,16 @@ def resolve_config(
         raise ValueError("io.final_cleanup_wait_seconds must be >= 0")
     config.training.block_size = config.data.block_size
     return config
+
+
+def _project_path(value: str | Path, project_root: Path, field_name: str) -> Path:
+    candidate = Path(value)
+    if not candidate.is_absolute():
+        candidate = project_root / candidate
+    resolved = candidate.resolve()
+    if not resolved.is_relative_to(project_root):
+        raise ValueError(f"{field_name} must stay inside project root {project_root}: {resolved}")
+    return resolved
 
 
 def write_resolved_config(config: Config, path: str | Path) -> None:

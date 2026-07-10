@@ -15,6 +15,7 @@ def test_resume_loads_global_and_restores_db_dump(tmp_path):
         run_id="resume_test",
         shared_root=str(shared_root),
         sqlite_local_dir=str(sqlite_dir),
+        project_root=tmp_path,
     )
     paths = RunPaths(shared_root)
     prepare_run_dirs(paths, config.sync.num_learners)
@@ -59,6 +60,7 @@ def test_resume_loads_global_and_restores_db_dump(tmp_path):
         run_id="resume_test",
         shared_root=str(shared_root),
         sqlite_local_dir=str(resume_db),
+        project_root=tmp_path,
     )
     resume_config.init.resume = True
     resume_config.init.resume_db_dump = str(dump)

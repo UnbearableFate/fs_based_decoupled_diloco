@@ -22,7 +22,9 @@ PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
 RUN_ID="${RUN_ID:-$(date +%Y%m%d_%H%M%S)_p04_1node}"
 PARENT_RUN_ID="${PARENT_RUN_ID:-}"
 ARTIFACT_ROOT="${ARTIFACT_ROOT:-$PROJECT_ROOT/artifacts/duraloco/P04/$RUN_ID}"
-STORAGE_ROOT="${STORAGE_ROOT:-$(dirname "$PROJECT_ROOT")/duraloco_p04_runtime/$RUN_ID}"
+STORAGE_ROOT="${STORAGE_ROOT:-$PROJECT_ROOT/runs/duraloco/P04/$RUN_ID}"
+source "$PROJECT_ROOT/scripts/lib/project_paths.sh"
+require_project_paths "$PROJECT_ROOT" "$ARTIFACT_ROOT" "$STORAGE_ROOT"
 
 if [[ ! -x "$PYTHON_BIN" ]]; then
   echo "Python executable not found: $PYTHON_BIN" >&2

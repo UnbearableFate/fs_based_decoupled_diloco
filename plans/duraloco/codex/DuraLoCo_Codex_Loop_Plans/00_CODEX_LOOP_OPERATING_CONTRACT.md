@@ -46,6 +46,7 @@ git log -5 --oneline
 
 - 根目录和当前目录链上的 `AGENTS.md`；
 - 当前阶段文件；
+- P05 及后续阶段的 `P00_P04_IMPLEMENTATION_LESSONS.md`；
 - `plans/duraloco/STATE.yaml`；
 - 尚未关闭的 `DECISIONS.md`、`BLOCKERS.md`；
 - 上一阶段 `PHASE_REPORT.md`；
@@ -122,7 +123,7 @@ plans/duraloco/phases/<phase>_PHASE_REPORT.md
 
 ### 2.7 双语里程碑与 Checker 失败报告
 
-这里的 milestone 指每个 `PXX` 阶段（`P00`–`P12`）的 gate 结果。阶段首次进入 `checking`，以及随后到达 `completed` 或 `blocked` 时，Maker 必须创建或更新：
+这里的 milestone 指必需主线 `P00`–`P08`、`P10`–`P12` 的 gate 结果，以及在显式选择后才生效的可选 `P09` gate 结果。阶段首次进入 `checking`，以及随后到达 `completed` 或 `blocked` 时，Maker 必须创建或更新：
 
 ```text
 plans/duraloco/phases/PXX_PHASE_REPORT.md
@@ -148,7 +149,30 @@ plans/duraloco/phases/PXX_PHASE_REPORT.md
 - 一个 phase 的全部必需 acceptance IDs 通过后，agent 把 phase 标记为 `completed`，持久化报告和 verified commit，并按照依赖图自动创建/切换到下一 phase 分支继续执行；阶段之间不设置人工审核或等待状态。
 - 可逆且位于既定 research contract 内的协议、默认值和实现选择由 agent 决定，写入 `DECISIONS.md`，经独立 Checker 复核后生效。
 - 自动推进不授权 merge `main`、发布 artifact/公开数据、使用真实凭据或公共云/付费资源、超过 Miyabi 自主资源范围、删除共享数据或执行 destructive lifecycle 操作；这些外部风险动作仍按明确审批门处理，但不阻止不依赖该动作的后续工作。
-- 若下一 phase 有多个依赖，只有所有依赖 phase 都 `completed` 且集成 Checker 通过后才自动进入；P08/P09 等并行分支必须按依赖图汇合，不得以单分支完成冒充集成完成。
+- 若下一 phase 有多个依赖，只有所有依赖 phase 都 `completed` 且集成 Checker 通过后才自动进入；P07/P08 等并行分支必须按依赖图汇合，不得以单分支完成冒充集成完成。可选 P09 不得阻塞 P10–P12 或主线完成，且不得被自动启动。
+
+### 2.9 P00–P04 经验驱动的后续必需 gate
+
+P05 及后续阶段必须读取并执行
+`P00_P04_IMPLEMENTATION_LESSONS.md`。以下约束来自已经发生且由独立
+Checker 复现的失败：
+
+- 所有可重试 mutation 以持久化 request identity 区分原请求重试与
+  独立的相同内容调用；
+- response-loss/takeover/restart reconciliation 检查权威 ancestry，不只比较
+  当前 head 或 cache；
+- simulator/runtime/replay/recovery 共用一个语义实现，或以对抗顺序、
+  mutant 和 digest 等价性证据证明无偏差；
+- typed fail-closed 边界覆盖 parse/validate/setup/lock/publish/cleanup/recovery 全路径，
+  做决策时使用 immutable input snapshot；
+- 每次提交或执行尝试（含 fail、inconclusive、queued-cancelled 与
+  pre-allocation cancellation）都产生 manifest；每个相同 validation shape 的
+  retry 以 `parent_run_id` 串联；
+- 仅当当前持久化套件、state、双语 report、acceptance mapping 与
+  checksum 在最终干净 target commit 上一致为绿，且独立 Checker 重放
+  历史反例后无 required-gate follow-up，才能完成 phase；
+- 真实 backend 结论必须绑定 capability/mount/stripe/module 证据和明确
+  non-claim；queue/cancel/resubmit 必须绑定相同 commit/config/gates 并记录 lineage。
 
 ## 3. 分支与 Worktree 纪律
 
@@ -229,7 +253,7 @@ approval_reason: null  # 仅用于外部风险动作，不用于 goal/phase 过�
 }
 ```
 
-禁止覆盖同一 run manifest。重试必须使用新的 run ID，并通过 `parent_run_id` 指向前一次尝试。
+禁止覆盖同一 run manifest。重试必须使用新的 run ID，并通过 `parent_run_id` 指向同一 validation shape 的前一次尝试。作业提交后即建立 manifest；即使作业在 allocation 前取消，也要记录 queue、job ID、请求资源、最后 qstat 状态、取消原因和 `result: inconclusive`（或等价的结构化状态）。
 
 ## 5. Miyabi 执行契约
 

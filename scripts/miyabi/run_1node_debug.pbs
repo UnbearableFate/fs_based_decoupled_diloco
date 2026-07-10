@@ -26,7 +26,7 @@ fi
 CONFIG="${CONFIG:-$PROJECT_ROOT/configs/fs_diloco_gpt2_wikitext2_1l_debug.yaml}"
 RUN_ID="${RUN_ID:-$(date +%Y%m%d_%H%M%S)_fs_diloco_1node_debug}"
 SHARED_ROOT="${SHARED_ROOT:-$PROJECT_ROOT/runs/fs_diloco/$RUN_ID}"
-SYNCER_DB_DIR="${SYNCER_DB_DIR:-${TMPDIR:-/tmp}/fs_diloco/$RUN_ID}"
+SYNCER_DB_DIR="${SYNCER_DB_DIR:-$PROJECT_ROOT/.runtime/fs_diloco/$RUN_ID/sqlite}"
 SYNCER_CUDA_VISIBLE_DEVICES="${SYNCER_CUDA_VISIBLE_DEVICES:-0}"
 LEARNER_CUDA_VISIBLE_DEVICES="${LEARNER_CUDA_VISIBLE_DEVICES:-0}"
 NUM_LEARNERS=1
@@ -34,6 +34,8 @@ NUM_LEARNERS=1
 cd "$PROJECT_ROOT"
 mkdir -p "$SHARED_ROOT" "$PROJECT_ROOT/logs"
 LOG_ROOT="$PROJECT_ROOT/logs/qsub_${RUN_ID}"
+source "$PROJECT_ROOT/scripts/lib/project_paths.sh"
+require_project_paths "$PROJECT_ROOT" "$SHARED_ROOT" "$SYNCER_DB_DIR" "$LOG_ROOT"
 mkdir -p "$LOG_ROOT"
 
 echo "RUN_ID=$RUN_ID"

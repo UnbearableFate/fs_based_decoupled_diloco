@@ -25,7 +25,8 @@ human_approval_gates: []
 > 2. `00_CODEX_LOOP_OPERATING_CONTRACT.md`；
 > 3. `miyabi-development` skill 的 `SKILL.md`；
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
-> 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
+> 6. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
 > 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
@@ -62,6 +63,7 @@ Storage-native 协议的开销不是由低效 prototype 实现主导；fragment 
 - [ ] publish/read/validate/quorum/merge/commit/adopt telemetry；
 - [ ] memory/I/O/request benchmark harness；
 - [ ] legacy vs optimized 数值对照。
+- [ ] optimized/runtime/reference 共用选择与数值语义，不重复实现 policy。
 
 ### 3.2 明确不做
 
@@ -203,6 +205,7 @@ tests/performance_core/
 - [ ] incremental cursor；
 - [ ] key sharding；
 - [ ] prefetch queue/backpressure；
+- [ ] scanner/prefetch 对同一 immutable manifest/object snapshot 验证和使用，避免 TOCTOU；
 - [ ] 结构化 event IDs；
 - [ ] 单写者 metrics。
 
@@ -253,6 +256,8 @@ tests/performance_core/
 - [ ] P08-A06：每个 commit 可从 telemetry 重建 publish→select→read→merge→CAS→adopt timeline；
 - [ ] P08-A07：performance 结果保存 raw manifests，不只保留汇总；
 - [ ] P08-A08：Miyabi 1-node GPU profile 与 2-node storage pipeline evidence。
+- [ ] P08-A09：optimized/runtime/reference 在 adversarial order、restart 和并发 prefetch 下的 decision/state digest 等价，且回归能杀死一个独立 policy 实现 mutant；
+- [ ] P08-A10：profile/benchmark 的 fail、inconclusive、queued-cancelled 和 retry 都有 raw manifest lineage，最终 Checker 在最终干净 commit 重放当前等价套件。
 
 ## 9. 验证矩阵
 
@@ -290,7 +295,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 ## 11. 自动推进与 Agent 决策门
 
 - [ ] CUDA/C++ extension、tensor layout 或默认 precision 变更由 agent 依据 profile、numeric equivalence、portable fallback 和回滚证据决定，经 Checker 复核后生效。
-- [ ] P08 必需 gate 通过后标记 `completed`；等待依赖图中的 P07/P09 完成并通过集成 Checker 后自动进入 P10，不等待人工审核。
+- [ ] P08 必需 gate 通过后标记 `completed`；等待依赖图中的 P07 完成并通过集成 Checker 后自动进入 P10，不等待人工审核，也不等待可选 P09。
 
 ## 12. 阻塞与停止规则
 

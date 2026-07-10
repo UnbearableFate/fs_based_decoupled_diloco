@@ -18,7 +18,7 @@ No milestone 1 code depends on `torch.distributed`, NCCL collectives, RPC, Ray, 
 
 ## Syncer State
 
-SQLite is authoritative after ingestion. It tracks learners, updates, global versions, events, and DB dumps. The DB path defaults to syncer-local storage under `${TMPDIR:-/tmp}/fs_diloco/$RUN_ID`; consistent backups are copied to the shared filesystem with SQLite's backup API.
+SQLite is authoritative after ingestion. It tracks learners, updates, global versions, events, and DB dumps. The DB path defaults to project-contained storage under `$PROJECT_ROOT/.runtime/fs_diloco/$RUN_ID/sqlite`; consistent backups are copied to the shared run directory with SQLite's backup API.
 
 ## Merge Semantics
 
