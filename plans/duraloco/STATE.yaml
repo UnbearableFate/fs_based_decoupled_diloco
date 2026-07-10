@@ -11,9 +11,9 @@ attempts_for_current_failure: 1
 last_verified_commit: null
 checks:
   local_static: static_pass
-  local_runtime: not_run
+  local_runtime: contract_pass
   miyabi_login_static: static_pass
-  miyabi_1node: not_run
+  miyabi_1node: miyabi_1node_pass
   miyabi_2node: not_run
   miyabi_9node: not_run
 acceptance:
@@ -25,7 +25,13 @@ acceptance:
   M00-A06: {result: not_run, evidence: []}
   M00-A07: {result: not_run, evidence: []}
   M00-A08: {result: not_run, evidence: []}
-  M00-A09: {result: not_run, evidence: []}
+  M00-A09:
+    result: pass
+    evidence:
+      - artifacts/duraloco/M00/20260711_m00_97a6876_1node/manifest.json
+      - artifacts/duraloco/M00/20260711_m00_97a6876_1node/one_node_contract.json
+      - artifacts/duraloco/M00/20260711_m00_97a6876_1node/20260711_m00_97a6876_1node-full_after_recovery.json
+      - artifacts/duraloco/M00/20260711_m00_97a6876_1node/20260711_m00_97a6876_1node-fragment_after_recovery.json
   M00-A10: {result: not_run, evidence: []}
   M00-A11: {result: not_run, evidence: []}
   M00-A12: {result: not_run, evidence: []}
@@ -35,7 +41,8 @@ artifacts:
   - artifacts/duraloco/M00/20260711_m00_6e615e1_1node
   - artifacts/duraloco/M00/20260711_m00_74b5cbe_1node
   - artifacts/duraloco/M00/20260711_m00_04da7ee_1node
-next_action: "commit same-base production enforcement and learner adoption pacing, then retry one node"
+  - artifacts/duraloco/M00/20260711_m00_97a6876_1node
+next_action: "implement and run the clean two-node backend/transaction/takeover qualification"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

@@ -12,11 +12,12 @@
 - Pending acceptance targets: M00-A01 through M00-A12
 - Checker verdict: not run
 
-The first implementation commit removes the legacy persistence surface, adds
+The implementation removes the legacy persistence surface, adds
 the production safetensors transaction path, replay-derived `RuntimeView`,
 re-entrant proposal catalog, file-native analysis, explicit warm-start
 generation metadata, and M00 static/runtime harnesses. Static source/config/
-script/test scanning passes. Compute qualification remains in progress.
+script/test scanning passes. The clean one-node qualification now passes;
+two-node and nine-node compute qualification remain in progress.
 
 ### Checker and qualification failure history
 
@@ -77,6 +78,22 @@ script/test scanning passes. Compute qualification remains in progress.
   ancestry, and staleness. The fast full learner also polled latest once and
   could finish several overlapping intervals before seeing the committed
   successor.
+
+#### Maker attempt 4 — `20260711_m00_97a6876_1node` — PASS
+
+- Time/identity: PBS `2359082.opbs`, host `mg0027`, implementation
+  `97a687698c4b8964bbf4891d0d2e070358b831dd`.
+- Result: forbidden scanning passed; the dependency-complete suite passed with
+  `270 passed, 1 skipped`; the reference POSIX crash/replay contract passed at
+  10 commits; both production full and fragment paths completed; deleting all
+  derived latest/stop/weights/outer-state/fragment exports and starting a new
+  syncer process reconstructed the same committed-state digest.
+- Exact evidence: full path committed 2 transitions and consumed 4 proposals;
+  fragment path committed 4 transitions and consumed 8 proposals. The before
+  and after recovery digests were respectively identical for both paths.
+- Evidence: `artifacts/duraloco/M00/20260711_m00_97a6876_1node/manifest.json`,
+  `one_node_contract.json`, and the full/fragment `*_before_recovery.json` and
+  `*_after_recovery.json` reports.
 - Impact: M00-A03, M00-A04, M00-A09, P02-A04, and P04 replay requalification.
 - Evidence: `artifacts/duraloco/M00/20260711_m00_04da7ee_1node/manifest.json`,
   `one_node_contract.json`, full syncer/learner logs, and `stdout.log`.
@@ -87,8 +104,9 @@ script/test scanning passes. Compute qualification remains in progress.
 ### Limitations and next action
 
 M00 still assumes one active syncer. Lease/fencing begins in P05; learner exact
-restart and authoritative GC remain later work. Next action is a parent-linked
-clean one-node retry, followed only on PASS by the two-node and nine-node gates.
+restart and authoritative GC remain later work. Next action is the clean
+two-node backend/transaction/takeover gate, followed only on PASS by the
+nine-node terminal gate.
 
 ## 中文
 
@@ -105,7 +123,7 @@ clean one-node retry, followed only on PASS by the two-node and nine-node gates.
 首个实现提交删除旧持久化表面，加入 production safetensors transaction、由 replay
 派生的 `RuntimeView`、可重入 proposal catalog、文件原生 analysis、显式 warm-start
 generation metadata 与 M00 静态/运行 harness。源码、配置、脚本与测试的静态禁止项
-扫描已通过；compute 再验收仍在进行。
+扫描已通过；干净单节点资格验证也已通过，双节点与九节点 compute 再验收仍在进行。
 
 ### Checker 与资格验证失败历史
 
@@ -163,8 +181,22 @@ generation metadata 与 M00 静态/运行 harness。源码、配置、脚本与�
   再次强制；配置 post-upload adoption 的 learner 在一个 scan/grace window 内等待
   successor。
 
+#### Maker 第 4 次尝试 — `20260711_m00_97a6876_1node` — PASS
+
+- 时间/身份：PBS `2359082.opbs`，节点 `mg0027`，实现提交
+  `97a687698c4b8964bbf4891d0d2e070358b831dd`。
+- 结果：forbidden scan 通过；dependency-complete suite 为 `270 passed, 1 skipped`；
+  reference POSIX crash/replay contract 在 10 个 commits 上通过；production full 与
+  fragment 两条路径均完成。删除全部派生 latest/stop/weights/outer-state/fragment exports
+  后启动新 syncer 进程，重建的 committed-state digest 保持一致。
+- 精确证据：full 路径提交 2 个 transitions、消费 4 个 proposals；fragment 路径提交
+  4 个 transitions、消费 8 个 proposals；两条路径的恢复前后 digest 均分别一致。
+- 证据：`artifacts/duraloco/M00/20260711_m00_97a6876_1node/manifest.json`、
+  `one_node_contract.json`，以及 full/fragment 的 `*_before_recovery.json` 与
+  `*_after_recovery.json` 报告。
+
 ### 限制与下一动作
 
 M00 仍假设只有一个 active syncer；lease/fencing 属于 P05，learner exact restart 与
-权威 GC 属于后续阶段。下一动作是 parent-linked 干净单节点重试；只有通过后才进入
-双节点与九节点 gate。
+权威 GC 属于后续阶段。下一动作是干净双节点 backend/transaction/takeover gate；只有
+通过后才进入九节点 terminal gate。
