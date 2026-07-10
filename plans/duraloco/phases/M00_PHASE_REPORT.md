@@ -94,6 +94,23 @@ two-node and nine-node compute qualification remain in progress.
 - Evidence: `artifacts/duraloco/M00/20260711_m00_97a6876_1node/manifest.json`,
   `one_node_contract.json`, and the full/fragment `*_before_recovery.json` and
   `*_after_recovery.json` reports.
+
+#### Two-node qualification — `20260711_m00_81b442c_2node` — PASS
+
+- Time/identity: PBS `2359105.opbs`, hosts `mg0030` and `mg0033`, implementation
+  `81b442c80c60f222555d5aeb773fcafa69672ae8`.
+- Backend result: 100 same-version POSIX/Lustre races produced exactly one
+  winner per round, zero visibility failures, and successful stale-lock
+  takeover.
+- Transaction result: 20 same-parent races produced exactly 20 committed
+  transitions, zero double winners, zero double inclusions, identical replay
+  digests on both nodes, recovered response loss, and second-node continuation.
+- Production takeover result: the first production process committed sequence
+  1 and exited; a fresh process on the second node recovered the identical
+  `RuntimeView` digest and appended sequence 2 through the production head CAS.
+  No local database file was created.
+- Evidence: `artifacts/duraloco/M00/20260711_m00_81b442c_2node/manifest.json`,
+  `two_node_summary.json`, rank reports, and operation traces.
 - Impact: M00-A03, M00-A04, M00-A09, P02-A04, and P04 replay requalification.
 - Evidence: `artifacts/duraloco/M00/20260711_m00_04da7ee_1node/manifest.json`,
   `one_node_contract.json`, full syncer/learner logs, and `stdout.log`.
@@ -105,8 +122,7 @@ two-node and nine-node compute qualification remain in progress.
 
 M00 still assumes one active syncer. Lease/fencing begins in P05; learner exact
 restart and authoritative GC remain later work. Next action is the clean
-two-node backend/transaction/takeover gate, followed only on PASS by the
-nine-node terminal gate.
+nine-node GPT-2/WikiText-2 50×10 terminal gate.
 
 ## 中文
 
@@ -195,8 +211,22 @@ generation metadata 与 M00 静态/运行 harness。源码、配置、脚本与�
   `one_node_contract.json`，以及 full/fragment 的 `*_before_recovery.json` 与
   `*_after_recovery.json` 报告。
 
+#### 双节点资格验证 — `20260711_m00_81b442c_2node` — PASS
+
+- 时间/身份：PBS `2359105.opbs`，节点 `mg0030` 与 `mg0033`，实现提交
+  `81b442c80c60f222555d5aeb773fcafa69672ae8`。
+- Backend 结果：100 轮同 version POSIX/Lustre race 每轮恰好一个 winner，跨节点可见性
+  失败为零，stale-lock takeover 成功。
+- Transaction 结果：20 轮同 parent race 恰好产生 20 个 committed transitions，
+  double winner 与 double inclusion 均为零；两节点 replay digest 一致，并验证了
+  response-loss recovery 与第二节点 continuation。
+- Production takeover 结果：首个 production 进程提交 sequence 1 后退出；第二节点上
+  的新进程恢复完全一致的 `RuntimeView` digest，并经 production head CAS 追加 sequence 2；
+  未产生任何本地数据库文件。
+- 证据：`artifacts/duraloco/M00/20260711_m00_81b442c_2node/manifest.json`、
+  `two_node_summary.json`、各 rank 报告与 operation traces。
+
 ### 限制与下一动作
 
 M00 仍假设只有一个 active syncer；lease/fencing 属于 P05，learner exact restart 与
-权威 GC 属于后续阶段。下一动作是干净双节点 backend/transaction/takeover gate；只有
-通过后才进入九节点 terminal gate。
+权威 GC 属于后续阶段。下一动作是干净九节点 GPT-2/WikiText-2 50×10 terminal gate。

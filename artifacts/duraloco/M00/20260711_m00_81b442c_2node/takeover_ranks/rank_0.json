@@ -1,0 +1,13 @@
+{
+  "commit_seq_at_exit": 1,
+  "consumed_proposal_ids": [
+    "p-46fb6b90abe22511ba5cde573a70863bdb733ed68e8555d82c6c153bf19a11c0"
+  ],
+  "hostname": "mg0030",
+  "process_exits_before_takeover": true,
+  "rank": 0,
+  "role": "initial_process",
+  "runtime_view_digest_at_exit": "2103a9e0a883eceac7d9854b6bc0d9c60714bcff892de96d0a7222b510cac698",
+  "status": "PASS",
+  "world_size": 2
+}

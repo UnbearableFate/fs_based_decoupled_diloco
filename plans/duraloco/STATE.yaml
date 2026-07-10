@@ -14,7 +14,7 @@ checks:
   local_runtime: contract_pass
   miyabi_login_static: static_pass
   miyabi_1node: miyabi_1node_pass
-  miyabi_2node: not_run
+  miyabi_2node: miyabi_2node_pass
   miyabi_9node: not_run
 acceptance:
   M00-A01: {result: not_run, evidence: []}
@@ -32,7 +32,13 @@ acceptance:
       - artifacts/duraloco/M00/20260711_m00_97a6876_1node/one_node_contract.json
       - artifacts/duraloco/M00/20260711_m00_97a6876_1node/20260711_m00_97a6876_1node-full_after_recovery.json
       - artifacts/duraloco/M00/20260711_m00_97a6876_1node/20260711_m00_97a6876_1node-fragment_after_recovery.json
-  M00-A10: {result: not_run, evidence: []}
+  M00-A10:
+    result: pass
+    evidence:
+      - artifacts/duraloco/M00/20260711_m00_81b442c_2node/manifest.json
+      - artifacts/duraloco/M00/20260711_m00_81b442c_2node/two_node_summary.json
+      - artifacts/duraloco/M00/20260711_m00_81b442c_2node/takeover_ranks/rank_0.json
+      - artifacts/duraloco/M00/20260711_m00_81b442c_2node/takeover_ranks/rank_1.json
   M00-A11: {result: not_run, evidence: []}
   M00-A12: {result: not_run, evidence: []}
 open_decisions: []
@@ -42,7 +48,8 @@ artifacts:
   - artifacts/duraloco/M00/20260711_m00_74b5cbe_1node
   - artifacts/duraloco/M00/20260711_m00_04da7ee_1node
   - artifacts/duraloco/M00/20260711_m00_97a6876_1node
-next_action: "implement and run the clean two-node backend/transaction/takeover qualification"
+  - artifacts/duraloco/M00/20260711_m00_81b442c_2node
+next_action: "run the clean nine-node GPT-2/WikiText-2 50x10 terminal qualification"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
