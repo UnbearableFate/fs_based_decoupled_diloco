@@ -40,6 +40,13 @@ def test_v1_adapter_parses_without_granting_v2_authority():
             "file_path": "p",
             "file_size_bytes": [],
         },
+        {
+            "run_id": "x",
+            "update_id": "u",
+            "learner_id": "l",
+            "file_path": "p",
+            "file_size_bytes": float("inf"),
+        },
     ],
 )
 def test_v1_adapter_malformed_inputs_are_typed(bad):

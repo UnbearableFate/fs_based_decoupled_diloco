@@ -48,7 +48,7 @@ def parse_v1_manifest(payload: Mapping[str, Any]) -> LegacyProposal:
         local_step_start = int(payload.get("local_step_start", 0))
         local_step_end = int(payload.get("local_step_end", 0))
         file_size = int(payload["file_size_bytes"])
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ProtocolError("V1_SCHEMA", f"legacy numeric field is invalid: {exc}") from exc
     if min(
         fragment_id,
