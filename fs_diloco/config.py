@@ -11,7 +11,7 @@ from typing import Any, TypeVar, get_args, get_origin, get_type_hints
 
 import yaml
 
-from .constants import DEFAULT_DATA_CACHE_DIR, DEFAULT_RUNS_DIR, DEFAULT_RUNTIME_DIR
+from .constants import DEFAULT_DATA_CACHE_DIR, DEFAULT_RUNS_DIR
 
 T = TypeVar("T")
 
@@ -28,8 +28,8 @@ class RunSection:
 class InitSection:
     resume: bool = False
     resume_version: str | int = "latest"
-    resume_db_dump: str | None = None
     allow_overwrite_existing_run: bool = False
+    run_generation: int = 0
 
 
 @dataclass
@@ -69,11 +69,10 @@ class SyncSection:
     quorum_min: int = 4
     quorum_max: int = 8
     max_staleness_versions: int = 2
-    staleness_lambda: float = 0.25
-    selection_policy: str = "most_recent_per_learner"
+    staleness_lambda: float = 0.2
+    selection_policy: str = "oldest_pending"
     scan_interval_seconds: float = 2.0
     grace_window: GraceWindowSection = field(default_factory=GraceWindowSection)
-    db_dump_every_versions: int = 1
     stop_after_outer_steps: int | None = 20
     stop_after_global_tokens: int | None = None
     stop_file_poll_seconds: float = 5.0
@@ -130,13 +129,11 @@ class IOSection:
     compute_sha256: bool = False
     keep_processed_updates: bool = True
     cleanup_applied_after_versions: int | None = None
-    keep_last_db_dumps: int = 2
     # These are opt-in debug retention flags. Normal successful runs keep only
     # the final syncer checkpoint and delete every learner-local checkpoint.
     keep_last_global_versions: int | None = None
     keep_last_learner_update_versions: int | None = None
     final_cleanup_wait_seconds: float = 120.0
-    sqlite_local_dir: str | None = None
 
 
 @dataclass
@@ -249,7 +246,6 @@ def resolve_config(
     *,
     run_id: str | None = None,
     shared_root: str | None = None,
-    sqlite_local_dir: str | None = None,
     num_learners: int | None = None,
     project_root: str | Path | None = None,
 ) -> Config:
@@ -265,14 +261,6 @@ def resolve_config(
         config.run.shared_root = str(root / DEFAULT_RUNS_DIR / config.run.run_id)
     else:
         config.run.shared_root = str(_project_path(config.run.shared_root, root, "run.shared_root"))
-    if sqlite_local_dir is not None:
-        config.io.sqlite_local_dir = sqlite_local_dir
-    if config.io.sqlite_local_dir is None:
-        config.io.sqlite_local_dir = str(root / DEFAULT_RUNTIME_DIR / config.run.run_id / "sqlite")
-    else:
-        config.io.sqlite_local_dir = str(
-            _project_path(config.io.sqlite_local_dir, root, "io.sqlite_local_dir")
-        )
     if config.data.cache_dir is None:
         config.data.cache_dir = str(root / DEFAULT_DATA_CACHE_DIR)
     else:
@@ -290,8 +278,12 @@ def resolve_config(
             raise ValueError(f"unsupported fragments.schedule: {config.fragments.schedule}")
         if config.fragments.strategy not in {"full", "balanced_tensor"}:
             raise ValueError(f"unsupported fragments.strategy: {config.fragments.strategy}")
-    if config.io.keep_last_db_dumps < 1:
-        raise ValueError("io.keep_last_db_dumps must be >= 1")
+    if config.init.run_generation < 0:
+        raise ValueError("init.run_generation must be >= 0")
+    if config.sync.staleness_lambda != 0.2:
+        raise ValueError("sync.staleness_lambda must equal the frozen Protocol v2 value 0.2")
+    if config.sync.selection_policy != "oldest_pending":
+        raise ValueError("sync.selection_policy must be oldest_pending")
     for field_name in ("keep_last_global_versions", "keep_last_learner_update_versions"):
         value = getattr(config.io, field_name)
         if value is not None and int(value) < 1:

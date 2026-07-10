@@ -12,7 +12,6 @@ from .paths import RunPaths
 _GLOBAL_WEIGHT_RE = re.compile(r"^global_v(\d{6})\.safetensors$")
 _OUTER_OPTIM_RE = re.compile(r"^outer_v(\d{6})\.safetensors$")
 _FRAGMENT_ARTIFACT_RE = re.compile(r"^v(\d{6})\.safetensors$")
-_DB_DUMP_RE = re.compile(r"^metadata_.+_v(\d{6})\.db$")
 
 
 def _safe_unlink(path: Path, logger: Any | None = None) -> bool:
@@ -109,37 +108,6 @@ def cleanup_syncer_model_artifacts(
             logger=logger,
         )
     )
-
-
-def cleanup_db_dumps(
-    paths: RunPaths,
-    *,
-    keep_last: int = 2,
-    logger: Any | None = None,
-) -> int:
-    """Keep only the newest consistent SQLite backups."""
-    keep_last = max(0, int(keep_last))
-    dumps: list[Path] = []
-    for path in paths.db_dumps.glob("metadata_*_v*.db"):
-        if _DB_DUMP_RE.match(path.name) is not None:
-            dumps.append(path)
-    dumps.sort(key=lambda path: (path.stat().st_mtime_ns, path.name))
-    keep_paths = {path.resolve(strict=False) for path in (dumps[-keep_last:] if keep_last else [])}
-    deleted = 0
-    for path in dumps:
-        if path.resolve(strict=False) in keep_paths:
-            continue
-        if _safe_unlink(path, logger):
-            deleted += 1
-    if deleted and logger is not None:
-        logger.event(
-            "retention_cleanup",
-            role="syncer",
-            artifact_kind="db_dump",
-            deleted_files=deleted,
-            keep_last=keep_last,
-        )
-    return deleted
 
 
 def _inside_directory(path: Path, directory: Path) -> bool:

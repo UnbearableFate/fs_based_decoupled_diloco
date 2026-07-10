@@ -45,6 +45,7 @@ CHECK_VALUES = {
     "blocked",
 }
 ACCEPTANCE_COUNTS = {
+    "M00": 12,
     "P00": 8,
     "P01": 8,
     "P02": 8,
@@ -95,11 +96,14 @@ def _load(path: Path) -> dict[str, Any]:
     return payload
 
 
-def _phase_number(value: Any) -> int:
-    match = re.fullmatch(r"P(0[0-9]|1[0-2])", str(value))
-    if not match:
+PHASE_ORDER = ("P00", "P01", "P02", "P03", "P04", "M00", "P05", "P06", "P07", "P08", "P09", "P10", "P11", "P12")
+
+
+def _phase_rank(value: Any) -> int:
+    try:
+        return PHASE_ORDER.index(str(value))
+    except ValueError:
         raise StateError(f"invalid phase: {value!r}")
-    return int(match.group(1))
 
 
 def _checker_verdict(root: Path, relative: str) -> tuple[str, str]:
@@ -119,7 +123,7 @@ def validate(payload: dict[str, Any], *, root: Path) -> None:
     missing = sorted(REQUIRED - payload.keys())
     if missing:
         raise StateError("missing required fields: " + ", ".join(missing))
-    _phase_number(payload["phase"])
+    _phase_rank(payload["phase"])
     status = payload["status"]
     if status not in STATUSES:
         raise StateError(f"invalid status: {status!r}")
@@ -184,15 +188,15 @@ def validate(payload: dict[str, Any], *, root: Path) -> None:
             raise StateError("completed phase cannot have open blockers")
         if any(value in {"not_run", "failed", "blocked"} for value in checks.values()):
             raise StateError("completed phase contains an unresolved check status")
-        if _phase_number(payload["phase"]) >= 4 and checks.get("miyabi_9node") != "miyabi_9node_pass":
+        if _phase_rank(payload["phase"]) >= _phase_rank("P04") and checks.get("miyabi_9node") != "miyabi_9node_pass":
             raise StateError("P04+ completion requires the terminal Miyabi 9-node GPT-2 gate")
     if payload["requires_human_approval"] and not payload["approval_reason"]:
         raise StateError("requires_human_approval needs approval_reason")
 
 
 def validate_transition(previous: dict[str, Any], current: dict[str, Any]) -> None:
-    previous_phase = _phase_number(previous["phase"])
-    current_phase = _phase_number(current["phase"])
+    previous_phase = _phase_rank(previous["phase"])
+    current_phase = _phase_rank(current["phase"])
     if current_phase == previous_phase:
         if current["status"] not in TRANSITIONS[previous["status"]]:
             raise StateError(
@@ -200,7 +204,9 @@ def validate_transition(previous: dict[str, Any], current: dict[str, Any]) -> No
             )
         return
     if current_phase != previous_phase + 1:
-        raise StateError(f"phase jump is not sequential: P{previous_phase:02d} -> P{current_phase:02d}")
+        raise StateError(
+            f"phase jump is not sequential: {previous['phase']} -> {current['phase']}"
+        )
     if previous["status"] not in {"completed", "ready_to_merge", "merged"}:
         raise StateError("next phase cannot start before previous phase completed")
     if current["status"] not in {"planned", "in_progress"}:

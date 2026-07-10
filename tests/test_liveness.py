@@ -2,24 +2,20 @@ import time
 
 from fs_diloco.atomic_io import atomic_write_json
 from fs_diloco.constants import FORMAT_VERSION
-from fs_diloco.liveness import ingest_heartbeats, no_progress_timed_out, update_liveness_statuses
-from fs_diloco.sqlite_store import SQLiteStore
+from fs_diloco.liveness import build_liveness_view, liveness_counts, no_progress_timed_out
 
 
-def test_heartbeat_ingest_and_status_transitions(tmp_path):
-    store = SQLiteStore(tmp_path / "db.sqlite3")
-    heartbeat_dir = tmp_path / "heartbeats"
-    now = time.time()
+def _heartbeat(path, *, timestamp, status="active"):
     atomic_write_json(
-        heartbeat_dir / "learner_000.json",
+        path,
         {
             "format_version": FORMAT_VERSION,
             "run_id": "run",
             "learner_id": "learner_000",
             "hostname": "host",
             "pid": 123,
-            "timestamp": now,
-            "status": "active",
+            "timestamp": timestamp,
+            "status": status,
             "phase": "inner_steps",
             "last_loaded_global_version": 0,
             "last_local_step": 2,
@@ -27,28 +23,43 @@ def test_heartbeat_ingest_and_status_transitions(tmp_path):
             "tokens_per_sec": 10.0,
         },
     )
-    assert ingest_heartbeats(store, heartbeat_dir, run_id="run", num_learners=1) == 1
-    counts = update_liveness_statuses(
-        store,
+
+
+def test_heartbeat_view_is_rebuilt_without_persistent_state(tmp_path):
+    now = time.time()
+    path = tmp_path / "heartbeats" / "learner_000.json"
+    _heartbeat(path, timestamp=now)
+    stale = build_liveness_view(
+        path.parent,
+        run_id="run",
+        num_learners=1,
         stale_after_seconds=1.0,
         dead_after_seconds=2.0,
         now=now + 1.5,
     )
-    assert counts["stale"] == 1
-    counts = update_liveness_statuses(
-        store,
+    assert liveness_counts(stale)["stale"] == 1
+    dead = build_liveness_view(
+        path.parent,
+        run_id="run",
+        num_learners=1,
         stale_after_seconds=1.0,
         dead_after_seconds=2.0,
         now=now + 3.0,
     )
-    assert counts["dead"] == 1
-    store.close()
+    assert liveness_counts(dead)["dead"] == 1
 
 
-def test_stopped_preserved_and_no_progress_timeout(tmp_path):
-    store = SQLiteStore(tmp_path / "db.sqlite3")
-    store.upsert_learner("learner_000", last_seen=time.time() - 1000, status="stopped")
-    counts = update_liveness_statuses(store, stale_after_seconds=1.0, dead_after_seconds=2.0)
-    assert counts["stopped"] == 1
+def test_stopped_is_preserved_and_no_progress_timeout(tmp_path):
+    now = time.time()
+    path = tmp_path / "heartbeats" / "learner_000.json"
+    _heartbeat(path, timestamp=now - 1000, status="stopped")
+    view = build_liveness_view(
+        path.parent,
+        run_id="run",
+        num_learners=1,
+        stale_after_seconds=1.0,
+        dead_after_seconds=2.0,
+        now=now,
+    )
+    assert liveness_counts(view)["stopped"] == 1
     assert no_progress_timed_out(0.0, 1.0, now=2.0)
-    store.close()

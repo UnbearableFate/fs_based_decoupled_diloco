@@ -53,7 +53,6 @@ WORKER=(
   --root "$STORAGE_ROOT"
   --run-id "$RUN_ID"
   --output "$ARTIFACT_ROOT/p04_1node_report.json"
-  --cache "$ARTIFACT_ROOT/consumption_cache.sqlite"
 )
 printf -v WORKER_TEXT '%q ' "${WORKER[@]}"
 printf '%s\n' "${WORKER_TEXT% }" | tee "$ARTIFACT_ROOT/commands.log"
@@ -82,7 +81,7 @@ MANIFEST_ARGS=(
   --result pass
   --assertion "10-transition POSIX prefix replay matched memory"
   --assertion "all P04 crash points recovered to an old or new legal prefix"
-  --assertion "cache deletion and rebuild were exact and prepared orphans stayed uncommitted"
+  --assertion "empty local state replay was exact and prepared orphans stayed uncommitted"
 )
 if [[ -n "$PARENT_RUN_ID" ]]; then
   MANIFEST_ARGS+=(--parent-run-id "$PARENT_RUN_ID")

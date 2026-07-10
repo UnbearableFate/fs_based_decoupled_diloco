@@ -26,14 +26,13 @@ sync:
   quorum_min: 1
   quorum_max: 1
   max_staleness_versions: 2
-  staleness_lambda: 0.25
-  selection_policy: most_recent_per_learner
+  staleness_lambda: 0.2
+  selection_policy: oldest_pending
   scan_interval_seconds: 1.0
   grace_window:
     mode: fixed
     fixed_seconds: 1.0
     max_seconds: 1.0
-  db_dump_every_versions: 1
   stop_after_outer_steps: 4
   stop_after_global_tokens: null
   stop_file_poll_seconds: 1.0
@@ -80,11 +79,9 @@ io:
   compute_sha256: false
   keep_processed_updates: true
   cleanup_applied_after_versions: null
-  keep_last_db_dumps: 2
   keep_last_global_versions: 3
   keep_last_learner_update_versions: 3
   final_cleanup_wait_seconds: 120.0
-  sqlite_local_dir: null
 
 learner:
   poll_latest_during_inner_steps: false

@@ -52,20 +52,41 @@ class LogLayout:
     def proposal_key(self, proposal_id: str) -> str:
         return normalize_key(f"{self.proposal_prefix}{_component(proposal_id, 'proposal_id')}.json")
 
+    def proposal_payload_key(self, sha256: str) -> str:
+        return self._content_key("proposals/payloads", sha256, "safetensors")
+
     def params_key(self, fragment_id: int, sha256: str) -> str:
         return self._payload_key("params", fragment_id, sha256)
 
     def outer_state_key(self, fragment_id: int, sha256: str) -> str:
         return self._payload_key("outer-state", fragment_id, sha256)
 
-    def _payload_key(self, kind: str, fragment_id: int, sha256: str) -> str:
+    def production_params_key(self, fragment_id: int, sha256: str) -> str:
+        return self._payload_key("params", fragment_id, sha256, suffix="safetensors")
+
+    def production_outer_state_key(self, fragment_id: int, sha256: str) -> str:
+        return self._payload_key("outer-state", fragment_id, sha256, suffix="safetensors")
+
+    def _payload_key(
+        self,
+        kind: str,
+        fragment_id: int,
+        sha256: str,
+        *,
+        suffix: str = "json",
+    ) -> str:
         if type(fragment_id) is not int or fragment_id < 0:
             raise ValueError("fragment_id must be a non-negative integer")
         if not isinstance(sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", sha256):
             raise ValueError("payload digest must be 64 lowercase hex characters")
         return normalize_key(
-            f"{self.root}/immutable/fragments/{fragment_id:08d}/{kind}-{sha256}.json"
+            f"{self.root}/immutable/fragments/{fragment_id:08d}/{kind}-{sha256}.{suffix}"
         )
+
+    def _content_key(self, prefix: str, sha256: str, suffix: str) -> str:
+        if not isinstance(sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", sha256):
+            raise ValueError("payload digest must be 64 lowercase hex characters")
+        return normalize_key(f"{self.root}/immutable/{prefix}/{sha256}.{suffix}")
 
     def commit_key(self, commit_seq: int, commit_id: str) -> str:
         if type(commit_seq) is not int or commit_seq < 1:

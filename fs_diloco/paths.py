@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .atomic_io import ensure_dir
-from .constants import DB_DUMP_TEMPLATE, GLOBAL_WEIGHT_TEMPLATE, OUTER_OPTIM_TEMPLATE
+from .constants import GLOBAL_WEIGHT_TEMPLATE, OUTER_OPTIM_TEMPLATE
 
 
 @dataclass(frozen=True)
@@ -16,6 +16,10 @@ class RunPaths:
     @property
     def control(self) -> Path:
         return self.shared_root / "control"
+
+    @property
+    def authority(self) -> Path:
+        return self.shared_root / "authority"
 
     @property
     def weights(self) -> Path:
@@ -54,8 +58,8 @@ class RunPaths:
         return self.shared_root / "heartbeats"
 
     @property
-    def db_dumps(self) -> Path:
-        return self.shared_root / "db_dumps"
+    def quarantine(self) -> Path:
+        return self.shared_root / "quarantine"
 
     @property
     def logs(self) -> Path:
@@ -97,13 +101,10 @@ class RunPaths:
     def fragment_outer_optim_path(self, fragment_id: int, version: int) -> Path:
         return self.fragment_optim / f"fragment_{fragment_id:03d}" / f"v{version:06d}.safetensors"
 
-    def db_dump_path(self, timestamp: str, version: int) -> Path:
-        return self.db_dumps / DB_DUMP_TEMPLATE.format(timestamp=timestamp, version=version)
-
-
 def prepare_run_dirs(paths: RunPaths, num_learners: int) -> None:
     for directory in [
         paths.control,
+        paths.authority,
         paths.weights,
         paths.optim,
         paths.updates_pending,
@@ -113,7 +114,7 @@ def prepare_run_dirs(paths: RunPaths, num_learners: int) -> None:
         paths.fragment_weights,
         paths.fragment_optim,
         paths.heartbeats,
-        paths.db_dumps,
+        paths.quarantine,
         paths.logs,
         paths.metrics,
     ]:

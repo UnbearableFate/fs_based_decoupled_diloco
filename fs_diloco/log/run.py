@@ -33,6 +33,9 @@ class RunSpec:
     )
     max_global_staleness: int = 64
     max_fragment_staleness: int = 4
+    payload_codec: str = "canonical-float-hex-v1"
+    generation_kind: str = "fresh"
+    source_checkpoint_digests: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         for value, name in ((self.run_id, "run_id"), (self.model_revision, "model_revision")):
@@ -52,6 +55,20 @@ class RunSpec:
         ):
             if type(value) is not int or value < 0:
                 raise ValueError(f"{name} must be a non-negative integer")
+        if self.payload_codec not in {
+            "canonical-float-hex-v1",
+            "safetensors-flat-v1",
+        }:
+            raise ValueError(f"unsupported run payload codec: {self.payload_codec}")
+        if self.generation_kind not in {"fresh", "warm_start"}:
+            raise ValueError("generation_kind must be fresh or warm_start")
+        object.__setattr__(self, "source_checkpoint_digests", tuple(self.source_checkpoint_digests))
+        for digest in self.source_checkpoint_digests:
+            validate_sha256(digest, field="source_checkpoint_digest")
+        if self.generation_kind == "fresh" and self.source_checkpoint_digests:
+            raise ValueError("fresh generation cannot name source checkpoints")
+        if self.generation_kind == "warm_start" and not self.source_checkpoint_digests:
+            raise ValueError("warm-start generation requires source checkpoint digests")
 
     @property
     def digest(self) -> str:
@@ -72,7 +89,12 @@ class RunSpec:
                 "max_global_staleness": self.max_global_staleness,
                 "max_fragment_staleness": self.max_fragment_staleness,
             },
-            "payload_codec": "canonical-float-hex-v1",
+            "payload_codec": self.payload_codec,
+            "generation_origin": {
+                "kind": self.generation_kind,
+                "source_checkpoint_digests": list(self.source_checkpoint_digests),
+                "exact_continuation": False,
+            },
         }
 
     @classmethod
@@ -89,14 +111,30 @@ class RunSpec:
             "weighting_config",
             "protocol_config",
             "payload_codec",
+            "generation_origin",
         }
         if set(payload) != required or payload.get("protocol_version") != 2:
             raise ValueError("invalid run specification fields or protocol version")
-        if payload.get("payload_codec") != "canonical-float-hex-v1":
+        if payload.get("payload_codec") not in {
+            "canonical-float-hex-v1",
+            "safetensors-flat-v1",
+        }:
             raise ValueError("unsupported run payload codec")
         optimizer = payload["optimizer_config"]
         weighting = payload["weighting_config"]
         protocol = payload["protocol_config"]
+        origin = payload["generation_origin"]
+        if not isinstance(origin, dict) or set(origin) != {
+            "kind",
+            "source_checkpoint_digests",
+            "exact_continuation",
+        }:
+            raise ValueError("invalid generation origin")
+        if origin["exact_continuation"] is not False:
+            raise ValueError("generation origin cannot claim exact historical continuation")
+        source_digests = origin["source_checkpoint_digests"]
+        if not isinstance(source_digests, list):
+            raise ValueError("source checkpoint digests must be a list")
         if not isinstance(optimizer, dict) or set(optimizer) != {
             "name",
             "lr",
@@ -151,6 +189,9 @@ class RunSpec:
             weighting_config=weighting_config,
             max_global_staleness=protocol["max_global_staleness"],
             max_fragment_staleness=protocol["max_fragment_staleness"],
+            payload_codec=payload["payload_codec"],
+            generation_kind=origin["kind"],
+            source_checkpoint_digests=tuple(source_digests),
         )
 
 

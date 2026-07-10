@@ -58,7 +58,6 @@ FULL_COMMAND=(
   "CONFIG=$PROJECT_ROOT/configs/fs_diloco_tiny_local.yaml"
   "RUN_ID=$FULL_RUN_ID"
   "SHARED_ROOT=$PROJECT_ROOT/runs/fs_diloco/$FULL_RUN_ID"
-  "SYNCER_DB_DIR=$PROJECT_ROOT/.runtime/fs_diloco/$FULL_RUN_ID/sqlite"
   "$PROJECT_ROOT/scripts/local/run_tiny_2proc_smoke.sh"
 )
 printf '%q ' "${FULL_COMMAND[@]}" | tee -a "$ARTIFACT_ROOT/commands.log"
@@ -72,7 +71,6 @@ FRAGMENT_COMMAND=(
   "CONFIG=$PROJECT_ROOT/configs/fs_diloco_tiny_fragment_local.yaml"
   "RUN_ID=$FRAGMENT_RUN_ID"
   "SHARED_ROOT=$PROJECT_ROOT/runs/fs_diloco/$FRAGMENT_RUN_ID"
-  "SYNCER_DB_DIR=$PROJECT_ROOT/.runtime/fs_diloco/$FRAGMENT_RUN_ID/sqlite"
   "$PROJECT_ROOT/scripts/local/run_tiny_2proc_smoke.sh"
 )
 printf '%q ' "${FRAGMENT_COMMAND[@]}" | tee -a "$ARTIFACT_ROOT/commands.log"

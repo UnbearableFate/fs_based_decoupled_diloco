@@ -1,10 +1,12 @@
-"""Heartbeat ingestion and learner liveness transitions."""
+"""Volatile learner-liveness views derived from heartbeat observations."""
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import time
 from pathlib import Path
-from typing import Any
+from types import MappingProxyType
+from typing import Any, Mapping
 
 from .atomic_io import safe_read_json
 from .constants import (
@@ -15,7 +17,20 @@ from .constants import (
     LEARNER_STATUS_STALE,
     learner_id_from_index,
 )
-from .sqlite_store import SQLiteStore
+
+
+@dataclass(frozen=True)
+class LivenessView:
+    learners: Mapping[str, Mapping[str, Any]]
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "learners",
+            MappingProxyType(
+                {key: MappingProxyType(dict(value)) for key, value in self.learners.items()}
+            ),
+        )
 
 
 def valid_learner_ids(num_learners: int) -> set[str]:
@@ -34,45 +49,9 @@ def validate_heartbeat(
         return False, "run_id"
     if payload.get("learner_id") not in valid_learner_ids(num_learners):
         return False, "learner_id"
-    if "timestamp" not in payload:
+    if not isinstance(payload.get("timestamp"), (int, float)):
         return False, "timestamp"
     return True, None
-
-
-def ingest_heartbeats(
-    store: SQLiteStore,
-    heartbeat_dir: str | Path,
-    *,
-    run_id: str,
-    num_learners: int,
-) -> int:
-    heartbeat_dir = Path(heartbeat_dir)
-    count = 0
-    if not heartbeat_dir.exists():
-        return 0
-    for path in sorted(heartbeat_dir.glob("learner_*.json")):
-        payload = safe_read_json(path)
-        if payload is None:
-            continue
-        ok, _reason = validate_heartbeat(payload, run_id=run_id, num_learners=num_learners)
-        if not ok:
-            continue
-        status = payload.get("status") or LEARNER_STATUS_ACTIVE
-        store.upsert_learner(
-            payload["learner_id"],
-            hostname=payload.get("hostname"),
-            pid=payload.get("pid"),
-            last_seen=float(payload["timestamp"]),
-            last_loaded_global_version=payload.get("last_loaded_global_version"),
-            last_local_step=payload.get("last_local_step"),
-            last_update_id=payload.get("last_update_id"),
-            tokens_per_sec=payload.get("tokens_per_sec"),
-            last_heartbeat_path=str(path),
-            status=status,
-            status_reason=payload.get("phase"),
-        )
-        count += 1
-    return count
 
 
 def classify_liveness(
@@ -95,33 +74,61 @@ def classify_liveness(
     return LEARNER_STATUS_DEAD, f"heartbeat_age={age:.1f}s"
 
 
-def update_liveness_statuses(
-    store: SQLiteStore,
+def build_liveness_view(
+    heartbeat_dir: str | Path,
     *,
+    run_id: str,
+    num_learners: int,
     stale_after_seconds: float,
     dead_after_seconds: float,
     now: float | None = None,
-) -> dict[str, int]:
-    now = time.time() if now is None else now
+) -> LivenessView:
+    observed_at = time.time() if now is None else now
+    learners: dict[str, dict[str, Any]] = {}
+    for path in sorted(Path(heartbeat_dir).glob("learner_*.json")):
+        payload = safe_read_json(path)
+        if not isinstance(payload, dict):
+            continue
+        valid, _ = validate_heartbeat(
+            payload,
+            run_id=run_id,
+            num_learners=num_learners,
+        )
+        if not valid:
+            continue
+        status, reason = classify_liveness(
+            now=observed_at,
+            last_seen=float(payload["timestamp"]),
+            current_status=str(payload.get("status") or LEARNER_STATUS_ACTIVE),
+            stale_after_seconds=stale_after_seconds,
+            dead_after_seconds=dead_after_seconds,
+        )
+        learners[str(payload["learner_id"])] = {
+            **payload,
+            "status": status,
+            "status_reason": reason,
+            "heartbeat_path": str(path),
+        }
+    return LivenessView(learners)
+
+
+def liveness_counts(view: LivenessView) -> dict[str, int]:
     counts = {
         LEARNER_STATUS_ACTIVE: 0,
         LEARNER_STATUS_STALE: 0,
         LEARNER_STATUS_DEAD: 0,
         LEARNER_STATUS_STOPPED: 0,
     }
-    for learner in store.list_learners():
-        status, reason = classify_liveness(
-            now=now,
-            last_seen=learner.get("last_seen"),
-            current_status=learner.get("status") or LEARNER_STATUS_DEAD,
-            stale_after_seconds=stale_after_seconds,
-            dead_after_seconds=dead_after_seconds,
-        )
-        store.update_learner_status(learner["learner_id"], status, reason)
+    for learner in view.learners.values():
+        status = str(learner["status"])
         counts[status] = counts.get(status, 0) + 1
     return counts
 
 
-def no_progress_timed_out(last_progress_time: float, timeout_seconds: float, now: float | None = None) -> bool:
-    now = time.time() if now is None else now
-    return now - last_progress_time > timeout_seconds
+def no_progress_timed_out(
+    last_progress_time: float,
+    timeout_seconds: float,
+    now: float | None = None,
+) -> bool:
+    observed_at = time.time() if now is None else now
+    return observed_at - last_progress_time > timeout_seconds

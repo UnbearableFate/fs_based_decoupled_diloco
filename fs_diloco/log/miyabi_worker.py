@@ -12,7 +12,6 @@ import time
 from fs_diloco.log.model import ReferenceProposal
 from fs_diloco.storage import InMemoryStorageBackend, NotFound, PosixStorageBackend
 
-from .cache import rebuild_cache, verify_cache
 from .commit import CRASH_POINTS, CommitConflict, TransactionalLog
 from .errors import InjectedLogCrash
 from .replay import inspect_orphans, replay_log
@@ -78,17 +77,16 @@ def _build_prefix(backend, run_id: str, steps: int = 10):
     return log, replay_log(log)
 
 
-def run_one_node(*, root: Path, run_id: str, output: Path, cache: Path) -> dict[str, object]:
+def run_one_node(*, root: Path, run_id: str, output: Path) -> dict[str, object]:
     backend = PosixStorageBackend(root)
     log, posix_replay = _build_prefix(backend, run_id)
     _, memory_replay = _build_prefix(InMemoryStorageBackend(), run_id)
     if posix_replay.prefix_digests != memory_replay.prefix_digests:
         raise AssertionError("memory/POSIX committed prefix digests differ")
-    first_cache = rebuild_cache(log, cache)
-    cache.unlink()
-    second_cache = rebuild_cache(log, cache)
-    if first_cache != second_cache or verify_cache(log, cache) != first_cache:
-        raise AssertionError("cache rebuild is not exact")
+    first_replay = replay_log(log)
+    second_replay = replay_log(TransactionalLog.open(backend, run_id))
+    if first_replay.committed_state_digest != second_replay.committed_state_digest:
+        raise AssertionError("fresh-process log replay is not exact")
 
     orphan_proposal = _proposal(
         log,
@@ -145,7 +143,7 @@ def run_one_node(*, root: Path, run_id: str, output: Path, cache: Path) -> dict[
         "committed_state_digest": posix_replay.committed_state_digest,
         "memory_posix_equal": True,
         "crash_points": crash_results,
-        "cache_rebuild_exact": True,
+        "empty_local_state_recovery_exact": True,
         "prepared_orphan_count": len(orphan_report.prepared_orphans),
         "operation_count": len(backend.history),
     }
@@ -309,7 +307,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     one.add_argument("--root", type=Path, required=True)
     one.add_argument("--run-id", required=True)
     one.add_argument("--output", type=Path, required=True)
-    one.add_argument("--cache", type=Path, required=True)
     two = subparsers.add_parser("two-node")
     two.add_argument("--root", type=Path, required=True)
     two.add_argument("--run-id", required=True)
@@ -321,7 +318,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     if args.command == "one-node":
-        run_one_node(root=args.root, run_id=args.run_id, output=args.output, cache=args.cache)
+        run_one_node(root=args.root, run_id=args.run_id, output=args.output)
     else:
         if args.rounds < 10:
             raise ValueError("P04 two-node gate requires at least 10 rounds")

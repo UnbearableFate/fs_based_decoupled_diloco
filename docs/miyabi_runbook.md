@@ -27,11 +27,10 @@ qsub scripts/miyabi/run_1node_debug.pbs
 
 The script starts a GPU-backed syncer and one GPU learner on the same compute node using `configs/fs_diloco_gpt2_wikitext2_1l_debug.yaml`. Acceptance evidence is:
 
-- `control/latest.json` reports version `1` or higher;
+- committed-log analysis reports `commit_seq` `1` or higher;
 - `weights/global_v000001.safetensors` exists;
-- `db_dumps/metadata_*_v000001.db` exists;
 - learner log shows finite `inner_step_summary` loss values;
-- syncer log shows `outer_step_applied` and `global_published`.
+- syncer log shows `transition_committed`.
 
 ## 2-Node Runtime Smoke
 
@@ -79,4 +78,4 @@ Use `TASK_SUITE=full` for `wikitext,lambada_openai,hellaswag,piqa,arc_easy,arc_c
 scripts/miyabi/inspect_run.sh runs/fs_diloco/<RUN_ID>
 ```
 
-This reads `latest.json`, `stop.json`, metrics CSV files, and the newest DB dump.
+This verifies the committed prefix first, then folds JSONL/CSV telemetry and reports whether derived exports match the head.

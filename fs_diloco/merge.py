@@ -56,7 +56,7 @@ def normalized_fragment_update_weights(
 def select_one_per_learner(
     updates: list[dict[str, Any]],
     *,
-    policy: str = "most_recent_per_learner",
+    policy: str = "oldest_pending",
     quorum_max: int | None = None,
 ) -> list[dict[str, Any]]:
     by_learner: dict[str, dict[str, Any]] = {}
@@ -69,18 +69,11 @@ def select_one_per_learner(
         if policy == "oldest_pending":
             if float(update["committed_at"]) < float(current["committed_at"]):
                 by_learner[learner_id] = update
-        elif policy == "most_recent_per_learner":
-            key = (int(update["local_step_end"]), float(update["committed_at"]))
-            current_key = (int(current["local_step_end"]), float(current["committed_at"]))
-            if key > current_key:
-                by_learner[learner_id] = update
         else:
             raise ValueError(f"unsupported selection_policy: {policy}")
     selected = list(by_learner.values())
     if policy == "oldest_pending":
         selected.sort(key=lambda row: (float(row["committed_at"]), row["learner_id"]))
-    else:
-        selected.sort(key=lambda row: (row["learner_id"], int(row["local_step_end"])))
     if quorum_max is not None:
         selected = selected[:quorum_max]
     return selected

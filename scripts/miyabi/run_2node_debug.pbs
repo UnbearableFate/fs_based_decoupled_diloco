@@ -26,7 +26,6 @@ fi
 CONFIG="${CONFIG:-$PROJECT_ROOT/configs/fs_diloco_gpt2_wikitext2_1l_debug.yaml}"
 RUN_ID="${RUN_ID:-$(date +%Y%m%d_%H%M%S)_fs_diloco_2node_debug}"
 SHARED_ROOT="${SHARED_ROOT:-$PROJECT_ROOT/runs/fs_diloco/$RUN_ID}"
-SYNCER_DB_DIR="${SYNCER_DB_DIR:-$PROJECT_ROOT/.runtime/fs_diloco/$RUN_ID/sqlite}"
 SYNCER_CUDA_VISIBLE_DEVICES="${SYNCER_CUDA_VISIBLE_DEVICES:-0}"
 LEARNER_CUDA_VISIBLE_DEVICES="${LEARNER_CUDA_VISIBLE_DEVICES:-0}"
 NUM_LEARNERS=1
@@ -45,7 +44,7 @@ fi
 mkdir -p "$SHARED_ROOT" "$PROJECT_ROOT/logs"
 LOG_ROOT="$PROJECT_ROOT/logs/qsub_${RUN_ID}"
 source "$PROJECT_ROOT/scripts/lib/project_paths.sh"
-require_project_paths "$PROJECT_ROOT" "$SHARED_ROOT" "$SYNCER_DB_DIR" "$LOG_ROOT"
+require_project_paths "$PROJECT_ROOT" "$SHARED_ROOT" "$LOG_ROOT"
 mkdir -p "$LOG_ROOT"
 
 MPI_ENV_ARGS=(
@@ -54,7 +53,6 @@ MPI_ENV_ARGS=(
   "CONFIG=$CONFIG"
   "RUN_ID=$RUN_ID"
   "SHARED_ROOT=$SHARED_ROOT"
-  "SYNCER_DB_DIR=$SYNCER_DB_DIR"
   "SYNCER_CUDA_VISIBLE_DEVICES=$SYNCER_CUDA_VISIBLE_DEVICES"
   "LEARNER_CUDA_VISIBLE_DEVICES=$LEARNER_CUDA_VISIBLE_DEVICES"
   "NUM_LEARNERS=$NUM_LEARNERS"
@@ -64,7 +62,6 @@ echo "RUN_ID=$RUN_ID"
 echo "PROJECT_ROOT=$PROJECT_ROOT"
 echo "CONFIG=$CONFIG"
 echo "SHARED_ROOT=$SHARED_ROOT"
-echo "SYNCER_DB_DIR=$SYNCER_DB_DIR"
 echo "SYNCER_CUDA_VISIBLE_DEVICES=$SYNCER_CUDA_VISIBLE_DEVICES"
 echo "LEARNER_CUDA_VISIBLE_DEVICES=$LEARNER_CUDA_VISIBLE_DEVICES"
 echo "NNODES=$NNODES"
@@ -87,7 +84,6 @@ mpirun \
         --config "$CONFIG" \
         --run-id "$RUN_ID" \
         --shared-root "$SHARED_ROOT" \
-        --sqlite-local-dir "$SYNCER_DB_DIR" \
         --num-learners "$NUM_LEARNERS" \
         2>&1 | tee "$PROJECT_ROOT/logs/qsub_${RUN_ID}/syncer.log"
     else

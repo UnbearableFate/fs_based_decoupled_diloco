@@ -1,6 +1,5 @@
 """DuraLoCo reference and durable transactional log APIs."""
 
-from .cache import CacheSnapshot, load_cache, rebuild_cache, verify_cache
 from .commit import CRASH_POINTS, CommitResult, PreparedLogTransition, TransactionalLog
 from .errors import (
     CommitConflict,
@@ -28,6 +27,7 @@ from .model import (
     select_quorum,
 )
 from .replay import OrphanReport, ReplayResult, inspect_orphans, replay_log
+from .production import ProductionTransactionalLog
 from .run import RunManifest, RunSpec
 
 __all__ = [
@@ -35,7 +35,6 @@ __all__ = [
     "CommitConflict",
     "CommitResult",
     "CRASH_POINTS",
-    "CacheSnapshot",
     "DecisionEvent",
     "FragmentState",
     "InjectedLogCrash",
@@ -44,6 +43,7 @@ __all__ = [
     "OrphanReport",
     "PreparedTransition",
     "PreparedLogTransition",
+    "ProductionTransactionalLog",
     "ProposalDecision",
     "ReferenceProposal",
     "ReferenceProtocolConfig",
@@ -60,9 +60,6 @@ __all__ = [
     "decide_proposal",
     "prepare_transition",
     "inspect_orphans",
-    "load_cache",
-    "rebuild_cache",
     "replay_log",
     "select_quorum",
-    "verify_cache",
 ]

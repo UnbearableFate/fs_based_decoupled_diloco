@@ -1,7 +1,7 @@
 phase: M00
 status: in_progress
-planning_basis_branch: codex/fs-diloco-miyabi
-planning_basis_commit: afc50a1e179c64321645b278b2497ea3ab3fe24d
+planning_basis_branch: codex/duraloco-p04-transaction-log
+planning_basis_commit: a655413cea6ebe9bc368b5827318efd766683b5a
 actual_base_branch: no_sql
 actual_base_commit: f32b9ddf3fd6443947c178aee667029df1c7f86d
 feature_branch: codex/duraloco-m00-sqlite-free-rebase

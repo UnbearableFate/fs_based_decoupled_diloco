@@ -30,6 +30,7 @@ fs-diloco-syncer = "fs_diloco.syncer:main"
 fs-diloco-learner = "fs_diloco.learner:main"
 fs-diloco-inspect = "fs_diloco.analysis:main"
 fs-diloco-lm-eval = "fs_diloco.eval_lm_harness:main"
+fs-diloco-bootstrap = "fs_diloco.log.bootstrap:main"
 
 [tool.ruff]
 line-length = 100

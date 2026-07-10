@@ -1,9 +1,7 @@
 import json
-import os
 
 from fs_diloco.paths import RunPaths
 from fs_diloco.retention import (
-    cleanup_db_dumps,
     cleanup_fragment_artifacts,
     cleanup_global_artifacts,
     cleanup_learner_update_artifacts,
@@ -135,21 +133,3 @@ def test_cleanup_syncer_models_covers_full_and_fragment_layouts(tmp_path):
     fragment_optim = (paths.fragment_optim / "fragment_000").glob("*.safetensors")
     assert [path.name for path in fragment_weights] == ["v000002.safetensors"]
     assert [path.name for path in fragment_optim] == ["v000002.safetensors"]
-
-
-def test_cleanup_db_dumps_keeps_two_newest_backups(tmp_path):
-    paths = RunPaths(tmp_path)
-    paths.db_dumps.mkdir(parents=True)
-    dumps = []
-    for version in range(5):
-        path = paths.db_dump_path(f"20260710_00000{version}", version)
-        path.write_text("db")
-        os.utime(path, ns=(version + 1, version + 1))
-        dumps.append(path)
-
-    deleted = cleanup_db_dumps(paths)
-
-    assert deleted == 3
-    assert sorted(path.name for path in paths.db_dumps.glob("*.db")) == sorted(
-        [dumps[3].name, dumps[4].name]
-    )

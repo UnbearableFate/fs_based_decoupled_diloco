@@ -8,18 +8,17 @@ def test_config_defaults_and_cli_overrides(tmp_path):
         "configs/fs_diloco_tiny_local.yaml",
         run_id="test_run",
         shared_root=str(tmp_path / "run"),
-        sqlite_local_dir=str(tmp_path / "db"),
         num_learners=1,
         project_root=tmp_path,
     )
     assert config.run.run_id == "test_run"
     assert config.run.shared_root == str(tmp_path / "run")
-    assert config.io.sqlite_local_dir == str(tmp_path / "db")
     assert config.sync.num_learners == 1
     assert config.sync.quorum_min == 1
     assert config.inner_optimizer.betas == (0.9, 0.95)
     assert config.fragments.enabled is False
-    assert config.io.keep_last_db_dumps == 2
+    assert config.sync.staleness_lambda == 0.2
+    assert config.sync.selection_policy == "oldest_pending"
     assert config.io.keep_last_global_versions is None
     assert config.io.keep_last_learner_update_versions is None
 
@@ -31,21 +30,16 @@ def test_config_defaults_keep_all_writable_state_inside_project(tmp_path):
         project_root=tmp_path,
     )
     assert config.run.shared_root == str(tmp_path / "runs/fs_diloco/contained_run")
-    assert config.io.sqlite_local_dir == str(
-        tmp_path / ".runtime/fs_diloco/contained_run/sqlite"
-    )
     assert config.data.cache_dir == str(tmp_path / ".cache/fs_diloco/huggingface/datasets")
 
 
-@pytest.mark.parametrize("field", ["shared_root", "sqlite_local_dir"])
-def test_config_rejects_runtime_paths_outside_project(tmp_path, field):
-    kwargs = {field: str(tmp_path.parent / "outside")}
+def test_config_rejects_runtime_paths_outside_project(tmp_path):
     with pytest.raises(ValueError, match="must stay inside project root"):
         resolve_config(
             "configs/fs_diloco_tiny_local.yaml",
             run_id="escaped_run",
             project_root=tmp_path,
-            **kwargs,
+            shared_root=str(tmp_path.parent / "outside"),
         )
 
 

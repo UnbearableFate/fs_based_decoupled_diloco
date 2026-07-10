@@ -314,7 +314,12 @@ def write_update(
     paths: RunPaths,
     config: Config,
     learner_id: str,
+    learner_session_id: str,
+    proposal_sequence: int,
     base_global_version: int,
+    base_commit_id: str,
+    base_commit_seq: int,
+    base_frontier_digest: str,
     interval_start_step: int,
     local_step: int,
     inner_steps: int,
@@ -333,15 +338,21 @@ def write_update(
     meta_path = update_dir / f"update_{update_uuid}.meta.json"
     created_at = time.time()
     save_update_vector(tensor_path, flat, dtype=dtype_from_name(config.io.tensor_dtype))
-    digest = sha256_file(tensor_path) if config.io.compute_sha256 else None
+    digest = sha256_file(tensor_path)
     metadata = {
         "format_version": FORMAT_VERSION,
         "run_id": config.run.run_id,
         "update_id": update_id,
         "learner_id": learner_id,
+        "learner_session_id": learner_session_id,
+        "proposal_sequence": proposal_sequence,
+        "run_generation": config.init.run_generation,
         "hostname": socket.gethostname(),
         "pid": os.getpid(),
         "base_global_version": base_global_version,
+        "base_commit_id": base_commit_id,
+        "base_commit_seq": base_commit_seq,
+        "base_frontier_digest": base_frontier_digest,
         "local_step_start": interval_start_step,
         "local_step_end": local_step,
         "inner_steps": inner_steps,
@@ -367,9 +378,14 @@ def write_fragment_update(
     paths: RunPaths,
     config: Config,
     learner_id: str,
+    learner_session_id: str,
+    proposal_sequence: int,
     fragment_id: int,
     base_fragment_version: int,
     base_global_merge_event: int,
+    base_commit_id: str,
+    base_commit_seq: int,
+    base_frontier_digest: str,
     interval_start_step: int,
     local_step: int,
     inner_steps: int,
@@ -389,18 +405,24 @@ def write_fragment_update(
     meta_path = update_dir / f"update_{update_uuid}_fragment_{fragment_id:03d}.meta.json"
     created_at = time.time()
     save_fragment_update(tensor_path, fragment_tensor, dtype_from_name(config.io.tensor_dtype))
-    digest = sha256_file(tensor_path) if config.io.compute_sha256 else None
+    digest = sha256_file(tensor_path)
     metadata = {
         "format_version": FORMAT_VERSION,
         "update_kind": "fragment",
         "run_id": config.run.run_id,
         "update_id": update_id,
         "learner_id": learner_id,
+        "learner_session_id": learner_session_id,
+        "proposal_sequence": proposal_sequence,
+        "run_generation": config.init.run_generation,
         "hostname": socket.gethostname(),
         "pid": os.getpid(),
         "fragment_id": int(fragment_id),
         "base_fragment_version": int(base_fragment_version),
         "base_global_merge_event": int(base_global_merge_event),
+        "base_commit_id": base_commit_id,
+        "base_commit_seq": base_commit_seq,
+        "base_frontier_digest": base_frontier_digest,
         "local_step_start": interval_start_step,
         "local_step_end": local_step,
         "inner_steps": inner_steps,
@@ -427,6 +449,7 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
     logger = JsonlLogger(paths.logs / f"{learner_id}.jsonl", learner_id)
     log_uncaught_exception(logger)
     learner_index = learner_index_from_id(learner_id)
+    learner_session_id = f"{learner_id}-{uuid.uuid4().hex}"
     torch.manual_seed(config.training.seed + learner_index)
     device = choose_device()
     logger.event(
@@ -456,6 +479,7 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
         fragment_index=fragment_index,
         device=device,
     )
+    last_authority = latest
     optimizer, scheduler = build_inner_optimizer_and_scheduler(model, config)
     tokens_since_fragment_load = {fragment_id: 0 for fragment_id in last_loaded_fragment_versions}
     local_update_index = 0
@@ -497,6 +521,7 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
             interval_start_time = time.monotonic()
             interval_start_step = local_step
             base_global_merge_event = last_loaded_global_merge_event
+            base_authority = last_authority
             losses: list[float] = []
             interval_tokens = 0
             interval_examples = 0
@@ -559,6 +584,7 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
                             last_loaded_fragment_versions=last_loaded_fragment_versions,
                             device=device,
                         )
+                        last_authority = maybe_latest
                         if changed:
                             fragment_adopt_count += len(changed)
                             last_adopted_fragments = changed
@@ -602,9 +628,14 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
                 paths=paths,
                 config=config,
                 learner_id=learner_id,
+                learner_session_id=learner_session_id,
+                proposal_sequence=local_update_index + 1,
                 fragment_id=fragment_id,
                 base_fragment_version=base_fragment_version,
                 base_global_merge_event=base_global_merge_event,
+                base_commit_id=str(base_authority["commit_id"]),
+                base_commit_seq=int(base_authority["commit_seq"]),
+                base_frontier_digest=str(base_authority["frontier_sha256"]),
                 interval_start_step=interval_start_step,
                 local_step=local_step,
                 inner_steps=len(losses),
@@ -717,6 +748,7 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
                         last_loaded_fragment_versions=last_loaded_fragment_versions,
                         device=device,
                     )
+                    last_authority = maybe_latest
                     if changed:
                         fragment_adopt_count += len(changed)
                         last_adopted_fragments = changed
@@ -767,6 +799,7 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
                             last_loaded_fragment_versions=last_loaded_fragment_versions,
                             device=device,
                         )
+                        last_authority = maybe_latest
                         if changed:
                             fragment_adopt_count += len(changed)
                             last_adopted_fragments = changed
@@ -793,6 +826,7 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
                     last_loaded_fragment_versions=last_loaded_fragment_versions,
                     device=device,
                 )
+                last_authority = maybe_latest
                 if changed:
                     fragment_adopt_count += len(changed)
                     last_adopted_fragments = changed
@@ -844,6 +878,7 @@ def run_learner(config: Config, learner_id: str) -> None:
     logger = JsonlLogger(paths.logs / f"{learner_id}.jsonl", learner_id)
     log_uncaught_exception(logger)
     learner_index = learner_index_from_id(learner_id)
+    learner_session_id = f"{learner_id}-{uuid.uuid4().hex}"
     torch.manual_seed(config.training.seed + learner_index)
     device = choose_device()
     logger.event(
@@ -867,6 +902,7 @@ def run_learner(config: Config, learner_id: str) -> None:
         param_index=param_index,
         device=device,
     )
+    last_authority = latest
     optimizer, scheduler = build_inner_optimizer_and_scheduler(model, config)
     logger.event("loaded_global", version=last_loaded_global_version)
     logger.event("inner_optimizer_reset", version=last_loaded_global_version)
@@ -898,6 +934,7 @@ def run_learner(config: Config, learner_id: str) -> None:
             interval_start_time = time.monotonic()
             interval_start_step = local_step
             base_global_version = last_loaded_global_version
+            base_authority = last_authority
             losses: list[float] = []
             interval_tokens = 0
             interval_examples = 0
@@ -950,6 +987,7 @@ def run_learner(config: Config, learner_id: str) -> None:
                             param_index=param_index,
                             device=device,
                         )
+                        last_authority = maybe_latest
                         optimizer, scheduler = build_inner_optimizer_and_scheduler(model, config)
                         tokens_since_global_load = 0
                         logger.event("global_adopted", version=last_loaded_global_version)
@@ -971,7 +1009,12 @@ def run_learner(config: Config, learner_id: str) -> None:
                 paths=paths,
                 config=config,
                 learner_id=learner_id,
+                learner_session_id=learner_session_id,
+                proposal_sequence=local_step,
                 base_global_version=base_global_version,
+                base_commit_id=str(base_authority["commit_id"]),
+                base_commit_seq=int(base_authority["commit_seq"]),
+                base_frontier_digest=str(base_authority["frontier_sha256"]),
                 interval_start_step=interval_start_step,
                 local_step=local_step,
                 inner_steps=len(losses),
@@ -1054,6 +1097,7 @@ def run_learner(config: Config, learner_id: str) -> None:
                         param_index=param_index,
                         device=device,
                     )
+                    last_authority = maybe_latest
                     optimizer, scheduler = build_inner_optimizer_and_scheduler(model, config)
                     tokens_since_global_load = 0
                     logger.event("global_adopted", version=last_loaded_global_version)

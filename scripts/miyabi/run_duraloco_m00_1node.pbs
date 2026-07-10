@@ -1,0 +1,156 @@
+#!/bin/bash
+#PBS -N duraloco_m00_1n
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:30:00
+#PBS -j oe
+#PBS -m ae
+
+set -eEuo pipefail
+
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat
+REQUIRED_MODULES=()
+for module_name in "${REQUIRED_MODULES[@]}"; do
+  module load "$module_name"
+done
+module list 2>&1 | cat
+
+PROJECT_ROOT="${PROJECT_ROOT:-${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}}"
+PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
+RUN_ID="${RUN_ID:-$(date +%Y%m%d_%H%M%S)_m00_1node}"
+PARENT_RUN_ID="${PARENT_RUN_ID:-}"
+ARTIFACT_ROOT="${ARTIFACT_ROOT:-$PROJECT_ROOT/artifacts/duraloco/M00/$RUN_ID}"
+STORAGE_ROOT="${STORAGE_ROOT:-$PROJECT_ROOT/runs/duraloco/M00/$RUN_ID}"
+FULL_ROOT="$STORAGE_ROOT/full"
+FRAGMENT_ROOT="$STORAGE_ROOT/fragment"
+CONTRACT_ROOT="$STORAGE_ROOT/contract"
+source "$PROJECT_ROOT/scripts/lib/project_paths.sh"
+require_project_paths "$PROJECT_ROOT" "$ARTIFACT_ROOT" "$STORAGE_ROOT"
+
+cd "$PROJECT_ROOT"
+mkdir -p "$ARTIFACT_ROOT" "$FULL_ROOT" "$FRAGMENT_ROOT" "$CONTRACT_ROOT"
+touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log" "$ARTIFACT_ROOT/commands.log"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+export CUDA_VISIBLE_DEVICES=""
+export WANDB_MODE=disabled
+
+result=fail
+exit_code=1
+finish() {
+  observed=$?
+  if [[ "$result" == pass ]]; then
+    exit_code=0
+  elif [[ "$observed" -ne 0 ]]; then
+    exit_code=$observed
+  fi
+  qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
+  args=(
+    --root "$PROJECT_ROOT"
+    --output "$ARTIFACT_ROOT/manifest.json"
+    --phase M00
+    --purpose contract
+    --run-id "$RUN_ID"
+    --backend lustre
+    --config scripts/miyabi/run_duraloco_m00_1node.pbs
+    --commands-log commands.log
+    --stdout stdout.log
+    --stderr stderr.log
+    --exit-code "$exit_code"
+    --result "$result"
+    --assertion "full dependency-complete suite and forbidden-surface check"
+    --assertion "one-node POSIX crash/replay contract"
+    --assertion "full and fragment process paths recover from committed log after derived exports are deleted"
+  )
+  if [[ -n "$PARENT_RUN_ID" ]]; then
+    args+=(--parent-run-id "$PARENT_RUN_ID")
+  fi
+  "$PYTHON_BIN" scripts/agent/create_run_manifest.py "${args[@]}" || true
+}
+trap finish EXIT
+trap 'echo "[ERROR] M00 1-node gate failed at line $LINENO" | tee -a "$ARTIFACT_ROOT/stderr.log"' ERR
+
+hostname | tee "$ARTIFACT_ROOT/hostname.log"
+printf 'PBS_JOBID=%s\nPBS_NODEFILE=%s\nSTORAGE_ROOT=%s\n' \
+  "${PBS_JOBID:-}" "${PBS_NODEFILE:-}" "$STORAGE_ROOT" \
+  | tee "$ARTIFACT_ROOT/pbs_environment.log"
+"$PYTHON_BIN" --version 2>&1 | tee "$ARTIFACT_ROOT/python_version.log"
+git status --short --branch | tee "$ARTIFACT_ROOT/git_status.log"
+git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"
+findmnt -T "$STORAGE_ROOT" 2>&1 | tee "$ARTIFACT_ROOT/mount.log" || true
+if command -v lfs >/dev/null 2>&1; then
+  lfs getstripe "$STORAGE_ROOT" 2>&1 | tee "$ARTIFACT_ROOT/stripe.log" || true
+else
+  printf 'lfs unavailable\n' | tee "$ARTIFACT_ROOT/stripe.log"
+fi
+
+run_command() {
+  printf '%q ' "$@" | tee -a "$ARTIFACT_ROOT/commands.log"
+  printf '\n' | tee -a "$ARTIFACT_ROOT/commands.log"
+  "$@" 2>&1 | tee -a "$ARTIFACT_ROOT/stdout.log"
+}
+
+run_process_smoke() {
+  label=$1
+  config=$2
+  root=$3
+  sync_log="$ARTIFACT_ROOT/${label}_syncer.log"
+  learner0_log="$ARTIFACT_ROOT/${label}_learner_000.log"
+  learner1_log="$ARTIFACT_ROOT/${label}_learner_001.log"
+  "$PYTHON_BIN" -m fs_diloco.syncer \
+    --config "$config" --run-id "$label" --shared-root "$root" --num-learners 2 \
+    > "$sync_log" 2>&1 &
+  sync_pid=$!
+  sleep 2
+  "$PYTHON_BIN" -m fs_diloco.learner \
+    --config "$config" --run-id "$label" --shared-root "$root" \
+    --learner-id learner_000 --num-learners 2 > "$learner0_log" 2>&1 &
+  learner0_pid=$!
+  "$PYTHON_BIN" -m fs_diloco.learner \
+    --config "$config" --run-id "$label" --shared-root "$root" \
+    --learner-id learner_001 --num-learners 2 > "$learner1_log" 2>&1 &
+  learner1_pid=$!
+  wait "$learner0_pid"
+  wait "$learner1_pid"
+  wait "$sync_pid"
+  "$PYTHON_BIN" -m fs_diloco.analysis summary "$root" --json \
+    | tee "$ARTIFACT_ROOT/${label}_before_recovery.json"
+  before_digest=$("$PYTHON_BIN" -c \
+    'import json,sys; print(json.load(open(sys.argv[1]))["committed_state_digest"])' \
+    "$ARTIFACT_ROOT/${label}_before_recovery.json")
+  rm -f "$root/control/latest.json" "$root/control/stop.json"
+  rm -rf "$root/weights" "$root/optim" "$root/fragments/weights" "$root/fragments/optim"
+  "$PYTHON_BIN" - "$config" "$ARTIFACT_ROOT/${label}_resume.yaml" <<'PY'
+from pathlib import Path
+import sys
+import yaml
+source, output = map(Path, sys.argv[1:])
+payload = yaml.safe_load(source.read_text())
+payload.setdefault("init", {})
+payload["init"].update({"resume": True, "resume_version": "latest", "run_generation": 0})
+output.write_text(yaml.safe_dump(payload, sort_keys=False))
+PY
+  "$PYTHON_BIN" -m fs_diloco.syncer \
+    --config "$ARTIFACT_ROOT/${label}_resume.yaml" --run-id "$label" \
+    --shared-root "$root" --num-learners 2 \
+    > "$ARTIFACT_ROOT/${label}_resume.log" 2>&1
+  "$PYTHON_BIN" -m fs_diloco.analysis summary "$root" --json \
+    | tee "$ARTIFACT_ROOT/${label}_after_recovery.json"
+  after_digest=$("$PYTHON_BIN" -c \
+    'import json,sys; print(json.load(open(sys.argv[1]))["committed_state_digest"])' \
+    "$ARTIFACT_ROOT/${label}_after_recovery.json")
+  [[ "$before_digest" == "$after_digest" ]]
+}
+
+run_command "$PYTHON_BIN" scripts/agent/check_no_embedded_database.py --root "$PROJECT_ROOT" \
+  --output "$ARTIFACT_ROOT/forbidden_surface.json"
+run_command "$PYTHON_BIN" -m pytest -q tests --junitxml "$ARTIFACT_ROOT/junit.xml"
+run_command "$PYTHON_BIN" -m fs_diloco.log.miyabi_worker one-node \
+  --root "$CONTRACT_ROOT" --run-id "$RUN_ID-contract" \
+  --output "$ARTIFACT_ROOT/one_node_contract.json"
+
+run_process_smoke "$RUN_ID-full" "$PROJECT_ROOT/configs/fs_diloco_tiny_local.yaml" "$FULL_ROOT"
+run_process_smoke "$RUN_ID-fragment" "$PROJECT_ROOT/configs/fs_diloco_tiny_fragment_local.yaml" "$FRAGMENT_ROOT"
+
+result=pass
+exit_code=0

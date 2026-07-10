@@ -2,7 +2,7 @@
 
 Filesystem-backed Decoupled DiLoCo research prototype for Miyabi-G.
 
-The prototype uses independent single-GPU learners and one GPU-backed syncer process. It supports both the original full-vector mode (`fragment_id = 0`) and a balanced-tensor fragment mode with multiple scheduled fragments. Learners publish `safetensors` payloads followed by JSON commit markers on the shared filesystem. The syncer ingests those metadata files into a syncer-local SQLite database, applies token/staleness-weighted merging with quorum and grace-window behavior on its local GPU, steps explicit outer optimizers, logs syncer-side telemetry to W&B, and publishes global state through `control/latest.json`.
+The prototype uses independent single-GPU learners and one GPU-backed syncer process. It supports full-vector (`fragment_id = 0`) and balanced-tensor fragment modes. Learners publish `safetensors` payloads followed by JSON discovery markers. The syncer validates candidates, performs deterministic token/staleness selection, steps the outer optimizer, and commits paired parameter/outer-state objects through one head CAS. The committed transition log is the only persistent authority; `control/latest.json`, heartbeats, CSV, JSONL, and W&B are derived or observational.
 
 The implementation intentionally does not use `torch.distributed`, NCCL, RPC, Ray, DeepSpeed, FSDP, or PCCL for milestone 1 communication.
 
@@ -69,8 +69,10 @@ python -m fs_diloco.analysis runs/fs_diloco/<RUN_ID>
 - Large tensors are stored as `safetensors`.
 - Learner update metadata JSON is the commit marker.
 - Heartbeat JSON files are liveness hints.
-- `control/latest.json` is the only global pointer learners poll.
-- SQLite stays local to the syncer and is backed up to `db_dumps/`.
+- `control/latest.json` is a learner-facing export of the committed frontier.
+- `authority/runs/<run>/generations/<generation>/control/head.json` is the only mutable authority.
+- Pending and selected candidates are process-local and disappear safely on restart.
+- Resume rebuilds an immutable `RuntimeView` from the committed prefix.
 - Learners overwrite the full model and reset the inner optimizer after adopting a newer global version.
 - Outer optimizers are explicit flat-vector SGD, momentum/Nesterov, and AdamW-style implementations.
 

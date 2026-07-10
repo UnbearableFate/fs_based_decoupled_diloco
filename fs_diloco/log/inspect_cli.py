@@ -1,16 +1,14 @@
-"""Inspect, verify, replay, and rebuild a P04 POSIX log."""
+"""Inspect, verify, and replay a DuraLoCo POSIX log."""
 
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict
 import json
 from pathlib import Path
 import sys
 
 from fs_diloco.storage import PosixStorageBackend
 
-from .cache import rebuild_cache, verify_cache
 from .commit import TransactionalLog
 from .errors import VerificationError
 from .replay import inspect_orphans, replay_log
@@ -18,11 +16,10 @@ from .replay import inspect_orphans, replay_log
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("verify", "replay", "orphans", "rebuild-cache"))
+    parser.add_argument("command", choices=("verify", "replay", "orphans"))
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--generation", type=int, default=0)
-    parser.add_argument("--cache", type=Path)
     parser.add_argument("--output", type=Path)
     return parser.parse_args(argv)
 
@@ -43,11 +40,7 @@ def _result(args: argparse.Namespace) -> dict[str, object]:
         }
     if args.command == "orphans":
         return {"status": "PASS", "run_id": args.run_id, **inspect_orphans(log).to_dict()}
-    if args.cache is None:
-        raise ValueError("rebuild-cache requires --cache")
-    rebuilt = rebuild_cache(log, args.cache)
-    verify_cache(log, args.cache)
-    return {"status": "PASS", "run_id": args.run_id, "cache": asdict(rebuilt)}
+    raise ValueError(f"unsupported inspect command: {args.command}")
 
 
 def main(argv: list[str] | None = None) -> int:
