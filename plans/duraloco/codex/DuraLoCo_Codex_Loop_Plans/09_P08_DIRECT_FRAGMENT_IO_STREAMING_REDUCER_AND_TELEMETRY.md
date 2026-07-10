@@ -294,7 +294,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
 - 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
-- 需要提交 9 节点、长时间或付费公共云作业：停止并取得明确批准。
+- 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
 
 ## 13. 阶段完成报告模板

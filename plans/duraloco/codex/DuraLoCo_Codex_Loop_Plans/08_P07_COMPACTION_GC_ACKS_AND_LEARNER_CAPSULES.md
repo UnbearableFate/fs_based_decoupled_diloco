@@ -293,7 +293,7 @@ tests/lifecycle/
 | 本地 | lifecycle unit、concurrent stress、accelerated soak。 |
 | Miyabi 1-node | snapshot/restore/capsule real filesystem + tiny model。 |
 | Miyabi 2-node | GC 与 learner/syncer/restore 并发；仅隔离 prefix，GC dry-run 默认。 |
-| 长时间/9-node | 正式 24/72h soak 延后 P12，需批准。 |
+| 长时间/9-node | 9-node 与不超过 2 小时的作业由 agent 自主决定；正式 24/72h soak 延后 P12，因超过 2 小时需批准。 |
 
 ## 10. Maker–Checker 交接
 
@@ -327,7 +327,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
 - 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
-- 需要提交 9 节点、长时间或付费公共云作业：停止并取得明确批准。
+- 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
 
 ## 13. 阶段完成报告模板

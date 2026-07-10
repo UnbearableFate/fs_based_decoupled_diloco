@@ -132,7 +132,7 @@ P08 与 P09 在 P06 之后可以使用独立 worktree 并行开发，但不能�
 7. learner interval base freeze；
 8. safe lifecycle/GC；
 9. 1-node与2-node真实运行；
-10. 9-node明确人工批准。
+10. Miyabi 作业通过资源预检；单个作业不超过 16 节点且 walltime 不超过 2 小时。
 
 任何阶段出现 proposal double logical inclusion、split-brain、fragment/outer-state unpaired、live-object deletion 或无法重建 authority state，后续性能/训练阶段全部阻塞。
 
@@ -158,8 +158,8 @@ references/DuraLoCo_research_draft_zh.md
 - P08：需要 1-node GPU profile 和 2-node pipeline。
 - P09：MinIO；真实公共云需要凭据/预算批准。
 - P10：controller 先 shadow；动态算法参数需要批准。
-- P11：9-node acceptance 需要明确批准。
-- P12：长作业、多 seed、公共云和 artifact 发布分别审批。
+- P11：9-node acceptance 可由 agent 自主申请和执行，无需用户批准。
+- P12：单个 Miyabi 作业在 `select<=16`、`walltime<=02:00:00` 范围内由 agent 自主决定，包括 9-node 和 multi-seed 作业；超限作业、公共云和 artifact 发布分别审批。
 
 ## 9. 最终研究完成条件
 

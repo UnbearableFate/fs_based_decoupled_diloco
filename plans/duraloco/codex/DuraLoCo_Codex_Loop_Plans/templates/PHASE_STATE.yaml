@@ -15,7 +15,7 @@ checks:
   miyabi_login_static: not_run
   miyabi_1node: not_run
   miyabi_2node: not_run
-  miyabi_9node: not_authorized
+  miyabi_9node: not_run
 open_decisions: []
 open_blockers: []
 artifacts: []

@@ -132,7 +132,7 @@ P08 与 P09 在 P06 之后可以使用独立 worktree 并行开发，但不能�
 7. learner interval base freeze；
 8. safe lifecycle/GC；
 9. 1-node与2-node真实运行；
-10. 9-node明确人工批准。
+10. Miyabi 作业通过资源预检；单个作业不超过 16 节点且 walltime 不超过 2 小时。
 
 任何阶段出现 proposal double logical inclusion、split-brain、fragment/outer-state unpaired、live-object deletion 或无法重建 authority state，后续性能/训练阶段全部阻塞。
 
@@ -158,8 +158,8 @@ references/DuraLoCo_research_draft_zh.md
 - P08：需要 1-node GPU profile 和 2-node pipeline。
 - P09：MinIO；真实公共云需要凭据/预算批准。
 - P10：controller 先 shadow；动态算法参数需要批准。
-- P11：9-node acceptance 需要明确批准。
-- P12：长作业、多 seed、公共云和 artifact 发布分别审批。
+- P11：9-node acceptance 可由 agent 自主申请和执行，无需用户批准。
+- P12：单个 Miyabi 作业在 `select<=16`、`walltime<=02:00:00` 范围内由 agent 自主决定，包括 9-node 和 multi-seed 作业；超限作业、公共云和 artifact 发布分别审批。
 
 ## 9. 最终研究完成条件
 
@@ -340,7 +340,7 @@ checks:
   miyabi_login_static: not_run
   miyabi_1node: not_run
   miyabi_2node: not_run
-  miyabi_9node: not_authorized
+  miyabi_9node: not_run
 open_decisions: []
 open_blockers: []
 artifacts: []
@@ -420,7 +420,7 @@ L3  Miyabi login-node static checks
 L4  1-node PBS targeted runtime
 L5  1-node real model/data ≤10 optimizer steps
 L6  2-node PBS distributed/runtime contract ≤10 minutes
-L7  full 9-node or long batch, explicit human approval
+L7  full Miyabi batch within the autonomous envelope: select<=16 and walltime<=02:00:00
 ```
 
 1-node interactive：
@@ -485,7 +485,7 @@ mpirun ... /usr/bin/env "KEY=value" ... bash -lc '...'
 - 同一根因连续三次修复仍失败；
 - 五个连续 loop 没有缩小失败面；
 - 需要修改 research contract、failure model、linearization point 或 optimizer 数值语义；
-- 需要未授权的 9 节点、长时间、公共云或付费资源；
+- 需要单个 Miyabi 作业超过 16 节点或 2 小时，或需要公共云/其他付费资源；
 - 需要真实凭据、删除共享数据、运行 destructive GC；
 - 出现可能污染论文结果的数据/代码版本不一致；
 - 无法判断当前是否处于 Miyabi login 或 compute node。
@@ -504,7 +504,8 @@ mpirun ... /usr/bin/env "KEY=value" ... bash -lc '...'
 ## 9. 安全和成本
 
 - 凭据只能来自环境、Miyabi 允许的 secret 机制或用户明确提供的临时凭据；禁止写入 Git、配置、日志或 artifact。
-- public cloud、跨区域 egress、长期 9-node 作业和 destructive lifecycle policy 均需用户批准。
+- Agent 可自行决定并提交单个 `select<=16` 且 `walltime<=02:00:00` 的 Miyabi 作业，包括 9-node 作业，无需用户批准；仍须遵守阶段前置 gate、作业预检和 1→2→9 验证阶梯。
+- 单个 Miyabi 作业超过 16 节点或 2 小时，以及 public cloud、跨区域 egress、其他付费资源和 destructive lifecycle policy，均需用户批准。
 - GC 默认 dry-run，直到 reachability proof、并发恢复测试和人工 gate 全部通过。
 - 故障注入只能作用于隔离的 run root/bucket prefix，不得向共享根目录发送 kill/delete。
 
@@ -523,7 +524,7 @@ mpirun ... /usr/bin/env "KEY=value" ... bash -lc '...'
 ## 11. 共同启动指令
 
 ```text
-读取仓库根 AGENTS.md、miyabi-development skill、DuraLoCo 共同执行契约和当前阶段计划。先识别 hostname、branch、commit 和工作树状态。使用单 writer 的 maker loop；先写失败测试/规范，再做最小实现；独立 checker 复核。每轮更新 STATE.yaml 和 artifact manifest。遵守 Miyabi 登录节点 control-plane 限制与 1→2→9 节点验证阶梯。不得自动合并 main，不得虚构实验结果，不得在未批准时运行 9 节点、长时间或公共云作业。
+读取仓库根 AGENTS.md、miyabi-development skill、DuraLoCo 共同执行契约和当前阶段计划。先识别 hostname、branch、commit 和工作树状态。使用单 writer 的 maker loop；先写失败测试/规范，再做最小实现；独立 checker 复核。每轮更新 STATE.yaml 和 artifact manifest。遵守 Miyabi 登录节点 control-plane 限制与 1→2→9 节点验证阶梯。单个 select<=16 且 walltime<=02:00:00 的 Miyabi 作业（包括 9 节点）由 agent 自主决定和提交；超出此范围或使用公共云/其他付费资源前取得用户批准。不得自动合并 main，不得虚构实验结果。
 ```
 
 ## 12. 参考
@@ -831,7 +832,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
 - 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
-- 需要提交 9 节点、长时间或付费公共云作业：停止并取得明确批准。
+- 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
 
 ## 13. 阶段完成报告模板
@@ -1175,7 +1176,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
 - 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
-- 需要提交 9 节点、长时间或付费公共云作业：停止并取得明确批准。
+- 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
 
 ## 13. 阶段完成报告模板
@@ -1496,7 +1497,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
 - 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
-- 需要提交 9 节点、长时间或付费公共云作业：停止并取得明确批准。
+- 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
 
 ## 13. 阶段完成报告模板
@@ -1827,7 +1828,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
 - 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
-- 需要提交 9 节点、长时间或付费公共云作业：停止并取得明确批准。
+- 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
 
 ## 13. 阶段完成报告模板
@@ -2166,7 +2167,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
 - 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
-- 需要提交 9 节点、长时间或付费公共云作业：停止并取得明确批准。
+- 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
 
 ## 13. 阶段完成报告模板
@@ -2500,7 +2501,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
 - 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
-- 需要提交 9 节点、长时间或付费公共云作业：停止并取得明确批准。
+- 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
 
 ## 13. 阶段完成报告模板
@@ -2832,7 +2833,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
 - 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
-- 需要提交 9 节点、长时间或付费公共云作业：停止并取得明确批准。
+- 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
 
 ## 13. 阶段完成报告模板
@@ -3161,7 +3162,7 @@ tests/lifecycle/
 | 本地 | lifecycle unit、concurrent stress、accelerated soak。 |
 | Miyabi 1-node | snapshot/restore/capsule real filesystem + tiny model。 |
 | Miyabi 2-node | GC 与 learner/syncer/restore 并发；仅隔离 prefix，GC dry-run 默认。 |
-| 长时间/9-node | 正式 24/72h soak 延后 P12，需批准。 |
+| 长时间/9-node | 9-node 与不超过 2 小时的作业由 agent 自主决定；正式 24/72h soak 延后 P12，因超过 2 小时需批准。 |
 
 ## 10. Maker–Checker 交接
 
@@ -3195,7 +3196,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
 - 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
-- 需要提交 9 节点、长时间或付费公共云作业：停止并取得明确批准。
+- 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
 
 ## 13. 阶段完成报告模板
@@ -3525,7 +3526,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
 - 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
-- 需要提交 9 节点、长时间或付费公共云作业：停止并取得明确批准。
+- 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
 
 ## 13. 阶段完成报告模板
@@ -3886,7 +3887,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
 - 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
-- 需要提交 9 节点、长时间或付费公共云作业：停止并取得明确批准。
+- 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
 
 ## 13. 阶段完成报告模板
@@ -4216,7 +4217,7 @@ tests/controller/
 | Miyabi 1-node | fixed/shadow/enforced tiny real path。 |
 | Miyabi 2-node | tail delay/failure injection、fair quorum、backpressure。 |
 | MinIO/object store | 至少一个 backend trace。 |
-| 9-node | P11 acceptance 才启用获批的稳定策略。 |
+| 9-node | P11 acceptance 才启用已通过前置 gate 的稳定策略；资源申请无需用户批准。 |
 
 ## 10. Maker–Checker 交接
 
@@ -4249,7 +4250,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
 - 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
-- 需要提交 9 节点、长时间或付费公共云作业：停止并取得明确批准。
+- 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
 
 ## 13. 阶段完成报告模板
@@ -4297,8 +4298,8 @@ depends_on:
 required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
 human_approval_gates:
-  - "提交任何 9 节点 batch 作业前必须获得明确批准；"
-  - "长于 debug allocation、destructive GC 或真实故障操作必须批准。"
+  - "单个 Miyabi 作业超过 16 节点或 2 小时时必须批准；16 节点、2 小时以内（含 9 节点）由 agent 自主决定。"
+  - "destructive GC 或作用于共享资源的真实故障操作必须批准。"
 ---
 
 # P11 — Miyabi 集成、Chaos Runner 与 9 节点 Acceptance
@@ -4323,7 +4324,7 @@ DuraLoCo 在目标 Lustre/PBS/GPU 环境中不仅通过模拟，还能在 8 lear
 
 ### 1.2 完成后的系统增量
 
-更新 Miyabi runbook、PBS scripts/configs、chaos scenario runner、acceptance checker 和 artifact packager；在授权后完成 9-node acceptance。
+更新 Miyabi runbook、PBS scripts/configs、chaos scenario runner、acceptance checker 和 artifact packager；由 agent 自主申请资源并完成 9-node acceptance。
 
 ## 2. 前置条件
 
@@ -4331,7 +4332,7 @@ DuraLoCo 在目标 Lustre/PBS/GPU 环境中不仅通过模拟，还能在 8 lear
 - [ ] feature branches 已按用户选择集成到 acceptance branch；
 - [ ] Miyabi skill 已安装/可读；
 - [ ] 确认 group/project、shared root、cache paths、model/dataset availability；
-- [ ] 9-node 预算/批准状态明确。
+- [ ] 9-node 资源配置已确认不超过 `select=16`、`walltime=02:00:00` 的自主范围。
 
 ## 3. 范围
 
@@ -4346,7 +4347,7 @@ DuraLoCo 在目标 Lustre/PBS/GPU 环境中不仅通过模拟，还能在 8 lear
 - [ ] logs/metrics/state digests packager；
 - [ ] 1-node 10-step real model/data；
 - [ ] 2-node failover；
-- [ ] 授权后的 9-node 8L+1S acceptance；
+- [ ] 9-node 8L+1S acceptance；
 - [ ] 运行后安全 cleanup/retention report。
 
 ### 3.2 明确不做
@@ -4382,7 +4383,7 @@ tests/test_acceptance_checker.py
 ## 5. 需要先冻结的设计决策
 
 - [ ] D-1101：9-node role/GPU mapping；
-- [ ] D-1102：PBS group、queue、walltime 由实际账户/项目确认；
+- [ ] D-1102：PBS group、queue、walltime 由实际账户/项目确认，且单个作业不超过 16 节点和 2 小时；
 - [ ] D-1103：fault tape 允许的 signal/process scope；
 - [ ] D-1104：Lustre run root/stripe 与 cache paths；
 - [ ] D-1105：9-node acceptance 的 commit/fragment/step 上限；
@@ -4479,17 +4480,17 @@ tests/test_acceptance_checker.py
 
 **停止条件。** 上述验证全部通过，且未引入未记录的行为变化。
 
-### Loop 4 — 9-node acceptance（人工 gate）
+### Loop 4 — 9-node acceptance（agent 自主资源 gate）
 
 **目标。** 8 learners + 1 syncer/standby 真实布局完成短 acceptance。
 
 **先产生的失败证据或规范。**
 
-- [ ] pre-submit checker 必须拒绝无批准、错误 group、未通过前置 gate。
+- [ ] pre-submit checker 必须拒绝超过 16 节点/2 小时、错误 group、未通过前置 gate。
 
 **实现任务。**
 
-- [ ] 取得明确批准；
+- [ ] agent 根据实验目标自主选择不超过 16 节点、2 小时的资源；
 - [ ] 提交 batch；
 - [ ] 监控 qstat/log；
 - [ ] 运行 acceptance checker；
@@ -4544,7 +4545,7 @@ tests/test_acceptance_checker.py
 - [ ] Miyabi 登录节点仅 control-plane；
 - [ ] 每个 runtime run 绑定 branch/commit/config/PBS job/hosts；
 - [ ] fault injection 只作用于 run-owned process/prefix；
-- [ ] 9-node 未授权绝不提交；
+- [ ] 9-node 可自主提交，但单个作业不得超过 16 节点或 2 小时；
 - [ ] acceptance checker 验证 protocol state 而非只看进程退出；
 - [ ] 所有角色日志可关联同 run ID。
 
@@ -4567,7 +4568,7 @@ tests/test_acceptance_checker.py
 - [ ] P11-A02：1-node real ≤10-step v2 run 完成且 finite；
 - [ ] P11-A03：2-node failover 无 split-brain/double inclusion；
 - [ ] P11-A04：fault tape 与 state verify artifact 完整；
-- [ ] P11-A05：在明确批准后，9-node 8L+1S acceptance 通过；未批准则阶段状态必须保持 awaiting_approval，而非伪 PASS；
+- [ ] P11-A05：agent 自主提交的 9-node 8L+1S acceptance 通过，且作业资源不超过 16 节点和 2 小时；
 - [ ] P11-A06：9-node 每个角色 hostname/rank/GPU/run ID 可追踪；
 - [ ] P11-A07：所有 commits 可 replay/verify；
 - [ ] P11-A08：artifact packager 在缺证据时 fail closed；
@@ -4581,9 +4582,9 @@ tests/test_acceptance_checker.py
 | Miyabi login | 必须：git/static/qsub/qstat/log only。 |
 | Miyabi 1-node | 必须。 |
 | Miyabi 2-node | 必须，最大 debug walltime 10 分钟。 |
-| Miyabi 9-node | 必须人工批准后才能提交；这是本阶段最终 gate。 |
+| Miyabi 9-node | agent 可自主提交，无需用户批准；单个作业最多 16 节点、2 小时，这是本阶段最终 runtime gate。 |
 
-1/2-node runtime 每次尝试后必须检查 `qstat "$PBS_JOBID"`。若 9-node 未获批准，交付物可以是 `READY_FOR_9NODE_APPROVAL`，但不得标记 P11 完成。
+1/2/9-node runtime 每次尝试后必须检查 `qstat "$PBS_JOBID"`。9-node 不再设置 `READY_FOR_9NODE_APPROVAL` 状态；前置 gate 通过后由 agent 自主提交，未实际通过则不得标记 P11 完成。
 
 ## 10. Maker–Checker 交接
 
@@ -4609,20 +4610,20 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 
 ## 11. 人工审批门
 
-- [ ] 提交任何 9 节点 batch 作业前必须获得明确批准；
-- [ ] 长于 debug allocation、destructive GC 或真实故障操作必须批准。
+- [ ] 单个 Miyabi 作业超过 16 节点或 2 小时时必须获得明确批准；范围内作业（包括 9 节点）无需用户批准；
+- [ ] destructive GC 或作用于共享资源的真实故障操作必须批准。
 
 ## 12. 阻塞与停止规则
 
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
 - 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
-- 需要提交 9 节点、长时间或付费公共云作业：停止并取得明确批准。
+- 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
 
 ## 13. 阶段完成报告模板
 
-报告 initial hostname/workflow、branch/commit sync、PBS job IDs、nodes/roles、fault tape、head/epoch/commit summary、finite loss、acceptance assertions、9-node approval/结果。
+报告 initial hostname/workflow、branch/commit sync、PBS job IDs、nodes/roles、fault tape、head/epoch/commit summary、finite loss、acceptance assertions、9-node 资源决策/结果。
 
 ## 14. 可直接复制给 Codex 的启动指令
 
@@ -4665,7 +4666,7 @@ depends_on:
 required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
 human_approval_gates:
-  - "所有长时间、多 seed、9-node 和公共云实验须先批准资源预算与实验注册表；"
+  - "单个 Miyabi 作业超过 16 节点或 2 小时，以及公共云实验，须先批准资源预算；范围内的 9-node 和 multi-seed 作业由 agent 自主决定。"
   - "发布 artifact 或公开数据前需审批。"
 ---
 
@@ -4697,7 +4698,7 @@ human_approval_gates:
 
 - [ ] P11 9-node acceptance 已通过；
 - [ ] 所有 correctness invariants 无未关闭 P0；
-- [ ] resource/cost budget 已批准；
+- [ ] resource/cost budget 已登记；范围内 Miyabi 作业由 agent 自主决定，超限或公共云预算已批准；
 - [ ] 模型、数据集、revision、seeds、baselines 冻结；
 - [ ] 分析脚本在 synthetic fixture 上通过。
 
@@ -4786,14 +4787,14 @@ artifact/
 - [ ] 建立 registry schema；
 - [ ] 2×2 matrix；
 - [ ] claim→experiment mapping；
-- [ ] 资源估算/审批字段；
+- [ ] 资源估算、自主范围判定和超限审批字段；
 - [ ] run manifest generator。
 
 **本循环验证。**
 
 - [ ] registry validator pass；
 - [ ] 每个 primary claim 有实验；
-- [ ] 每个 expensive run 有批准。
+- [ ] 每个 run 都有资源估算；范围内 Miyabi 作业无需批准，超限或公共云 run 有批准。
 
 **本循环持久化输出。**
 
@@ -4972,7 +4973,7 @@ artifact/
 
 以下条件是阶段 gate，不是建议。Maker 必须给出命令、退出码和 artifact 路径；Checker 必须逐项复核。
 
-- [ ] P12-A01：experiment registry 与 preregistration 冻结并获批；
+- [ ] P12-A01：experiment registry 与 preregistration 冻结并通过独立 checker；
 - [ ] P12-A02：2×2 transport/fusion baseline 完整；
 - [ ] P12-A03：correctness campaign 无未解释 double apply/split/live delete；
 - [ ] P12-A04：failure-free overhead 与 break-even 有真实数据；
@@ -4993,10 +4994,11 @@ artifact/
 |---|---|---|
 | Unit/reference/correctness quick | local/compute | 普通 phase gate |
 | Lustre 1/2-node micro + crash | Miyabi | debug allocation |
-| 9-node short/long | Miyabi | 每批明确批准 |
+| 9-node、≤2h | Miyabi | agent 自主决定并提交，无需用户批准 |
+| >2h 或 >16-node | Miyabi | 明确批准后提交 |
 | MinIO | 独立允许环境 | 无 secret；记录版本 |
 | 公共云 | approved provider/region | 凭据、预算、egress 明确批准 |
-| Multi-seed model training | Miyabi/approved | registry + budget + stopping rule |
+| Multi-seed model training | Miyabi/approved | registry + budget + stopping rule；单个范围内 Miyabi 作业自主提交 |
 
 分析必须先运行 `validate_runs.py`；只有 status `COMPLETE_AND_MATCHED` 的 run 可进入 primary aggregate。
 
@@ -5024,7 +5026,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 
 ## 11. 人工审批门
 
-- [ ] 所有长时间、多 seed、9-node 和公共云实验须先批准资源预算与实验注册表；
+- [ ] 单个 Miyabi 作业超过 16 节点或 2 小时，以及公共云实验，须先批准资源预算；范围内的 9-node 和 multi-seed 作业由 agent 自主决定；
 - [ ] 发布 artifact 或公开数据前需审批。
 
 ## 12. 阻塞与停止规则
@@ -5032,12 +5034,12 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
 - 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
-- 需要提交 9 节点、长时间或付费公共云作业：停止并取得明确批准。
+- 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点和 multi-seed）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
 
 ## 13. 阶段完成报告模板
 
-报告 registry version、批准预算、completed/failed/excluded runs、primary metrics/CIs、negative results、claims supported/rejected、artifact checksum和 paper readiness。
+报告 registry version、资源决策与实际用量、completed/failed/excluded runs、primary metrics/CIs、negative results、claims supported/rejected、artifact checksum和 paper readiness。
 
 ## 14. 可直接复制给 Codex 的启动指令
 

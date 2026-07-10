@@ -12,7 +12,7 @@ depends_on:
 required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
 human_approval_gates:
-  - "所有长时间、多 seed、9-node 和公共云实验须先批准资源预算与实验注册表；"
+  - "单个 Miyabi 作业超过 16 节点或 2 小时，以及公共云实验，须先批准资源预算；范围内的 9-node 和 multi-seed 作业由 agent 自主决定。"
   - "发布 artifact 或公开数据前需审批。"
 ---
 
@@ -44,7 +44,7 @@ human_approval_gates:
 
 - [ ] P11 9-node acceptance 已通过；
 - [ ] 所有 correctness invariants 无未关闭 P0；
-- [ ] resource/cost budget 已批准；
+- [ ] resource/cost budget 已登记；范围内 Miyabi 作业由 agent 自主决定，超限或公共云预算已批准；
 - [ ] 模型、数据集、revision、seeds、baselines 冻结；
 - [ ] 分析脚本在 synthetic fixture 上通过。
 
@@ -133,14 +133,14 @@ artifact/
 - [ ] 建立 registry schema；
 - [ ] 2×2 matrix；
 - [ ] claim→experiment mapping；
-- [ ] 资源估算/审批字段；
+- [ ] 资源估算、自主范围判定和超限审批字段；
 - [ ] run manifest generator。
 
 **本循环验证。**
 
 - [ ] registry validator pass；
 - [ ] 每个 primary claim 有实验；
-- [ ] 每个 expensive run 有批准。
+- [ ] 每个 run 都有资源估算；范围内 Miyabi 作业无需批准，超限或公共云 run 有批准。
 
 **本循环持久化输出。**
 
@@ -319,7 +319,7 @@ artifact/
 
 以下条件是阶段 gate，不是建议。Maker 必须给出命令、退出码和 artifact 路径；Checker 必须逐项复核。
 
-- [ ] P12-A01：experiment registry 与 preregistration 冻结并获批；
+- [ ] P12-A01：experiment registry 与 preregistration 冻结并通过独立 checker；
 - [ ] P12-A02：2×2 transport/fusion baseline 完整；
 - [ ] P12-A03：correctness campaign 无未解释 double apply/split/live delete；
 - [ ] P12-A04：failure-free overhead 与 break-even 有真实数据；
@@ -340,10 +340,11 @@ artifact/
 |---|---|---|
 | Unit/reference/correctness quick | local/compute | 普通 phase gate |
 | Lustre 1/2-node micro + crash | Miyabi | debug allocation |
-| 9-node short/long | Miyabi | 每批明确批准 |
+| 9-node、≤2h | Miyabi | agent 自主决定并提交，无需用户批准 |
+| >2h 或 >16-node | Miyabi | 明确批准后提交 |
 | MinIO | 独立允许环境 | 无 secret；记录版本 |
 | 公共云 | approved provider/region | 凭据、预算、egress 明确批准 |
-| Multi-seed model training | Miyabi/approved | registry + budget + stopping rule |
+| Multi-seed model training | Miyabi/approved | registry + budget + stopping rule；单个范围内 Miyabi 作业自主提交 |
 
 分析必须先运行 `validate_runs.py`；只有 status `COMPLETE_AND_MATCHED` 的 run 可进入 primary aggregate。
 
@@ -371,7 +372,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 
 ## 11. 人工审批门
 
-- [ ] 所有长时间、多 seed、9-node 和公共云实验须先批准资源预算与实验注册表；
+- [ ] 单个 Miyabi 作业超过 16 节点或 2 小时，以及公共云实验，须先批准资源预算；范围内的 9-node 和 multi-seed 作业由 agent 自主决定；
 - [ ] 发布 artifact 或公开数据前需审批。
 
 ## 12. 阻塞与停止规则
@@ -379,12 +380,12 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
 - 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
-- 需要提交 9 节点、长时间或付费公共云作业：停止并取得明确批准。
+- 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点和 multi-seed）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
 
 ## 13. 阶段完成报告模板
 
-报告 registry version、批准预算、completed/failed/excluded runs、primary metrics/CIs、negative results、claims supported/rejected、artifact checksum和 paper readiness。
+报告 registry version、资源决策与实际用量、completed/failed/excluded runs、primary metrics/CIs、negative results、claims supported/rejected、artifact checksum和 paper readiness。
 
 ## 14. 可直接复制给 Codex 的启动指令
 

@@ -156,7 +156,7 @@ checks:
   miyabi_login_static: not_run
   miyabi_1node: not_run
   miyabi_2node: not_run
-  miyabi_9node: not_authorized
+  miyabi_9node: not_run
 open_decisions: []
 open_blockers: []
 artifacts: []
@@ -236,7 +236,7 @@ L3  Miyabi login-node static checks
 L4  1-node PBS targeted runtime
 L5  1-node real model/data ≤10 optimizer steps
 L6  2-node PBS distributed/runtime contract ≤10 minutes
-L7  full 9-node or long batch, explicit human approval
+L7  full Miyabi batch within the autonomous envelope: select<=16 and walltime<=02:00:00
 ```
 
 1-node interactive：
@@ -301,7 +301,7 @@ mpirun ... /usr/bin/env "KEY=value" ... bash -lc '...'
 - 同一根因连续三次修复仍失败；
 - 五个连续 loop 没有缩小失败面；
 - 需要修改 research contract、failure model、linearization point 或 optimizer 数值语义；
-- 需要未授权的 9 节点、长时间、公共云或付费资源；
+- 需要单个 Miyabi 作业超过 16 节点或 2 小时，或需要公共云/其他付费资源；
 - 需要真实凭据、删除共享数据、运行 destructive GC；
 - 出现可能污染论文结果的数据/代码版本不一致；
 - 无法判断当前是否处于 Miyabi login 或 compute node。
@@ -320,7 +320,8 @@ mpirun ... /usr/bin/env "KEY=value" ... bash -lc '...'
 ## 9. 安全和成本
 
 - 凭据只能来自环境、Miyabi 允许的 secret 机制或用户明确提供的临时凭据；禁止写入 Git、配置、日志或 artifact。
-- public cloud、跨区域 egress、长期 9-node 作业和 destructive lifecycle policy 均需用户批准。
+- Agent 可自行决定并提交单个 `select<=16` 且 `walltime<=02:00:00` 的 Miyabi 作业，包括 9-node 作业，无需用户批准；仍须遵守阶段前置 gate、作业预检和 1→2→9 验证阶梯。
+- 单个 Miyabi 作业超过 16 节点或 2 小时，以及 public cloud、跨区域 egress、其他付费资源和 destructive lifecycle policy，均需用户批准。
 - GC 默认 dry-run，直到 reachability proof、并发恢复测试和人工 gate 全部通过。
 - 故障注入只能作用于隔离的 run root/bucket prefix，不得向共享根目录发送 kill/delete。
 
@@ -339,7 +340,7 @@ mpirun ... /usr/bin/env "KEY=value" ... bash -lc '...'
 ## 11. 共同启动指令
 
 ```text
-读取仓库根 AGENTS.md、miyabi-development skill、DuraLoCo 共同执行契约和当前阶段计划。先识别 hostname、branch、commit 和工作树状态。使用单 writer 的 maker loop；先写失败测试/规范，再做最小实现；独立 checker 复核。每轮更新 STATE.yaml 和 artifact manifest。遵守 Miyabi 登录节点 control-plane 限制与 1→2→9 节点验证阶梯。不得自动合并 main，不得虚构实验结果，不得在未批准时运行 9 节点、长时间或公共云作业。
+读取仓库根 AGENTS.md、miyabi-development skill、DuraLoCo 共同执行契约和当前阶段计划。先识别 hostname、branch、commit 和工作树状态。使用单 writer 的 maker loop；先写失败测试/规范，再做最小实现；独立 checker 复核。每轮更新 STATE.yaml 和 artifact manifest。遵守 Miyabi 登录节点 control-plane 限制与 1→2→9 节点验证阶梯。单个 select<=16 且 walltime<=02:00:00 的 Miyabi 作业（包括 9 节点）由 agent 自主决定和提交；超出此范围或使用公共云/其他付费资源前取得用户批准。不得自动合并 main，不得虚构实验结果。
 ```
 
 ## 12. 参考
