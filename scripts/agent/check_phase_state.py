@@ -44,6 +44,21 @@ CHECK_VALUES = {
     "failed",
     "blocked",
 }
+ACCEPTANCE_COUNTS = {
+    "P00": 8,
+    "P01": 8,
+    "P02": 8,
+    "P03": 8,
+    "P04": 9,
+    "P05": 10,
+    "P06": 11,
+    "P07": 10,
+    "P08": 8,
+    "P09": 9,
+    "P10": 9,
+    "P11": 9,
+    "P12": 12,
+}
 REQUIRED = {
     "phase",
     "status",
@@ -122,6 +137,16 @@ def validate(payload: dict[str, Any], *, root: Path) -> None:
     acceptance = payload["acceptance"]
     if not isinstance(acceptance, dict) or not acceptance:
         raise StateError("acceptance must be a non-empty mapping")
+    expected_acceptance = {
+        f"{payload['phase']}-A{number:02d}"
+        for number in range(1, ACCEPTANCE_COUNTS[payload["phase"]] + 1)
+    }
+    if set(acceptance) != expected_acceptance:
+        raise StateError(
+            "acceptance set differs from phase contract: "
+            f"missing={sorted(expected_acceptance - set(acceptance))} "
+            f"extra={sorted(set(acceptance) - expected_acceptance)}"
+        )
     for acceptance_id, evidence in acceptance.items():
         if not re.fullmatch(rf"{payload['phase']}-A\d{{2}}", str(acceptance_id)):
             raise StateError(f"invalid acceptance ID for phase: {acceptance_id}")
@@ -148,6 +173,8 @@ def validate(payload: dict[str, Any], *, root: Path) -> None:
             raise StateError("completed phase checker did not pass")
         if payload["open_blockers"]:
             raise StateError("completed phase cannot have open blockers")
+        if any(value in {"not_run", "failed", "blocked"} for value in checks.values()):
+            raise StateError("completed phase contains an unresolved check status")
     if payload["requires_human_approval"] and not payload["approval_reason"]:
         raise StateError("requires_human_approval needs approval_reason")
 

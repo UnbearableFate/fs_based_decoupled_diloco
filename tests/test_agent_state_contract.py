@@ -26,7 +26,10 @@ def _base_state() -> dict:
         "attempts_for_current_failure": 0,
         "last_verified_commit": None,
         "checks": {"local_static": "not_run"},
-        "acceptance": {"P00-A01": {"result": "not_run", "evidence": []}},
+        "acceptance": {
+            f"P00-A{number:02d}": {"result": "not_run", "evidence": []}
+            for number in range(1, 9)
+        },
         "open_decisions": [],
         "open_blockers": [],
         "artifacts": [],
@@ -76,7 +79,11 @@ def test_completed_with_structured_checker_and_evidence_passes(tmp_path):
     payload = _base_state()
     payload["status"] = "completed"
     payload["last_verified_commit"] = "b" * 40
-    payload["acceptance"]["P00-A01"] = {"result": "pass", "evidence": ["artifact"]}
+    payload["acceptance"] = {
+        key: {"result": "pass", "evidence": ["artifact"]}
+        for key in payload["acceptance"]
+    }
+    payload["checks"] = {"local_static": "static_pass"}
     payload["checker_report"] = "checker.md"
     assert _run(tmp_path, payload).returncode == 0
 
@@ -90,11 +97,26 @@ def test_illegal_status_and_phase_jumps_are_rejected(tmp_path):
     completed = copy.deepcopy(previous)
     completed["status"] = "completed"
     completed["last_verified_commit"] = "c" * 40
-    completed["acceptance"]["P00-A01"] = {"result": "pass", "evidence": ["artifact"]}
+    completed["acceptance"] = {
+        key: {"result": "pass", "evidence": ["artifact"]}
+        for key in completed["acceptance"]
+    }
+    completed["checks"] = {"local_static": "static_pass"}
     completed["checker_report"] = "checker.md"
     (tmp_path / "checker.md").write_text("Verdict: PASS\n")
     skipped = copy.deepcopy(previous)
     skipped["phase"] = "P02"
     skipped["status"] = "in_progress"
-    skipped["acceptance"] = {"P02-A01": {"result": "not_run", "evidence": []}}
+    skipped["acceptance"] = {
+        f"P02-A{number:02d}": {"result": "not_run", "evidence": []}
+        for number in range(1, 9)
+    }
     assert _run(tmp_path, skipped, previous=completed).returncode != 0
+
+
+def test_missing_acceptance_id_is_rejected_even_before_completion(tmp_path):
+    payload = _base_state()
+    del payload["acceptance"]["P00-A08"]
+    result = _run(tmp_path, payload)
+    assert result.returncode != 0
+    assert "acceptance set differs" in result.stderr
