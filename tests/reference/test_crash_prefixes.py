@@ -1,7 +1,11 @@
 from __future__ import annotations
 
-from fs_diloco.testing.crash_matrix import enumerate_single_commit_crashes
+from fs_diloco.testing.crash_matrix import (
+    enumerate_decision_crashes,
+    enumerate_single_commit_crashes,
+)
 from fs_diloco.testing.reference_simulator import CRASH_POINTS
+from fs_diloco.testing.reference_simulator import DECISION_CRASH_POINTS
 from fs_diloco.testing.reference_simulator import ReferenceSimulator
 
 import pytest
@@ -31,6 +35,17 @@ def test_pre_cas_crashes_create_only_non_authoritative_orphans():
             "before_head_cas",
         }:
             assert result.orphan_objects > 0
+            assert result.recovered_digest == result.old_digest
+
+
+def test_every_decision_crash_point_recovers_old_or_new_legal_prefix():
+    results = enumerate_decision_crashes()
+    assert len(results) == len(DECISION_CRASH_POINTS)
+    for result in results:
+        assert result.recovered_digest in {result.old_digest, result.new_digest}
+        if result.crash_point == "after_decision_head_cas":
+            assert result.recovered_digest == result.new_digest
+        else:
             assert result.recovered_digest == result.old_digest
 
 

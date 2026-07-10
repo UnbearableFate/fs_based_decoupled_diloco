@@ -16,6 +16,7 @@ from fs_diloco.log.model import (
 from fs_diloco.protocol.canonical_json import canonical_digest
 from fs_diloco.testing.reference_simulator import (
     CRASH_POINTS,
+    DECISION_CRASH_POINTS,
     PUBLICATION_CRASH_POINTS,
     ReferenceSimulator,
 )
@@ -90,6 +91,13 @@ def generate_trace(seed: int, *, steps: int = 12, fragments: int = 2) -> Trace:
                     fragment=rng.randrange(fragments),
                 )
             )
+        elif choice < 0.76:
+            crash_point = (
+                rng.choice((None, *DECISION_CRASH_POINTS))
+                if rng.random() < 0.45
+                else None
+            )
+            events.append(TraceEvent(action="decide", crash_point=crash_point))
         else:
             crash_point = rng.choice((None, *CRASH_POINTS)) if rng.random() < 0.45 else None
             events.append(
@@ -137,6 +145,20 @@ def replay_trace(trace: Trace) -> SystemState:
                 )
         elif event.action == "restart":
             simulator.restart()
+        elif event.action == "decide":
+            state = simulator.durable_state
+            candidates = sorted(
+                proposal.proposal_id
+                for proposal in state.proposals.values()
+                if state.eligible(proposal)
+            )
+            if candidates:
+                simulator.attempt_decision(
+                    proposal_id=candidates[0],
+                    decision="superseded",
+                    reason="seeded_trace_policy",
+                    crash_at=event.crash_point,
+                )
         elif event.action == "invalid_unknown_selection":
             before = simulator.durable_state.state_digest()
             try:

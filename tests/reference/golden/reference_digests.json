@@ -7,20 +7,21 @@
   },
   "suite_100": {
     "action_counts": {
-      "commit": 296,
-      "invalid_unknown_selection": 73,
-      "publish": 631,
-      "restart": 127
+      "commit": 217,
+      "decide": 87,
+      "invalid_unknown_selection": 77,
+      "publish": 619,
+      "restart": 140
     },
     "count": 100,
     "start_seed": 0,
-    "suite_digest": "b14917304a79a3b2cec239421a8a0fe3e6ea8d1d72f4512d6c292bcbaef0191b",
+    "suite_digest": "9e2c6b1531e1399679337760f5b6a528ed91abf880be3adf975168f22c7f064e",
     "unique_state_digests": 100
   },
   "trace": {
-    "event_count": 32,
+    "event_count": 31,
     "seed": 20260710,
-    "state_digest": "72c10a58e5a9f847af81e0e86e234568795f5075ce0f396162e3d36b57c90120",
-    "trace_digest": "a41701809d86343bdff035b8353f5608cc2e114e5af406a752fb2b206e0225ee"
+    "state_digest": "c95465075c48a715a7736aaf43669df44ab893fe1ee380fccf5d29bd226c080e",
+    "trace_digest": "60977c333045152d875ea7a50044183406063faee3b366958126a2a096da0682"
   }
 }

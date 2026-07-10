@@ -26,6 +26,25 @@ def test_immutable_put_is_idempotent_and_conflicting_bytes_fail():
         backend.put_immutable("objects/b", b"x", sha256="0" * 64)
 
 
+def test_write_boundaries_snapshot_mutable_bytes_like_inputs():
+    backend = InMemoryStorageBackend()
+    source = bytearray(b"one")
+    metadata = backend.put_immutable("objects/a", source)
+    source[:] = b"two"
+    assert backend.get("objects/a") == b"one"
+    assert metadata.sha256 == hashlib.sha256(b"one").hexdigest()
+
+    replacement = bytearray(b"new")
+    updated = backend.conditional_replace(
+        "objects/a",
+        expected_version=metadata.version,
+        data=replacement,
+    )
+    replacement[:] = b"bad"
+    assert backend.get("objects/a") == b"new"
+    assert updated.sha256 == hashlib.sha256(b"new").hexdigest()
+
+
 def test_conditional_replace_has_one_winner_and_stale_token_fails():
     backend = InMemoryStorageBackend()
     initial = backend.put_if_absent("control/head", b"zero")

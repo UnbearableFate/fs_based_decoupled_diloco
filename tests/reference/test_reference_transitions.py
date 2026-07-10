@@ -1,17 +1,22 @@
 from __future__ import annotations
 
 import pytest
+from dataclasses import replace
 
 from fs_diloco.log.model import (
+    FragmentState,
     SystemState,
     TransitionConflict,
     assert_invariants,
+    check_invariants,
     commit_prepared,
     decide_proposal,
+    fold_commits,
     prepare_transition,
     recover_prefix,
     select_quorum,
 )
+from fs_diloco.protocol.canonical_json import canonical_digest
 
 from .helpers import proposal_for
 
@@ -49,6 +54,8 @@ def test_competing_prepared_transitions_have_one_parent_winner():
 
 def test_every_committed_prefix_replays_to_the_same_digest():
     state = SystemState.genesis(fragment_count=2)
+    genesis = state
+    historical_digests = [state.committed_digest()]
     for sequence in range(6):
         fragment_id = sequence % 2
         proposal = proposal_for(
@@ -67,10 +74,14 @@ def test_every_committed_prefix_replays_to_the_same_digest():
                 selected_proposal_ids=(proposal.proposal_id,),
             ),
         )
+        historical_digests.append(state.committed_digest())
+    independent_genesis = replace(genesis, proposals=dict(state.proposals))
     for prefix in range(state.head_commit_seq + 1):
         recovered = recover_prefix(state, prefix)
+        independently_folded = fold_commits(independent_genesis, state.commits[:prefix])
         assert recovered.head_commit_seq == prefix
-        assert recovered.state_digest() == recover_prefix(state, prefix).state_digest()
+        assert recovered.committed_digest() == historical_digests[prefix]
+        assert independently_folded.committed_digest() == historical_digests[prefix]
 
 
 def test_quorum_selection_and_explicit_supersession_are_deterministic():
@@ -109,6 +120,35 @@ def test_quorum_uses_oldest_sequence_for_each_learner_before_canonical_order():
     assert select_quorum(state, fragment_id=0, quorum_min=1, quorum_max=1) == (
         older.proposal_id,
     )
+
+
+def test_same_base_overlapping_successor_requires_explicit_supersession():
+    state = SystemState.genesis()
+    older = proposal_for(state, learner=0, sequence=0, values=(1.0, 0.0))
+    overlapping = proposal_for(state, learner=0, sequence=1, values=(2.0, 0.0))
+    state = state.publish(overlapping).publish(older)
+    state = commit_prepared(
+        state,
+        prepare_transition(
+            state,
+            fragment_id=0,
+            selected_proposal_ids=(older.proposal_id,),
+        ),
+    )
+    assert not state.eligible(overlapping)
+    with pytest.raises(Exception, match="ineligible"):
+        prepare_transition(
+            state,
+            fragment_id=0,
+            selected_proposal_ids=(overlapping.proposal_id,),
+        )
+    state = decide_proposal(
+        state,
+        proposal_id=overlapping.proposal_id,
+        decision="superseded",
+        reason="overlaps_committed_same_base_interval",
+    )
+    assert_invariants(state)
 
 
 def test_duplicate_publication_is_idempotent():
@@ -222,6 +262,60 @@ def test_eligibility_requires_exact_commit_sequence_and_fragment_version_pairing
     assert not state.eligible(wrong_fragment)
 
 
+def test_commit_revalidates_prepared_event_and_rejects_forged_causal_base():
+    state = SystemState.genesis()
+    valid = proposal_for(state, learner=0, sequence=0)
+    impossible = type(valid).create(
+        learner_id="learner-001",
+        session_id="session-001",
+        sequence=0,
+        fragment_id=0,
+        base_commit_id="genesis",
+        base_commit_seq=0,
+        base_fragment_version=1,
+        target_tokens=10,
+        values=(1.0, -1.0),
+    )
+    state = state.publish(valid).publish(impossible)
+    prepared = prepare_transition(
+        state,
+        fragment_id=0,
+        selected_proposal_ids=(valid.proposal_id,),
+    )
+    forged = replace(
+        prepared,
+        selected_proposal_ids=(impossible.proposal_id,),
+        event=replace(
+            prepared.event,
+            selected_proposal_ids=(impossible.proposal_id,),
+        ),
+    )
+    with pytest.raises(TransitionConflict, match="no longer validates"):
+        commit_prepared(state, forged)
+
+    forged_event = replace(forged.event, commit_id="pending")
+    forged_event = replace(
+        forged_event,
+        commit_id="rc-" + canonical_digest(forged_event.identity_body()),
+    )
+    forged_fragment = FragmentState(
+        version=1,
+        params=forged_event.new_params,
+        outer_state=forged_event.new_outer_state,
+        params_commit_id=forged_event.commit_id,
+        outer_state_commit_id=forged_event.commit_id,
+    )
+    forged_state = replace(
+        state,
+        head_commit_id=forged_event.commit_id,
+        head_commit_seq=1,
+        fragments={0: forged_fragment},
+        consumed_proposal_ids=frozenset({impossible.proposal_id}),
+        commits=(forged_event,),
+    )
+    assert any("I-004" in item for item in check_invariants(forged_state))
+
+
 def test_recovery_preserves_nonzero_genesis_parameters():
     state = SystemState.genesis(initial_value=3.5)
     proposal = proposal_for(state, learner=0, sequence=0)
@@ -258,5 +352,7 @@ def test_recovery_preserves_only_drop_decisions_reachable_at_prefix():
         decision="expired",
         reason="test_prefix",
     )
+    assert state.head_commit_seq == 2
     assert dropped.proposal_id not in recover_prefix(state, 0).dropped_proposal_ids
-    assert dropped.proposal_id in recover_prefix(state, 1).dropped_proposal_ids
+    assert dropped.proposal_id not in recover_prefix(state, 1).dropped_proposal_ids
+    assert dropped.proposal_id in recover_prefix(state, 2).dropped_proposal_ids

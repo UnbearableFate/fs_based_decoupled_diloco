@@ -20,16 +20,25 @@ correctness.
 
 `SystemState` contains one global head, per-fragment parameters/version/outer
 state, published proposals, committed consumption/drop sets, and a parent-linked
-commit sequence. Its state identity binds the optimizer, rational-weighting,
-global/fragment staleness configurations, and every durably published proposal
-as well as committed/drop state. Preparing a transition
+commit sequence. Its full state identity binds the optimizer,
+rational-weighting, global/fragment staleness configurations, and every
+durably published proposal as well as committed/drop state. A separate
+`committed_digest` excludes the unordered proposal store and is the oracle for
+independent head-prefix folding. Preparing a transition
 canonicalizes proposal IDs, validates
 eligibility against authoritative state, rejects duplicate learners/IDs,
 applies the frozen rational staleness decay `tokens / (1 + 0.2 * staleness)`,
 normalizes those positive weights in float64, reduces in canonical order, and
 executes the declared outer optimizer. Preparation does not mutate authority.
 
-`commit_prepared` succeeds only against the exact parent head, consumes each
+Proposal drop/supersession is itself a parent-linked decision event that
+advances the same global head; it cannot change eligibility outside the
+recoverable prefix log. Same learner/session/fragment proposals sharing one
+base are treated as overlapping: after the oldest is consumed, successors
+require an explicit supersession decision and cannot be consumed.
+
+`commit_prepared` re-derives and revalidates the complete deterministic event,
+succeeds only against the exact parent head, consumes each
 proposal once, and installs parameters plus outer state with the same producing
 commit ID. Every committed result checks linear history, consumption equality,
 version increments, output pairing, reference completeness, and deterministic
@@ -47,9 +56,10 @@ the P00 numeric tolerance.
 ## Crash and model checking
 
 The simulator injects crashes before and after parameter-object, outer-state,
-commit-record, frontier, and head-CAS effects. Every pre-CAS crash recovers the
-old prefix and may leave only unreachable prepared objects; response loss after
-CAS recovers the new prefix. All stored prefixes can be folded and verified.
+commit-record, frontier, decision-record, and head-CAS effects. Every pre-CAS
+crash recovers the old prefix and may leave only unreachable prepared objects;
+response loss after CAS recovers the new prefix. Recorded historical committed
+digests and an independent event fold verify every stored prefix.
 
 Seeded traces cover publication (including before/after-effect crashes),
 selection/commit, rejected illegal selections, crash, and restart. Rejected

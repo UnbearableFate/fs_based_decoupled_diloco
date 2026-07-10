@@ -192,6 +192,29 @@ class CommitEvent:
 
 
 @dataclass(frozen=True)
+class DecisionEvent:
+    commit_seq: int
+    commit_id: str
+    parent_commit_id: str
+    proposal_id: str
+    decision: str
+    reason: str
+
+    def identity_body(self) -> dict[str, object]:
+        return {
+            "event_type": "proposal_decision",
+            "commit_seq": self.commit_seq,
+            "parent_commit_id": self.parent_commit_id,
+            "proposal_id": self.proposal_id,
+            "decision": self.decision,
+            "reason": self.reason,
+        }
+
+
+LogEvent = CommitEvent | DecisionEvent
+
+
+@dataclass(frozen=True)
 class PreparedTransition:
     parent_commit_id: str
     parent_commit_seq: int
@@ -234,7 +257,7 @@ class SystemState:
     consumed_proposal_ids: frozenset[str]
     dropped_proposal_ids: frozenset[str]
     proposal_decisions: Mapping[str, ProposalDecision]
-    commits: tuple[CommitEvent, ...]
+    commits: tuple[LogEvent, ...]
 
     def __post_init__(self) -> None:
         object.__setattr__(
@@ -309,6 +332,19 @@ class SystemState:
             if existing != proposal:
                 raise TransitionError("reference proposal identity-content conflict")
             return self
+        for observed in self.proposals.values():
+            if (
+                observed.learner_id,
+                observed.session_id,
+                observed.fragment_id,
+                observed.sequence,
+            ) == (
+                proposal.learner_id,
+                proposal.session_id,
+                proposal.fragment_id,
+                proposal.sequence,
+            ):
+                raise TransitionError("learner/session/fragment sequence maps to different content")
         proposals = dict(self.proposals)
         proposals[proposal.proposal_id] = proposal
         result = replace(self, proposals=proposals)
@@ -328,6 +364,22 @@ class SystemState:
             max_fragment_staleness = self.protocol_config.max_fragment_staleness
         if proposal.proposal_id in self.consumed_proposal_ids | self.dropped_proposal_ids:
             return False
+        for consumed_id in self.consumed_proposal_ids:
+            consumed = self.proposals.get(consumed_id)
+            if consumed is not None and (
+                consumed.learner_id,
+                consumed.session_id,
+                consumed.fragment_id,
+                consumed.base_commit_id,
+                consumed.base_fragment_version,
+            ) == (
+                proposal.learner_id,
+                proposal.session_id,
+                proposal.fragment_id,
+                proposal.base_commit_id,
+                proposal.base_fragment_version,
+            ):
+                return False
         if proposal.fragment_id not in self.fragments:
             return False
         if proposal.base_commit_id not in self.ancestor_commit_ids:
@@ -345,7 +397,7 @@ class SystemState:
         fragment = self.fragments[proposal.fragment_id]
         base_fragment_version = self.genesis_fragments[proposal.fragment_id].version
         for event in self.commits[: proposal.base_commit_seq]:
-            if event.fragment_id == proposal.fragment_id:
+            if isinstance(event, CommitEvent) and event.fragment_id == proposal.fragment_id:
                 base_fragment_version = event.new_fragment_version
         if proposal.base_fragment_version != base_fragment_version:
             return False
@@ -371,9 +423,6 @@ class SystemState:
             "fragments": {
                 str(key): value.identity() for key, value in sorted(self.fragments.items())
             },
-            "proposals": {
-                key: value.identity() for key, value in sorted(self.proposals.items())
-            },
             "consumed_proposal_ids": sorted(self.consumed_proposal_ids),
             "dropped_proposal_ids": sorted(self.dropped_proposal_ids),
             "proposal_decisions": {
@@ -382,8 +431,19 @@ class SystemState:
             "commits": [event.identity_body() | {"commit_id": event.commit_id} for event in self.commits],
         }
 
-    def state_digest(self) -> str:
+    def state_identity(self) -> dict[str, object]:
+        return {
+            **self.committed_identity(),
+            "proposals": {
+                key: value.identity() for key, value in sorted(self.proposals.items())
+            },
+        }
+
+    def committed_digest(self) -> str:
         return canonical_digest(self.committed_identity())
+
+    def state_digest(self) -> str:
+        return canonical_digest(self.state_identity())
 
 
 def prepare_transition(
@@ -495,24 +555,50 @@ def decide_proposal(
     decision: str,
     reason: str,
 ) -> SystemState:
-    if decision not in {"dropped", "superseded", "quarantined", "expired"}:
+    if not isinstance(decision, str) or decision not in {
+        "dropped",
+        "superseded",
+        "quarantined",
+        "expired",
+    }:
         raise ValueError(f"unsupported proposal decision: {decision}")
+    if not isinstance(reason, str) or not reason:
+        raise ValueError("proposal decision reason must be a non-empty string")
     if proposal_id not in state.proposals:
         raise TransitionError("cannot decide an unknown proposal")
     if proposal_id in state.consumed_proposal_ids:
         raise TransitionError("cannot drop/supersede a committed proposal")
     existing = state.proposal_decisions.get(proposal_id)
-    record = ProposalDecision(proposal_id, decision, reason, state.head_commit_seq)
     if existing is not None:
-        if existing != record:
+        if existing.decision != decision or existing.reason != reason:
             raise TransitionError("proposal already has a conflicting terminal decision")
         return state
+    event_body = {
+        "event_type": "proposal_decision",
+        "commit_seq": state.head_commit_seq + 1,
+        "parent_commit_id": state.head_commit_id,
+        "proposal_id": proposal_id,
+        "decision": decision,
+        "reason": reason,
+    }
+    event = DecisionEvent(
+        commit_seq=state.head_commit_seq + 1,
+        commit_id="rd-" + canonical_digest(event_body),
+        parent_commit_id=state.head_commit_id,
+        proposal_id=proposal_id,
+        decision=decision,
+        reason=reason,
+    )
+    record = ProposalDecision(proposal_id, decision, reason, event.commit_seq)
     decisions = dict(state.proposal_decisions)
     decisions[proposal_id] = record
     result = replace(
         state,
+        head_commit_id=event.commit_id,
+        head_commit_seq=event.commit_seq,
         dropped_proposal_ids=state.dropped_proposal_ids | {proposal_id},
         proposal_decisions=decisions,
+        commits=state.commits + (event,),
     )
     assert_invariants(result)
     return result
@@ -526,6 +612,16 @@ def commit_prepared(state: SystemState, prepared: PreparedTransition) -> SystemS
         raise TransitionConflict("prepared transition parent is stale")
     if set(prepared.selected_proposal_ids) & state.consumed_proposal_ids:
         raise TransitionConflict("proposal was already consumed")
+    try:
+        expected = prepare_transition(
+            state,
+            fragment_id=prepared.fragment_id,
+            selected_proposal_ids=prepared.selected_proposal_ids,
+        )
+    except TransitionError as exc:
+        raise TransitionConflict(f"prepared transition no longer validates: {exc}") from exc
+    if prepared != expected:
+        raise TransitionConflict("prepared event differs from the deterministic transition")
     current = state.fragments[prepared.fragment_id]
     event = prepared.event
     if event.previous_fragment_version != current.version:
@@ -557,14 +653,48 @@ def check_invariants(state: SystemState) -> tuple[str, ...]:
     ancestors = {"genesis"}
     ancestor_sequences = {"genesis": 0}
     seen: set[str] = set()
+    seen_interval_bases: set[tuple[str, str, int, str, int]] = set()
     expected_versions = {fragment_id: 0 for fragment_id in state.fragments}
     expected_fragments = dict(state.genesis_fragments)
+    fragment_versions_by_commit = {
+        "genesis": {
+            fragment_id: fragment.version
+            for fragment_id, fragment in state.genesis_fragments.items()
+        }
+    }
+    expected_decisions: dict[str, ProposalDecision] = {}
     for expected_seq, event in enumerate(state.commits, start=1):
         if event.commit_seq != expected_seq:
             violations.append("I-002: commit sequence is not contiguous")
         if event.parent_commit_id != expected_parent:
             violations.append("I-002: commit parent chain is not linear")
         expected_parent = event.commit_id
+
+        if isinstance(event, DecisionEvent):
+            if event.decision not in {"dropped", "superseded", "quarantined", "expired"}:
+                violations.append("I-003: decision event has an invalid terminal state")
+            if not event.reason:
+                violations.append("I-003: decision event has no reason")
+            if event.proposal_id not in state.proposals:
+                violations.append("I-001: decision names an unavailable proposal")
+            if event.proposal_id in seen:
+                violations.append("I-003: committed proposal also has a terminal decision")
+            if event.proposal_id in expected_decisions:
+                violations.append("I-003: proposal has multiple terminal decisions")
+            expected_decisions[event.proposal_id] = ProposalDecision(
+                event.proposal_id,
+                event.decision,
+                event.reason,
+                event.commit_seq,
+            )
+            expected_id = "rd-" + canonical_digest(event.identity_body())
+            if event.commit_id != expected_id:
+                violations.append("I-009: decision identity is not deterministic")
+            ancestors.add(event.commit_id)
+            ancestor_sequences[event.commit_id] = event.commit_seq
+            fragment_versions_by_commit[event.commit_id] = dict(expected_versions)
+            continue
+
         duplicate = seen & set(event.selected_proposal_ids)
         if duplicate:
             violations.append("I-003: proposal appears in multiple commits")
@@ -583,8 +713,25 @@ def check_invariants(state: SystemState) -> tuple[str, ...]:
                 violations.append("I-004: selected proposal has an invalid causal base")
             if proposal.fragment_id != event.fragment_id:
                 violations.append("I-004: selected proposal targets a different fragment")
-            if proposal.base_fragment_version > event.previous_fragment_version:
-                violations.append("I-004: selected proposal has a future fragment base")
+            base_versions = fragment_versions_by_commit.get(proposal.base_commit_id)
+            if (
+                base_versions is None
+                or base_versions.get(proposal.fragment_id)
+                != proposal.base_fragment_version
+            ):
+                violations.append(
+                    "I-004: selected proposal fragment version differs from its base commit"
+                )
+            interval_base = (
+                proposal.learner_id,
+                proposal.session_id,
+                proposal.fragment_id,
+                proposal.base_commit_id,
+                proposal.base_fragment_version,
+            )
+            if interval_base in seen_interval_bases:
+                violations.append("I-003: overlapping same-base learner interval is included twice")
+            seen_interval_bases.add(interval_base)
             if (
                 event.previous_fragment_version - proposal.base_fragment_version
                 > state.protocol_config.max_fragment_staleness
@@ -613,58 +760,65 @@ def check_invariants(state: SystemState) -> tuple[str, ...]:
                 for proposal in selected
             )
         ):
-            weights = normalized_weights(
-                {proposal.proposal_id: proposal.target_tokens for proposal in selected},
-                staleness={
-                    proposal.proposal_id: expected_fragment.version
-                    - proposal.base_fragment_version
-                    for proposal in selected
-                },
-                config=state.weighting_config,
-            )
-            expected_weights = tuple(
-                (proposal_id, weights[proposal_id].hex())
-                for proposal_id in event.selected_proposal_ids
-            )
-            aggregate = weighted_reduce(
-                {proposal.proposal_id: proposal.values for proposal in selected},
-                weights,
-            )
-            expected_params, expected_outer = outer_step(
-                expected_fragment.params,
-                aggregate,
-                expected_fragment.outer_state,
-                state.optimizer_config,
-            )
-            expected_transition_digest = optimizer_state_digest(
-                expected_params,
-                expected_outer,
-                state.optimizer_config,
-            )
-            if (
-                event.weights_hex != expected_weights
-                or event.new_params != expected_params
-                or event.new_outer_state != expected_outer
-                or event.transition_digest != expected_transition_digest
-            ):
+            try:
+                weights = normalized_weights(
+                    {proposal.proposal_id: proposal.target_tokens for proposal in selected},
+                    staleness={
+                        proposal.proposal_id: expected_fragment.version
+                        - proposal.base_fragment_version
+                        for proposal in selected
+                    },
+                    config=state.weighting_config,
+                )
+                expected_weights = tuple(
+                    (proposal_id, weights[proposal_id].hex())
+                    for proposal_id in event.selected_proposal_ids
+                )
+                aggregate = weighted_reduce(
+                    {proposal.proposal_id: proposal.values for proposal in selected},
+                    weights,
+                )
+                expected_params, expected_outer = outer_step(
+                    expected_fragment.params,
+                    aggregate,
+                    expected_fragment.outer_state,
+                    state.optimizer_config,
+                )
+                expected_transition_digest = optimizer_state_digest(
+                    expected_params,
+                    expected_outer,
+                    state.optimizer_config,
+                )
+            except (ValueError, OverflowError):
                 violations.append("I-009: committed numeric transition differs from oracle")
-            expected_fragments[event.fragment_id] = FragmentState(
-                version=event.new_fragment_version,
-                params=event.new_params,
-                outer_state=event.new_outer_state,
-                params_commit_id=event.commit_id,
-                outer_state_commit_id=event.commit_id,
-            )
+            else:
+                if (
+                    event.weights_hex != expected_weights
+                    or event.new_params != expected_params
+                    or event.new_outer_state != expected_outer
+                    or event.transition_digest != expected_transition_digest
+                ):
+                    violations.append("I-009: committed numeric transition differs from oracle")
+                expected_fragments[event.fragment_id] = FragmentState(
+                    version=event.new_fragment_version,
+                    params=event.new_params,
+                    outer_state=event.new_outer_state,
+                    params_commit_id=event.commit_id,
+                    outer_state_commit_id=event.commit_id,
+                )
         expected_id = "rc-" + canonical_digest(event.identity_body())
         if event.commit_id != expected_id:
             violations.append("I-009: commit identity is not deterministic")
         ancestors.add(event.commit_id)
         ancestor_sequences[event.commit_id] = event.commit_seq
+        fragment_versions_by_commit[event.commit_id] = dict(expected_versions)
     if state.head_commit_seq != len(state.commits) or state.head_commit_id != expected_parent:
         violations.append("I-002: head does not name the committed chain tip")
     if seen != set(state.consumed_proposal_ids):
         violations.append("I-003: consumption set differs from committed selections")
-    if set(state.proposal_decisions) != set(state.dropped_proposal_ids):
+    if dict(state.proposal_decisions) != expected_decisions:
+        violations.append("I-003: terminal decisions differ from committed decision events")
+    if set(expected_decisions) != set(state.dropped_proposal_ids):
         violations.append("I-003: terminal decisions differ from dropped proposal set")
     if state.consumed_proposal_ids & state.dropped_proposal_ids:
         violations.append("I-003: proposal is both consumed and terminally dropped")
@@ -676,7 +830,7 @@ def check_invariants(state: SystemState) -> tuple[str, ...]:
         if fragment != expected_fragments.get(fragment_id):
             violations.append("I-005: frontier state differs from folded commit history")
         if fragment.version > 0 and fragment.params_commit_id not in {
-            event.commit_id for event in state.commits
+            event.commit_id for event in state.commits if isinstance(event, CommitEvent)
         }:
             violations.append("I-001: fragment references an unknown producing commit")
     return tuple(dict.fromkeys(violations))
@@ -688,7 +842,7 @@ def assert_invariants(state: SystemState) -> None:
         raise TransitionError("; ".join(violations))
 
 
-def fold_commits(genesis: SystemState, commits: Iterable[CommitEvent]) -> SystemState:
+def fold_commits(genesis: SystemState, commits: Iterable[LogEvent]) -> SystemState:
     state = replace(
         genesis,
         head_commit_id="genesis",
@@ -702,6 +856,30 @@ def fold_commits(genesis: SystemState, commits: Iterable[CommitEvent]) -> System
     for event in commits:
         if event.parent_commit_id != state.head_commit_id:
             raise TransitionError("cannot fold non-linear commit history")
+        if isinstance(event, DecisionEvent):
+            if event.proposal_id not in state.proposals:
+                raise TransitionError("cannot fold decision for an unknown proposal")
+            if event.proposal_id in state.consumed_proposal_ids:
+                raise TransitionError("cannot fold decision for a consumed proposal")
+            if event.proposal_id in state.proposal_decisions:
+                raise TransitionError("cannot fold duplicate proposal decision")
+            decisions = dict(state.proposal_decisions)
+            decisions[event.proposal_id] = ProposalDecision(
+                event.proposal_id,
+                event.decision,
+                event.reason,
+                event.commit_seq,
+            )
+            state = replace(
+                state,
+                head_commit_id=event.commit_id,
+                head_commit_seq=event.commit_seq,
+                dropped_proposal_ids=state.dropped_proposal_ids | {event.proposal_id},
+                proposal_decisions=decisions,
+                commits=state.commits + (event,),
+            )
+            assert_invariants(state)
+            continue
         if set(event.selected_proposal_ids) & state.consumed_proposal_ids:
             raise TransitionError("cannot fold double-included proposal")
         current = state.fragments[event.fragment_id]
@@ -745,16 +923,4 @@ def recover_prefix(state: SystemState, commit_seq: int | None = None) -> SystemS
         proposal_decisions={},
         commits=(),
     )
-    recovered = fold_commits(genesis, state.commits[:commit_seq])
-    decisions = {
-        proposal_id: decision
-        for proposal_id, decision in state.proposal_decisions.items()
-        if decision.decided_at_commit_seq <= commit_seq
-    }
-    recovered = replace(
-        recovered,
-        dropped_proposal_ids=frozenset(decisions),
-        proposal_decisions=decisions,
-    )
-    assert_invariants(recovered)
-    return recovered
+    return fold_commits(genesis, state.commits[:commit_seq])

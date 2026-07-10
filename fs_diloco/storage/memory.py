@@ -93,6 +93,12 @@ class InMemoryStorageBackend:
         self._version_counter += 1
         return f"v{self._version_counter:08d}-{hashlib.sha256(data).hexdigest()[:16]}"
 
+    @staticmethod
+    def _snapshot_bytes(data: bytes | bytearray | memoryview) -> bytes:
+        if not isinstance(data, (bytes, bytearray, memoryview)):
+            raise TypeError("storage payload must be bytes-like")
+        return bytes(data)
+
     def _metadata(self, key: str, data: bytes, version: str) -> ObjectMetadata:
         return ObjectMetadata(key, len(data), hashlib.sha256(data).hexdigest(), version)
 
@@ -122,6 +128,7 @@ class InMemoryStorageBackend:
     def put_immutable(self, key: str, data: bytes, *, sha256: str | None = None) -> ObjectMetadata:
         operation = "put_immutable"
         self._maybe_fail(operation, "before", key)
+        data = self._snapshot_bytes(data)
         digest = hashlib.sha256(data).hexdigest()
         if sha256 is not None and sha256 != digest:
             self._record(operation, key, "caller_digest_mismatch", None)
@@ -153,6 +160,7 @@ class InMemoryStorageBackend:
     ) -> ObjectMetadata:
         operation = "conditional_replace"
         self._maybe_fail(operation, "before", key)
+        data = self._snapshot_bytes(data)
         existing = self._objects.get(key)
         if existing is None:
             self._record(operation, key, "missing", None)

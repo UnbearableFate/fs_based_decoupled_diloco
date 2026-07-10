@@ -10,6 +10,7 @@ from fs_diloco.log.model import (
     SystemState,
     assert_invariants,
     commit_prepared,
+    decide_proposal,
     prepare_transition,
 )
 
@@ -27,6 +28,12 @@ CRASH_POINTS = (
     "after_head_cas",
 )
 PUBLICATION_CRASH_POINTS = ("before_publish", "after_publish")
+DECISION_CRASH_POINTS = (
+    "before_decision_record_put",
+    "after_decision_record_put",
+    "before_decision_head_cas",
+    "after_decision_head_cas",
+)
 
 
 @dataclass(frozen=True)
@@ -38,6 +45,16 @@ class AttemptResult:
     new_digest: str
     orphan_objects: int
     prepared: PreparedTransition
+
+
+@dataclass(frozen=True)
+class DecisionAttemptResult:
+    outcome: str
+    crash_point: str | None
+    old_digest: str
+    recovered_digest: str
+    new_digest: str
+    orphan_objects: int
 
 
 class ReferenceSimulator:
@@ -102,6 +119,52 @@ class ReferenceSimulator:
                     return self._result("crashed_old_prefix", crash_at, old, new, prepared)
                 return self._result("crashed_new_prefix", crash_at, old, new, prepared)
         return self._result("committed", None, old, new, prepared)
+
+    def attempt_decision(
+        self,
+        *,
+        proposal_id: str,
+        decision: str,
+        reason: str,
+        crash_at: str | None = None,
+    ) -> DecisionAttemptResult:
+        if crash_at is not None and crash_at not in DECISION_CRASH_POINTS:
+            raise ValueError(f"unknown decision crash point: {crash_at}")
+        old = self.durable_state
+        new = decide_proposal(
+            old,
+            proposal_id=proposal_id,
+            decision=decision,
+            reason=reason,
+        )
+        if crash_at == "before_decision_record_put":
+            self.state = old
+            return self._decision_result("crashed_old_prefix", crash_at, old, new)
+        if crash_at in {"after_decision_record_put", "before_decision_head_cas"}:
+            self.orphan_objects += 1
+            self.state = old
+            return self._decision_result("crashed_old_prefix", crash_at, old, new)
+        self.durable_state = new
+        self.state = new
+        if crash_at == "after_decision_head_cas":
+            return self._decision_result("crashed_new_prefix", crash_at, old, new)
+        return self._decision_result("committed", None, old, new)
+
+    def _decision_result(
+        self,
+        outcome: str,
+        crash_point: str | None,
+        old: SystemState,
+        new: SystemState,
+    ) -> DecisionAttemptResult:
+        return DecisionAttemptResult(
+            outcome=outcome,
+            crash_point=crash_point,
+            old_digest=old.state_digest(),
+            recovered_digest=self.durable_state.state_digest(),
+            new_digest=new.state_digest(),
+            orphan_objects=self.orphan_objects,
+        )
 
     def _result(
         self,

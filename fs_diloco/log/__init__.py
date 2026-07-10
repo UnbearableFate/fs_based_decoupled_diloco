@@ -2,6 +2,7 @@
 
 from .model import (
     CommitEvent,
+    DecisionEvent,
     FragmentState,
     PreparedTransition,
     ProposalDecision,
@@ -18,6 +19,7 @@ from .model import (
 
 __all__ = [
     "CommitEvent",
+    "DecisionEvent",
     "FragmentState",
     "PreparedTransition",
     "ProposalDecision",
