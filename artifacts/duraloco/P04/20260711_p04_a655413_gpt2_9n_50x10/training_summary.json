@@ -1,0 +1,798 @@
+{
+  "db": {
+    "applied_updates": 80,
+    "contributors": [
+      {
+        "applied_version": 1,
+        "effective_weight": 0.125,
+        "learner_id": "learner_000",
+        "update_id": "learner_000_00000050_7ab14ffd77fd"
+      },
+      {
+        "applied_version": 1,
+        "effective_weight": 0.125,
+        "learner_id": "learner_001",
+        "update_id": "learner_001_00000050_9c21bd3ab648"
+      },
+      {
+        "applied_version": 1,
+        "effective_weight": 0.125,
+        "learner_id": "learner_002",
+        "update_id": "learner_002_00000050_b44bc779c08c"
+      },
+      {
+        "applied_version": 1,
+        "effective_weight": 0.125,
+        "learner_id": "learner_003",
+        "update_id": "learner_003_00000050_f47b673c2ff6"
+      },
+      {
+        "applied_version": 1,
+        "effective_weight": 0.125,
+        "learner_id": "learner_004",
+        "update_id": "learner_004_00000050_2f18987c6753"
+      },
+      {
+        "applied_version": 1,
+        "effective_weight": 0.125,
+        "learner_id": "learner_005",
+        "update_id": "learner_005_00000050_f7ad7a5a66c6"
+      },
+      {
+        "applied_version": 1,
+        "effective_weight": 0.125,
+        "learner_id": "learner_006",
+        "update_id": "learner_006_00000050_2862ab2b3b6e"
+      },
+      {
+        "applied_version": 1,
+        "effective_weight": 0.125,
+        "learner_id": "learner_007",
+        "update_id": "learner_007_00000050_fe215d1781f8"
+      },
+      {
+        "applied_version": 2,
+        "effective_weight": 0.125,
+        "learner_id": "learner_000",
+        "update_id": "learner_000_00000100_5ae1729a8f4a"
+      },
+      {
+        "applied_version": 2,
+        "effective_weight": 0.125,
+        "learner_id": "learner_001",
+        "update_id": "learner_001_00000100_8f7709e1658f"
+      },
+      {
+        "applied_version": 2,
+        "effective_weight": 0.125,
+        "learner_id": "learner_002",
+        "update_id": "learner_002_00000100_f351e62c50c8"
+      },
+      {
+        "applied_version": 2,
+        "effective_weight": 0.125,
+        "learner_id": "learner_003",
+        "update_id": "learner_003_00000100_8aabefb9ac38"
+      },
+      {
+        "applied_version": 2,
+        "effective_weight": 0.125,
+        "learner_id": "learner_004",
+        "update_id": "learner_004_00000100_643e718dcedb"
+      },
+      {
+        "applied_version": 2,
+        "effective_weight": 0.125,
+        "learner_id": "learner_005",
+        "update_id": "learner_005_00000100_2e2f2925c5ea"
+      },
+      {
+        "applied_version": 2,
+        "effective_weight": 0.125,
+        "learner_id": "learner_006",
+        "update_id": "learner_006_00000100_b8df5fd271c6"
+      },
+      {
+        "applied_version": 2,
+        "effective_weight": 0.125,
+        "learner_id": "learner_007",
+        "update_id": "learner_007_00000100_ff1791524301"
+      },
+      {
+        "applied_version": 3,
+        "effective_weight": 0.14285714285714285,
+        "learner_id": "learner_000",
+        "update_id": "learner_000_00000150_2718eca74c66"
+      },
+      {
+        "applied_version": 3,
+        "effective_weight": 0.14285714285714285,
+        "learner_id": "learner_001",
+        "update_id": "learner_001_00000200_e876fd82de9c"
+      },
+      {
+        "applied_version": 3,
+        "effective_weight": 0.11904761904761905,
+        "learner_id": "learner_002",
+        "update_id": "learner_002_00000150_6c66656ed129"
+      },
+      {
+        "applied_version": 3,
+        "effective_weight": 0.11904761904761905,
+        "learner_id": "learner_003",
+        "update_id": "learner_003_00000150_1717eb20cb1f"
+      },
+      {
+        "applied_version": 3,
+        "effective_weight": 0.11904761904761905,
+        "learner_id": "learner_004",
+        "update_id": "learner_004_00000150_e66a9101ba6a"
+      },
+      {
+        "applied_version": 3,
+        "effective_weight": 0.11904761904761905,
+        "learner_id": "learner_005",
+        "update_id": "learner_005_00000150_6539a540bd98"
+      },
+      {
+        "applied_version": 3,
+        "effective_weight": 0.11904761904761905,
+        "learner_id": "learner_006",
+        "update_id": "learner_006_00000150_dab4ee972afc"
+      },
+      {
+        "applied_version": 3,
+        "effective_weight": 0.11904761904761905,
+        "learner_id": "learner_007",
+        "update_id": "learner_007_00000150_b0cef8299f20"
+      },
+      {
+        "applied_version": 4,
+        "effective_weight": 0.13333333333333333,
+        "learner_id": "learner_000",
+        "update_id": "learner_000_00000200_73d9275caf7f"
+      },
+      {
+        "applied_version": 4,
+        "effective_weight": 0.13333333333333333,
+        "learner_id": "learner_001",
+        "update_id": "learner_001_00000250_29018d682f91"
+      },
+      {
+        "applied_version": 4,
+        "effective_weight": 0.13333333333333333,
+        "learner_id": "learner_002",
+        "update_id": "learner_002_00000250_e1a646d018e1"
+      },
+      {
+        "applied_version": 4,
+        "effective_weight": 0.13333333333333333,
+        "learner_id": "learner_003",
+        "update_id": "learner_003_00000250_7fdee1c9ca95"
+      },
+      {
+        "applied_version": 4,
+        "effective_weight": 0.11111111111111112,
+        "learner_id": "learner_004",
+        "update_id": "learner_004_00000200_7a396b9018fc"
+      },
+      {
+        "applied_version": 4,
+        "effective_weight": 0.11111111111111112,
+        "learner_id": "learner_005",
+        "update_id": "learner_005_00000200_bf4010ca5b4c"
+      },
+      {
+        "applied_version": 4,
+        "effective_weight": 0.13333333333333333,
+        "learner_id": "learner_006",
+        "update_id": "learner_006_00000250_0731feb04b02"
+      },
+      {
+        "applied_version": 4,
+        "effective_weight": 0.11111111111111112,
+        "learner_id": "learner_007",
+        "update_id": "learner_007_00000200_4d81db6aa59a"
+      },
+      {
+        "applied_version": 5,
+        "effective_weight": 0.13333333333333333,
+        "learner_id": "learner_000",
+        "update_id": "learner_000_00000250_a89cec95bf0d"
+      },
+      {
+        "applied_version": 5,
+        "effective_weight": 0.13333333333333333,
+        "learner_id": "learner_001",
+        "update_id": "learner_001_00000300_f527814619fd"
+      },
+      {
+        "applied_version": 5,
+        "effective_weight": 0.13333333333333333,
+        "learner_id": "learner_002",
+        "update_id": "learner_002_00000300_a98f633fa035"
+      },
+      {
+        "applied_version": 5,
+        "effective_weight": 0.13333333333333333,
+        "learner_id": "learner_003",
+        "update_id": "learner_003_00000300_7d20c4c6e6f2"
+      },
+      {
+        "applied_version": 5,
+        "effective_weight": 0.11111111111111112,
+        "learner_id": "learner_004",
+        "update_id": "learner_004_00000250_6c622b9087cf"
+      },
+      {
+        "applied_version": 5,
+        "effective_weight": 0.11111111111111112,
+        "learner_id": "learner_005",
+        "update_id": "learner_005_00000250_4dde9cd6b01a"
+      },
+      {
+        "applied_version": 5,
+        "effective_weight": 0.13333333333333333,
+        "learner_id": "learner_006",
+        "update_id": "learner_006_00000300_c8a5b90b9eea"
+      },
+      {
+        "applied_version": 5,
+        "effective_weight": 0.11111111111111112,
+        "learner_id": "learner_007",
+        "update_id": "learner_007_00000250_3006b599c462"
+      },
+      {
+        "applied_version": 6,
+        "effective_weight": 0.125,
+        "learner_id": "learner_000",
+        "update_id": "learner_000_00000300_1e351066904e"
+      },
+      {
+        "applied_version": 6,
+        "effective_weight": 0.125,
+        "learner_id": "learner_001",
+        "update_id": "learner_001_00000400_64c114469b3b"
+      },
+      {
+        "applied_version": 6,
+        "effective_weight": 0.125,
+        "learner_id": "learner_002",
+        "update_id": "learner_002_00000350_2831486370a4"
+      },
+      {
+        "applied_version": 6,
+        "effective_weight": 0.125,
+        "learner_id": "learner_003",
+        "update_id": "learner_003_00000350_99397d5f4ed7"
+      },
+      {
+        "applied_version": 6,
+        "effective_weight": 0.125,
+        "learner_id": "learner_004",
+        "update_id": "learner_004_00000350_8e7db0f74924"
+      },
+      {
+        "applied_version": 6,
+        "effective_weight": 0.125,
+        "learner_id": "learner_005",
+        "update_id": "learner_005_00000350_c888ac3ead34"
+      },
+      {
+        "applied_version": 6,
+        "effective_weight": 0.125,
+        "learner_id": "learner_006",
+        "update_id": "learner_006_00000350_055e275161b9"
+      },
+      {
+        "applied_version": 6,
+        "effective_weight": 0.125,
+        "learner_id": "learner_007",
+        "update_id": "learner_007_00000350_239b81b7c205"
+      },
+      {
+        "applied_version": 7,
+        "effective_weight": 0.10638297872340427,
+        "learner_id": "learner_000",
+        "update_id": "learner_000_00000350_73f7bed0a567"
+      },
+      {
+        "applied_version": 7,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_001",
+        "update_id": "learner_001_00000450_1c0f4eb8153a"
+      },
+      {
+        "applied_version": 7,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_002",
+        "update_id": "learner_002_00000450_3c3a52d77b19"
+      },
+      {
+        "applied_version": 7,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_003",
+        "update_id": "learner_003_00000400_d889a383f58e"
+      },
+      {
+        "applied_version": 7,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_004",
+        "update_id": "learner_004_00000400_ca5f55284f17"
+      },
+      {
+        "applied_version": 7,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_005",
+        "update_id": "learner_005_00000400_d2835715a123"
+      },
+      {
+        "applied_version": 7,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_006",
+        "update_id": "learner_006_00000400_8e3cc68c6f26"
+      },
+      {
+        "applied_version": 7,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_007",
+        "update_id": "learner_007_00000400_6bd37cead8ef"
+      },
+      {
+        "applied_version": 8,
+        "effective_weight": 0.10638297872340427,
+        "learner_id": "learner_000",
+        "update_id": "learner_000_00000400_ec00cb410bae"
+      },
+      {
+        "applied_version": 8,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_001",
+        "update_id": "learner_001_00000500_17b62503bce0"
+      },
+      {
+        "applied_version": 8,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_002",
+        "update_id": "learner_002_00000500_ef4ea9144eef"
+      },
+      {
+        "applied_version": 8,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_003",
+        "update_id": "learner_003_00000500_3a607016f61d"
+      },
+      {
+        "applied_version": 8,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_004",
+        "update_id": "learner_004_00000450_f7c2120a6cc0"
+      },
+      {
+        "applied_version": 8,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_005",
+        "update_id": "learner_005_00000450_6e4ca91e76b0"
+      },
+      {
+        "applied_version": 8,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_006",
+        "update_id": "learner_006_00000500_9bd5b720972a"
+      },
+      {
+        "applied_version": 8,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_007",
+        "update_id": "learner_007_00000450_2a8de00f064a"
+      },
+      {
+        "applied_version": 9,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_000",
+        "update_id": "learner_000_00000500_c753930bd7fb"
+      },
+      {
+        "applied_version": 9,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_001",
+        "update_id": "learner_001_00000600_9f77503d70fe"
+      },
+      {
+        "applied_version": 9,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_002",
+        "update_id": "learner_002_00000550_74d0569cb267"
+      },
+      {
+        "applied_version": 9,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_003",
+        "update_id": "learner_003_00000550_ac0c4a5b4332"
+      },
+      {
+        "applied_version": 9,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_004",
+        "update_id": "learner_004_00000550_2c4e0376915e"
+      },
+      {
+        "applied_version": 9,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_005",
+        "update_id": "learner_005_00000500_f74c75fedd80"
+      },
+      {
+        "applied_version": 9,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_006",
+        "update_id": "learner_006_00000550_44c9d986002a"
+      },
+      {
+        "applied_version": 9,
+        "effective_weight": 0.10638297872340427,
+        "learner_id": "learner_007",
+        "update_id": "learner_007_00000500_7cab4e5af1cf"
+      },
+      {
+        "applied_version": 10,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_000",
+        "update_id": "learner_000_00000550_eb870962d95b"
+      },
+      {
+        "applied_version": 10,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_001",
+        "update_id": "learner_001_00000650_5553480c8bb9"
+      },
+      {
+        "applied_version": 10,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_002",
+        "update_id": "learner_002_00000650_ef1a8e0d75f1"
+      },
+      {
+        "applied_version": 10,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_003",
+        "update_id": "learner_003_00000600_c9bdd78b333a"
+      },
+      {
+        "applied_version": 10,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_004",
+        "update_id": "learner_004_00000600_2409bae1bb49"
+      },
+      {
+        "applied_version": 10,
+        "effective_weight": 0.10638297872340427,
+        "learner_id": "learner_005",
+        "update_id": "learner_005_00000550_245244190220"
+      },
+      {
+        "applied_version": 10,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_006",
+        "update_id": "learner_006_00000600_913e06375dfd"
+      },
+      {
+        "applied_version": 10,
+        "effective_weight": 0.12765957446808512,
+        "learner_id": "learner_007",
+        "update_id": "learner_007_00000600_2a163eeadf10"
+      }
+    ],
+    "dropped_updates": 16,
+    "exists": true,
+    "fragment_applied_updates": 0,
+    "fragment_dropped_updates": 0,
+    "fragment_learners_with_updates": [],
+    "fragment_pending_updates": 0,
+    "fragment_selected_counts_by_event": {},
+    "fragment_staleness_values": [],
+    "fragment_update_integrity": {
+      "corrupt": [],
+      "missing": [],
+      "ok": true
+    },
+    "fragment_versions_rows": [],
+    "global_versions": 11,
+    "path": "/work/xg24i002/x10041/duraloco_training_runtime/20260711_p04_a655413_gpt2_9n_50x10/db_dumps/metadata_20260711_015237_v000010.db",
+    "pending_updates": 0
+  },
+  "fragment_merge_counts": {},
+  "fragment_sizes": {
+    "imbalance_ratio": 0.0,
+    "max": 0,
+    "mean": 0.0,
+    "min": 0
+  },
+  "fragment_staleness_distribution": {
+    "count": 0
+  },
+  "fragment_versions": {},
+  "global_merge_event": 10,
+  "heartbeats": {
+    "learner_000": {
+      "format_version": 1,
+      "hostname": "mg0004",
+      "last_loaded_global_version": 10,
+      "last_local_step": 600,
+      "last_update_id": "learner_000_00000600_a85e96d970b3",
+      "learner_id": "learner_000",
+      "phase": "process_exit",
+      "pid": 658308,
+      "run_id": "20260711_p04_a655413_gpt2_9n_50x10",
+      "status": "stopped",
+      "timestamp": 1783702357.7166305,
+      "tokens_per_sec": null
+    },
+    "learner_001": {
+      "format_version": 1,
+      "hostname": "mg0007",
+      "last_loaded_global_version": 10,
+      "last_local_step": 721,
+      "last_update_id": "learner_001_00000721_41d5e0a2aee1",
+      "learner_id": "learner_001",
+      "phase": "process_exit",
+      "pid": 3521178,
+      "run_id": "20260711_p04_a655413_gpt2_9n_50x10",
+      "status": "stopped",
+      "timestamp": 1783702358.005554,
+      "tokens_per_sec": null
+    },
+    "learner_002": {
+      "format_version": 1,
+      "hostname": "mg0008",
+      "last_loaded_global_version": 10,
+      "last_local_step": 700,
+      "last_update_id": "learner_002_00000700_d8ea047a5583",
+      "learner_id": "learner_002",
+      "phase": "process_exit",
+      "pid": 850329,
+      "run_id": "20260711_p04_a655413_gpt2_9n_50x10",
+      "status": "stopped",
+      "timestamp": 1783702357.8922653,
+      "tokens_per_sec": null
+    },
+    "learner_003": {
+      "format_version": 1,
+      "hostname": "mg0010",
+      "last_loaded_global_version": 10,
+      "last_local_step": 683,
+      "last_update_id": "learner_003_00000683_4c91ffd5255e",
+      "learner_id": "learner_003",
+      "phase": "process_exit",
+      "pid": 1989327,
+      "run_id": "20260711_p04_a655413_gpt2_9n_50x10",
+      "status": "stopped",
+      "timestamp": 1783702357.9850647,
+      "tokens_per_sec": null
+    },
+    "learner_004": {
+      "format_version": 1,
+      "hostname": "mg0011",
+      "last_loaded_global_version": 10,
+      "last_local_step": 664,
+      "last_update_id": "learner_004_00000664_2df5690eb8b6",
+      "learner_id": "learner_004",
+      "phase": "process_exit",
+      "pid": 190714,
+      "run_id": "20260711_p04_a655413_gpt2_9n_50x10",
+      "status": "stopped",
+      "timestamp": 1783702358.0226057,
+      "tokens_per_sec": null
+    },
+    "learner_005": {
+      "format_version": 1,
+      "hostname": "mg0012",
+      "last_loaded_global_version": 10,
+      "last_local_step": 635,
+      "last_update_id": "learner_005_00000635_48b0c44741d1",
+      "learner_id": "learner_005",
+      "phase": "process_exit",
+      "pid": 1218247,
+      "run_id": "20260711_p04_a655413_gpt2_9n_50x10",
+      "status": "stopped",
+      "timestamp": 1783702358.0093567,
+      "tokens_per_sec": null
+    },
+    "learner_006": {
+      "format_version": 1,
+      "hostname": "mg0013",
+      "last_loaded_global_version": 10,
+      "last_local_step": 689,
+      "last_update_id": "learner_006_00000689_9fd51f18f7d0",
+      "learner_id": "learner_006",
+      "phase": "process_exit",
+      "pid": 698359,
+      "run_id": "20260711_p04_a655413_gpt2_9n_50x10",
+      "status": "stopped",
+      "timestamp": 1783702358.0567536,
+      "tokens_per_sec": null
+    },
+    "learner_007": {
+      "format_version": 1,
+      "hostname": "mg0014",
+      "last_loaded_global_version": 10,
+      "last_local_step": 650,
+      "last_update_id": "learner_007_00000650_e0299c7b0314",
+      "learner_id": "learner_007",
+      "phase": "process_exit",
+      "pid": 3157175,
+      "run_id": "20260711_p04_a655413_gpt2_9n_50x10",
+      "status": "stopped",
+      "timestamp": 1783702357.6639278,
+      "tokens_per_sec": null
+    }
+  },
+  "latest": {
+    "created_at": 1783702357.151333,
+    "format_version": 1,
+    "optim_path": "/work/xg24i002/x10041/duraloco_training_runtime/20260711_p04_a655413_gpt2_9n_50x10/optim/outer_v000010.safetensors",
+    "param_index_path": "/work/xg24i002/x10041/duraloco_training_runtime/20260711_p04_a655413_gpt2_9n_50x10/control/param_index.json",
+    "run_id": "20260711_p04_a655413_gpt2_9n_50x10",
+    "total_seen_tokens": 512000,
+    "version": 10,
+    "weight_path": "/work/xg24i002/x10041/duraloco_training_runtime/20260711_p04_a655413_gpt2_9n_50x10/weights/global_v000010.safetensors"
+  },
+  "latest_kind": "full",
+  "learner_fragment_adoption": {
+    "learner_000": {
+      "fragment_adopt_count": 0,
+      "has_adopted_after_initial": false,
+      "last_adopted_fragments": [],
+      "last_loaded_fragment_versions": {}
+    },
+    "learner_001": {
+      "fragment_adopt_count": 0,
+      "has_adopted_after_initial": false,
+      "last_adopted_fragments": [],
+      "last_loaded_fragment_versions": {}
+    },
+    "learner_002": {
+      "fragment_adopt_count": 0,
+      "has_adopted_after_initial": false,
+      "last_adopted_fragments": [],
+      "last_loaded_fragment_versions": {}
+    },
+    "learner_003": {
+      "fragment_adopt_count": 0,
+      "has_adopted_after_initial": false,
+      "last_adopted_fragments": [],
+      "last_loaded_fragment_versions": {}
+    },
+    "learner_004": {
+      "fragment_adopt_count": 0,
+      "has_adopted_after_initial": false,
+      "last_adopted_fragments": [],
+      "last_loaded_fragment_versions": {}
+    },
+    "learner_005": {
+      "fragment_adopt_count": 0,
+      "has_adopted_after_initial": false,
+      "last_adopted_fragments": [],
+      "last_loaded_fragment_versions": {}
+    },
+    "learner_006": {
+      "fragment_adopt_count": 0,
+      "has_adopted_after_initial": false,
+      "last_adopted_fragments": [],
+      "last_loaded_fragment_versions": {}
+    },
+    "learner_007": {
+      "fragment_adopt_count": 0,
+      "has_adopted_after_initial": false,
+      "last_adopted_fragments": [],
+      "last_loaded_fragment_versions": {}
+    }
+  },
+  "learner_local_steps": {
+    "learner_000": 600,
+    "learner_001": 721,
+    "learner_002": 700,
+    "learner_003": 683,
+    "learner_004": 664,
+    "learner_005": 635,
+    "learner_006": 689,
+    "learner_007": 650
+  },
+  "learner_metrics": {
+    "exists": true,
+    "last": {
+      "base_fragment_version": "",
+      "fragment_adopt_count": "",
+      "fragment_id": "",
+      "fragment_norm": "",
+      "global_merge_event": "",
+      "global_version": "9",
+      "last_loaded_fragment_versions_json": "",
+      "learner_id": "learner_006",
+      "local_step": "689",
+      "param_norm": "1449.94580078125",
+      "phase": "update_written",
+      "timestamp": "1783702357.7492006",
+      "tokens": "4992",
+      "tokens_per_sec": "3211.0162681729553",
+      "train_loss": "3.816259164076585",
+      "update_write_seconds": "0.5225762419868261"
+    },
+    "rows": 109
+  },
+  "loss_summary": {
+    "count": 109,
+    "first_10_mean": 4.323343832492829,
+    "last_10_mean": 3.824454461311286,
+    "last_vs_first_ratio": 0.8846056685494097,
+    "max": 4.55599953174591,
+    "mean": 3.998481378443652,
+    "min": 3.512711410522461,
+    "obvious_divergence": false
+  },
+  "materialized_weight_exists": false,
+  "selected_count_distribution": {
+    "8": 10
+  },
+  "shared_root": "/work/xg24i002/x10041/duraloco_training_runtime/20260711_p04_a655413_gpt2_9n_50x10",
+  "stop": {
+    "format_version": 1,
+    "reason": "stop_after_outer_steps",
+    "run_id": "20260711_p04_a655413_gpt2_9n_50x10",
+    "timestamp": 1783702357.1946182,
+    "total_seen_tokens": 512000,
+    "version": 10
+  },
+  "stop_reason": "stop_after_outer_steps",
+  "syncer_log_flags": {
+    "error": false,
+    "exists": true,
+    "no_progress_timeout": false,
+    "uncaught_exception": false
+  },
+  "syncer_metrics": {
+    "exists": true,
+    "last": {
+      "aggregation_seconds": "0.00020793601288460195",
+      "fragment_aggregation_seconds": "",
+      "fragment_id": "",
+      "fragment_read_seconds": "",
+      "fragment_staleness_max": "",
+      "fragment_staleness_mean": "",
+      "fragment_staleness_min": "",
+      "fragment_version": "",
+      "global_interval_seconds": "2.75492000579834",
+      "global_merge_event": "",
+      "materialize_full_seconds": "",
+      "outer_step_seconds": "0.004073323012562469",
+      "publish_seconds": "1.0839311520103365",
+      "read_seconds": "0.520866702980129",
+      "selected_count": "8",
+      "stale_updates_dropped": "2",
+      "timestamp": "1783702357.1903725",
+      "total_update_tokens": "51200",
+      "version": "10"
+    },
+    "rows": 10
+  },
+  "update_manifest": {
+    "exists": true,
+    "last": {
+      "base_fragment_version": "",
+      "base_global_merge_event": "",
+      "base_global_version": "9",
+      "file_path": "/work/xg24i002/x10041/duraloco_training_runtime/20260711_p04_a655413_gpt2_9n_50x10/updates/pending/learner_006/update_9fd51f18f7d0.params.safetensors",
+      "file_size_bytes": "497759328",
+      "fragment_id": "",
+      "learner_id": "learner_006",
+      "local_step_end": "689",
+      "local_step_start": "650",
+      "sha256": "dbf47d3428248f31a23c3d18618f036212afdda0bda7d24a98ef9c280ba647cb",
+      "timestamp": "1783702357.751686",
+      "tokens_this_update": "4992",
+      "update_id": "learner_006_00000689_9fd51f18f7d0",
+      "update_kind": ""
+    },
+    "rows": 109
+  }
+}

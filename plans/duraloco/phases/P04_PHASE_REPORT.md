@@ -7,11 +7,12 @@
 - Phase: P04 — transactional fragment log and prefix recovery
 - Branch: `codex/duraloco-p04-transaction-log`
 - Base: completed P03 commit `a93633d8d41bdb0e184711c4efaa132f211aa5e9`
-- Verified implementation: `79373ecab4e051b4c9ff2ba128250d8612b9ab8b`
-- State: `checking`; Maker gates P04-A01 through P04-A08 passed
-- Open target: P04-A09 independent one-CAS proof audit
-- Maker PBS: `2358087.opbs` (1 node), `2358090.opbs` (2 nodes), and
-  `2358093.opbs` (terminal 9 nodes)
+- Verified implementation: `a655413cea6ebe9bc368b5827318efd766683b5a`
+- State: `checking`; Maker gates P04-A01 through P04-A08 and the independent
+  P04-A09 counterexample audit passed
+- Open target: independent Checker persistence/lineage re-authorization
+- Parent-linked Maker PBS: `2358166.opbs` (1 node), `2358168.opbs` (2 nodes),
+  and `2358179.opbs` (terminal 9 nodes)
 
 ### Acceptance summary
 
@@ -24,29 +25,33 @@
 | P04-A06 | PASS | deleted and corrupt SQLite cache rebuilt exactly from replay |
 | P04-A07 | PASS | memory and POSIX prefix/state digests match |
 | P04-A08 | PASS | inspect CLI passed and corruption test localizes commit sequence |
-| P04-A09 | CHECKING | independent Checker one-CAS proof and counterexample audit |
+| P04-A09 | PASS | independent Checker one-CAS proof and five novel counterexamples |
 
 ### Terminal real-training gate
 
-- qsub job `2358093.opbs` used 9 distinct hosts: `mg0231`, `mg0293`,
-  `mg0294`, `mg0295`, `mg0296`, `mg0339`, `mg0352`, `mg0360`, `mg0393`.
+- qsub job `2358179.opbs` used 9 distinct hosts: `mg0003`, `mg0004`,
+  `mg0007`, `mg0008`, `mg0010`, `mg0011`, `mg0012`, `mg0013`, `mg0014`.
 - PBS walltime was hard-limited to 15 minutes; observed `qstat` elapsed time was
   47 seconds at final validation, so the slow-run failure signal did not fire.
+- The first regular-queue submission, `2358174.opbs`, showed an estimated start
+  over one hour later due to resource pressure and was canceled before
+  allocation. The final batch was immediately resubmitted to `debug-g`; this
+  queue change did not relax the 15-minute limit or any training assertion.
 - The run used real `gpt2` and WikiText-2 with one syncer and eight learners,
   `inner_steps=50`, and exactly 10 committed outer optimizer transitions.
 - This is the required real-training **50×10** milestone marker.
-- Learner local-step range was 554–567. All 96 observed losses were finite,
-  from 3.1660020141 to 4.5559995317.
+- Learner local-step range was 600–721. All 109 observed losses were finite,
+  from 3.5127114105 to 4.5559995317.
 - Eleven checkpoints (`v000000` through `v000010`) were retained and SHA-256
   bound to a ten-transition P04 projection. Its final committed digest was
-  `530fdc067b09dd77b98b488fe1d393138b6aa32c42ac93b264966b46b53e14e0`.
+  `3ec49951ad933a01a8691f4ada366d3b2f865e0b0faa0b840552f2737e24ba4d`.
 - All twelve terminal assertions passed and the terminal P04 test slice passed
   26 tests. The cumulative 1-node suite passed 272 tests with one explicit
   pre-existing nightly skip.
 
 ### Verification failure history
 
-#### Independent Checker `2db8a73` / PBS `2358154` — blocked, fix pending
+#### Independent Checker `2db8a73` / PBS `2358154` — blocked, resolved for recheck
 
 - Phenomenon: all five new transactional counterexamples passed, but the
   persisted `tests/log` slice passed 24 and failed 2. The milestone-state test
@@ -59,8 +64,11 @@
 - Impact: P04-A09 persistence/reproducibility gate; no transactional safety
   defect was found.
 - Evidence: `artifacts/duraloco/P04/20260711_checker_p04_79373ec_1node/checker_report.md`.
-- Resolution: make the state test lifecycle-aware, add the exact bilingual
-  marker, and rerun parent-linked 1→2→9 evidence at the fix commit.
+- Resolution: `a655413` made the state test lifecycle-aware and added the exact
+  bilingual marker. Parent-linked PBS `2358166`, `2358168`, and `2358179`
+  then passed at that clean commit; their manifests bind the failed f6 attempt
+  or the previous corresponding successful run. Final Checker re-authorization
+  remains pending.
 
 #### 1-node `f6d6e93` / PBS `2358012` — resolved
 
@@ -93,8 +101,9 @@ integration.
 
 ### Next action
 
-Persist this Maker evidence, obtain the independent Checker verdict for
-P04-A09, then archive the bilingual completed report and milestone commit.
+Persist the fixed Maker evidence, obtain independent Checker
+persistence/lineage re-authorization, then archive the bilingual completed
+report and milestone commit.
 
 ## 中文
 
@@ -103,11 +112,12 @@ P04-A09, then archive the bilingual completed report and milestone commit.
 - 阶段：P04 — transactional fragment log 与 prefix recovery
 - 分支：`codex/duraloco-p04-transaction-log`
 - 基线：已完成的 P03 提交 `a93633d8d41bdb0e184711c4efaa132f211aa5e9`
-- 已验证实现：`79373ecab4e051b4c9ff2ba128250d8612b9ab8b`
-- 状态：`checking`；Maker gates P04-A01 至 P04-A08 已通过
-- 未完成 target：P04-A09 独立 one-CAS proof 审查
-- Maker PBS：`2358087.opbs`（单节点）、`2358090.opbs`（双节点）、
-  `2358093.opbs`（最终九节点）
+- 已验证实现：`a655413cea6ebe9bc368b5827318efd766683b5a`
+- 状态：`checking`；Maker gates P04-A01 至 P04-A08 与独立 P04-A09
+  反例审查已通过
+- 未完成 target：独立 Checker persistence/lineage 重新授权
+- 带 parent lineage 的 Maker PBS：`2358166.opbs`（单节点）、
+  `2358168.opbs`（双节点）、`2358179.opbs`（最终九节点）
 
 ### 验收摘要
 
@@ -120,28 +130,31 @@ P04-A09, then archive the bilingual completed report and milestone commit.
 | P04-A06 | PASS | 删除或损坏的 SQLite cache 均从 replay 精确重建 |
 | P04-A07 | PASS | memory 与 POSIX prefix/state digests 一致 |
 | P04-A08 | PASS | inspect CLI 通过，corruption test 能定位 commit sequence |
-| P04-A09 | CHECKING | 独立 Checker one-CAS proof 与反例审查 |
+| P04-A09 | PASS | 独立 Checker one-CAS proof 与五个新反例 |
 
 ### 最终真实训练 gate
 
-- qsub 作业 `2358093.opbs` 使用 9 个不同 hosts：`mg0231`、`mg0293`、
-  `mg0294`、`mg0295`、`mg0296`、`mg0339`、`mg0352`、`mg0360`、`mg0393`。
+- qsub 作业 `2358179.opbs` 使用 9 个不同 hosts：`mg0003`、`mg0004`、
+  `mg0007`、`mg0008`、`mg0010`、`mg0011`、`mg0012`、`mg0013`、`mg0014`。
 - PBS walltime 硬限制为 15 分钟；最终校验时 `qstat` observed elapsed 为
   47 秒，因此没有触发 slow-run 失败信号。
+- 首次 regular queue 提交 `2358174.opbs` 因资源压力预估要一小时后才
+  启动，因此在分配节点前取消；最终 batch 立即改投 `debug-g`，仍保持
+  15 分钟硬限制与全部训练断言。
 - 训练使用真实 `gpt2` 与 WikiText-2，1 个 syncer、8 个 learners，
   `inner_steps=50`，并恰好提交 10 次 outer optimizer transition。
 - 这是规定的真实训练 **50×10** milestone marker。
-- learners local-step 范围为 554–567；96 个 loss 全部有限，范围
-  3.1660020141–4.5559995317。
+- learners local-step 范围为 600–721；109 个 loss 全部有限，范围
+  3.5127114105–4.5559995317。
 - 保留并 SHA-256 绑定了 `v000000` 至 `v000010` 共 11 个 checkpoints；
   十次 P04 projection 的最终 committed digest 为
-  `530fdc067b09dd77b98b488fe1d393138b6aa32c42ac93b264966b46b53e14e0`。
+  `3ec49951ad933a01a8691f4ada366d3b2f865e0b0faa0b840552f2737e24ba4d`。
 - 十二项 terminal assertions 全部通过，最终 P04 test slice 通过 26 项；
   累计单节点 suite 通过 272 项，仅有一个既有 nightly skip。
 
 ### 验证失败历史
 
-#### 独立 Checker `2db8a73` / PBS `2358154` — 阻塞，待修复
+#### 独立 Checker `2db8a73` / PBS `2358154` — 阻塞，已修复待复审
 
 - 现象：五个新增 transactional 反例全部通过，但 persisted `tests/log` slice
   24 项通过、2 项失败。milestone state test 仍期待 `in_progress`/`not_run`，
@@ -152,8 +165,10 @@ P04-A09, then archive the bilingual completed report and milestone commit.
   rerun 也没有把 retry lineage 写入 manifests。
 - 影响：P04-A09 persistence/reproducibility gate；未发现 transactional safety 缺陷。
 - 证据：`artifacts/duraloco/P04/20260711_checker_p04_79373ec_1node/checker_report.md`。
-- 解决：让 state test 识别生命周期、加入精确双语 marker，并在修复提交上重跑
-  parent-linked 1→2→9 evidence。
+- 解决：`a655413` 让 state test 识别生命周期并加入精确双语 marker；
+  带 parent lineage 的 PBS `2358166`、`2358168`、`2358179` 随后在该 clean
+  commit 上全部通过，manifest 已绑定 f6 失败尝试或上一个对应的成功作业。
+  最终 Checker 重新授权尚待完成。
 
 #### 单节点 `f6d6e93` / PBS `2358012` — 已解决
 
@@ -181,5 +196,5 @@ P05。最终 probe 把确定性 P04 projection 与真实 checkpoint hashes 绑�
 
 ### 下一动作
 
-持久化 Maker evidence，取得 P04-A09 独立 Checker 结论，然后归档双语 completed
-report 和 milestone commit。
+持久化修复后 Maker evidence，取得独立 Checker 的 persistence/lineage 重新授权，
+然后归档双语 completed report 和 milestone commit。

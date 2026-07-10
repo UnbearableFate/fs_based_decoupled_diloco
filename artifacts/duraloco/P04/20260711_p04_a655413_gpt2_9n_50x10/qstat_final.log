@@ -1,0 +1,4 @@
+Miyabi scheduled stop time: 0000/00/00(week) 00:00:00 (Remain: 00:00:00)
+
+JOB_ID            JOB_NAME   STATUS    PROJECT    QUEUE           START_DATE       ELAPSE        TOKEN NODE MIG
+2358179           duraloco_p RUNNING   xg24i002   debug-g         07/11 01:51:36   00:00:47        0.1    9   -
