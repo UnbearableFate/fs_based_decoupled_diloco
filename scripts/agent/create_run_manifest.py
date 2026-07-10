@@ -47,6 +47,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--config", type=Path)
     parser.add_argument("--backend", default="memory")
     parser.add_argument("--seed", type=int)
+    parser.add_argument("--dataset-revision")
+    parser.add_argument("--model-revision")
+    parser.add_argument("--hostname")
+    parser.add_argument("--pbs-job-id")
+    parser.add_argument("--pbs-nodefile-digest")
     parser.add_argument("--commands-log", default="commands.log")
     parser.add_argument("--stdout", default="stdout.log")
     parser.add_argument("--stderr", default="stderr.log")
@@ -67,6 +72,10 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     now = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     status = _git(root, "status", "--porcelain=v1").splitlines()
+    nodefile_digest = None
+    nodefile = os.environ.get("PBS_NODEFILE")
+    if nodefile and Path(nodefile).is_file():
+        nodefile_digest = _sha256(Path(nodefile))
     config_path = None
     config_digest = None
     if args.config:
@@ -86,12 +95,14 @@ def main(argv: list[str] | None = None) -> int:
         "git_branch": _git(root, "branch", "--show-current"),
         "dirty_tree": bool(status),
         "dirty_paths": status,
-        "hostname": platform.node(),
+        "hostname": args.hostname or platform.node(),
         "python_version": platform.python_version(),
-        "pbs_job_id": os.environ.get("PBS_JOBID"),
-        "pbs_nodefile": os.environ.get("PBS_NODEFILE"),
+        "pbs_job_id": args.pbs_job_id or os.environ.get("PBS_JOBID"),
+        "pbs_nodefile_digest": args.pbs_nodefile_digest or nodefile_digest,
         "config_path": config_path,
         "config_digest": config_digest,
+        "dataset_revision": args.dataset_revision,
+        "model_revision": args.model_revision,
         "backend": args.backend,
         "seed": args.seed,
         "commands_log": args.commands_log,

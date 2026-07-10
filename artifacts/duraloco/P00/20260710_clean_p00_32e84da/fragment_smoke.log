@@ -1,0 +1,312 @@
+{
+  "db": {
+    "applied_updates": 0,
+    "contributors": [],
+    "dropped_updates": 0,
+    "exists": true,
+    "fragment_applied_updates": 8,
+    "fragment_dropped_updates": 0,
+    "fragment_learners_with_updates": [
+      "learner_000",
+      "learner_001"
+    ],
+    "fragment_pending_updates": 0,
+    "fragment_selected_counts_by_event": {
+      "1": 2,
+      "2": 2,
+      "3": 2,
+      "4": 2
+    },
+    "fragment_staleness_values": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "fragment_update_integrity": {
+      "corrupt": [],
+      "missing": [
+        "learner_000_00000002_f000_bab09d5d05ba",
+        "learner_001_00000002_f000_08e4ce22e61d",
+        "learner_000_00000004_f001_e45258939798",
+        "learner_001_00000004_f001_7635776d9984",
+        "learner_000_00000006_f000_704ed65ef3e6",
+        "learner_001_00000006_f000_39004a05dcf4",
+        "learner_000_00000008_f001_e4698622569c",
+        "learner_001_00000008_f001_d0da351d50c2"
+      ],
+      "ok": false
+    },
+    "fragment_versions_rows": [
+      {
+        "fragment_id": 0,
+        "global_merge_event": 0,
+        "num_updates": 0,
+        "status": "committed",
+        "version": 0
+      },
+      {
+        "fragment_id": 0,
+        "global_merge_event": 1,
+        "num_updates": 2,
+        "status": "committed",
+        "version": 1
+      },
+      {
+        "fragment_id": 0,
+        "global_merge_event": 3,
+        "num_updates": 2,
+        "status": "committed",
+        "version": 2
+      },
+      {
+        "fragment_id": 1,
+        "global_merge_event": 0,
+        "num_updates": 0,
+        "status": "committed",
+        "version": 0
+      },
+      {
+        "fragment_id": 1,
+        "global_merge_event": 2,
+        "num_updates": 2,
+        "status": "committed",
+        "version": 1
+      },
+      {
+        "fragment_id": 1,
+        "global_merge_event": 4,
+        "num_updates": 2,
+        "status": "committed",
+        "version": 2
+      }
+    ],
+    "global_versions": 0,
+    "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco_p00/runs/fs_diloco/20260710_clean_p00_32e84da_fragment/db_dumps/metadata_20260710_222244_v000004.db",
+    "pending_updates": 0
+  },
+  "fragment_merge_counts": {
+    "0": 2,
+    "1": 2
+  },
+  "fragment_sizes": {
+    "imbalance_ratio": 1.0,
+    "max": 1024,
+    "mean": 1024.0,
+    "min": 1024
+  },
+  "fragment_staleness_distribution": {
+    "count": 8,
+    "max": 0.0,
+    "mean": 0.0,
+    "min": 0.0
+  },
+  "fragment_versions": {
+    "0": 2,
+    "1": 2
+  },
+  "global_merge_event": 4,
+  "heartbeats": {
+    "learner_000": {
+      "format_version": 1,
+      "hostname": "mg0032",
+      "last_adopted_fragments": [
+        1
+      ],
+      "last_loaded_fragment_versions": {
+        "0": 2,
+        "1": 2
+      },
+      "last_loaded_global_merge_event": 4,
+      "last_loaded_global_version": 4,
+      "last_local_step": 8,
+      "last_update_id": "learner_000_00000008_f001_e4698622569c",
+      "learner_id": "learner_000",
+      "phase": "process_exit",
+      "pid": 2312853,
+      "run_id": "20260710_clean_p00_32e84da_fragment",
+      "status": "stopped",
+      "timestamp": 1783689764.4745011,
+      "tokens_per_sec": null
+    },
+    "learner_001": {
+      "format_version": 1,
+      "hostname": "mg0032",
+      "last_adopted_fragments": [
+        1
+      ],
+      "last_loaded_fragment_versions": {
+        "0": 2,
+        "1": 2
+      },
+      "last_loaded_global_merge_event": 4,
+      "last_loaded_global_version": 4,
+      "last_local_step": 8,
+      "last_update_id": "learner_001_00000008_f001_d0da351d50c2",
+      "learner_id": "learner_001",
+      "phase": "process_exit",
+      "pid": 2312854,
+      "run_id": "20260710_clean_p00_32e84da_fragment",
+      "status": "stopped",
+      "timestamp": 1783689764.4762397,
+      "tokens_per_sec": null
+    }
+  },
+  "latest": {
+    "created_at": 1783689764.2964437,
+    "format_version": 1,
+    "fragment_index_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco_p00/runs/fs_diloco/20260710_clean_p00_32e84da_fragment/fragments/fragment_index.json",
+    "fragments": {
+      "0": {
+        "optim_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco_p00/runs/fs_diloco/20260710_clean_p00_32e84da_fragment/fragments/optim/fragment_000/v000002.safetensors",
+        "updated_at_global_merge_event": 3,
+        "version": 2,
+        "weight_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco_p00/runs/fs_diloco/20260710_clean_p00_32e84da_fragment/fragments/weights/fragment_000/v000002.safetensors"
+      },
+      "1": {
+        "optim_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco_p00/runs/fs_diloco/20260710_clean_p00_32e84da_fragment/fragments/optim/fragment_001/v000002.safetensors",
+        "updated_at_global_merge_event": 4,
+        "version": 2,
+        "weight_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco_p00/runs/fs_diloco/20260710_clean_p00_32e84da_fragment/fragments/weights/fragment_001/v000002.safetensors"
+      }
+    },
+    "global_merge_event": 4,
+    "latest_kind": "fragment",
+    "latest_layout_version": 2,
+    "materialized_weight_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco_p00/runs/fs_diloco/20260710_clean_p00_32e84da_fragment/weights/global_v000004.safetensors",
+    "param_index_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco_p00/runs/fs_diloco/20260710_clean_p00_32e84da_fragment/control/param_index.json",
+    "run_id": "20260710_clean_p00_32e84da_fragment",
+    "total_seen_tokens": 512,
+    "version": 4
+  },
+  "latest_kind": "fragment",
+  "learner_fragment_adoption": {
+    "learner_000": {
+      "fragment_adopt_count": 3,
+      "has_adopted_after_initial": true,
+      "last_adopted_fragments": [
+        1
+      ],
+      "last_loaded_fragment_versions": {
+        "0": 2,
+        "1": 2
+      }
+    },
+    "learner_001": {
+      "fragment_adopt_count": 3,
+      "has_adopted_after_initial": true,
+      "last_adopted_fragments": [
+        1
+      ],
+      "last_loaded_fragment_versions": {
+        "0": 2,
+        "1": 2
+      }
+    }
+  },
+  "learner_local_steps": {
+    "learner_000": 8,
+    "learner_001": 8
+  },
+  "learner_metrics": {
+    "exists": true,
+    "last": {
+      "base_fragment_version": "1",
+      "fragment_adopt_count": "3",
+      "fragment_id": "1",
+      "fragment_norm": "4.571587085723877",
+      "global_merge_event": "3",
+      "global_version": "3",
+      "last_loaded_fragment_versions_json": "{\"0\": 2, \"1\": 1}",
+      "learner_id": "learner_001",
+      "local_step": "8",
+      "param_norm": "31.98379898071289",
+      "phase": "fragment_update_written",
+      "timestamp": "1783689764.064119",
+      "tokens": "64",
+      "tokens_per_sec": "5083.512595692125",
+      "train_loss": "4.347419261932373",
+      "update_write_seconds": "0.006613070028834045"
+    },
+    "rows": 9
+  },
+  "loss_summary": {
+    "count": 8,
+    "first_10_mean": 4.325138509273529,
+    "last_10_mean": 4.325138509273529,
+    "last_vs_first_ratio": 1.0,
+    "max": 4.427079677581787,
+    "mean": 4.325138509273529,
+    "min": 4.171165466308594,
+    "obvious_divergence": false
+  },
+  "materialized_weight_exists": true,
+  "selected_count_distribution": {
+    "2": 4
+  },
+  "shared_root": "/work/xg24i002/x10041/fs_based_decoupled_diloco_p00/runs/fs_diloco/20260710_clean_p00_32e84da_fragment",
+  "stop": {
+    "format_version": 1,
+    "reason": "stop_after_outer_steps",
+    "run_id": "20260710_clean_p00_32e84da_fragment",
+    "timestamp": 1783689764.2992225,
+    "total_seen_tokens": 512,
+    "version": 4
+  },
+  "stop_reason": "stop_after_outer_steps",
+  "syncer_log_flags": {
+    "error": false,
+    "exists": true,
+    "no_progress_timeout": false,
+    "uncaught_exception": false
+  },
+  "syncer_metrics": {
+    "exists": true,
+    "last": {
+      "aggregation_seconds": "6.76159979775548e-05",
+      "fragment_aggregation_seconds": "6.76159979775548e-05",
+      "fragment_id": "1",
+      "fragment_read_seconds": "0.0010540559887886047",
+      "fragment_staleness_max": "0",
+      "fragment_staleness_mean": "0.0",
+      "fragment_staleness_min": "0",
+      "fragment_version": "2",
+      "global_interval_seconds": "0.24541044235229492",
+      "global_merge_event": "4",
+      "materialize_full_seconds": "0.004568735952489078",
+      "outer_step_seconds": "0.00014646491035819054",
+      "publish_seconds": "0.01710133603774011",
+      "read_seconds": "0.0010540559887886047",
+      "selected_count": "2",
+      "stale_updates_dropped": "0",
+      "timestamp": "1783689764.289276",
+      "total_update_tokens": "128",
+      "version": "4"
+    },
+    "rows": 4
+  },
+  "update_manifest": {
+    "exists": true,
+    "last": {
+      "base_fragment_version": "1",
+      "base_global_merge_event": "3",
+      "base_global_version": "3",
+      "file_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco_p00/runs/fs_diloco/20260710_clean_p00_32e84da_fragment/updates/pending/learner_001/update_d0da351d50c2_fragment_001.params.safetensors",
+      "file_size_bytes": "4184",
+      "fragment_id": "1",
+      "learner_id": "learner_001",
+      "local_step_end": "8",
+      "local_step_start": "6",
+      "sha256": "86ba21f0fd2a0c1ee0dbd6198142a30ed96e0d8fae5d454e545f9f138820429c",
+      "timestamp": "1783689764.0645583",
+      "tokens_this_update": "64",
+      "update_id": "learner_001_00000008_f001_d0da351d50c2",
+      "update_kind": "fragment"
+    },
+    "rows": 9
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "assertions": [
+    "runtime exited zero but P00 evidence persistence was incomplete",
+    "full-vector smoke reproduced BASE-001"
+  ],
+  "backend": "lustre",
+  "commands_log": "commands.log",
+  "config_digest": null,
+  "config_path": null,
+  "dataset_revision": "synthetic-v1",
+  "dirty_paths": [],
+  "dirty_tree": false,
+  "ended_at_utc": "2026-07-10T13:25:59.854820Z",
+  "exit_code": 0,
+  "git_branch": "",
+  "git_commit": "32e84da63c5a0a31842fbcca46a5bc2876398dad",
+  "hostname": "mg0032",
+  "manifest_sha256": "52e9261a1f411438a9b82a1b329715b6a3ddf30803a6d189f1c82da76d717a0e",
+  "model_revision": "synthetic-tiny-v1",
+  "parent_run_id": null,
+  "pbs_job_id": "2357333.opbs",
+  "pbs_nodefile_digest": null,
+  "phase": "P00",
+  "purpose": "smoke",
+  "python_version": "3.13.13",
+  "result": "inconclusive",
+  "run_id": "91a51312-62ef-4039-a416-deb9d3625d55",
+  "schema_version": 1,
+  "seed": null,
+  "started_at_utc": "2026-07-10T13:25:59.854820Z",
+  "stderr": "pytest.log",
+  "stdout": "full_smoke.log"
+}

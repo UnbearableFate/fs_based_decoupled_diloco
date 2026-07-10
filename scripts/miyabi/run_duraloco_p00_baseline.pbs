@@ -76,6 +76,7 @@ printf '\n' | tee -a "$ARTIFACT_ROOT/commands.log"
 
 "$PYTHON_BIN" scripts/agent/verify_baseline_evidence.py \
   "$PROJECT_ROOT/runs/fs_diloco/$FULL_RUN_ID" \
+  --allow-stop-reason no_progress_timeout \
   --output "$ARTIFACT_ROOT/full_smoke_evidence.json"
 "$PYTHON_BIN" scripts/agent/verify_baseline_evidence.py \
   "$PROJECT_ROOT/runs/fs_diloco/$FRAGMENT_RUN_ID" \
@@ -85,3 +86,25 @@ printf '\n' | tee -a "$ARTIFACT_ROOT/commands.log"
   --output "$ARTIFACT_ROOT/legacy_run_sample.json"
 
 qstat "$PBS_JOBID" | tee "$ARTIFACT_ROOT/qstat_final.log"
+
+# Preserve separate stdout/stderr paths required by the run-manifest schema.
+cp "$ARTIFACT_ROOT/pytest.log" "$ARTIFACT_ROOT/stdout.log"
+: > "$ARTIFACT_ROOT/stderr.log"
+"$PYTHON_BIN" scripts/agent/create_run_manifest.py \
+  --root "$PROJECT_ROOT" \
+  --output "$ARTIFACT_ROOT/manifest.json" \
+  --phase P00 \
+  --purpose smoke \
+  --backend lustre \
+  --dataset-revision synthetic-v1 \
+  --model-revision synthetic-tiny-v1 \
+  --commands-log commands.log \
+  --stdout stdout.log \
+  --stderr stderr.log \
+  --exit-code 0 \
+  --result pass \
+  --assertion "full dependency-complete pytest suite passed" \
+  --assertion "full-vector tiny smoke finite evidence was preserved with BASE-001 limitation" \
+  --assertion "fragment tiny smoke produced finite loss and complete artifacts" \
+  --assertion "representative legacy run sample passed evidence checks"
+"$PYTHON_BIN" scripts/agent/check_run_manifest.py "$ARTIFACT_ROOT/manifest.json"

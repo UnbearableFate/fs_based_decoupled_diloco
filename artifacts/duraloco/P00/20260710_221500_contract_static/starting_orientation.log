@@ -1,0 +1,52 @@
+hostname=miyabi-g1
+PBS_JOBID=
+PBS_NODEFILE=
+branch=main
+commit=afc50a1e179c64321645b278b2497ea3ab3fe24d
+planning_basis_commit=afc50a1e179c64321645b278b2497ea3ab3fe24d
+worktree_status_at_start:
+ M README.md
+ M configs/fs_diloco_gpt2_wikitext2_1l_debug.yaml
+ M configs/fs_diloco_gpt2_wikitext2_1l_fragment_debug.yaml
+ M configs/fs_diloco_gpt2_wikitext2_8l_5000steps.yaml
+ M configs/fs_diloco_gpt2_wikitext2_8l_fragment_5000steps.yaml
+ M configs/fs_diloco_gpt2_wikitext2_8l_fragment_50x4.yaml
+ M docs/design.md
+ M docs/miyabi_runbook.md
+ M docs/user-guide/01-overview.zh-en.md
+ M docs/user-guide/02-training.zh-en.md
+ M docs/user-guide/07-operations.zh-en.md
+ M fs_diloco/config.py
+ M fs_diloco/learner.py
+ M fs_diloco/retention.py
+ M fs_diloco/syncer.py
+ M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
+ M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/01_P00_BASELINE_AND_RESEARCH_CONTRACT.md
+ M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/02_P01_PROTOCOL_V2_SCHEMAS_AND_VALIDATION.md
+ M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/03_P02_REFERENCE_SIMULATOR_AND_IN_MEMORY_BACKEND.md
+ M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/04_P03_STORAGE_ABSTRACTION_AND_POSIX_LUSTRE_CONTRACT.md
+ M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/05_P04_TRANSACTIONAL_FRAGMENT_LOG_AND_PREFIX_RECOVERY.md
+ M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/06_P05_SYNCER_LEASE_FENCING_AND_FAILOVER.md
+ M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/07_P06_LEARNER_INTERVALS_ADOPTION_AND_RECOVERY.md
+ M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/08_P07_COMPACTION_GC_ACKS_AND_LEARNER_CAPSULES.md
+ M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/09_P08_DIRECT_FRAGMENT_IO_STREAMING_REDUCER_AND_TELEMETRY.md
+ M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/10_P09_OBJECT_STORE_BACKEND_AND_HYBRID_BASELINE.md
+ M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/11_P10_SACC_AND_ALGORITHM_SYSTEM_CODESIGN.md
+ M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/12_P11_MIYABI_INTEGRATION_CHAOS_AND_9NODE_ACCEPTANCE.md
+ M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/13_P12_FORMAL_EXPERIMENTS_ARTIFACT_AND_PAPER_EVIDENCE.md
+ M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/DuraLoCo_Codex_Master_Plan.md
+ M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/README.md
+ M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/SHA256SUMS.txt
+ M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/templates/PHASE_REPORT.md
+ M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/templates/PHASE_STATE.yaml
+ M scripts/miyabi/run_1node_debug.pbs
+ M scripts/miyabi/run_1node_fragment_debug.pbs
+ M scripts/miyabi/run_1node_lm_eval.pbs
+ M scripts/miyabi/run_2node_debug.pbs
+ M scripts/miyabi/run_2node_fragment_debug.pbs
+ M scripts/miyabi/run_9node_fragment_gpt2_wikitext2_5000steps.pbs
+ M scripts/miyabi/run_9node_fragment_gpt2_wikitext2_50x4.pbs
+ M scripts/miyabi/run_9node_gpt2_wikitext2.pbs
+ M scripts/miyabi/run_9node_gpt2_wikitext2_5000steps.pbs
+ M tests/test_config.py
+ M tests/test_retention.py

@@ -1,0 +1,147 @@
+{
+  "assertions": {
+    "committed_version_positive": true,
+    "finite_loss_count_positive": true,
+    "invalid_log_lines_zero": true,
+    "nonfinite_loss_count_zero": true,
+    "required_event_groups_present": true,
+    "required_events_present": true,
+    "sqlite_nonempty": true,
+    "stop_reason_accepted": true
+  },
+  "events": {
+    "db_dumped": 51,
+    "fragment_latest_polled": 400,
+    "fragment_latest_published": 50,
+    "fragment_outer_step_applied": 50,
+    "fragment_quorum_wait": 603,
+    "fragment_run_initialized": 1,
+    "fragment_update_written": 400,
+    "fragment_updates_selected": 50,
+    "fragments_adopted": 400,
+    "heartbeat_written": 762,
+    "heartbeats_ingested": 710,
+    "inner_optimizer_reset": 408,
+    "inner_step_summary": 800,
+    "learner_liveness_updated": 710,
+    "loaded_fragment_latest": 8,
+    "metadata_ingested": 160,
+    "process_exit": 9,
+    "process_start": 9,
+    "retention_cleanup": 3,
+    "stop_published": 1,
+    "stop_seen": 7,
+    "wandb_initialized": 1
+  },
+  "finite_loss_events": 1200,
+  "invalid_log_lines": 0,
+  "kind": "legacy-run-sample",
+  "latest": {
+    "created_at": 1783616509.360443,
+    "format_version": 1,
+    "fragment_index_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260710_013757_fs_diloco_gpt2_wikitext2_8l_fragment_5000steps/fragments/fragment_index.json",
+    "fragments": {
+      "0": {
+        "optim_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260710_013757_fs_diloco_gpt2_wikitext2_8l_fragment_5000steps/fragments/optim/fragment_000/v000013.safetensors",
+        "updated_at_global_merge_event": 49,
+        "version": 13,
+        "weight_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260710_013757_fs_diloco_gpt2_wikitext2_8l_fragment_5000steps/fragments/weights/fragment_000/v000013.safetensors"
+      },
+      "1": {
+        "optim_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260710_013757_fs_diloco_gpt2_wikitext2_8l_fragment_5000steps/fragments/optim/fragment_001/v000013.safetensors",
+        "updated_at_global_merge_event": 50,
+        "version": 13,
+        "weight_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260710_013757_fs_diloco_gpt2_wikitext2_8l_fragment_5000steps/fragments/weights/fragment_001/v000013.safetensors"
+      },
+      "2": {
+        "optim_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260710_013757_fs_diloco_gpt2_wikitext2_8l_fragment_5000steps/fragments/optim/fragment_002/v000012.safetensors",
+        "updated_at_global_merge_event": 47,
+        "version": 12,
+        "weight_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260710_013757_fs_diloco_gpt2_wikitext2_8l_fragment_5000steps/fragments/weights/fragment_002/v000012.safetensors"
+      },
+      "3": {
+        "optim_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260710_013757_fs_diloco_gpt2_wikitext2_8l_fragment_5000steps/fragments/optim/fragment_003/v000012.safetensors",
+        "updated_at_global_merge_event": 48,
+        "version": 12,
+        "weight_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260710_013757_fs_diloco_gpt2_wikitext2_8l_fragment_5000steps/fragments/weights/fragment_003/v000012.safetensors"
+      }
+    },
+    "global_merge_event": 50,
+    "latest_kind": "fragment",
+    "latest_layout_version": 2,
+    "materialized_weight_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260710_013757_fs_diloco_gpt2_wikitext2_8l_fragment_5000steps/weights/global_v000050.safetensors",
+    "param_index_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260710_013757_fs_diloco_gpt2_wikitext2_8l_fragment_5000steps/control/param_index.json",
+    "run_id": "20260710_013757_fs_diloco_gpt2_wikitext2_8l_fragment_5000steps",
+    "total_seen_tokens": 655360000,
+    "version": 50
+  },
+  "limitations": [
+    "legacy run is observational baseline, not Protocol v2 authority evidence",
+    "only representative control/log/DB/tensor artifacts are hashed"
+  ],
+  "nonfinite_loss_events": 0,
+  "run_root": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260710_013757_fs_diloco_gpt2_wikitext2_8l_fragment_5000steps",
+  "sampled_artifacts": [
+    {
+      "path": "control/latest.json",
+      "sha256": "a6bd188bc3f926c42edd724c2eb78759a83c7075818560586660c0a2934273d5",
+      "size": 2772
+    },
+    {
+      "path": "control/stop.json",
+      "sha256": "6cbcaa8443f72d9fd9badd0f8db15fcc4f0d21b3d737758b342f46112a56c3fb",
+      "size": 228
+    },
+    {
+      "path": "control/run_config.resolved.yaml",
+      "sha256": "e914b6f8dc36d5a2c2c0f55cf465a0fdddd3f51297a5143e415e990653a89cad",
+      "size": 2760
+    },
+    {
+      "path": "control/param_index.json",
+      "sha256": "6180a6911d51acdb9c7566cb6ac579528136fcd4fed67c7246b28c9c33a02c4c",
+      "size": 27277
+    },
+    {
+      "path": "logs/learner_000.jsonl",
+      "sha256": "6754e04210809d29d00e0a794b5bf08cc5261011ebcc936f7a6df2c79ef0a23d",
+      "size": 86643
+    },
+    {
+      "path": "logs/syncer.jsonl",
+      "sha256": "87a1e154f3e52479ebd04c627b8581f95dc8a84151f238b70b2e5a49ff9c4256",
+      "size": 423194
+    },
+    {
+      "path": "weights/global_v000050.safetensors",
+      "sha256": "6a498fda0c60431de60dc4191a98eb64fb4a66c127b699fc005fc95ad87f4404",
+      "size": 497774176
+    },
+    {
+      "path": "db_dumps/metadata_20260710_020149_v000050.db",
+      "sha256": "2a24f836fbb41ce3826ce803274546505566f38ebacfe2731b83ad961f7f9d19",
+      "size": 557056
+    }
+  ],
+  "schema_version": 1,
+  "sqlite_tables": {
+    "db_dumps": 50,
+    "events": 401,
+    "fragment_updates": 400,
+    "fragment_versions": 54,
+    "fragments": 4,
+    "global_versions": 0,
+    "learners": 8,
+    "run_state": 1,
+    "sqlite_sequence": 2,
+    "updates": 0
+  },
+  "stop": {
+    "format_version": 1,
+    "reason": "stop_after_outer_steps",
+    "run_id": "20260710_013757_fs_diloco_gpt2_wikitext2_8l_fragment_5000steps",
+    "timestamp": 1783616509.3634686,
+    "total_seen_tokens": 655360000,
+    "version": 50
+  }
+}

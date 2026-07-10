@@ -120,3 +120,22 @@ def test_missing_acceptance_id_is_rejected_even_before_completion(tmp_path):
     result = _run(tmp_path, payload)
     assert result.returncode != 0
     assert "acceptance set differs" in result.stderr
+
+
+def test_pass_with_required_gate_followup_cannot_complete(tmp_path):
+    report = tmp_path / "checker.md"
+    report.write_text(
+        "Verdict: PASS_WITH_FOLLOWUPS\nrequired_gate_followups: rerun runtime gate\n"
+    )
+    payload = _base_state()
+    payload["status"] = "completed"
+    payload["last_verified_commit"] = "b" * 40
+    payload["acceptance"] = {
+        key: {"result": "pass", "evidence": ["artifact"]}
+        for key in payload["acceptance"]
+    }
+    payload["checks"] = {"local_static": "static_pass"}
+    payload["checker_report"] = "checker.md"
+    result = _run(tmp_path, payload)
+    assert result.returncode != 0
+    assert "required_gate_followups" in result.stderr

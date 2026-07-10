@@ -101,3 +101,7 @@ Known baseline limitations are the absence of strict content/causal proposal
 validation, conditional head commit, durable consumption history, cache-free
 replay, fencing/failover, atomic fragment/outer-state publication, exact
 fragment resume, and reachability-based reclamation.
+
+Observed smoke defects and their exact reproductions are recorded in
+`baseline_limitations.md`; a non-success stop cannot pass the evidence checker
+unless its reason is explicitly allowed and linked to such a limitation.

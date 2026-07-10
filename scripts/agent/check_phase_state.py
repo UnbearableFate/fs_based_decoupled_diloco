@@ -102,7 +102,7 @@ def _phase_number(value: Any) -> int:
     return int(match.group(1))
 
 
-def _checker_verdict(root: Path, relative: str) -> str:
+def _checker_verdict(root: Path, relative: str) -> tuple[str, str]:
     path = Path(relative)
     path = path if path.is_absolute() else root / path
     if not path.is_file():
@@ -111,7 +111,8 @@ def _checker_verdict(root: Path, relative: str) -> str:
     match = re.search(r"(?mi)^\s*(?:verdict|status)\s*:\s*(PASS(?:_WITH_FOLLOWUPS)?|BLOCKED)\s*$", text)
     if not match:
         raise StateError(f"checker report has no structured verdict: {relative}")
-    return match.group(1)
+    followups = re.search(r"(?mi)^\s*required_gate_followups\s*:\s*(.+?)\s*$", text)
+    return match.group(1), followups.group(1).strip() if followups else ""
 
 
 def validate(payload: dict[str, Any], *, root: Path) -> None:
@@ -169,8 +170,16 @@ def validate(payload: dict[str, Any], *, root: Path) -> None:
         report = payload["checker_report"]
         if not isinstance(report, str) or not report:
             raise StateError("completed phase requires checker_report")
-        if _checker_verdict(root, report) not in {"PASS", "PASS_WITH_FOLLOWUPS"}:
+        verdict, required_gate_followups = _checker_verdict(root, report)
+        if verdict not in {"PASS", "PASS_WITH_FOLLOWUPS"}:
             raise StateError("completed phase checker did not pass")
+        if verdict == "PASS_WITH_FOLLOWUPS" and required_gate_followups.casefold() not in {
+            "none",
+            "[]",
+        }:
+            raise StateError(
+                "PASS_WITH_FOLLOWUPS may complete only with required_gate_followups: none"
+            )
         if payload["open_blockers"]:
             raise StateError("completed phase cannot have open blockers")
         if any(value in {"not_run", "failed", "blocked"} for value in checks.values()):
