@@ -35,7 +35,10 @@ Proposal drop/supersession is itself a parent-linked decision event that
 advances the same global head; it cannot change eligibility outside the
 recoverable prefix log. Same learner/session/fragment proposals sharing one
 base are treated as overlapping: after the oldest is consumed, successors
-require an explicit supersession decision and cannot be consumed.
+require an explicit supersession decision and cannot be consumed. Across
+successive bases, committed sequence numbers for each learner/session/fragment
+lineage must increase monotonically; a late lower sequence remains published
+but is ineligible for commitment.
 
 `commit_prepared` re-derives and revalidates the complete deterministic event,
 succeeds only against the exact parent head, consumes each
@@ -68,5 +71,6 @@ same state digest. The quick gate runs 1,000 traces; the
 explicit suite runs 10,000. The minimizer removes irrelevant events from a
 failing trace. Deliberate double-apply, wrong-parent, parameter/outer-state
 pairing, and canonical-but-numerically-wrong transition mutants must be
-detected, demonstrating that the checks fail when the target invariants are
-actually broken.
+detected. A fifth mutant for committed learner-lineage sequence rollback must
+also be detected, demonstrating that the checks fail when the target
+invariants are actually broken.

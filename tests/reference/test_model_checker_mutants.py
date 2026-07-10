@@ -14,6 +14,7 @@ from .helpers import state_with_one_commit
         ("wrong_parent", "I-002"),
         ("state_pairing", "I-005"),
         ("numeric_transition", "I-009"),
+        ("sequence_rollback", "I-003"),
     ],
 )
 def test_deliberate_safety_mutants_are_killed(mutant, invariant):

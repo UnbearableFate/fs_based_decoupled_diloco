@@ -4,7 +4,16 @@ from __future__ import annotations
 
 from dataclasses import replace
 
-from fs_diloco.log.model import CommitEvent, FragmentState, SystemState, check_invariants
+from fs_diloco.log.model import (
+    CommitEvent,
+    FragmentState,
+    ReferenceProposal,
+    SystemState,
+    check_invariants,
+    commit_prepared,
+    prepare_transition,
+    recover_prefix,
+)
 from fs_diloco.testing.trace import generate_trace, replay_trace
 
 
@@ -128,12 +137,76 @@ def mutate_numeric_transition(state: SystemState) -> SystemState:
     )
 
 
+def mutate_sequence_rollback(state: SystemState) -> SystemState:
+    if len(state.commits) != 1 or not isinstance(state.commits[0], CommitEvent):
+        raise ValueError("sequence rollback mutant expects one commit")
+    first_id = state.commits[0].selected_proposal_ids[0]
+    first = state.proposals[first_id]
+    genesis = recover_prefix(state, 0)
+    high = ReferenceProposal.create(
+        learner_id=first.learner_id,
+        session_id=first.session_id,
+        sequence=2,
+        fragment_id=first.fragment_id,
+        base_commit_id=genesis.head_commit_id,
+        base_commit_seq=genesis.head_commit_seq,
+        base_fragment_version=genesis.fragments[first.fragment_id].version,
+        target_tokens=first.target_tokens,
+        values=first.values,
+    )
+    high_state = genesis.publish(high)
+    high_state = commit_prepared(
+        high_state,
+        prepare_transition(
+            high_state,
+            fragment_id=high.fragment_id,
+            selected_proposal_ids=(high.proposal_id,),
+        ),
+    )
+    rollback = ReferenceProposal.create(
+        learner_id=first.learner_id,
+        session_id=first.session_id,
+        sequence=1,
+        fragment_id=first.fragment_id,
+        base_commit_id=high_state.head_commit_id,
+        base_commit_seq=high_state.head_commit_seq,
+        base_fragment_version=high_state.fragments[first.fragment_id].version,
+        target_tokens=first.target_tokens,
+        values=first.values,
+    )
+    published = high_state.publish(rollback)
+    validation_shadow = replace(published, consumed_proposal_ids=frozenset())
+    prepared = prepare_transition(
+        validation_shadow,
+        fragment_id=rollback.fragment_id,
+        selected_proposal_ids=(rollback.proposal_id,),
+    )
+    event = prepared.event
+    fragments = dict(published.fragments)
+    fragments[rollback.fragment_id] = FragmentState(
+        version=event.new_fragment_version,
+        params=event.new_params,
+        outer_state=event.new_outer_state,
+        params_commit_id=event.commit_id,
+        outer_state_commit_id=event.commit_id,
+    )
+    return replace(
+        published,
+        head_commit_id=event.commit_id,
+        head_commit_seq=event.commit_seq,
+        fragments=fragments,
+        consumed_proposal_ids=published.consumed_proposal_ids | {rollback.proposal_id},
+        commits=published.commits + (event,),
+    )
+
+
 def mutant_violations(state: SystemState, mutant: str) -> tuple[str, ...]:
     functions = {
         "double_apply": mutate_double_inclusion,
         "wrong_parent": mutate_wrong_parent,
         "state_pairing": mutate_state_pairing,
         "numeric_transition": mutate_numeric_transition,
+        "sequence_rollback": mutate_sequence_rollback,
     }
     if mutant not in functions:
         raise ValueError(mutant)

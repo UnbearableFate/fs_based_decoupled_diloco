@@ -7,6 +7,7 @@ from fs_diloco.log.model import (
     FragmentState,
     SystemState,
     TransitionConflict,
+    TransitionError,
     assert_invariants,
     check_invariants,
     commit_prepared,
@@ -136,7 +137,7 @@ def test_same_base_overlapping_successor_requires_explicit_supersession():
         ),
     )
     assert not state.eligible(overlapping)
-    with pytest.raises(Exception, match="ineligible"):
+    with pytest.raises(TransitionError, match="ineligible"):
         prepare_transition(
             state,
             fragment_id=0,
@@ -149,6 +150,29 @@ def test_same_base_overlapping_successor_requires_explicit_supersession():
         reason="overlaps_committed_same_base_interval",
     )
     assert_invariants(state)
+
+
+def test_committed_learner_lineage_rejects_sequence_rollback():
+    state = SystemState.genesis()
+    high = proposal_for(state, learner=0, sequence=2)
+    state = state.publish(high)
+    state = commit_prepared(
+        state,
+        prepare_transition(
+            state,
+            fragment_id=0,
+            selected_proposal_ids=(high.proposal_id,),
+        ),
+    )
+    rollback = proposal_for(state, learner=0, sequence=1)
+    state = state.publish(rollback)
+    assert not state.eligible(rollback)
+    with pytest.raises(Exception, match="ineligible"):
+        prepare_transition(
+            state,
+            fragment_id=0,
+            selected_proposal_ids=(rollback.proposal_id,),
+        )
 
 
 def test_duplicate_publication_is_idempotent():

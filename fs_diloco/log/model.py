@@ -366,16 +366,23 @@ class SystemState:
             return False
         for consumed_id in self.consumed_proposal_ids:
             consumed = self.proposals.get(consumed_id)
-            if consumed is not None and (
+            if consumed is None:
+                continue
+            same_lineage = (
                 consumed.learner_id,
                 consumed.session_id,
                 consumed.fragment_id,
-                consumed.base_commit_id,
-                consumed.base_fragment_version,
             ) == (
                 proposal.learner_id,
                 proposal.session_id,
                 proposal.fragment_id,
+            )
+            if same_lineage and consumed.sequence >= proposal.sequence:
+                return False
+            if same_lineage and (
+                consumed.base_commit_id,
+                consumed.base_fragment_version,
+            ) == (
                 proposal.base_commit_id,
                 proposal.base_fragment_version,
             ):
@@ -654,6 +661,7 @@ def check_invariants(state: SystemState) -> tuple[str, ...]:
     ancestor_sequences = {"genesis": 0}
     seen: set[str] = set()
     seen_interval_bases: set[tuple[str, str, int, str, int]] = set()
+    last_sequence_by_lineage: dict[tuple[str, str, int], int] = {}
     expected_versions = {fragment_id: 0 for fragment_id in state.fragments}
     expected_fragments = dict(state.genesis_fragments)
     fragment_versions_by_commit = {
@@ -732,6 +740,18 @@ def check_invariants(state: SystemState) -> tuple[str, ...]:
             if interval_base in seen_interval_bases:
                 violations.append("I-003: overlapping same-base learner interval is included twice")
             seen_interval_bases.add(interval_base)
+            lineage = (
+                proposal.learner_id,
+                proposal.session_id,
+                proposal.fragment_id,
+            )
+            previous_sequence = last_sequence_by_lineage.get(lineage)
+            if previous_sequence is not None and proposal.sequence <= previous_sequence:
+                violations.append("I-003: committed learner lineage sequence is not monotonic")
+            last_sequence_by_lineage[lineage] = max(
+                proposal.sequence,
+                previous_sequence if previous_sequence is not None else proposal.sequence,
+            )
             if (
                 event.previous_fragment_version - proposal.base_fragment_version
                 > state.protocol_config.max_fragment_staleness
