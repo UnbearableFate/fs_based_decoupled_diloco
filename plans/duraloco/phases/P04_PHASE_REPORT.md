@@ -34,6 +34,7 @@
   47 seconds at final validation, so the slow-run failure signal did not fire.
 - The run used real `gpt2` and WikiText-2 with one syncer and eight learners,
   `inner_steps=50`, and exactly 10 committed outer optimizer transitions.
+- This is the required real-training **50×10** milestone marker.
 - Learner local-step range was 554–567. All 96 observed losses were finite,
   from 3.1660020141 to 4.5559995317.
 - Eleven checkpoints (`v000000` through `v000010`) were retained and SHA-256
@@ -44,6 +45,22 @@
   pre-existing nightly skip.
 
 ### Verification failure history
+
+#### Independent Checker `2db8a73` / PBS `2358154` — blocked, fix pending
+
+- Phenomenon: all five new transactional counterexamples passed, but the
+  persisted `tests/log` slice passed 24 and failed 2. The milestone-state test
+  still expected `in_progress`/`not_run`, while persisted state correctly said
+  `checking`/`miyabi_9node_pass`; the report test could not find its exact
+  `50×10` marker. The final 1-node manifest also had `parent_run_id: null`
+  despite the documented failed f6 attempt.
+- Reason: persistence-sensitive tests/report text were not transitioned with
+  state, and Maker reruns did not bind retry lineage into manifests.
+- Impact: P04-A09 persistence/reproducibility gate; no transactional safety
+  defect was found.
+- Evidence: `artifacts/duraloco/P04/20260711_checker_p04_79373ec_1node/checker_report.md`.
+- Resolution: make the state test lifecycle-aware, add the exact bilingual
+  marker, and rerun parent-linked 1→2→9 evidence at the fix commit.
 
 #### 1-node `f6d6e93` / PBS `2358012` — resolved
 
@@ -113,6 +130,7 @@ P04-A09, then archive the bilingual completed report and milestone commit.
   47 秒，因此没有触发 slow-run 失败信号。
 - 训练使用真实 `gpt2` 与 WikiText-2，1 个 syncer、8 个 learners，
   `inner_steps=50`，并恰好提交 10 次 outer optimizer transition。
+- 这是规定的真实训练 **50×10** milestone marker。
 - learners local-step 范围为 554–567；96 个 loss 全部有限，范围
   3.1660020141–4.5559995317。
 - 保留并 SHA-256 绑定了 `v000000` 至 `v000010` 共 11 个 checkpoints；
@@ -122,6 +140,20 @@ P04-A09, then archive the bilingual completed report and milestone commit.
   累计单节点 suite 通过 272 项，仅有一个既有 nightly skip。
 
 ### 验证失败历史
+
+#### 独立 Checker `2db8a73` / PBS `2358154` — 阻塞，待修复
+
+- 现象：五个新增 transactional 反例全部通过，但 persisted `tests/log` slice
+  24 项通过、2 项失败。milestone state test 仍期待 `in_progress`/`not_run`，
+  而持久化 state 已正确变为 `checking`/`miyabi_9node_pass`；report test 也找不到
+  精确的 `50×10` marker。最终单节点 manifest 的 `parent_run_id` 仍为 `null`，
+  没有绑定已记录的 f6 失败尝试。
+- 原因：persistence-sensitive tests/report text 没有随 state 一起转换，Maker
+  rerun 也没有把 retry lineage 写入 manifests。
+- 影响：P04-A09 persistence/reproducibility gate；未发现 transactional safety 缺陷。
+- 证据：`artifacts/duraloco/P04/20260711_checker_p04_79373ec_1node/checker_report.md`。
+- 解决：让 state test 识别生命周期、加入精确双语 marker，并在修复提交上重跑
+  parent-linked 1→2→9 evidence。
 
 #### 单节点 `f6d6e93` / PBS `2358012` — 已解决
 

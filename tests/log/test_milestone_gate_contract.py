@@ -36,10 +36,11 @@ def test_terminal_milestone_pbs_is_nine_nodes_and_hard_15_minutes():
     assert "tests/log" in script
 
 
-def test_p04_state_cannot_claim_the_terminal_gate_before_runtime_evidence():
+def test_p04_state_tracks_the_terminal_gate_across_persistence_transitions():
     state = yaml.safe_load((ROOT / "plans/duraloco/phases/P04_STATE.yaml").read_text())
-    assert state["checks"]["miyabi_9node"] == "not_run"
-    assert state["status"] == "in_progress"
+    assert state["status"] in {"in_progress", "checking", "completed"}
+    expected = "not_run" if state["last_verified_commit"] is None else "miyabi_9node_pass"
+    assert state["checks"]["miyabi_9node"] == expected
 
 
 def test_p04_report_is_bilingual_and_records_the_terminal_gate():

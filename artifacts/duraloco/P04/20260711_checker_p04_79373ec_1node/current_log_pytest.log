@@ -1,0 +1,28 @@
+.....................FF...                                               [100%]
+=================================== FAILURES ===================================
+____ test_p04_state_cannot_claim_the_terminal_gate_before_runtime_evidence _____
+
+    def test_p04_state_cannot_claim_the_terminal_gate_before_runtime_evidence():
+        state = yaml.safe_load((ROOT / "plans/duraloco/phases/P04_STATE.yaml").read_text())
+>       assert state["checks"]["miyabi_9node"] == "not_run"
+E       AssertionError: assert 'miyabi_9node_pass' == 'not_run'
+E
+E         - not_run
+E         + miyabi_9node_pass
+
+tests/log/test_milestone_gate_contract.py:41: AssertionError
+__________ test_p04_report_is_bilingual_and_records_the_terminal_gate __________
+
+    def test_p04_report_is_bilingual_and_records_the_terminal_gate():
+        report = (ROOT / "plans/duraloco/phases/P04_PHASE_REPORT.md").read_text()
+        assert "## English" in report
+        assert "## 中文" in report
+        assert "9-node" in report
+>       assert "50×10" in report
+E       AssertionError: assert '50×10' in '# P04 Milestone Report\n\n## English\n\n### Status\n\n- Phase: P04 — transactional fragment log and prefix recovery\n...2 syncer 集成。\n\n### 下一动作\n\n持久化 Maker evidence，取得 P04-A09 独立 Checker 结论，然后归档双语 completed\nreport 和 milestone commit。\n'
+
+tests/log/test_milestone_gate_contract.py:50: AssertionError
+=========================== short test summary info ============================
+FAILED tests/log/test_milestone_gate_contract.py::test_p04_state_cannot_claim_the_terminal_gate_before_runtime_evidence
+FAILED tests/log/test_milestone_gate_contract.py::test_p04_report_is_bilingual_and_records_the_terminal_gate
+2 failed, 24 passed in 2.66s

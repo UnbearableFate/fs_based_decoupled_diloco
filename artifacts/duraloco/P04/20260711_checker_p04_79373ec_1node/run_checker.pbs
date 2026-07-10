@@ -1,0 +1,44 @@
+#!/bin/bash
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:10:00
+#PBS -j oe
+
+set -uo pipefail
+
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat
+module list 2>&1 | cat
+
+PROJECT_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco_p04
+ARTIFACT_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P04/20260711_checker_p04_79373ec_1node
+PYTHON_BIN=/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python
+RUNTIME_ROOT=/work/xg24i002/x10041/duraloco_p04_runtime/20260711_checker_p04_79373ec_1node
+
+cd "$PROJECT_ROOT" || exit 2
+mkdir -p "$RUNTIME_ROOT"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+hostname > "$ARTIFACT_ROOT/hostname.log"
+git rev-parse HEAD > "$ARTIFACT_ROOT/git_commit.log"
+git status --short --branch > "$ARTIFACT_ROOT/git_status.log"
+"$PYTHON_BIN" --version > "$ARTIFACT_ROOT/python_version.log" 2>&1
+printf 'PBS_JOBID=%s\nPBS_NODEFILE=%s\nRUNTIME_ROOT=%s\n' \
+  "${PBS_JOBID:-}" "${PBS_NODEFILE:-}" "$RUNTIME_ROOT" \
+  > "$ARTIFACT_ROOT/pbs_environment.log"
+
+"$PYTHON_BIN" "$ARTIFACT_ROOT/checker_counterexamples.py" \
+  "$RUNTIME_ROOT" "$ARTIFACT_ROOT/checker_results.json" \
+  > "$ARTIFACT_ROOT/checker_stdout.log" \
+  2> "$ARTIFACT_ROOT/checker_stderr.log"
+checker_rc=$?
+printf '%s\n' "$checker_rc" > "$ARTIFACT_ROOT/checker_exit_code.log"
+
+"$PYTHON_BIN" -m pytest -q tests/log \
+  > "$ARTIFACT_ROOT/current_log_pytest.log" \
+  2> "$ARTIFACT_ROOT/current_log_pytest_stderr.log"
+pytest_rc=$?
+printf '%s\n' "$pytest_rc" > "$ARTIFACT_ROOT/current_log_pytest_exit_code.log"
+
+if [[ "$checker_rc" -ne 0 || "$pytest_rc" -ne 0 ]]; then
+  exit 1
+fi
