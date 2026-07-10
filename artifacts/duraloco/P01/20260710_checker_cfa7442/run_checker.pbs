@@ -1,0 +1,211 @@
+#!/bin/bash
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:05:00
+#PBS -j oe
+#PBS -m ae
+
+set -eEuo pipefail
+trap 'echo "[ERROR] checker failed at line $LINENO" >&2' ERR
+
+PROJECT_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco_p01
+PYTHON_BIN=/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python
+ARTIFACT_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P01/20260710_checker_cfa7442
+
+cd "$PROJECT_ROOT"
+mkdir -p "$ARTIFACT_ROOT"
+exec > >(tee "$ARTIFACT_ROOT/checker_counterexamples.log") 2>&1
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+
+hostname
+printf 'PBS_JOBID=%s\nPBS_NODEFILE=%s\n' "${PBS_JOBID:-}" "${PBS_NODEFILE:-}"
+"$PYTHON_BIN" --version
+git rev-parse HEAD
+git status --short --branch
+
+"$PYTHON_BIN" - <<'PY'
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import struct
+import tempfile
+
+from fs_diloco.protocol.errors import ErrorCategory, ProtocolError
+from fs_diloco.protocol.quarantine import QuarantineRegistry
+from fs_diloco.protocol.schemas import CommitManifest, ProposalManifest
+from fs_diloco.protocol.validation import (
+    ValidationContext,
+    validate_candidate_bytes,
+    validate_proposal,
+)
+from fs_diloco.protocol.v1_adapter import parse_v1_manifest
+from tests.protocol.helpers import make_proposal, proposal_dict, safetensors_bytes, write_payload
+from tests.protocol.test_schema_roundtrip import _commit_dict
+
+
+def context(root: Path, **overrides: object) -> ValidationContext:
+    values = {
+        "run_id": "run-test",
+        "run_generation": 0,
+        "model_revision": "synthetic-model-v1",
+        "current_commit_id": "genesis",
+        "current_commit_seq": 0,
+        "ancestor_commit_ids": frozenset({"genesis"}),
+        "commit_sequences_by_id": {"genesis": 0},
+        "fragment_versions": {0: 0},
+        "parameter_index_digest": "b" * 64,
+        "fragment_layout_digest": "c" * 64,
+        "outer_optimizer_schema_digest": "d" * 64,
+        "frontier_digests_by_commit": {"genesis": "a" * 64},
+        "fragment_versions_by_commit": {"genesis": {0: 0}},
+        "namespace_root": root,
+    }
+    values.update(overrides)
+    return ValidationContext(**values)
+
+
+def error_code(report) -> str:
+    assert not report.valid
+    return report.errors[0]["code"]
+
+
+with tempfile.TemporaryDirectory(prefix="p01-checker-") as raw_root:
+    root = Path(raw_root)
+    malformed = {
+        "unhashable_manifest_type": (
+            b'{"manifest_type":{"nested":"bad"}}',
+            "SCHEMA_MANIFEST_TYPE",
+        ),
+        "nfc_key_collision": (
+            b'{"manifest_type":"head","e\\u0301":1,"\\u00e9":2}',
+            "MALFORMED_MANIFEST",
+        ),
+        "invalid_utf8": (
+            b'{"manifest_type":"head","value":"\xed\xa0\x80"}',
+            "MALFORMED_MANIFEST",
+        ),
+    }
+    for name, (payload, expected) in malformed.items():
+        report, record = validate_candidate_bytes(
+            payload,
+            context(root),
+            QuarantineRegistry(),
+            validate_tensor=False,
+        )
+        assert error_code(report) == expected, (name, report.errors)
+        assert record is not None and record.category == "quarantine"
+        print(f"MALFORMED_TYPED {name} {expected}")
+
+    valid = make_proposal(root)
+    full = validate_proposal(valid, context(root))
+    assert full.valid and full.eligible and full.validation_level == "full"
+
+    metadata_only = validate_proposal(valid, context(root), validate_tensor=False)
+    assert metadata_only.valid and not metadata_only.eligible
+    assert metadata_only.validation_level == "metadata_causal"
+    print("PARTIAL_NOT_ELIGIBLE metadata_causal")
+
+    path, nonfinite_payload = write_payload(root, values=(1.0, float("nan")))
+    nonfinite = ProposalManifest.with_computed_id(
+        proposal_dict(
+            root,
+            payload=nonfinite_payload,
+            relative=path.relative_to(root).as_posix(),
+        )
+    )
+    partial = validate_proposal(nonfinite, context(root), require_finite=False)
+    assert partial.valid and not partial.eligible
+    assert partial.validation_level == "payload_without_finite"
+    rejected = validate_proposal(nonfinite, context(root))
+    assert error_code(rejected) == "PAYLOAD_NONFINITE"
+    print("NONFINITE_REJECTED PAYLOAD_NONFINITE")
+
+    impossible = make_proposal(root, base_fragment_version=5)
+    impossible_report = validate_proposal(
+        impossible,
+        context(root, fragment_versions={0: 5}),
+        validate_tensor=False,
+    )
+    assert error_code(impossible_report) == "BASE_FRAGMENT_VERSION_MISMATCH"
+    print("CAUSAL_PAIRING_REJECTED BASE_FRAGMENT_VERSION_MISMATCH")
+
+    for alias in (
+        "immutable//proposals/payload.safetensors",
+        "immutable/proposals/./payload.safetensors",
+        "immutable/\x00/payload.safetensors",
+    ):
+        proposal = make_proposal(root, payload_key=alias)
+        report, record = validate_candidate_bytes(
+            proposal.canonical_bytes(), context(root), QuarantineRegistry()
+        )
+        assert error_code(report) == "PAYLOAD_PATH_ESCAPE"
+        assert record is not None
+    print("PATH_ALIASES_REJECTED 3")
+
+    nested = b'{"x":' * 160 + b'"leaf"' + b"}" * 160
+    header = b'{"__metadata__":{"nested":' + nested + b"}}"
+    deep_payload = struct.pack("<Q", len(header)) + header
+    relative = "immutable/proposals/checker-deep.safetensors"
+    deep_path = root / relative
+    deep_path.parent.mkdir(parents=True, exist_ok=True)
+    deep_path.write_bytes(deep_payload)
+    deep = ProposalManifest.with_computed_id(
+        proposal_dict(root, payload=deep_payload, relative=relative)
+    )
+    report, record = validate_candidate_bytes(
+        deep.canonical_bytes(), context(root), QuarantineRegistry()
+    )
+    assert error_code(report) == "SAFETENSORS_HEADER"
+    assert record is not None
+    print("DEEP_HEADER_TYPED SAFETENSORS_HEADER")
+
+    commit_payload = _commit_dict(valid)
+    commit_payload["selected_proposals"][0]["weight_fp64_hex"] = "1"
+    try:
+        CommitManifest.from_dict(commit_payload)
+    except ProtocolError as exc:
+        assert exc.code == "SCHEMA_WEIGHT"
+    else:
+        raise AssertionError("noncanonical weight was accepted")
+    print("NONCANONICAL_WEIGHT_REJECTED SCHEMA_WEIGHT")
+
+    try:
+        parse_v1_manifest(
+            {
+                "run_id": "legacy",
+                "update_id": "u",
+                "learner_id": "l",
+                "file_path": "p",
+                "file_size_bytes": float("inf"),
+            }
+        )
+    except ProtocolError as exc:
+        assert exc.code == "V1_SCHEMA"
+    else:
+        raise AssertionError("overflowing v1 numeric was accepted")
+    print("V1_OVERFLOW_TYPED V1_SCHEMA")
+
+    registry = QuarantineRegistry()
+    registry.record(
+        observed_identity="p-checker",
+        content_sha256="a" * 64,
+        error=ProtocolError("PAYLOAD_HASH", "bad"),
+    )
+    try:
+        registry.record(
+            observed_identity="p-checker",
+            content_sha256="b" * 64,
+            error=ProtocolError("PAYLOAD_HASH", "bad"),
+        )
+    except ProtocolError as exc:
+        assert exc.category == ErrorCategory.FATAL
+    else:
+        raise AssertionError("identity/content conflict was accepted")
+    print("IDENTITY_CONFLICT_FATAL")
+
+print("CHECKER_COUNTEREXAMPLES_PASS")
+PY
+
+qstat "$PBS_JOBID"

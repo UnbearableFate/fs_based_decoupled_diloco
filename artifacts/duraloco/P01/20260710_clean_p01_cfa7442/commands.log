@@ -1,0 +1,2 @@
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python scripts/agent/generate_protocol_goldens.py
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python -m pytest -q tests --junitxml /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P01/20260710_clean_p01_cfa7442/junit.xml

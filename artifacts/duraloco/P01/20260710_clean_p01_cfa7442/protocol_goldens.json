@@ -1,0 +1,26 @@
+{
+  "commit": {
+    "canonical": "{\"aggregate_digest\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"commit_id\":\"c-1ca76f4d2fb5988712226d7bba537cd7970cb0533c960036803ed9b639b47543\",\"commit_seq\":1,\"fencing_epoch\":0,\"fragment_id\":0,\"manifest_type\":\"commit\",\"new_fragment_version\":1,\"new_outer_state_ref\":{\"key\":\"outer\",\"sha256\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"size\":8},\"new_params_ref\":{\"key\":\"params\",\"sha256\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"size\":8},\"outer_optimizer_impl_digest\":\"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff\",\"parent_commit_id\":\"genesis\",\"parent_head_version\":\"v0\",\"previous_fragment_version\":0,\"protocol_version\":2,\"run_generation\":0,\"run_id\":\"golden-run\",\"selected_proposals\":[{\"base_commit_seq\":0,\"base_fragment_version\":0,\"learner_id\":\"learner-000\",\"learner_session_id\":\"session-000\",\"proposal_id\":\"p-3af8cdf8b961754d7c159750ba9c80d8f6addbcf884ea5b2e1f24c558182572d\",\"sequence\":1,\"staleness\":0,\"target_tokens\":100,\"weight_fp64_hex\":\"0x1.0000000000000p+0\"}]}",
+    "sha256": "2497cd40952b0e0b0e3430295c9b7fd295666e53bdee1ac2a5fa3d9308d2fcd0"
+  },
+  "drop_decision": {
+    "canonical": "{\"decided_at_commit_seq\":1,\"decision\":\"superseded\",\"manifest_type\":\"drop_decision\",\"proposal_id\":\"p-3af8cdf8b961754d7c159750ba9c80d8f6addbcf884ea5b2e1f24c558182572d\",\"protocol_version\":2,\"reason\":\"newer_nonoverlap\"}",
+    "sha256": "780be208844be724c0b008a711d0fc34f92a04d79cd79afa8870f9990663fb48"
+  },
+  "frontier": {
+    "canonical": "{\"commit_id\":\"c-1ca76f4d2fb5988712226d7bba537cd7970cb0533c960036803ed9b639b47543\",\"commit_seq\":1,\"consumed_proposal_ids\":[\"p-3af8cdf8b961754d7c159750ba9c80d8f6addbcf884ea5b2e1f24c558182572d\"],\"fencing_epoch\":0,\"fragments\":{\"0\":{\"outer_state_ref\":{\"key\":\"outer\",\"sha256\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"size\":8},\"params_ref\":{\"key\":\"params\",\"sha256\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"size\":8},\"producing_commit_id\":\"c-1ca76f4d2fb5988712226d7bba537cd7970cb0533c960036803ed9b639b47543\",\"version\":1}},\"frontier_sha256\":\"36908227466ea37e1448c8a22d1e19323cfaecfe9386bc3bf0035f82fbd515e8\",\"manifest_type\":\"frontier\",\"parent_frontier_sha256\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"protocol_version\":2,\"run_generation\":0,\"run_id\":\"golden-run\",\"scheduler_state\":{\"next_fragment_cursor\":0}}",
+    "sha256": "7dfa2e10a112e5ca1a87c2c8d16b81ebff0bde9e0f90ef0eaf49dd837b634263"
+  },
+  "head": {
+    "canonical": "{\"commit_id\":\"c-1ca76f4d2fb5988712226d7bba537cd7970cb0533c960036803ed9b639b47543\",\"commit_seq\":1,\"fencing_epoch\":0,\"frontier_ref\":{\"key\":\"frontier\",\"sha256\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"size\":8},\"manifest_type\":\"head\",\"protocol_version\":2,\"run_generation\":0,\"run_id\":\"golden-run\"}",
+    "sha256": "a2c8f63ad08c6e1ea3db309e57ff39917ff4b22324ec06212f0d83cd29ed83b8"
+  },
+  "object_ref": {
+    "canonical": "{\"key\":\"standalone-object\",\"sha256\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"size\":8}",
+    "sha256": "7a28a6dd5455ac3924429a42f65383ff03e73891aa566d87a8aa209c5c4cebf4"
+  },
+  "proposal": {
+    "canonical": "{\"base_commit_id\":\"genesis\",\"base_commit_seq\":0,\"base_fragment_version\":0,\"base_frontier_digest\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\",\"dtype\":\"float32\",\"fragment_id\":0,\"fragment_layout_digest\":\"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc\",\"learner_id\":\"learner-000\",\"learner_session_id\":\"session-000\",\"local_steps_since_base\":10,\"manifest_type\":\"proposal\",\"model_revision\":\"synthetic-model-v1\",\"outer_optimizer_schema_digest\":\"dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd\",\"parameter_index_digest\":\"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\",\"payload_key\":\"immutable/proposals/payload.safetensors\",\"payload_kind\":\"pseudo_gradient\",\"payload_sha256\":\"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee\",\"payload_size\":16,\"proposal_id\":\"p-3af8cdf8b961754d7c159750ba9c80d8f6addbcf884ea5b2e1f24c558182572d\",\"protocol_version\":2,\"run_generation\":0,\"run_id\":\"golden-run\",\"sequence\":1,\"shape\":[2],\"target_tokens_since_base\":100,\"tensor_key\":\"fragment_0000\"}",
+    "sha256": "14bfc94c744432e3010e19fa3342c49855b4688ed8413285a2521d8d2db37ce3"
+  }
+}
