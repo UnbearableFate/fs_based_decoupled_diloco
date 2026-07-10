@@ -184,6 +184,21 @@ def test_frontier_scheduler_state_has_an_exact_schema(tmp_path):
         FrontierManifest.from_dict(payload)
 
 
+def test_unhashable_enum_values_are_typed_schema_errors(tmp_path):
+    proposal = make_proposal(tmp_path)
+    proposal_payload = proposal.to_dict()
+    for field, value in (("payload_kind", []), ("dtype", {})):
+        candidate = copy.deepcopy(proposal_payload)
+        candidate[field] = value
+        with pytest.raises(Exception):
+            ProposalManifest.from_dict(candidate)
+
+    drop = _all_objects(tmp_path)[-1].to_dict()
+    drop["decision"] = []
+    with pytest.raises(Exception):
+        DropDecision.from_dict(drop)
+
+
 @pytest.mark.parametrize("field", ["run_id", "payload_key", "shape", "payload_sha256"])
 def test_proposal_required_fields_are_enforced(tmp_path, field):
     payload = make_proposal(tmp_path).to_dict()

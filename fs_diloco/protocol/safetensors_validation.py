@@ -81,7 +81,7 @@ def parse_safetensors(payload: bytes) -> tuple[dict[str, TensorHeader], bytes]:
         if not isinstance(value, dict) or set(value) != {"dtype", "shape", "data_offsets"}:
             raise ProtocolError("SAFETENSORS_HEADER", f"invalid tensor descriptor for {key}")
         dtype = value["dtype"]
-        if dtype not in DTYPE_BYTES:
+        if not isinstance(dtype, str) or dtype not in DTYPE_BYTES:
             raise ProtocolError("PAYLOAD_DTYPE", f"unsupported safetensors dtype: {dtype}")
         shape = value["shape"]
         if not isinstance(shape, list) or not all(type(item) is int and item >= 0 for item in shape):

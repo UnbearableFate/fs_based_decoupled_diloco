@@ -155,10 +155,18 @@ class ProposalManifest:
             raise _error("SCHEMA_SHAPE", "shape must be a non-empty list")
         normalized_shape = tuple(_integer(item, "shape item", minimum=1) for item in shape)
         payload_kind = payload["payload_kind"]
-        if payload_kind not in {"pseudo_gradient", "local_end_weight"}:
+        if not isinstance(payload_kind, str) or payload_kind not in {
+            "pseudo_gradient",
+            "local_end_weight",
+        }:
             raise _error("SCHEMA_ENUM", f"unsupported payload_kind: {payload_kind!r}")
         dtype = payload["dtype"]
-        if dtype not in {"float32", "float16", "bfloat16", "float64"}:
+        if not isinstance(dtype, str) or dtype not in {
+            "float32",
+            "float16",
+            "bfloat16",
+            "float64",
+        }:
             raise _error("SCHEMA_ENUM", f"unsupported dtype: {dtype!r}")
         previous = payload.get("previous_interval_proposal_id")
         if previous is not None:
@@ -649,7 +657,12 @@ class DropDecision:
         _strict_fields(payload, required)
         if payload["manifest_type"] != cls.MANIFEST_TYPE:
             raise _error("SCHEMA_ENUM", "manifest_type must be drop_decision")
-        if payload["decision"] not in {"dropped", "superseded", "quarantined", "expired"}:
+        if not isinstance(payload["decision"], str) or payload["decision"] not in {
+            "dropped",
+            "superseded",
+            "quarantined",
+            "expired",
+        }:
             raise _error("SCHEMA_ENUM", f"unsupported decision: {payload['decision']!r}")
         return cls(
             protocol_version=_protocol(payload["protocol_version"]),
@@ -677,6 +690,11 @@ Manifest = ProposalManifest | CommitManifest | FrontierManifest | HeadManifest |
 
 def parse_manifest(payload: Mapping[str, Any]) -> Manifest:
     manifest_type = payload.get("manifest_type")
+    if not isinstance(manifest_type, str):
+        raise _error(
+            "SCHEMA_MANIFEST_TYPE",
+            "manifest_type must be a string naming a supported manifest",
+        )
     parsers = {
         "proposal": ProposalManifest.from_dict,
         "commit": CommitManifest.from_dict,

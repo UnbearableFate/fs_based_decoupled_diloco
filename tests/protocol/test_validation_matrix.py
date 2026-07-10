@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import math
 from pathlib import Path
 import random
@@ -203,6 +204,9 @@ def test_test_fixture_actually_contains_nonfinite_value():
         b'{"manifest_type":"proposal","manifest_type":"head"}',
         b'{"manifest_type":"proposal","unexpected":true}',
         b"not-json",
+        b'{"manifest_type":[]}',
+        b'{"manifest_type":"proposal","payload_kind":[]}',
+        b'{"manifest_type":"proposal","dtype":{}}',
     ],
 )
 def test_arbitrary_malformed_candidates_are_typed_quarantine_not_scanner_crashes(
@@ -217,6 +221,20 @@ def test_arbitrary_malformed_candidates_are_typed_quarantine_not_scanner_crashes
     assert not report.valid
     assert record is not None
     assert record.category == "quarantine"
+
+
+@pytest.mark.parametrize(("field", "value"), [("payload_kind", []), ("dtype", {})])
+def test_full_candidate_with_unhashable_enum_is_typed_quarantine(tmp_path, field, value):
+    payload = make_proposal(tmp_path).to_dict()
+    payload[field] = value
+    report, record = validate_candidate_bytes(
+        json.dumps(payload).encode(),
+        _context(tmp_path),
+        QuarantineRegistry(),
+        validate_tensor=False,
+    )
+    assert not report.valid
+    assert record is not None
 
 
 def test_seeded_malformed_byte_corpus_never_escapes_as_scanner_exception(tmp_path):
@@ -267,6 +285,34 @@ def test_extreme_safetensors_metadata_nesting_is_typed_quarantine(tmp_path):
         QuarantineRegistry(),
     )
     assert _error_code(report) == "SAFETENSORS_HEADER"
+    assert record is not None
+
+
+def test_unhashable_safetensors_dtype_is_typed_quarantine(tmp_path):
+    header = json.dumps(
+        {
+            "fragment_0000": {
+                "dtype": [],
+                "shape": [2],
+                "data_offsets": [0, 0],
+            }
+        },
+        separators=(",", ":"),
+    ).encode()
+    payload = struct.pack("<Q", len(header)) + header
+    relative = "immutable/proposals/unhashable-dtype.safetensors"
+    path = tmp_path / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(payload)
+    proposal = ProposalManifest.with_computed_id(
+        proposal_dict(tmp_path, payload=payload, relative=relative)
+    )
+    report, record = validate_candidate_bytes(
+        proposal.canonical_bytes(),
+        _context(tmp_path),
+        QuarantineRegistry(),
+    )
+    assert _error_code(report) == "PAYLOAD_DTYPE"
     assert record is not None
 
 
