@@ -1,0 +1,24 @@
+phase: P00
+status: planned
+planning_basis_branch: codex/fs-diloco-miyabi
+planning_basis_commit: 011e180980e90c500bcd479a594ba47e507bb5d1
+actual_base_branch: null
+actual_base_commit: null
+feature_branch: null
+current_loop: 0
+current_goal: null
+attempts_for_current_failure: 0
+last_verified_commit: null
+checks:
+  local_static: not_run
+  local_runtime: not_run
+  miyabi_login_static: not_run
+  miyabi_1node: not_run
+  miyabi_2node: not_run
+  miyabi_9node: not_authorized
+open_decisions: []
+open_blockers: []
+artifacts: []
+next_action: "initialize phase"
+requires_human_approval: false
+approval_reason: null

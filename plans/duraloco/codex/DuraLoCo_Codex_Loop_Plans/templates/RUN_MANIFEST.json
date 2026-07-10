@@ -1,0 +1,20 @@
+{
+  "run_id": "<uuid-or-content-id>",
+  "parent_run_id": null,
+  "purpose": "unit|contract|smoke|chaos|benchmark|experiment",
+  "phase": "P00",
+  "git_commit": "<sha>",
+  "dirty_tree": false,
+  "hostname": "<host>",
+  "pbs_job_id": null,
+  "config_path": null,
+  "config_digest": null,
+  "backend": "memory|posix|lustre|minio|s3|hybrid",
+  "seed": null,
+  "commands_log": "commands.log",
+  "stdout": "stdout.log",
+  "stderr": "stderr.log",
+  "exit_code": null,
+  "result": "pass|fail|inconclusive",
+  "assertions": []
+}
