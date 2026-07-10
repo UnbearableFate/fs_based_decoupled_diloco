@@ -116,6 +116,7 @@ def test_duplicate_publication_is_idempotent():
     proposal = proposal_for(state, learner=0, sequence=0)
     once = state.publish(proposal)
     assert once.publish(proposal) == once
+    assert once.state_digest() != state.state_digest()
 
 
 def test_rational_staleness_decay_is_committed_in_canonical_weights():

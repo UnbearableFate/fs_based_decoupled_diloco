@@ -371,6 +371,9 @@ class SystemState:
             "fragments": {
                 str(key): value.identity() for key, value in sorted(self.fragments.items())
             },
+            "proposals": {
+                key: value.identity() for key, value in sorted(self.proposals.items())
+            },
             "consumed_proposal_ids": sorted(self.consumed_proposal_ids),
             "dropped_proposal_ids": sorted(self.dropped_proposal_ids),
             "proposal_decisions": {
