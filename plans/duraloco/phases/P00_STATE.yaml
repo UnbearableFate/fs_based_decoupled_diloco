@@ -1,0 +1,35 @@
+phase: P00
+status: in_progress
+planning_basis_branch: codex/fs-diloco-miyabi
+planning_basis_commit: afc50a1e179c64321645b278b2497ea3ab3fe24d
+actual_base_branch: main
+actual_base_commit: afc50a1e179c64321645b278b2497ea3ab3fe24d
+feature_branch: codex/duraloco-p00-contract
+current_loop: 1
+current_goal: "capture the dirty planning-basis baseline and freeze the research contract"
+attempts_for_current_failure: 0
+last_verified_commit: null
+checks:
+  local_static: not_run
+  local_runtime: not_run
+  miyabi_login_static: not_run
+  miyabi_1node: not_run
+  miyabi_2node: skipped_not_required
+  miyabi_9node: skipped_not_required
+acceptance:
+  P00-A01: {result: not_run, evidence: []}
+  P00-A02: {result: not_run, evidence: []}
+  P00-A03: {result: not_run, evidence: []}
+  P00-A04: {result: not_run, evidence: []}
+  P00-A05: {result: not_run, evidence: []}
+  P00-A06: {result: not_run, evidence: []}
+  P00-A07: {result: not_run, evidence: []}
+  P00-A08: {result: not_run, evidence: []}
+open_decisions: []
+open_blockers: []
+artifacts: []
+next_action: "complete P00 maker checks and independent contract review"
+automatic_progression: true
+requires_human_approval: false
+approval_reason: null
+checker_report: null

@@ -1,0 +1,669 @@
+{
+  "counts": {
+    "configs": 9,
+    "files": 93,
+    "pbs_scripts": 9,
+    "python_modules": 26,
+    "tests": 18
+  },
+  "critical_paths": [
+    "AGENTS.md",
+    "README.md",
+    "pyproject.toml",
+    ".python-version",
+    "fs_diloco",
+    "configs",
+    "scripts/local",
+    "scripts/miyabi",
+    "tests",
+    "plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans"
+  ],
+  "environment": {
+    "hostname": "miyabi-g1",
+    "pbs_job_id": null,
+    "pbs_nodefile": null,
+    "platform": "Linux-5.14.0-427.13.1.el9_4.aarch64-aarch64-with-glibc2.34",
+    "python": "3.13.13"
+  },
+  "file_source": {
+    "commit": "afc50a1e179c64321645b278b2497ea3ab3fe24d",
+    "kind": "git_commit"
+  },
+  "files": [
+    {
+      "executable": false,
+      "path": ".python-version",
+      "sha256": "02e735b3dfe1c32833eb550b7ff8ffa17f5f2bc3fa1e7bae61a8f5a3883ce398",
+      "size": 5
+    },
+    {
+      "executable": false,
+      "path": "AGENTS.md",
+      "sha256": "2de0c4942db3508f941eb2fab094ace6ccca1251686a6c3f5abd900508e90694",
+      "size": 744
+    },
+    {
+      "executable": false,
+      "path": "README.md",
+      "sha256": "536d8dc93d93cb8574101cd1da3d6973fdf2fd45afea2ac984cd5d16c6a8e053",
+      "size": 2877
+    },
+    {
+      "executable": false,
+      "path": "configs/fs_diloco_gpt2_wikitext2_1l_debug.yaml",
+      "sha256": "1c90c8aaf98eb43b5a9c94d23a3c0dd19f6395105006d21a787022065a0d4194",
+      "size": 1789
+    },
+    {
+      "executable": false,
+      "path": "configs/fs_diloco_gpt2_wikitext2_1l_fragment_debug.yaml",
+      "sha256": "f779fa08cadbae790d0b36071b0e441673cc7f7276b133bfb13d0ba370e59e0a",
+      "size": 2014
+    },
+    {
+      "executable": false,
+      "path": "configs/fs_diloco_gpt2_wikitext2_8l.yaml",
+      "sha256": "52f7b6976b5653acd135960d02b2eac328595ae2a535cd964be010f3ec510777",
+      "size": 1910
+    },
+    {
+      "executable": false,
+      "path": "configs/fs_diloco_gpt2_wikitext2_8l_5000steps.yaml",
+      "sha256": "258650ae6a8e38a681b4f835202bc000cde5ad00e694856c83ae3a83da77d606",
+      "size": 2168
+    },
+    {
+      "executable": false,
+      "path": "configs/fs_diloco_gpt2_wikitext2_8l_acceptance.yaml",
+      "sha256": "112e34522e97c8d1c5a7d58722a33da2ae14693c0feff816b0ca28b7159a05d3",
+      "size": 1797
+    },
+    {
+      "executable": false,
+      "path": "configs/fs_diloco_gpt2_wikitext2_8l_fragment_5000steps.yaml",
+      "sha256": "0a993de448c94605b25a8ca611383b44698254d9ad5b801e6de11b2efe4c0838",
+      "size": 2420
+    },
+    {
+      "executable": false,
+      "path": "configs/fs_diloco_gpt2_wikitext2_8l_fragment_50x4.yaml",
+      "sha256": "b6568043075c63926e3da076444991482dec2096a743f35565a8ad11ea050a05",
+      "size": 2394
+    },
+    {
+      "executable": false,
+      "path": "configs/fs_diloco_tiny_fragment_local.yaml",
+      "sha256": "41e85ebf2c73a0d50134763a59f5d5ee36051dce6df5695cb8d4d3770cccbaf1",
+      "size": 2048
+    },
+    {
+      "executable": false,
+      "path": "configs/fs_diloco_tiny_local.yaml",
+      "sha256": "77d7150fad4d6a4263e4cb3b6fd1bc6520f145511a54fd1e347c8acd6a8ac2e2",
+      "size": 1823
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/__init__.py",
+      "sha256": "de81b374df20f6690aba0226c051924f69a6fa206abd36b5fa3c6fb37d17dd7e",
+      "size": 102
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/analysis.py",
+      "sha256": "9f81ac3ceea03d6c53917713fbca16581d10ef0ea777df360c826ca4ed2d6885",
+      "size": 21657
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/atomic_io.py",
+      "sha256": "d3119b65458f51e25456ebc2176b570f98ed2329acf33e54da42189c1ec94101",
+      "size": 3130
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/cli.py",
+      "sha256": "5686371035345d734e22b04c248a9b5cbaeae5d4d6f6c9ad5aafad678f42d293",
+      "size": 675
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/config.py",
+      "sha256": "752005d929e78d020dade0cbca5563823a8207dfd02a09f7dd38311745f6ba34",
+      "size": 9003
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/constants.py",
+      "sha256": "4b6545ba74e6c14b522b7288504fae497d3b42a26b0654fe9e946a7569b6735f",
+      "size": 1129
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/eval_lm_harness.py",
+      "sha256": "82f99a9fac6292f03bbcce717de7ab88a68e964a8bb3067e2947c99b0eb89b41",
+      "size": 14661
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/failure_sim.py",
+      "sha256": "b9da18fd404ce18cdac791d56cc9b3e3ed7f5063984c5ecfd89e3d6a33d5b6a1",
+      "size": 964
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/fragment_codec.py",
+      "sha256": "0fe6976e7539746a453de90d26cc81f9de6d421f9ff7f4ec84a92d8aa296cddb",
+      "size": 3988
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/fragment_index.py",
+      "sha256": "6ca9905d8fbf9c8d3c7d3b91ee8342ee07f02b0205ef7052f9feb14004c1af1a",
+      "size": 6422
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/fragment_scheduler.py",
+      "sha256": "3b8b935017c8e169ea27e9e20572ce99d3eb97152c4c8cb643c838840a340dbf",
+      "size": 876
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/hf_data.py",
+      "sha256": "76eb1216e4696f16d6120384a95c730c9dd2c5acf397d336783cdcc420ed4b66",
+      "size": 4578
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/hf_model.py",
+      "sha256": "44ea4aab25a854e2e94a75d96f592e1195b735c8dd9e6529490f9b4c03fcf361",
+      "size": 3015
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/learner.py",
+      "sha256": "be3cd7315fa47b82ae609044adc5ced20ccecafc99899c047740af9e51333187",
+      "size": 45546
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/liveness.py",
+      "sha256": "2cc2e1f7403917f89febbd8c10c5a05e9e5f4aede8daa14d9099c6ca85dcb999",
+      "size": 3951
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/logging_utils.py",
+      "sha256": "bd615f3f64606233deff36bf71e51a0524fb0b04a37428bcba34c1bbe9315b19",
+      "size": 1632
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/merge.py",
+      "sha256": "0b7bbe7a64b66ecbba1fd15719c4eb74dfc87fbd2a4e868814c8c75f8166e0ee",
+      "size": 4199
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/metrics.py",
+      "sha256": "db9dbb279d8dcebe1a7d95528a0dd9cc1ec6d2cc3267725f4778a17d600761cb",
+      "size": 1908
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/outer_optim.py",
+      "sha256": "6c2644559c6ea3e38542ff31a0a4aba0ddb0163dd8a928c4e251b804b97ef646",
+      "size": 4562
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/param_index.py",
+      "sha256": "b9ea706764611a11f4c0643e9357e3f108311ae9d25b25cd734ff0e1c260a5dd",
+      "size": 4863
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/paths.py",
+      "sha256": "f90822b9ca78c997b52d36d42ce344d3b87cba7389536e6b7a0c7905c174c8e0",
+      "size": 3581
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/retention.py",
+      "sha256": "1084c4eedd567f5b15be4bef4f605b927e676d06e32e1ad0f99d22f4d66ca443",
+      "size": 4514
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/schema.sql",
+      "sha256": "03fca3145731576a7fcdee47a16469eb8de12984de8fb6cafb458183b276e86c",
+      "size": 4626
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/sqlite_store.py",
+      "sha256": "fa4c7c991128615dbe27c4f4e0c2c29977953f4e0354fe159baec1a864444102",
+      "size": 27724
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/syncer.py",
+      "sha256": "61f4d60a42929b16442704dc906e969073ffa87f559455e2328832a2be84909c",
+      "size": 52807
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/tensor_codec.py",
+      "sha256": "296296bde6fc77a9c1ebfbab1745beb3e7864547536430f4f8f3f1ff59cbed4c",
+      "size": 2804
+    },
+    {
+      "executable": false,
+      "path": "fs_diloco/wandb_logging.py",
+      "sha256": "36b41a19d7ebad93b2e215a9fc00736a005efe76e236708fe406330f981654b6",
+      "size": 3828
+    },
+    {
+      "executable": false,
+      "path": "plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md",
+      "sha256": "d01d89fe392b6f2d9cd412ef80a9b6e1363cecb345b8652c011cb39c7f240ef9",
+      "size": 14010
+    },
+    {
+      "executable": false,
+      "path": "plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/01_P00_BASELINE_AND_RESEARCH_CONTRACT.md",
+      "sha256": "62f61b9dd5d1a9dab372c284dd00266aec1caaf2f26d6850e769cc415fa4b48a",
+      "size": 13685
+    },
+    {
+      "executable": false,
+      "path": "plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/02_P01_PROTOCOL_V2_SCHEMAS_AND_VALIDATION.md",
+      "sha256": "64da9cc2a854f3240038889530c0fa9f59ff204b504c2ec2b67e037b3a22a2a9",
+      "size": 13179
+    },
+    {
+      "executable": false,
+      "path": "plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/03_P02_REFERENCE_SIMULATOR_AND_IN_MEMORY_BACKEND.md",
+      "sha256": "b4bdcb6605bc829ad1120f3a1d740bcc813d442297fde8387055d9598014c334",
+      "size": 12376
+    },
+    {
+      "executable": false,
+      "path": "plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/04_P03_STORAGE_ABSTRACTION_AND_POSIX_LUSTRE_CONTRACT.md",
+      "sha256": "4b19a06346f4c395b3f0592bf5cf4d871d16891abe5af71a4b805a169e628ac0",
+      "size": 12683
+    },
+    {
+      "executable": false,
+      "path": "plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/05_P04_TRANSACTIONAL_FRAGMENT_LOG_AND_PREFIX_RECOVERY.md",
+      "sha256": "fd13901d9a732465c61187bdd9f47b43aea16577c3c3b2e26fca9be83d75a040",
+      "size": 12560
+    },
+    {
+      "executable": false,
+      "path": "plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/06_P05_SYNCER_LEASE_FENCING_AND_FAILOVER.md",
+      "sha256": "d10e6a4ae49dd689a9cb650963c952097c3efc665a2551acd8ef47c7eaf25542",
+      "size": 12151
+    },
+    {
+      "executable": false,
+      "path": "plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/07_P06_LEARNER_INTERVALS_ADOPTION_AND_RECOVERY.md",
+      "sha256": "6b9b4d63b8650db290b81d2095b17c5fc0cad67b55d2c8599d6fee7a991baff5",
+      "size": 12765
+    },
+    {
+      "executable": false,
+      "path": "plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/08_P07_COMPACTION_GC_ACKS_AND_LEARNER_CAPSULES.md",
+      "sha256": "7d0a13a9276ac0296fa0738911f9bd74596e1f5b1d95ed5cefcf2d6264819745",
+      "size": 13188
+    },
+    {
+      "executable": false,
+      "path": "plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/09_P08_DIRECT_FRAGMENT_IO_STREAMING_REDUCER_AND_TELEMETRY.md",
+      "sha256": "0a195c5330c12396841a345cbf05d5ddcc8f4709947a0829052da446ea23f653",
+      "size": 12294
+    },
+    {
+      "executable": false,
+      "path": "plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/10_P09_OBJECT_STORE_BACKEND_AND_HYBRID_BASELINE.md",
+      "sha256": "64d09dea4b0621076582d2124745cd51a6b785a0696633d15f6e6d35e44bd9a0",
+      "size": 13086
+    },
+    {
+      "executable": false,
+      "path": "plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/11_P10_SACC_AND_ALGORITHM_SYSTEM_CODESIGN.md",
+      "sha256": "4b91f70f3594cc4b55ccb5619015891529434083a72ff382e6876a9ca28a5ce1",
+      "size": 13256
+    },
+    {
+      "executable": false,
+      "path": "plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/12_P11_MIYABI_INTEGRATION_CHAOS_AND_9NODE_ACCEPTANCE.md",
+      "sha256": "baef3f3334bcb652722ab2a8475fbc2d6ada46b021566e2f14c88447d62c6aa1",
+      "size": 13960
+    },
+    {
+      "executable": false,
+      "path": "plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/13_P12_FORMAL_EXPERIMENTS_ARTIFACT_AND_PAPER_EVIDENCE.md",
+      "sha256": "5e4972cc363aa61b5d3b1b70a8ae3a26e8584237323477f29651caa06cde3898",
+      "size": 15587
+    },
+    {
+      "executable": false,
+      "path": "plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/DuraLoCo_Codex_Master_Plan.md",
+      "sha256": "fe33c461228a210c2ead9977c02562a2fded300c1facf1dabdf366393b18d780",
+      "size": 192923
+    },
+    {
+      "executable": false,
+      "path": "plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/README.md",
+      "sha256": "0ad75b35bf28dc9010ae5118b307ca8d708f913e1da0ddd2d405522115a75409",
+      "size": 8045
+    },
+    {
+      "executable": false,
+      "path": "plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/SHA256SUMS.txt",
+      "sha256": "6e6b7ebd54f873510282a1005cc983291344043616afd7b7c2359ac7a8000945",
+      "size": 2270
+    },
+    {
+      "executable": false,
+      "path": "plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/references/DuraLoCo_research_draft_zh.md",
+      "sha256": "b88b989d16b79c98e85528893558b43f3675e56a8be96b0e78861df68d301044",
+      "size": 131379
+    },
+    {
+      "executable": false,
+      "path": "plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/templates/BLOCKER.md",
+      "sha256": "db95589eca876e1921cc120df3f4b73647f042f40e9c76f78228ef98cbfaf793",
+      "size": 398
+    },
+    {
+      "executable": false,
+      "path": "plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/templates/PHASE_REPORT.md",
+      "sha256": "af942cd374b6eff3a0a342534d5992c324349cc36bedfd707b63a37cc0eb3b7f",
+      "size": 711
+    },
+    {
+      "executable": false,
+      "path": "plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/templates/PHASE_STATE.yaml",
+      "sha256": "5f82d67cf2f5a4f228c393d24b620253169baf0958274f5cab0e6ba3a5337498",
+      "size": 598
+    },
+    {
+      "executable": false,
+      "path": "plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/templates/RUN_MANIFEST.json",
+      "sha256": "fe9a944a8f103d9d36ca5cabef8669e9b9ac6b4b483f188a27418c769490f0c8",
+      "size": 520
+    },
+    {
+      "executable": false,
+      "path": "pyproject.toml",
+      "sha256": "81e3e8d4b3f066fbc1a2ea8bc6f11c87991b8d6d50adb6b8b35701fa0236fa19",
+      "size": 707
+    },
+    {
+      "executable": true,
+      "path": "scripts/local/clean_run.sh",
+      "sha256": "552bbea884b366b2ef11c4408933106ae2acf9519eefd5985b1e852476d55da7",
+      "size": 326
+    },
+    {
+      "executable": true,
+      "path": "scripts/local/run_tiny_2proc_smoke.sh",
+      "sha256": "6b86fdc648fc0f477f21696d0d857f9ced82abfe20eac9a39d55fcb8e53cfd11",
+      "size": 1394
+    },
+    {
+      "executable": true,
+      "path": "scripts/miyabi/dump_sqlite.sh",
+      "sha256": "83cbe359de6ad495562e428d17e6b9e64719f4e9f0fcb1c960db1224059fd562",
+      "size": 149
+    },
+    {
+      "executable": true,
+      "path": "scripts/miyabi/inspect_run.sh",
+      "sha256": "07d159b981f2d2894ff71a8ed46c9d409f70e4cfc8a79b0758baa9fbd5a93e5b",
+      "size": 438
+    },
+    {
+      "executable": true,
+      "path": "scripts/miyabi/run_1node_debug.pbs",
+      "sha256": "d274fa791394900c10e81d77487f6d748110d29f38c0b5ef4194f2aab3ef8350",
+      "size": 1923
+    },
+    {
+      "executable": false,
+      "path": "scripts/miyabi/run_1node_fragment_debug.pbs",
+      "sha256": "2b3c0f69a41b9425d5fe20bb049941bb7185ea48bb439bff31bdc44c6f645e93",
+      "size": 2783
+    },
+    {
+      "executable": false,
+      "path": "scripts/miyabi/run_1node_lm_eval.pbs",
+      "sha256": "14897b7fb878ebb3107620fb945f239618a2759110eff8036e96f9983b4066e0",
+      "size": 5177
+    },
+    {
+      "executable": true,
+      "path": "scripts/miyabi/run_2node_debug.pbs",
+      "sha256": "9a3e34b98421b41a44c7dae375ffebfecf7eb0516127a62ea9568b21ae7d4312",
+      "size": 2870
+    },
+    {
+      "executable": false,
+      "path": "scripts/miyabi/run_2node_fragment_debug.pbs",
+      "sha256": "37c46ca43d29d173be727bade9502ec0ddb54abc1323c64a7c4cd94e8173fde6",
+      "size": 3878
+    },
+    {
+      "executable": false,
+      "path": "scripts/miyabi/run_9node_fragment_gpt2_wikitext2_5000steps.pbs",
+      "sha256": "1661180eb6cca473171b231d58efb68e6023c91448e41036cb8f2507e3b40aaf",
+      "size": 4768
+    },
+    {
+      "executable": false,
+      "path": "scripts/miyabi/run_9node_fragment_gpt2_wikitext2_50x4.pbs",
+      "sha256": "62bb5a0cb4da0333f968f383993c359f687a64bf3d0fcb7b7c496515b682e8a4",
+      "size": 4403
+    },
+    {
+      "executable": true,
+      "path": "scripts/miyabi/run_9node_gpt2_wikitext2.pbs",
+      "sha256": "b6f5074a8c92f2150156f1d4e98c760ada4ed02a2e38f4127829ae7c33718bdf",
+      "size": 2895
+    },
+    {
+      "executable": true,
+      "path": "scripts/miyabi/run_9node_gpt2_wikitext2_5000steps.pbs",
+      "sha256": "c1b8e58dad95f1bc691a2e24a636297c57661625ba803481edd467aa6b5e4e86",
+      "size": 4449
+    },
+    {
+      "executable": false,
+      "path": "tests/test_atomic_io.py",
+      "sha256": "775d04a9677bf2b5df613d470f5794a1e832c2dc95b557d1c8e0197ce6880a7f",
+      "size": 311
+    },
+    {
+      "executable": false,
+      "path": "tests/test_config.py",
+      "sha256": "2c14b62fb6ce2029070e1e94d72f181b11709ddd3226451c7ee9b1765624486c",
+      "size": 1486
+    },
+    {
+      "executable": false,
+      "path": "tests/test_fragment_analysis.py",
+      "sha256": "edfb8a10a1b5b6c970db343cfe18b4837eb65b18f4b811aa5236302c51eb8ee4",
+      "size": 6202
+    },
+    {
+      "executable": false,
+      "path": "tests/test_fragment_codec.py",
+      "sha256": "3ad6249c2d22da586c0b5e11aa55d2f20a1d7d9f52d7e4968f7379931f071523",
+      "size": 1754
+    },
+    {
+      "executable": false,
+      "path": "tests/test_fragment_index.py",
+      "sha256": "891e25050157b043511f799334b6c3ba1fb52fe37b683319b32c6a563460d1d9",
+      "size": 1601
+    },
+    {
+      "executable": false,
+      "path": "tests/test_fragment_merge.py",
+      "sha256": "d7cd0f15aa0dca8ecc974a6e9ec9a02fcbbd779f818834e066f622c7aa91dda3",
+      "size": 1488
+    },
+    {
+      "executable": false,
+      "path": "tests/test_fragment_pipeline_smoke.py",
+      "sha256": "324319ab73b3905b72778849a246805638954e958d0d84509b0571b47e641585",
+      "size": 795
+    },
+    {
+      "executable": false,
+      "path": "tests/test_fragment_scheduler.py",
+      "sha256": "70e43363b7a47978caacd144b744a72936296f6cd0624d5444c9ffeb44c8792f",
+      "size": 370
+    },
+    {
+      "executable": false,
+      "path": "tests/test_fragment_store.py",
+      "sha256": "93f44763c75d9d0834a811c3bca906997aaf13bfcee8a012ead0b7f7544d1f12",
+      "size": 3590
+    },
+    {
+      "executable": false,
+      "path": "tests/test_liveness.py",
+      "sha256": "693f8cfcdcd90f48686fcf95816347f17026b5ebec733c73af8a5086b0af451d",
+      "size": 1809
+    },
+    {
+      "executable": false,
+      "path": "tests/test_merge.py",
+      "sha256": "99918fa732479ce2d247e7589712a2fcc68429c9c7105be6c9c234ec5dfeab60",
+      "size": 1466
+    },
+    {
+      "executable": false,
+      "path": "tests/test_outer_optim.py",
+      "sha256": "986275318156f288ec4c7a07ef366818b9a04693f0f02ad38d4dcc773f2cb484",
+      "size": 1350
+    },
+    {
+      "executable": false,
+      "path": "tests/test_param_index_roundtrip.py",
+      "sha256": "6ecf953413297fae3b890a1ca7253da87faf0caf87b0095da5f33008178d1dd5",
+      "size": 619
+    },
+    {
+      "executable": false,
+      "path": "tests/test_resume.py",
+      "sha256": "9613ad7b99de6dec2fb842030d4c989cc92b8004372f7c9df92947c48153f3f8",
+      "size": 2711
+    },
+    {
+      "executable": false,
+      "path": "tests/test_retention.py",
+      "sha256": "9f88f306bf859ad411ba4b3f8d990ede8c1ec96cdd1e4891725520db098fa3cd",
+      "size": 2086
+    },
+    {
+      "executable": false,
+      "path": "tests/test_sqlite_store.py",
+      "sha256": "d28b20134354624694d4e995913cf867db3a9cd176d47421856234afd286af5a",
+      "size": 2042
+    },
+    {
+      "executable": false,
+      "path": "tests/test_syncer_selection.py",
+      "sha256": "c572032e0db37b0d3b8f66be69ac8b8dad3a2c0cdb6bef55f7bbbf438504105c",
+      "size": 600
+    },
+    {
+      "executable": false,
+      "path": "tests/test_wandb_logging.py",
+      "sha256": "65684868b7ef3dcaf71f504da8d9c9cdae37582f391ddcedf37fda383e4ba054",
+      "size": 1361
+    }
+  ],
+  "git": {
+    "branch": "codex/duraloco-p00-contract",
+    "commit": "afc50a1e179c64321645b278b2497ea3ab3fe24d",
+    "diff_sha256": "1d4632c610f1404b29870bfa00d87ddf049cdf6415f85b2cbbc67185d84cd521",
+    "dirty": true,
+    "status": [
+      " M AGENTS.md",
+      " M README.md",
+      " M configs/fs_diloco_gpt2_wikitext2_1l_debug.yaml",
+      " M configs/fs_diloco_gpt2_wikitext2_1l_fragment_debug.yaml",
+      " M configs/fs_diloco_gpt2_wikitext2_8l_5000steps.yaml",
+      " M configs/fs_diloco_gpt2_wikitext2_8l_fragment_5000steps.yaml",
+      " M configs/fs_diloco_gpt2_wikitext2_8l_fragment_50x4.yaml",
+      " M docs/design.md",
+      " M docs/miyabi_runbook.md",
+      " M docs/user-guide/01-overview.zh-en.md",
+      " M docs/user-guide/02-training.zh-en.md",
+      " M docs/user-guide/07-operations.zh-en.md",
+      " M fs_diloco/config.py",
+      " M fs_diloco/learner.py",
+      " M fs_diloco/retention.py",
+      " M fs_diloco/syncer.py",
+      " M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md",
+      " M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/01_P00_BASELINE_AND_RESEARCH_CONTRACT.md",
+      " M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/02_P01_PROTOCOL_V2_SCHEMAS_AND_VALIDATION.md",
+      " M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/03_P02_REFERENCE_SIMULATOR_AND_IN_MEMORY_BACKEND.md",
+      " M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/04_P03_STORAGE_ABSTRACTION_AND_POSIX_LUSTRE_CONTRACT.md",
+      " M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/05_P04_TRANSACTIONAL_FRAGMENT_LOG_AND_PREFIX_RECOVERY.md",
+      " M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/06_P05_SYNCER_LEASE_FENCING_AND_FAILOVER.md",
+      " M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/07_P06_LEARNER_INTERVALS_ADOPTION_AND_RECOVERY.md",
+      " M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/08_P07_COMPACTION_GC_ACKS_AND_LEARNER_CAPSULES.md",
+      " M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/09_P08_DIRECT_FRAGMENT_IO_STREAMING_REDUCER_AND_TELEMETRY.md",
+      " M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/10_P09_OBJECT_STORE_BACKEND_AND_HYBRID_BASELINE.md",
+      " M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/11_P10_SACC_AND_ALGORITHM_SYSTEM_CODESIGN.md",
+      " M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/12_P11_MIYABI_INTEGRATION_CHAOS_AND_9NODE_ACCEPTANCE.md",
+      " M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/13_P12_FORMAL_EXPERIMENTS_ARTIFACT_AND_PAPER_EVIDENCE.md",
+      " M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/DuraLoCo_Codex_Master_Plan.md",
+      " M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/README.md",
+      " M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/SHA256SUMS.txt",
+      " M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/templates/PHASE_REPORT.md",
+      " M plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/templates/PHASE_STATE.yaml",
+      " M scripts/miyabi/run_1node_debug.pbs",
+      " M scripts/miyabi/run_1node_fragment_debug.pbs",
+      " M scripts/miyabi/run_1node_lm_eval.pbs",
+      " M scripts/miyabi/run_2node_debug.pbs",
+      " M scripts/miyabi/run_2node_fragment_debug.pbs",
+      " M scripts/miyabi/run_9node_fragment_gpt2_wikitext2_5000steps.pbs",
+      " M scripts/miyabi/run_9node_fragment_gpt2_wikitext2_50x4.pbs",
+      " M scripts/miyabi/run_9node_gpt2_wikitext2.pbs",
+      " M scripts/miyabi/run_9node_gpt2_wikitext2_5000steps.pbs",
+      " M tests/test_config.py",
+      " M tests/test_retention.py",
+      "?? artifacts/",
+      "?? docs/duraloco/",
+      "?? fs_diloco/log/",
+      "?? fs_diloco/protocol/",
+      "?? fs_diloco/storage/",
+      "?? fs_diloco/testing/",
+      "?? plans/duraloco/BLOCKERS.md",
+      "?? plans/duraloco/DECISIONS.md",
+      "?? plans/duraloco/STATE.yaml",
+      "?? plans/duraloco/TRACEABILITY.md",
+      "?? plans/duraloco/phases/",
+      "?? scripts/agent/",
+      "?? scripts/miyabi/run_duraloco_p00_baseline.pbs",
+      "?? scripts/miyabi/run_duraloco_p00_p02_tests.pbs",
+      "?? tests/protocol/",
+      "?? tests/reference/",
+      "?? tests/test_agent_state_contract.py",
+      "?? tests/test_baseline_compatibility.py"
+    ],
+    "status_sha256": "59eadd666d67f02806f7a73a534bcca190b60a74eb3cc63c2d23be3df8bb938b"
+  },
+  "kind": "duraloco-baseline",
+  "manifest_sha256": "0f36b9f843fecdd2bf42717e27fcb991b8dd6f00a2f0fc1607fdb64133626ff3",
+  "repository_root": "/work/xg24i002/x10041/fs_based_decoupled_diloco",
+  "schema_version": 1
+}
