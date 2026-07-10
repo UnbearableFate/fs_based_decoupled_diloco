@@ -200,3 +200,57 @@ run generation plus an explicit compatibility amendment.
 - Rejected: retry-all hides configuration failures and raw errno handling leaks backend details into protocol code.
 - Compatibility: existing P02 exception names remain re-exported from `fs_diloco.storage`.
 - Reversibility: retryability metadata may be refined without changing semantic outcomes.
+
+## D-0401 — Single authoritative commit point
+
+- Context: one fragment transition publishes params, outer state, a commit record, and a frontier.
+- Candidates: publish each object as authority; two-phase coordinator; one global head CAS.
+- Choice: immutable objects are only prepared evidence; the conditional replacement of one global head is the sole transition linearization and commit point.
+- Rejected: multi-object authority admits partial visibility; a coordinator adds another mutable authority.
+- Compatibility: this refines D-0201 over the P03 conditional-replace contract and does not change legacy runtime defaults.
+- Reversibility: multiple heads require a new proof, protocol generation, and migration plan.
+
+## D-0402 — Frontier completeness
+
+- Context: a reader must recover the complete committed optimizer view from one reachable object.
+- Candidates: fragment-only frontier; external scheduler/cache state; complete frontier with fragment pairs and scheduler state.
+- Choice: every frontier records each fragment version, paired params/outer-state refs, producing commit, parent frontier digest, canonical consumed-proposal set, and deterministic scheduler cursor.
+- Rejected: external authoritative indexes prevent cache-free replay; fragment-only state omits global scheduling facts.
+- Compatibility: the frozen P01 `FrontierManifest` is the wire representation.
+- Reversibility: derived fields may be added in a new schema, but committed facts cannot move into a cache.
+
+## D-0403 — Per-fragment immutable optimizer state
+
+- Context: params and outer optimizer state must advance together while payloads may be large.
+- Candidates: embed state in the frontier; one mutable state file; separate immutable content-addressed params and outer-state objects.
+- Choice: canonical float-hex payload objects are independently content-addressed and referenced as one pair by the commit and frontier.
+- Rejected: embedding bloats control objects; mutable state creates a partial-update window.
+- Compatibility: P04 uses the P02 standard-library float64 oracle; tensor encodings remain a later performance refinement.
+- Reversibility: another payload codec may be selected with an implementation digest and equivalence evidence.
+
+## D-0404 — Authoritative proposal consumption
+
+- Context: a proposal must be logically included at most once even if caches disappear or writers race.
+- Candidates: mutable SQLite table; separate mutable index; commit selections folded into the frontier.
+- Choice: commit records are the authoritative evidence and the frontier carries the canonical cumulative consumed-ID set; SQLite is a fully rebuildable materialization only.
+- Rejected: mutable index authority can diverge from the committed prefix.
+- Compatibility: this refines D-0202/D-0203 and preserves explicit revalidation after CAS conflict.
+- Reversibility: compaction may summarize the same facts but may not redefine them.
+
+## D-0405 — Canonical transition identity
+
+- Context: retries and independent backends must produce the same logical transition.
+- Candidates: random commit IDs; timestamps/listing order; canonical parent, selection, weights, outputs, and implementation digest.
+- Choice: proposal IDs are sorted, normalized float weights use exact `float.hex`, payloads use canonical JSON, and commit identity binds the parent head version plus both output refs and optimizer implementation digest; observational timestamps are excluded.
+- Rejected: random or observational inputs prevent deterministic retry and cross-backend equivalence.
+- Compatibility: the frozen P01 identities and P02 numeric oracle are reused.
+- Reversibility: identity changes require a new run generation/protocol version.
+
+## D-0406 — Orphan definition and retention boundary
+
+- Context: failed CAS and crashes leave complete or partial immutable preparations.
+- Candidates: treat listed objects as committed; delete immediately; classify by reachability from the current head.
+- Choice: any run object not reachable from the checksum-verified current head/frontier/parent chain is an orphan and never committed. P04 reports but does not delete orphans; retention and grace are deferred to P07.
+- Rejected: listing-based authority is unsafe; immediate deletion can race an in-flight prepare.
+- Compatibility: P03 listing remains discovery-only and all tests use isolated run prefixes.
+- Reversibility: later GC may delete only after the P07 reachability/grace proof.
