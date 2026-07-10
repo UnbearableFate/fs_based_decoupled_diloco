@@ -187,3 +187,12 @@ def test_unknown_fields_types_versions_and_ranges_are_rejected(tmp_path):
     for payload in cases:
         with pytest.raises(Exception):
             ProposalManifest.from_dict(payload)
+
+
+@pytest.mark.parametrize("spelling", ["1", "0x1p+0", "0X1.0000000000000P+0"])
+def test_commit_weights_require_exact_canonical_float_hex(tmp_path, spelling):
+    proposal = make_proposal(tmp_path)
+    payload = _commit_dict(proposal)
+    payload["selected_proposals"][0]["weight_fp64_hex"] = spelling
+    with pytest.raises(Exception, match="canonical float.hex"):
+        CommitManifest.from_dict(payload)

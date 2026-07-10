@@ -217,6 +217,18 @@ def test_seeded_malformed_byte_corpus_never_escapes_as_scanner_exception(tmp_pat
         assert record is not None
 
 
+def test_extreme_nesting_becomes_typed_quarantine_not_recursion_error(tmp_path):
+    payload = ("[" * 2000 + "0" + "]" * 2000).encode()
+    report, record = validate_candidate_bytes(
+        payload,
+        _context(tmp_path),
+        QuarantineRegistry(),
+        validate_tensor=False,
+    )
+    assert _error_code(report) == "MALFORMED_MANIFEST"
+    assert record is not None
+
+
 def test_missing_payload_is_retryable_and_not_quarantined(tmp_path):
     proposal = make_proposal(tmp_path, payload_key="immutable/proposals/missing.safetensors")
     report, record = validate_candidate_bytes(

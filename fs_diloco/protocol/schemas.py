@@ -296,6 +296,11 @@ class ProposalSelection:
             raise _error("SCHEMA_WEIGHT", "weight_fp64_hex is not a hexadecimal float") from exc
         if not math.isfinite(numeric_weight) or numeric_weight <= 0:
             raise _error("SCHEMA_WEIGHT", "proposal weight must be finite and positive")
+        if weight != numeric_weight.hex():
+            raise _error(
+                "SCHEMA_WEIGHT",
+                "weight_fp64_hex must use the exact canonical float.hex spelling",
+            )
         return cls(
             proposal_id=_string(payload["proposal_id"], "proposal_id"),
             learner_id=_string(payload["learner_id"], "learner_id"),

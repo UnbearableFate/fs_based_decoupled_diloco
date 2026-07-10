@@ -56,7 +56,10 @@ def _normalize(value: Any, *, path: str = "$") -> Any:
 
 
 def canonical_text(value: Any) -> str:
-    normalized = _normalize(value)
+    try:
+        normalized = _normalize(value)
+    except RecursionError as exc:
+        raise CanonicalJSONError("canonical JSON nesting exceeds the supported depth") from exc
     return json.dumps(
         normalized,
         ensure_ascii=False,
@@ -81,6 +84,11 @@ def loads_strict(payload: str | bytes | bytearray) -> Any:
             object_pairs_hook=_pairs_no_duplicates,
             parse_constant=_reject_constant,
         )
-    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+    except CanonicalJSONError:
+        raise
+    except (UnicodeDecodeError, RecursionError, ValueError) as exc:
         raise CanonicalJSONError(str(exc)) from exc
-    return _normalize(value)
+    try:
+        return _normalize(value)
+    except RecursionError as exc:
+        raise CanonicalJSONError("canonical JSON nesting exceeds the supported depth") from exc

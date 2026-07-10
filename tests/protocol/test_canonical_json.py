@@ -49,6 +49,12 @@ def test_unknown_python_types_are_rejected():
         canonical_text({"bad": object()})
 
 
+def test_extreme_json_nesting_is_a_typed_canonical_error():
+    payload = "[" * 2000 + "0" + "]" * 2000
+    with pytest.raises(CanonicalJSONError, match="depth|recursion|maximum"):
+        loads_strict(payload)
+
+
 def test_golden_digest_is_stable_in_a_fresh_process():
     command = [
         sys.executable,
