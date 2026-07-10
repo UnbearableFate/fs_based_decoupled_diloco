@@ -1,0 +1,26 @@
+{
+  "optimizer_digests": {
+    "adamw": "b3dcc7ad9d30991ab72f649ae9dea66bb1a3699e1ca8b20e32e31f6e31158563",
+    "momentum": "c67155967c92b50660b280da06f01ffaab7d2bbea0aab9fa2aec2130e83661fb",
+    "nesterov": "0422e601652caf0c41e38e51b655406cf3c955a61c4bcdbafab5707020d4bfde",
+    "sgd": "d740ea26878b51d51ed5eeaeeeeb55bb75e6f14a599afa4c852d697f61dc8026"
+  },
+  "suite_100": {
+    "action_counts": {
+      "commit": 296,
+      "invalid_unknown_selection": 73,
+      "publish": 631,
+      "restart": 127
+    },
+    "count": 100,
+    "start_seed": 0,
+    "suite_digest": "e9435ae3bd5e1401011af3a621c979954043deeef4069f3aff332a0f373bf3d1",
+    "unique_state_digests": 80
+  },
+  "trace": {
+    "event_count": 32,
+    "seed": 20260710,
+    "state_digest": "a23695d4a47d3e3400f4e3f30511ba6638f17e564de348b68ce482d97f83d179",
+    "trace_digest": "a41701809d86343bdff035b8353f5608cc2e114e5af406a752fb2b206e0225ee"
+  }
+}

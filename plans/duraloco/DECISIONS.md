@@ -146,3 +146,12 @@ run generation plus an explicit compatibility amendment.
 - Rejected: Torch violates P02 independence; NumPy adds an unnecessary oracle dependency.
 - Compatibility: adapter tests compare with the existing Torch implementation on a compute node.
 - Reversibility: performance implementations refine to, rather than redefine, this oracle.
+
+## D-0206 — P02 staleness weighting
+
+- Context: the numeric contract requires token/staleness weights, while P02 needs one executable formula.
+- Candidates: token-only; exponential decay; rational decay with the research-draft default.
+- Choice: use `tokens / (1 + 0.2 * fragment_staleness)` before canonical float64 normalization; commit the normalized hexadecimal weights.
+- Rejected: token-only does not satisfy the frozen numeric contract; exponential decay adds a platform-sensitive transcendental operation to the standard-library oracle.
+- Compatibility: fresh proposals have staleness zero and exactly preserve token-only legacy comparisons.
+- Reversibility: changing the function or lambda requires a new run generation and weighting implementation identity.

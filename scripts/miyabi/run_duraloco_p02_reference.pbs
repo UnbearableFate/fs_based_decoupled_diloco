@@ -1,0 +1,90 @@
+#!/bin/bash
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:10:00
+#PBS -j oe
+#PBS -m ae
+
+set -eEuo pipefail
+trap 'echo "[ERROR] Failed at line $LINENO" >&2' ERR
+
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat
+REQUIRED_MODULES=()  # Intentionally use Miyabi-G's compute-node default stack.
+for module_name in "${REQUIRED_MODULES[@]}"; do
+  module load "$module_name"
+done
+module list 2>&1 | cat
+
+PROJECT_ROOT="${PROJECT_ROOT:-${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}}"
+PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
+RUN_ID="${RUN_ID:-$(date +%Y%m%d_%H%M%S)_duraloco_p02_reference}"
+PARENT_RUN_ID="${PARENT_RUN_ID:-}"
+ARTIFACT_ROOT="${ARTIFACT_ROOT:-$PROJECT_ROOT/artifacts/duraloco/P02/$RUN_ID}"
+
+if [[ ! -x "$PYTHON_BIN" ]]; then
+  echo "Python executable not found or not executable: $PYTHON_BIN" >&2
+  exit 2
+fi
+
+cd "$PROJECT_ROOT"
+mkdir -p "$ARTIFACT_ROOT"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+
+hostname | tee "$ARTIFACT_ROOT/hostname.log"
+printf 'PBS_JOBID=%s\nPBS_NODEFILE=%s\n' "${PBS_JOBID:-}" "${PBS_NODEFILE:-}" \
+  | tee "$ARTIFACT_ROOT/pbs_environment.log"
+"$PYTHON_BIN" --version 2>&1 | tee "$ARTIFACT_ROOT/python_version.log"
+git status --short --branch | tee "$ARTIFACT_ROOT/git_status.log"
+git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"
+
+GOLDEN_COMMAND=("$PYTHON_BIN" scripts/agent/generate_reference_goldens.py)
+printf -v GOLDEN_COMMAND_TEXT '%q ' "${GOLDEN_COMMAND[@]}"
+printf '%s\n' "${GOLDEN_COMMAND_TEXT% }" | tee "$ARTIFACT_ROOT/commands.log"
+"${GOLDEN_COMMAND[@]}" | tee "$ARTIFACT_ROOT/reference_goldens.json"
+
+TEST_COMMAND=(
+  "$PYTHON_BIN" -m pytest -q
+  tests
+  --junitxml "$ARTIFACT_ROOT/junit.xml"
+)
+printf -v TEST_COMMAND_TEXT '%q ' "${TEST_COMMAND[@]}"
+printf '%s\n' "${TEST_COMMAND_TEXT% }" | tee -a "$ARTIFACT_ROOT/commands.log"
+"${TEST_COMMAND[@]}" 2>&1 | tee "$ARTIFACT_ROOT/pytest.log"
+
+TRACE_COMMAND=("$PYTHON_BIN" -m fs_diloco.testing.reference_cli --count 10000 --steps 12)
+printf -v TRACE_COMMAND_TEXT '%q ' "${TRACE_COMMAND[@]}"
+printf '%s\n' "${TRACE_COMMAND_TEXT% }" | tee -a "$ARTIFACT_ROOT/commands.log"
+"${TRACE_COMMAND[@]}" | tee "$ARTIFACT_ROOT/reference_10000.json"
+
+qstat "$PBS_JOBID" | tee "$ARTIFACT_ROOT/qstat_final.log"
+cp "$ARTIFACT_ROOT/pytest.log" "$ARTIFACT_ROOT/stdout.log"
+: > "$ARTIFACT_ROOT/stderr.log"
+
+MANIFEST_ARGS=(
+  --root "$PROJECT_ROOT"
+  --output "$ARTIFACT_ROOT/manifest.json"
+  --phase P02
+  --purpose contract
+  --run-id "$RUN_ID"
+  --backend memory
+  --config scripts/miyabi/run_duraloco_p02_reference.pbs
+  --dataset-revision seeded-reference-traces-v1
+  --model-revision stdlib-float64-reference-v1
+  --seed 0
+  --commands-log commands.log
+  --stdout stdout.log
+  --stderr stderr.log
+  --exit-code 0
+  --result pass
+  --assertion "1,000-trace quick and 10,000-trace explicit suites passed deterministically"
+  --assertion "all enumerated publication and commit crash points recovered a legal prefix"
+  --assertion "double-apply wrong-parent state-pairing and numeric-transition mutants were detected"
+  --assertion "SGD momentum Nesterov AdamW and fragment_count=1 matched the legacy Torch oracle"
+)
+if [[ -n "$PARENT_RUN_ID" ]]; then
+  MANIFEST_ARGS+=(--parent-run-id "$PARENT_RUN_ID")
+fi
+"$PYTHON_BIN" scripts/agent/create_run_manifest.py "${MANIFEST_ARGS[@]}"
+"$PYTHON_BIN" scripts/agent/check_run_manifest.py "$ARTIFACT_ROOT/manifest.json" \
+  --root "$PROJECT_ROOT"
