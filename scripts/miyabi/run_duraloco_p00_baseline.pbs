@@ -22,6 +22,7 @@ RUN_ID="${RUN_ID:-$(date +%Y%m%d_%H%M%S)_duraloco_p00_baseline}"
 ARTIFACT_ROOT="${ARTIFACT_ROOT:-$PROJECT_ROOT/artifacts/duraloco/P00/$RUN_ID}"
 FULL_RUN_ID="${RUN_ID}_full"
 FRAGMENT_RUN_ID="${RUN_ID}_fragment"
+LEGACY_RUN_ROOT="${LEGACY_RUN_ROOT:-$PROJECT_ROOT/runs/fs_diloco/20260710_013757_fs_diloco_gpt2_wikitext2_8l_fragment_5000steps}"
 
 if [[ ! -x "$PYTHON_BIN" ]]; then
   echo "Python executable not found or not executable: $PYTHON_BIN" >&2
@@ -80,7 +81,7 @@ printf '\n' | tee -a "$ARTIFACT_ROOT/commands.log"
   "$PROJECT_ROOT/runs/fs_diloco/$FRAGMENT_RUN_ID" \
   --output "$ARTIFACT_ROOT/fragment_smoke_evidence.json"
 "$PYTHON_BIN" scripts/agent/verify_baseline_evidence.py \
-  "$PROJECT_ROOT/runs/fs_diloco/20260710_013757_fs_diloco_gpt2_wikitext2_8l_fragment_5000steps" \
+  "$LEGACY_RUN_ROOT" \
   --output "$ARTIFACT_ROOT/legacy_run_sample.json"
 
 qstat "$PBS_JOBID" | tee "$ARTIFACT_ROOT/qstat_final.log"
