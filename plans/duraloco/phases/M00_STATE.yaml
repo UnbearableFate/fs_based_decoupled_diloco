@@ -34,7 +34,8 @@ open_blockers: []
 artifacts:
   - artifacts/duraloco/M00/20260711_m00_6e615e1_1node
   - artifacts/duraloco/M00/20260711_m00_74b5cbe_1node
-next_action: "commit the optional proposal identity repair, then run the next parent-linked clean 1-node retry"
+  - artifacts/duraloco/M00/20260711_m00_04da7ee_1node
+next_action: "commit same-base production enforcement and learner adoption pacing, then retry one node"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

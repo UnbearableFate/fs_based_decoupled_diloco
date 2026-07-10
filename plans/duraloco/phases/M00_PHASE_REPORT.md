@@ -60,6 +60,30 @@ script/test scanning passes. Compute qualification remains in progress.
 - Repair: omit the optional identity field entirely unless a predecessor ID is
   present. The next retry remains parent-linked.
 
+#### Maker attempt 3 — `20260711_m00_04da7ee_1node`
+
+- Time/identity: PBS `2359079.opbs`, host `mg0027`, implementation
+  `04da7ee01b69f66cac60a7e2d9173b3738b82ef4`.
+- Phenomenon: forbidden scanning, all 270 tests, and the one-node P04
+  crash/replay contract passed. The full-process smoke then committed its first
+  transition but replay rejected transition two as a duplicate same-base
+  learner interval.
+- Expected/actual: only one proposal from each learner/session/fragment/base
+  interval may be logically included. Production preparation admitted another
+  proposal from an already consumed interval, so replay correctly failed
+  closed.
+- Reason: confirmed. The reference path enforced same-base overlap during
+  prepare, while the initial production adapter only checked proposal ID,
+  ancestry, and staleness. The fast full learner also polled latest once and
+  could finish several overlapping intervals before seeing the committed
+  successor.
+- Impact: M00-A03, M00-A04, M00-A09, P02-A04, and P04 replay requalification.
+- Evidence: `artifacts/duraloco/M00/20260711_m00_04da7ee_1node/manifest.json`,
+  `one_node_contract.json`, full syncer/learner logs, and `stdout.log`.
+- Repair: carry consumed interval bases in `RuntimeView`, filter them in the
+  catalog, enforce them again at production prepare, and let learners configured
+  for post-upload adoption wait through one scan/grace window for a successor.
+
 ### Limitations and next action
 
 M00 still assumes one active syncer. Lease/fencing begins in P05; learner exact
@@ -119,6 +143,25 @@ generation metadata 与 M00 静态/运行 harness。源码、配置、脚本与�
   `stdout.log` 与 `junit.xml`。
 - 修复：只有确实存在 predecessor ID 时才加入该可选 identity 字段；下一次重试继续
   parent-linked。
+
+#### Maker 第 3 次尝试 — `20260711_m00_04da7ee_1node`
+
+- 时间/身份：PBS `2359079.opbs`，节点 `mg0027`，实现提交
+  `04da7ee01b69f66cac60a7e2d9173b3738b82ef4`。
+- 现象：forbidden scan、270 个 tests 与单节点 P04 crash/replay contract 均通过；
+  full process smoke 提交第一个 transition 后，replay 将第二个 transition 判为重复
+  same-base learner interval 并 fail closed。
+- 预期/实际：每个 learner/session/fragment/base interval 最多逻辑包含一个 proposal；
+  production prepare 实际允许了已消费 interval 的另一个 proposal，replay 正确拒绝。
+- 原因：已证实。reference prepare 已检查 same-base overlap，初版 production adapter
+  只检查 proposal ID、ancestry 与 staleness。快速 full learner 只轮询 latest 一次，
+  也可能在看到 committed successor 前完成多个重叠 interval。
+- 影响：M00-A03、M00-A04、M00-A09、P02-A04 与 P04 replay 再验收。
+- 证据：`artifacts/duraloco/M00/20260711_m00_04da7ee_1node/manifest.json`、
+  `one_node_contract.json`、full syncer/learner logs 与 `stdout.log`。
+- 修复：`RuntimeView` 携带 consumed interval bases，catalog 过滤，production prepare
+  再次强制；配置 post-upload adoption 的 learner 在一个 scan/grace window 内等待
+  successor。
 
 ### 限制与下一动作
 

@@ -186,6 +186,18 @@ class ProposalCatalog:
         validate_causal(manifest, context)
         if manifest.proposal_id in view.consumed_proposal_ids:
             raise ProtocolError("ALREADY_CONSUMED", "proposal is already committed")
+        interval_base = (
+            manifest.learner_id,
+            manifest.learner_session_id,
+            manifest.fragment_id,
+            manifest.base_commit_id,
+            manifest.base_fragment_version,
+        )
+        if interval_base in view.consumed_interval_bases:
+            raise ProtocolError(
+                "INTERVAL_ALREADY_CONSUMED",
+                "a proposal from this learner interval is already committed",
+            )
         return CatalogEntry(
             manifest=manifest,
             metadata_path=metadata_path,

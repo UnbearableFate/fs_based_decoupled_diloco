@@ -1,0 +1,33 @@
+{"actor": "syncer", "authority_root": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/M00/20260711_m00_04da7ee_1node/full/authority", "cuda_visible_devices": "", "device": "cpu", "event_type": "process_start", "hostname": "mg0027", "run_generation": 0, "run_id": "20260711_m00_04da7ee_1node-full", "shared_root": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/M00/20260711_m00_04da7ee_1node/full", "timestamp": 1783726566.4881074}
+{"actor": "syncer", "commit_seq": 0, "event_type": "generation_initialized", "hostname": "mg0027", "timestamp": 1783726568.1392384, "view_digest": "e6561ebef6396632bf15ec3302067f30e47708ca12887a922b08d4bb388928b9"}
+{"actor": "syncer", "commit_seq": 0, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0027", "quorum_min": 1, "timestamp": 1783726568.3935301}
+{"actor": "syncer", "commit_seq": 0, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0027", "quorum_min": 1, "timestamp": 1783726568.795883}
+{"actor": "syncer", "commit_seq": 0, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0027", "quorum_min": 1, "timestamp": 1783726569.1980383}
+{"actor": "syncer", "commit_seq": 0, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0027", "quorum_min": 1, "timestamp": 1783726569.6001859}
+{"actor": "syncer", "commit_seq": 0, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0027", "quorum_min": 1, "timestamp": 1783726570.0022569}
+{"actor": "syncer", "commit_seq": 0, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0027", "quorum_min": 1, "timestamp": 1783726570.404449}
+{"actor": "syncer", "commit_seq": 0, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0027", "quorum_min": 1, "timestamp": 1783726570.8069756}
+{"actor": "syncer", "commit_id": "c-33512a9ee18b52f9e27410a243b2647de77b34f5d197844c3bb16c0eaf9bff76", "commit_seq": 1, "event_type": "transition_committed", "fragment_id": 0, "hostname": "mg0027", "selected_proposal_ids": ["p-26321575488e75b04628b5dd59052f17ac1d7d6c4118c26763987ee14818b48f", "p-ffa3316b65089deeba53ec2b8ae6aca37b3f7dd6cf2594c23bf9a2f2f513a9e7"], "timestamp": 1783726571.3272495, "view_digest": "a8db92e9c2c17cd4f67d55a803ef941b929ee8af23570865a6290d30fb1e4c19"}
+{"actor": "syncer", "commit_seq": 1, "event_type": "error", "exc_info": "Traceback (most recent call last):\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/fs_diloco/syncer.py\", line 564, in run_syncer\n    view = build_runtime_view(log)\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/fs_diloco/runtime_view.py\", line 135, in build_runtime_view\n    return RuntimeView.from_replay(replay_log(log.transactional if hasattr(log, \"transactional\") else log))\n                                   ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/fs_diloco/log/replay.py\", line 718, in replay_log\n    return _replay_production_log(log)\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/fs_diloco/log/replay.py\", line 603, in _replay_production_log\n    raise VerificationError(\"same-base learner interval is consumed twice\", commit_seq=index)\nfs_diloco.log.errors.VerificationError: commit_seq=2: same-base learner interval is consumed twice\n", "hostname": "mg0027", "timestamp": 1783726571.4299622}
+{"actor": "syncer", "commit_id": "c-33512a9ee18b52f9e27410a243b2647de77b34f5d197844c3bb16c0eaf9bff76", "commit_seq": 1, "event_type": "stop_published", "hostname": "mg0027", "reason": "error", "timestamp": 1783726571.4337585}
+{"actor": "syncer", "commit_seq": 1, "event_type": "process_exit", "hostname": "mg0027", "reason": "error", "timestamp": 1783726571.4347217}
+{"actor": "syncer", "event_type": "error", "exc_type": "VerificationError", "hostname": "mg0027", "message": "commit_seq=2: same-base learner interval is consumed twice", "timestamp": 1783726571.4365842, "traceback": "Traceback (most recent call last):\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/fs_diloco/syncer.py\", line 673, in <module>\n    main()\n    ~~~~^^\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/fs_diloco/syncer.py\", line 669, in main\n    run_syncer(config)\n    ~~~~~~~~~~^^^^^^^^\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/fs_diloco/syncer.py\", line 564, in run_syncer\n    view = build_runtime_view(log)\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/fs_diloco/runtime_view.py\", line 135, in build_runtime_view\n    return RuntimeView.from_replay(replay_log(log.transactional if hasattr(log, \"transactional\") else log))\n                                   ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/fs_diloco/log/replay.py\", line 718, in replay_log\n    return _replay_production_log(log)\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/fs_diloco/log/replay.py\", line 603, in _replay_production_log\n    raise VerificationError(\"same-base learner interval is consumed twice\", commit_seq=index)\nfs_diloco.log.errors.VerificationError: commit_seq=2: same-base learner interval is consumed twice\n"}
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/fs_diloco/syncer.py", line 673, in <module>
+    main()
+    ~~~~^^
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/fs_diloco/syncer.py", line 669, in main
+    run_syncer(config)
+    ~~~~~~~~~~^^^^^^^^
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/fs_diloco/syncer.py", line 564, in run_syncer
+    view = build_runtime_view(log)
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/fs_diloco/runtime_view.py", line 135, in build_runtime_view
+    return RuntimeView.from_replay(replay_log(log.transactional if hasattr(log, "transactional") else log))
+                                   ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/fs_diloco/log/replay.py", line 718, in replay_log
+    return _replay_production_log(log)
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/fs_diloco/log/replay.py", line 603, in _replay_production_log
+    raise VerificationError("same-base learner interval is consumed twice", commit_seq=index)
+fs_diloco.log.errors.VerificationError: commit_seq=2: same-base learner interval is consumed twice

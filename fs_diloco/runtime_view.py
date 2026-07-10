@@ -12,6 +12,7 @@ from fs_diloco.protocol.schemas import FragmentState, FrontierManifest
 
 
 Lineage = tuple[str, str, int]
+IntervalBase = tuple[str, str, int, str, int]
 
 
 @dataclass(frozen=True)
@@ -24,6 +25,7 @@ class RuntimeView:
     committed_state_digest: str
     fragments: Mapping[int, FragmentState]
     consumed_proposal_ids: frozenset[str]
+    consumed_interval_bases: frozenset[IntervalBase]
     last_committed_sequences: Mapping[Lineage, int]
     commit_sequences_by_id: Mapping[str, int]
     frontier_digests_by_commit: Mapping[str, str]
@@ -60,6 +62,7 @@ class RuntimeView:
             ),
         )
         object.__setattr__(self, "consumed_proposal_ids", frozenset(self.consumed_proposal_ids))
+        object.__setattr__(self, "consumed_interval_bases", frozenset(self.consumed_interval_bases))
 
     @property
     def ancestor_commit_ids(self) -> frozenset[str]:
@@ -85,6 +88,7 @@ class RuntimeView:
             for item in replay.frontiers
         }
         sequences: dict[Lineage, int] = {}
+        intervals: set[IntervalBase] = set()
         total_seen_tokens = 0
         for proposal in replay.proposals.values():
             session = getattr(proposal, "learner_session_id", None)
@@ -92,6 +96,13 @@ class RuntimeView:
                 session = getattr(proposal, "session_id")
             lineage = (proposal.learner_id, session, proposal.fragment_id)
             sequences[lineage] = max(sequences.get(lineage, -1), proposal.sequence)
+            intervals.add(
+                (
+                    *lineage,
+                    proposal.base_commit_id,
+                    proposal.base_fragment_version,
+                )
+            )
             total_seen_tokens += int(
                 getattr(proposal, "target_tokens_since_base", getattr(proposal, "target_tokens", 0))
             )
@@ -106,6 +117,7 @@ class RuntimeView:
                 str(key): value.to_dict() for key, value in sorted(head.fragments.items())
             },
             "consumed_proposal_ids": sorted(replay.consumption),
+            "consumed_interval_bases": [list(item) for item in sorted(intervals)],
             "last_committed_sequences": [
                 [*key, value] for key, value in sorted(sequences.items())
             ],
@@ -121,6 +133,7 @@ class RuntimeView:
             committed_state_digest=replay.committed_state_digest,
             fragments=head.fragments,
             consumed_proposal_ids=frozenset(replay.consumption),
+            consumed_interval_bases=frozenset(intervals),
             last_committed_sequences=sequences,
             commit_sequences_by_id=commit_sequences,
             frontier_digests_by_commit=frontier_digests,

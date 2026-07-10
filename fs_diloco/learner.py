@@ -115,6 +115,23 @@ def read_latest_if_newer(paths: RunPaths, last_loaded_global_version: int) -> di
     return payload
 
 
+def wait_for_latest_if_newer(
+    paths: RunPaths,
+    last_loaded_global_version: int,
+    config: Config,
+) -> dict[str, Any] | None:
+    deadline = time.monotonic() + max(
+        config.sync.stop_file_poll_seconds,
+        config.sync.scan_interval_seconds + config.sync.grace_window.fixed_seconds + 1.0,
+    )
+    while time.monotonic() <= deadline:
+        payload = read_latest_if_newer(paths, last_loaded_global_version)
+        if payload is not None:
+            return payload
+        time.sleep(min(config.sync.stop_file_poll_seconds, max(0.0, deadline - time.monotonic())))
+    return None
+
+
 def read_fragment_latest_if_newer(paths: RunPaths, last_loaded_global_merge_event: int) -> dict[str, Any] | None:
     payload = safe_read_json(paths.latest_json)
     if payload is None or payload.get("latest_kind") != "fragment":
@@ -1084,7 +1101,11 @@ def run_learner(config: Config, learner_id: str) -> None:
             logger.event("heartbeat_written", local_step=local_step)
 
             if config.learner.adopt_global_after_upload:
-                maybe_latest = read_latest_if_newer(paths, last_loaded_global_version)
+                maybe_latest = wait_for_latest_if_newer(
+                    paths,
+                    last_loaded_global_version,
+                    config,
+                )
                 logger.event(
                     "latest_polled",
                     current_version=last_loaded_global_version,

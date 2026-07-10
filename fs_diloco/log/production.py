@@ -257,6 +257,31 @@ class ProductionTransactionalLog:
                 raise CommitConflict("proposal exceeds global staleness")
             if current_fragment.version - proposal.base_fragment_version > self.spec.max_fragment_staleness:
                 raise CommitConflict("proposal exceeds fragment staleness")
+            for consumed in replay.proposals.values():
+                consumed_session = getattr(
+                    consumed,
+                    "learner_session_id",
+                    getattr(consumed, "session_id", None),
+                )
+                same_lineage = (
+                    consumed.learner_id,
+                    consumed_session,
+                    consumed.fragment_id,
+                ) == (
+                    proposal.learner_id,
+                    proposal.learner_session_id,
+                    proposal.fragment_id,
+                )
+                if same_lineage and consumed.sequence >= proposal.sequence:
+                    raise CommitConflict("proposal lineage sequence is not monotonic")
+                if same_lineage and (
+                    consumed.base_commit_id,
+                    consumed.base_fragment_version,
+                ) == (
+                    proposal.base_commit_id,
+                    proposal.base_fragment_version,
+                ):
+                    raise CommitConflict("proposal overlaps a consumed same-base interval")
 
         weights = normalized_weights(
             {item.proposal_id: item.target_tokens_since_base for item in proposals},
