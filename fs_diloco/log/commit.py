@@ -564,6 +564,22 @@ class TransactionalLog:
                 commit_seq=prepared.commit.commit_seq,
                 head_version=current.metadata.version,
             )
+        if current.manifest.commit_seq > prepared.commit.commit_seq:
+            from .replay import replay_log
+
+            replay = replay_log(self)
+            index = prepared.commit.commit_seq - 1
+            if (
+                0 <= index < len(replay.commits)
+                and replay.commits[index] == prepared.commit
+                and replay.frontiers[index + 1] == prepared.frontier
+            ):
+                return CommitResult(
+                    status="already_committed",
+                    commit_id=prepared.commit.commit_id,
+                    commit_seq=prepared.commit.commit_seq,
+                    head_version=replay.loaded_head.metadata.version,
+                )
         return None
 
     def commit_transition(

@@ -55,3 +55,22 @@ def test_committed_proposal_cannot_be_logically_included_twice():
     log.commit_transition(fragment_id=0, selected_proposal_ids=(item.proposal_id,))
     with pytest.raises(CommitConflict):
         log.prepare_transition(fragment_id=0, selected_proposal_ids=(item.proposal_id,))
+
+
+def test_delayed_response_loss_resolution_finds_a_committed_ancestor():
+    backend = InMemoryStorageBackend()
+    log = initialize(backend, "delayed-response-loss")
+    first_item = proposal(log, learner="learner-a", sequence=1)
+    first = log.prepare_transition(
+        fragment_id=0, selected_proposal_ids=(first_item.proposal_id,)
+    )
+    assert log.commit_prepared(first).status == "committed"
+    successor_item = proposal(log, learner="learner-b", sequence=1, fragment_id=1)
+    assert log.commit_transition(
+        fragment_id=1, selected_proposal_ids=(successor_item.proposal_id,)
+    ).status == "committed"
+    recovered = log.resolve_prepared(first)
+    assert recovered is not None
+    assert recovered.status == "already_committed"
+    assert recovered.commit_id == first.commit.commit_id
+    assert replay_log(log).head_frontier.commit_seq == 2
