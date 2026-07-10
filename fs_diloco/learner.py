@@ -120,14 +120,13 @@ def wait_for_latest_if_newer(
     last_loaded_global_version: int,
     config: Config,
 ) -> dict[str, Any] | None:
-    deadline = time.monotonic() + max(
-        config.sync.stop_file_poll_seconds,
-        config.sync.scan_interval_seconds + config.sync.grace_window.fixed_seconds + 1.0,
-    )
+    deadline = time.monotonic() + config.liveness.no_progress_timeout_seconds
     while time.monotonic() <= deadline:
         payload = read_latest_if_newer(paths, last_loaded_global_version)
         if payload is not None:
             return payload
+        if paths.stop_json.exists():
+            return None
         time.sleep(min(config.sync.stop_file_poll_seconds, max(0.0, deadline - time.monotonic())))
     return None
 
@@ -146,14 +145,13 @@ def wait_for_fragment_latest_if_newer(
     last_loaded_global_merge_event: int,
     config: Config,
 ) -> dict[str, Any] | None:
-    deadline = time.monotonic() + max(
-        config.sync.stop_file_poll_seconds,
-        config.sync.scan_interval_seconds + config.sync.grace_window.fixed_seconds + 1.0,
-    )
+    deadline = time.monotonic() + config.liveness.no_progress_timeout_seconds
     while time.monotonic() <= deadline:
         payload = read_fragment_latest_if_newer(paths, last_loaded_global_merge_event)
         if payload is not None:
             return payload
+        if paths.stop_json.exists():
+            return None
         time.sleep(min(config.sync.stop_file_poll_seconds, max(0.0, deadline - time.monotonic())))
     return None
 

@@ -97,6 +97,25 @@ class ProposalCatalog:
         view: RuntimeView,
     ) -> CatalogEntry:
         payload_path = self._contained_payload(metadata.get("file_path"))
+        fragment_id = int(metadata.get("fragment_id", 0))
+        base_fragment_version = int(
+            metadata.get("base_fragment_version", metadata.get("base_global_version", -1))
+        )
+        learner_id = metadata.get("learner_id")
+        learner_session_id = metadata.get("learner_session_id")
+        base_commit_id = metadata.get("base_commit_id")
+        interval_base = (
+            learner_id,
+            learner_session_id,
+            fragment_id,
+            base_commit_id,
+            base_fragment_version,
+        )
+        if interval_base in view.consumed_interval_bases:
+            raise ProtocolError(
+                "INTERVAL_ALREADY_CONSUMED",
+                "a proposal from this learner interval is already committed",
+            )
         try:
             payload = payload_path.read_bytes()
         except OSError as exc:
@@ -120,10 +139,6 @@ class ProposalCatalog:
             shape=header.shape,
             dtype=dtype,
             require_finite=True,
-        )
-        fragment_id = int(metadata.get("fragment_id", 0))
-        base_fragment_version = int(
-            metadata.get("base_fragment_version", metadata.get("base_global_version", -1))
         )
         local_start = int(metadata.get("local_step_start", -1))
         local_end = int(metadata.get("local_step_end", -1))
@@ -186,18 +201,6 @@ class ProposalCatalog:
         validate_causal(manifest, context)
         if manifest.proposal_id in view.consumed_proposal_ids:
             raise ProtocolError("ALREADY_CONSUMED", "proposal is already committed")
-        interval_base = (
-            manifest.learner_id,
-            manifest.learner_session_id,
-            manifest.fragment_id,
-            manifest.base_commit_id,
-            manifest.base_fragment_version,
-        )
-        if interval_base in view.consumed_interval_bases:
-            raise ProtocolError(
-                "INTERVAL_ALREADY_CONSUMED",
-                "a proposal from this learner interval is already committed",
-            )
         return CatalogEntry(
             manifest=manifest,
             metadata_path=metadata_path,
