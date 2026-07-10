@@ -1,12 +1,12 @@
 phase: P01
-status: checking
+status: completed
 planning_basis_branch: codex/fs-diloco-miyabi
 planning_basis_commit: afc50a1e179c64321645b278b2497ea3ab3fe24d
 actual_base_branch: codex/duraloco-p00-contract
 actual_base_commit: 71fcae1b4d230a5a98ddb019f17b9f5009cde346
 feature_branch: codex/duraloco-p01-protocol-v2
 current_loop: 4
-current_goal: "archive independently checked Protocol v2 contract evidence"
+current_goal: "P01 Protocol v2 schemas and validation completed"
 attempts_for_current_failure: 0
 last_verified_commit: cfa74423978fa5ff62ff112fbde980e223d00e92
 checks:
@@ -30,7 +30,7 @@ open_blockers: []
 artifacts:
   - artifacts/duraloco/P01/20260710_clean_p01_cfa7442
   - artifacts/duraloco/P01/20260710_checker_cfa7442
-next_action: "persist checker-confirmed completed state, then start P02"
+next_action: "start P02 deterministic reference simulator and in-memory backend"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
