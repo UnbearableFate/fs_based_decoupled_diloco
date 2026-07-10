@@ -144,7 +144,6 @@ class ProposalCatalog:
             "base_commit_seq": int(metadata.get("base_commit_seq", -1)),
             "base_fragment_version": base_fragment_version,
             "base_frontier_digest": metadata.get("base_frontier_digest"),
-            "previous_interval_proposal_id": metadata.get("previous_interval_proposal_id"),
             "local_steps_since_base": local_end - local_start,
             "target_tokens_since_base": int(metadata.get("tokens_this_update", 0)),
             "payload_kind": "local_end_weight",
@@ -160,6 +159,9 @@ class ProposalCatalog:
         }
         if created_at is not None:
             body["created_at"] = str(created_at)
+        previous = metadata.get("previous_interval_proposal_id")
+        if previous is not None:
+            body["previous_interval_proposal_id"] = previous
         manifest = ProposalManifest.with_computed_id(body)
         context = ValidationContext(
             run_id=view.run_id,

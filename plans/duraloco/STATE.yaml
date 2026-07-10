@@ -33,7 +33,8 @@ open_decisions: []
 open_blockers: []
 artifacts:
   - artifacts/duraloco/M00/20260711_m00_6e615e1_1node
-next_action: "commit the I64 decoder and stale-test repair, then run a parent-linked clean 1-node retry"
+  - artifacts/duraloco/M00/20260711_m00_74b5cbe_1node
+next_action: "commit the optional proposal identity repair, then run the next parent-linked clean 1-node retry"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

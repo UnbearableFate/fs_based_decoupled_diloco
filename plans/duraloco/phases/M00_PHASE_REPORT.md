@@ -41,6 +41,25 @@ script/test scanning passes. Compute qualification remains in progress.
   schemas floating-only, and remap the two stale tests. Retry will use a new
   run ID with this attempt as `parent_run_id`.
 
+#### Maker attempt 2 — `20260711_m00_74b5cbe_1node`
+
+- Time/identity: PBS `2359078.opbs`, host `mg0027`, implementation
+  `74b5cbee242b877c86ba2f3293d855f3f9c8571c`.
+- Phenomenon: the static gate passed and the suite improved to one failure
+  (`269 passed, 1 skipped`). The listing omission/reorder catalog case found
+  zero valid candidates instead of two; process smokes did not start.
+- Expected/actual: both valid markers must survive deduplication and the older
+  sequence must be selected. Both were quarantined during identity parsing.
+- Reason: confirmed. Catalog construction included the optional
+  `previous_interval_proposal_id` key with a null value when computing the
+  proposal ID. Schema serialization correctly omitted the absent optional
+  field, so identity recomputation detected a mismatch.
+- Impact: M00-A03, M00-A04, and the P01 identity remapping gate.
+- Evidence: `artifacts/duraloco/M00/20260711_m00_74b5cbe_1node/manifest.json`,
+  `stdout.log`, and `junit.xml`.
+- Repair: omit the optional identity field entirely unless a predecessor ID is
+  present. The next retry remains parent-linked.
+
 ### Limitations and next action
 
 M00 still assumes one active syncer. Lease/fencing begins in P05; learner exact
@@ -83,6 +102,23 @@ generation metadata 与 M00 静态/运行 harness。源码、配置、脚本与�
   `stdout.log` 与 `junit.xml`。
 - 修复：outer-state 结构解析允许 `I64`，proposal dtype schema 仍仅允许浮点；同步
   更新两个过期测试。重试使用新 run ID，并通过 `parent_run_id` 指向本次尝试。
+
+#### Maker 第 2 次尝试 — `20260711_m00_74b5cbe_1node`
+
+- 时间/身份：PBS `2359078.opbs`，节点 `mg0027`，实现提交
+  `74b5cbee242b877c86ba2f3293d855f3f9c8571c`。
+- 现象：静态 gate 通过，完整套件缩小为一个失败（`269 passed, 1 skipped`）。listing
+  omission/reorder catalog case 应得到两个候选，实际为零；尚未进入 process smoke。
+- 预期/实际：两个合法 marker 都应通过去重，并选择较旧 sequence；实际在 identity
+  parsing 中均进入 quarantine。
+- 原因：已证实。catalog 在计算 proposal ID 时把可选
+  `previous_interval_proposal_id` 以 null key 放入 body；schema 序列化会正确省略缺失
+  可选字段，因此 identity 重算发现不一致。
+- 影响：M00-A03、M00-A04 与 P01 identity 重映射 gate。
+- 证据：`artifacts/duraloco/M00/20260711_m00_74b5cbe_1node/manifest.json`、
+  `stdout.log` 与 `junit.xml`。
+- 修复：只有确实存在 predecessor ID 时才加入该可选 identity 字段；下一次重试继续
+  parent-linked。
 
 ### 限制与下一动作
 

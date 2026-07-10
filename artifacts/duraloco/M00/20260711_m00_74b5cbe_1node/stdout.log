@@ -1,0 +1,35 @@
+{
+  "finding_count": 0,
+  "findings": [],
+  "scanned_files": 189,
+  "status": "PASS"
+}
+........................................................................ [ 26%]
+........................................................................ [ 53%]
+........s............................................................... [ 79%]
+.....................................F.................                  [100%]
+=================================== FAILURES ===================================
+_ test_listing_omission_duplicate_reorder_and_catalog_restart_do_not_change_view _
+
+tmp_path = PosixPath('/tmp/2359078.6473/pytest-of-x10041/pytest-0/test_listing_omission_duplicat0')
+
+    def test_listing_omission_duplicate_reorder_and_catalog_restart_do_not_change_view(tmp_path):
+        log = _log()
+        view = build_runtime_view(log)
+        older = _candidate(tmp_path, view, suffix="older", sequence=1, values=[1.0, 2.0])
+        newer = _candidate(tmp_path, view, suffix="newer", sequence=2, values=[2.0, 3.0])
+        catalog = ProposalCatalog(namespace_root=tmp_path, quarantine_root=tmp_path / "quarantine")
+        assert catalog.scan(metadata_paths=[], log=log, view=view) == ()
+        observed = catalog.scan(
+            metadata_paths=[newer, older, newer],
+            log=log,
+            view=view,
+        )
+>       assert len(observed) == 2
+E       assert 0 == 2
+E        +  where 0 = len(())
+
+tests/test_proposal_catalog.py:96: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_proposal_catalog.py::test_listing_omission_duplicate_reorder_and_catalog_restart_do_not_change_view
+1 failed, 269 passed, 1 skipped in 18.93s

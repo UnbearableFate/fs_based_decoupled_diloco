@@ -1,0 +1,12 @@
+/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/M00/20260711_m00_74b5cbe_1node
+stripe_count:  1 stripe_size:   1048576 pattern:       0 stripe_offset: -1
+
+/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/M00/20260711_m00_74b5cbe_1node/full
+stripe_count:  1 stripe_size:   1048576 pattern:       0 stripe_offset: -1
+
+/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/M00/20260711_m00_74b5cbe_1node/fragment
+stripe_count:  1 stripe_size:   1048576 pattern:       0 stripe_offset: -1
+
+/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/M00/20260711_m00_74b5cbe_1node/contract
+stripe_count:  1 stripe_size:   1048576 pattern:       0 stripe_offset: -1
+
