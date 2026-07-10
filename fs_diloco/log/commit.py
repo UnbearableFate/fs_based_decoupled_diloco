@@ -526,6 +526,9 @@ class TransactionalLog:
     ) -> CommitResult:
         if crash_at is not None and crash_at not in CRASH_POINTS:
             raise ValueError(f"unknown crash point: {crash_at}")
+        resolved = self.resolve_prepared(prepared)
+        if resolved is not None:
+            return resolved
         _fire(crash_at, "before_head_cas")
         try:
             metadata = self.backend.conditional_replace(

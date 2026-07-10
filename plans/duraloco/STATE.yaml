@@ -6,8 +6,8 @@ actual_base_branch: codex/duraloco-p03-posix-storage
 actual_base_commit: a93633d8d41bdb0e184711c4efaa132f211aa5e9
 feature_branch: codex/duraloco-p04-transaction-log
 current_loop: 1
-current_goal: "define the P04 transactional log layout and genesis transition"
-attempts_for_current_failure: 0
+current_goal: "resolve P04 response-loss retry outcome classification"
+attempts_for_current_failure: 1
 last_verified_commit: null
 checks:
   local_static: not_run
@@ -29,7 +29,7 @@ acceptance:
 open_decisions: []
 open_blockers: []
 artifacts: []
-next_action: "implement P04, validate 1/2-node, then run terminal real GPT-2 9-node 50x10 gate"
+next_action: "rerun the P04 1-node gate after the response-loss status fix"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
