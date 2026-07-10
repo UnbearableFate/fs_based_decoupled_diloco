@@ -1,0 +1,5 @@
+{
+  "input": {"z": "é", "a": [1, true, null]},
+  "canonical": "{\"a\":[1,true,null],\"z\":\"é\"}",
+  "sha256": "7268de922179fe369bffb347eb399ffbfaa36f1e7a34502bd6425cb69ca4ac67"
+}

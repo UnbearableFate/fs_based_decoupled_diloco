@@ -7,6 +7,7 @@ from typing import Any
 
 from .atomic_io import atomic_write_json, read_json
 from .constants import FORMAT_VERSION
+from .protocol.canonical_json import canonical_digest
 
 
 def _slice_from_param(entry: dict[str, Any]) -> dict[str, Any]:
@@ -151,3 +152,10 @@ def fragment_size_summary(fragment_index: dict[str, Any]) -> dict[str, float | i
         "mean": sum(sizes) / len(sizes),
         "imbalance_ratio": (float(max_size) / float(min_size)) if min_size > 0 else float("inf"),
     }
+
+
+def fragment_layout_digest(fragment_index: dict[str, Any]) -> str:
+    """Digest semantic layout fields while excluding host-specific source paths."""
+    validate_fragment_index(fragment_index)
+    fields = ("format_version", "strategy", "num_fragments", "total_numel", "fragments")
+    return canonical_digest({key: fragment_index[key] for key in fields})

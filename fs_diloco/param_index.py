@@ -9,6 +9,7 @@ import torch
 
 from .atomic_io import atomic_write_json, read_json
 from .constants import FORMAT_VERSION
+from .protocol.canonical_json import canonical_digest
 
 
 def torch_dtype_name(dtype: torch.dtype) -> str:
@@ -133,3 +134,12 @@ def validate_compatible_index(param_index: dict[str, Any], other: dict[str, Any]
             raise ValueError(f"param index mismatch for {key}: {param_index.get(key)} != {other.get(key)}")
     if param_index.get("params") != other.get("params"):
         raise ValueError("parameter entries differ")
+
+
+def param_index_digest(param_index: dict[str, Any]) -> str:
+    """Return the Protocol v2 digest for a validated parameter index."""
+    required = {"format_version", "model_name_or_path", "trainable_only", "total_numel", "params"}
+    missing = required - param_index.keys()
+    if missing:
+        raise ValueError(f"parameter index is missing digest fields: {sorted(missing)}")
+    return canonical_digest({key: param_index[key] for key in sorted(required)})
