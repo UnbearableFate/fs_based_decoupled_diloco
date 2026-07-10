@@ -1,0 +1,200 @@
+#!/bin/bash
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:05:00
+#PBS -j oe
+#PBS -m ae
+
+set -eEuo pipefail
+trap 'echo "[ERROR] checker failed at line $LINENO" >&2' ERR
+PROJECT_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco_p02
+PYTHON_BIN=/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python
+ARTIFACT_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P02/20260711_checker_7e12997
+cd "$PROJECT_ROOT"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+exec > >(tee "$ARTIFACT_ROOT/checker_counterexamples.log") 2>&1
+hostname
+printf 'PBS_JOBID=%s\nPBS_NODEFILE=%s\n' "${PBS_JOBID:-}" "${PBS_NODEFILE:-}"
+"$PYTHON_BIN" --version
+git rev-parse HEAD
+git status --short --branch
+
+"$PYTHON_BIN" - <<'PY'
+from __future__ import annotations
+
+import hashlib
+
+from fs_diloco.log.model import (
+    ReferenceProposal,
+    SystemState,
+    TransitionConflict,
+    check_invariants,
+    commit_prepared,
+    decide_proposal,
+    fold_commits,
+    prepare_transition,
+    recover_prefix,
+    select_quorum,
+)
+from fs_diloco.storage.memory import InMemoryStorageBackend
+from fs_diloco.testing.crash_matrix import (
+    enumerate_decision_crashes,
+    enumerate_single_commit_crashes,
+)
+from fs_diloco.testing.model_checker import mutant_violations
+from fs_diloco.testing.trace import Trace, TraceEvent, replay_trace
+from tests.reference.helpers import proposal_for, state_with_one_commit
+
+
+# Exact PBS 2357714 regression: choose values for a newer proposal whose ID
+# sorts before the older proposal, then ensure trace replay still commits oldest.
+older = ReferenceProposal.create(
+    learner_id="learner-000",
+    session_id="session-000",
+    sequence=0,
+    fragment_id=0,
+    base_commit_id="genesis",
+    base_commit_seq=0,
+    base_fragment_version=0,
+    target_tokens=10,
+    values=(1.0, 0.0),
+)
+newer = next(
+    candidate
+    for index in range(2, 1000)
+    if (
+        candidate := ReferenceProposal.create(
+            learner_id="learner-000",
+            session_id="session-000",
+            sequence=1,
+            fragment_id=0,
+            base_commit_id="genesis",
+            base_commit_seq=0,
+            base_fragment_version=0,
+            target_tokens=10,
+            values=(float(index), 0.0),
+        )
+    ).proposal_id
+    < older.proposal_id
+)
+policy_state = SystemState.genesis(fragment_count=2)
+policy_state = policy_state.publish(newer).publish(older)
+assert select_quorum(policy_state, fragment_id=0, quorum_min=1, quorum_max=1) == (
+    older.proposal_id,
+)
+trace = Trace(
+    seed=4242,
+    events=(
+        TraceEvent(
+            action="publish",
+            learner=0,
+            fragment=0,
+            sequence=older.sequence,
+            tokens=older.target_tokens,
+            value_hex=tuple(value.hex() for value in older.values),
+        ),
+        TraceEvent(
+            action="publish",
+            learner=0,
+            fragment=0,
+            sequence=newer.sequence,
+            tokens=newer.target_tokens,
+            value_hex=tuple(value.hex() for value in newer.values),
+        ),
+        TraceEvent(action="commit", fragment=0),
+    ),
+)
+replayed = replay_trace(trace)
+assert replayed.commits[0].selected_proposal_ids == (older.proposal_id,)
+assert older.proposal_id in replayed.consumed_proposal_ids
+assert newer.proposal_id not in replayed.consumed_proposal_ids
+assert newer.proposal_id not in replayed.dropped_proposal_ids
+assert not replayed.eligible(newer)
+replayed = decide_proposal(
+    replayed,
+    proposal_id=newer.proposal_id,
+    decision="superseded",
+    reason="checker_explicit_overlap_resolution",
+)
+assert newer.proposal_id in replayed.dropped_proposal_ids
+assert not check_invariants(replayed)
+print("EXACT_2357714_OLDEST_FIRST_PASS")
+
+
+# Recheck committed lineage rollback remains rejected.
+lineage = SystemState.genesis()
+high = proposal_for(lineage, learner=0, sequence=2)
+lineage = lineage.publish(high)
+lineage = commit_prepared(
+    lineage,
+    prepare_transition(lineage, fragment_id=0, selected_proposal_ids=(high.proposal_id,)),
+)
+rollback = proposal_for(lineage, learner=0, sequence=1)
+lineage = lineage.publish(rollback)
+assert not lineage.eligible(rollback)
+print("LINEAGE_ROLLBACK_REJECTED")
+
+
+# Independent benign interleaving: a decision races a prepared transition.
+race = SystemState.genesis()
+p0 = proposal_for(race, learner=0, sequence=0)
+p1 = proposal_for(race, learner=1, sequence=0, values=(2.0, 0.0))
+race = race.publish(p0).publish(p1)
+stale = prepare_transition(race, fragment_id=0, selected_proposal_ids=(p0.proposal_id,))
+race = decide_proposal(
+    race,
+    proposal_id=p1.proposal_id,
+    decision="superseded",
+    reason="checker_race",
+)
+try:
+    commit_prepared(race, stale)
+except TransitionConflict:
+    pass
+else:
+    raise AssertionError("pre-decision preparation advanced a newer head")
+race = commit_prepared(
+    race,
+    prepare_transition(race, fragment_id=0, selected_proposal_ids=(p0.proposal_id,)),
+)
+assert not check_invariants(race)
+assert recover_prefix(race).committed_digest() == race.committed_digest()
+assert (
+    fold_commits(recover_prefix(race, 0), race.commits).committed_digest()
+    == race.committed_digest()
+)
+print("BENIGN_DECISION_PREPARE_RACE_PASS")
+
+
+backend = InMemoryStorageBackend()
+source = bytearray(b"one")
+metadata = backend.put_immutable("immutable/a", source)
+source[:] = b"two"
+assert backend.get("immutable/a") == b"one"
+assert metadata.sha256 == hashlib.sha256(b"one").hexdigest()
+print("IMMUTABLE_STORAGE_SNAPSHOT_PASS")
+
+
+for result in (*enumerate_single_commit_crashes(), *enumerate_decision_crashes()):
+    assert result.recovered_digest in {result.old_digest, result.new_digest}
+print("ALL_COMMIT_DECISION_CRASH_PREFIXES_PASS")
+
+
+expected = {
+    "double_apply": "I-003",
+    "wrong_parent": "I-002",
+    "state_pairing": "I-005",
+    "numeric_transition": "I-009",
+    "sequence_rollback": "I-003",
+}
+mutant_base = state_with_one_commit()
+for mutant, invariant in expected.items():
+    violations = mutant_violations(mutant_base, mutant)
+    assert any(invariant in item for item in violations), (mutant, violations)
+    print(f"MUTANT_KILLED {mutant} {invariant}")
+
+print("CHECKER_7E12997_PASS")
+PY
+
+qstat "$PBS_JOBID"

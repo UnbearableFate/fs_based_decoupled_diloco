@@ -1,0 +1,147 @@
+{
+  "optimizers": {
+    "adamw": {
+      "config": {
+        "betas": [
+          "0x1.6666666666666p-1",
+          "0x1.e666666666666p-1"
+        ],
+        "eps": "0x1.5798ee2308c3ap-27",
+        "implementation": "stdlib-float64-v1",
+        "lr": "0x1.eb851eb851eb8p-6",
+        "momentum": "0x1.999999999999ap-1",
+        "name": "adamw",
+        "weight_decay": "0x1.47ae147ae147bp-7"
+      },
+      "digest": "b3dcc7ad9d30991ab72f649ae9dea66bb1a3699e1ca8b20e32e31f6e31158563",
+      "state": {
+        "exp_avg": [
+          "-0x1.1bda5119ce077p-4",
+          "0x1.758e219652bd3p-5",
+          "0x1.2f34d6a161e50p-2"
+        ],
+        "exp_avg_sq": [
+          "0x1.07d2c7b890d5ep-7",
+          "0x1.d0a67620ee8d8p-7",
+          "0x1.f313be22e5de9p-6"
+        ],
+        "momentum": [],
+        "step": 3
+      },
+      "theta": [
+        "0x1.008f13dc3f395p+0",
+        "-0x1.fdc8fc6247cfep+0",
+        "0x1.a5aefc49a198bp-2"
+      ]
+    },
+    "momentum": {
+      "config": {
+        "betas": [
+          "0x1.6666666666666p-1",
+          "0x1.e666666666666p-1"
+        ],
+        "eps": "0x1.5798ee2308c3ap-27",
+        "implementation": "stdlib-float64-v1",
+        "lr": "0x1.eb851eb851eb8p-6",
+        "momentum": "0x1.999999999999ap-1",
+        "name": "momentum",
+        "weight_decay": "0x1.47ae147ae147bp-7"
+      },
+      "digest": "c67155967c92b50660b280da06f01ffaab7d2bbea0aab9fa2aec2130e83661fb",
+      "state": {
+        "exp_avg": [],
+        "exp_avg_sq": [],
+        "momentum": [
+          "-0x1.da40bce207c26p-3",
+          "0x1.f8bd7baec997cp-4",
+          "0x1.105bcaa117751p+0"
+        ],
+        "step": 3
+      },
+      "theta": [
+        "0x1.0340d5c30cd9bp+0",
+        "-0x1.00cbc72336e5fp+1",
+        "0x1.c8282ad5aaf73p-2"
+      ]
+    },
+    "nesterov": {
+      "config": {
+        "betas": [
+          "0x1.6666666666666p-1",
+          "0x1.e666666666666p-1"
+        ],
+        "eps": "0x1.5798ee2308c3ap-27",
+        "implementation": "stdlib-float64-v1",
+        "lr": "0x1.eb851eb851eb8p-6",
+        "momentum": "0x1.999999999999ap-1",
+        "name": "nesterov",
+        "weight_decay": "0x1.47ae147ae147bp-7"
+      },
+      "digest": "0422e601652caf0c41e38e51b655406cf3c955a61c4bcdbafab5707020d4bfde",
+      "state": {
+        "exp_avg": [],
+        "exp_avg_sq": [],
+        "momentum": [
+          "-0x1.da25cc7be7facp-3",
+          "0x1.f89d39709dac8p-4",
+          "0x1.1050e546384bep+0"
+        ],
+        "step": 3
+      },
+      "theta": [
+        "0x1.04acee68d023fp+0",
+        "-0x1.012caf7a64064p+1",
+        "0x1.ae059cce53fbap-2"
+      ]
+    },
+    "sgd": {
+      "config": {
+        "betas": [
+          "0x1.6666666666666p-1",
+          "0x1.e666666666666p-1"
+        ],
+        "eps": "0x1.5798ee2308c3ap-27",
+        "implementation": "stdlib-float64-v1",
+        "lr": "0x1.eb851eb851eb8p-6",
+        "momentum": "0x1.999999999999ap-1",
+        "name": "sgd",
+        "weight_decay": "0x1.47ae147ae147bp-7"
+      },
+      "digest": "d740ea26878b51d51ed5eeaeeeeb55bb75e6f14a599afa4c852d697f61dc8026",
+      "state": {
+        "exp_avg": [],
+        "exp_avg_sq": [],
+        "momentum": [
+          "0x0.0p+0",
+          "0x0.0p+0",
+          "0x0.0p+0"
+        ],
+        "step": 3
+      },
+      "theta": [
+        "0x1.0212bdc685a3ep+0",
+        "-0x1.00899d20f3ae8p+1",
+        "0x1.daaec6186fa07p-2"
+      ]
+    }
+  },
+  "suite_100": {
+    "action_counts": {
+      "commit": 217,
+      "decide": 87,
+      "invalid_unknown_selection": 77,
+      "publish": 619,
+      "restart": 140
+    },
+    "count": 100,
+    "start_seed": 0,
+    "suite_digest": "1d6e5a3fcf6ba8e8d7913e312a67541ee4f14b60a80423ce12c3c0fa366ac40a",
+    "unique_state_digests": 100
+  },
+  "trace": {
+    "event_count": 31,
+    "seed": 20260710,
+    "state_digest": "1d24fff4ec8ad50dbecfbe42cc8a2153dd924e8305f332b99e12b11d8e5e25e9",
+    "trace_digest": "60977c333045152d875ea7a50044183406063faee3b366958126a2a096da0682"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "action_counts": {
+    "commit": 26276,
+    "decide": 11019,
+    "invalid_unknown_selection": 8827,
+    "publish": 73878,
+    "restart": 14347
+  },
+  "count": 10000,
+  "start_seed": 0,
+  "suite_digest": "7840b0ebcad828184ae5bdbb5d8b5f39427d66cf37343c7c8966f1549655ee7e",
+  "unique_state_digests": 10000
+}

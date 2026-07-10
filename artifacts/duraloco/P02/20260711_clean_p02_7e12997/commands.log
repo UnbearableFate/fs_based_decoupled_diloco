@@ -1,0 +1,3 @@
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python scripts/agent/generate_reference_goldens.py
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python -m pytest -q tests --junitxml /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P02/20260711_clean_p02_7e12997/junit.xml
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python -m fs_diloco.testing.reference_cli --count 10000 --steps 12
