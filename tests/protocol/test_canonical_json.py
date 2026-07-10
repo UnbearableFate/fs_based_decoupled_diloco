@@ -55,6 +55,12 @@ def test_extreme_json_nesting_is_a_typed_canonical_error():
         loads_strict(payload)
 
 
+@pytest.mark.parametrize("payload", ['"\\ud800"', '{"\\udfff":1}'])
+def test_lone_unicode_surrogates_are_typed_canonical_errors(payload):
+    with pytest.raises(CanonicalJSONError, match="surrogate"):
+        loads_strict(payload)
+
+
 def test_golden_digest_is_stable_in_a_fresh_process():
     command = [
         sys.executable,

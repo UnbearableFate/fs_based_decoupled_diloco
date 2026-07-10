@@ -110,6 +110,18 @@ def test_noncanonical_payload_key_aliases_are_rejected(tmp_path, alias):
     assert _error_code(validate_proposal(proposal, _context(tmp_path))) == "PAYLOAD_PATH_ESCAPE"
 
 
+@pytest.mark.parametrize("invalid_key", ["immutable/\x00/payload", "immutable\\payload", "a\npayload"])
+def test_control_and_non_posix_payload_keys_are_typed_rejections(tmp_path, invalid_key):
+    proposal = make_proposal(tmp_path, payload_key=invalid_key)
+    report, record = validate_candidate_bytes(
+        proposal.canonical_bytes(),
+        _context(tmp_path),
+        QuarantineRegistry(),
+    )
+    assert _error_code(report) == "PAYLOAD_PATH_ESCAPE"
+    assert record is not None
+
+
 @pytest.mark.parametrize(
     ("changes", "expected"),
     [
@@ -123,6 +135,34 @@ def test_noncanonical_payload_key_aliases_are_rejected(tmp_path, alias):
 def test_payload_metadata_mismatch_matrix(tmp_path, changes, expected):
     proposal = make_proposal(tmp_path, **changes)
     assert _error_code(validate_proposal(proposal, _context(tmp_path))) == expected
+
+
+def test_payload_hash_and_tensor_parse_use_one_immutable_byte_snapshot(tmp_path, monkeypatch):
+    path, original = write_payload(tmp_path, values=(1.0, 2.0))
+    replacement = safetensors_bytes((9.0, 8.0))
+    assert len(replacement) == len(original)
+    proposal = ProposalManifest.with_computed_id(
+        proposal_dict(
+            tmp_path,
+            payload=original,
+            relative=path.relative_to(tmp_path).as_posix(),
+        )
+    )
+    original_read_bytes = Path.read_bytes
+    reads = 0
+
+    def swap_after_snapshot(target: Path) -> bytes:
+        nonlocal reads
+        reads += 1
+        snapshot = original_read_bytes(target)
+        if reads == 1:
+            target.write_bytes(replacement)
+        return snapshot
+
+    monkeypatch.setattr(Path, "read_bytes", swap_after_snapshot)
+    report = validate_proposal(proposal, _context(tmp_path))
+    assert report.eligible
+    assert reads == 1
 
 
 @pytest.mark.parametrize("value", [float("nan"), float("inf"), -float("inf")])
@@ -264,6 +304,19 @@ def test_extreme_nesting_becomes_typed_quarantine_not_recursion_error(tmp_path):
     assert record is not None
 
 
+def test_lone_surrogate_in_full_candidate_is_typed_quarantine(tmp_path):
+    payload = make_proposal(tmp_path).to_dict()
+    payload["run_id"] = "\ud800"
+    report, record = validate_candidate_bytes(
+        json.dumps(payload).encode(),
+        _context(tmp_path),
+        QuarantineRegistry(),
+        validate_tensor=False,
+    )
+    assert _error_code(report) == "MALFORMED_MANIFEST"
+    assert record is not None
+
+
 def test_extreme_safetensors_metadata_nesting_is_typed_quarantine(tmp_path):
     nested = b'{"x":' * 2000 + b"0" + b"}" * 2000
     header = b'{"__metadata__":{"nested":' + nested + b"}}"
@@ -313,6 +366,29 @@ def test_unhashable_safetensors_dtype_is_typed_quarantine(tmp_path):
         QuarantineRegistry(),
     )
     assert _error_code(report) == "PAYLOAD_DTYPE"
+    assert record is not None
+
+
+@pytest.mark.parametrize(
+    "metadata",
+    [b'{"nonfinite":NaN}', b'{"nonfinite":Infinity}', b'{"not_a_string":1}'],
+)
+def test_invalid_safetensors_metadata_is_typed_quarantine(tmp_path, metadata):
+    header = b'{"__metadata__":' + metadata + b"}"
+    payload = struct.pack("<Q", len(header)) + header
+    relative = "immutable/proposals/invalid-metadata.safetensors"
+    path = tmp_path / relative
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(payload)
+    proposal = ProposalManifest.with_computed_id(
+        proposal_dict(tmp_path, payload=payload, relative=relative)
+    )
+    report, record = validate_candidate_bytes(
+        proposal.canonical_bytes(),
+        _context(tmp_path),
+        QuarantineRegistry(),
+    )
+    assert _error_code(report) == "SAFETENSORS_HEADER"
     assert record is not None
 
 

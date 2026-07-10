@@ -18,6 +18,13 @@ class CanonicalJSONError(ValueError):
     pass
 
 
+def _normalized_string(value: str, *, path: str) -> str:
+    normalized = unicodedata.normalize("NFC", value)
+    if any(0xD800 <= ord(char) <= 0xDFFF for char in normalized):
+        raise CanonicalJSONError(f"Unicode surrogate code point is forbidden at {path}")
+    return normalized
+
+
 def _pairs_no_duplicates(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     result: dict[str, Any] = {}
     for key, value in pairs:
@@ -39,7 +46,7 @@ def _normalize(value: Any, *, path: str = "$") -> Any:
             raise CanonicalJSONError(f"non-finite float at {path}")
         raise CanonicalJSONError(f"JSON floats are forbidden in canonical identity at {path}")
     if isinstance(value, str):
-        return unicodedata.normalize("NFC", value)
+        return _normalized_string(value, path=path)
     if isinstance(value, (list, tuple)):
         return [_normalize(item, path=f"{path}[{index}]") for index, item in enumerate(value)]
     if isinstance(value, dict):
@@ -47,7 +54,7 @@ def _normalize(value: Any, *, path: str = "$") -> Any:
         for raw_key, item in value.items():
             if not isinstance(raw_key, str):
                 raise CanonicalJSONError(f"non-string object key at {path}: {raw_key!r}")
-            key = unicodedata.normalize("NFC", raw_key)
+            key = _normalized_string(raw_key, path=f"{path}.<key>")
             if key in normalized:
                 raise CanonicalJSONError(f"key collision after Unicode normalization at {path}: {key!r}")
             normalized[key] = _normalize(item, path=f"{path}.{key}")

@@ -304,7 +304,7 @@ class ProposalSelection:
         weight = _string(payload["weight_fp64_hex"], "weight_fp64_hex")
         try:
             numeric_weight = float.fromhex(weight)
-        except ValueError as exc:
+        except (ValueError, OverflowError) as exc:
             raise _error("SCHEMA_WEIGHT", "weight_fp64_hex is not a hexadecimal float") from exc
         if not math.isfinite(numeric_weight) or numeric_weight <= 0:
             raise _error("SCHEMA_WEIGHT", "proposal weight must be finite and positive")
@@ -524,9 +524,21 @@ class FrontierManifest:
             raise _error("SCHEMA_FRAGMENTS", "fragments must be a non-empty mapping")
         fragments: dict[int, FragmentState] = {}
         for raw_id, state in raw_fragments.items():
-            if not isinstance(raw_id, str) or not raw_id.isdigit():
+            if (
+                not isinstance(raw_id, str)
+                or not raw_id.isascii()
+                or not raw_id.isdecimal()
+            ):
                 raise _error("SCHEMA_FRAGMENT_ID", "frontier fragment keys must be decimal strings")
-            fragment_id = int(raw_id)
+            try:
+                fragment_id = int(raw_id)
+            except ValueError as exc:
+                raise _error("SCHEMA_FRAGMENT_ID", "frontier fragment ID is out of range") from exc
+            if raw_id != str(fragment_id):
+                raise _error(
+                    "SCHEMA_FRAGMENT_ID",
+                    "frontier fragment keys must use canonical decimal spelling",
+                )
             if fragment_id in fragments:
                 raise _error("SCHEMA_FRAGMENT_ID", "duplicate normalized fragment ID")
             fragments[fragment_id] = FragmentState.from_dict(state)

@@ -26,3 +26,22 @@ def test_v1_adapter_parses_without_granting_v2_authority():
     assert legacy.fragment_id == 0
     with pytest.raises(ProtocolError, match="read-only|cannot write"):
         write_v2_authority(legacy)
+
+
+@pytest.mark.parametrize(
+    "bad",
+    [
+        [],
+        {"run_id": "x"},
+        {
+            "run_id": "x",
+            "update_id": "u",
+            "learner_id": "l",
+            "file_path": "p",
+            "file_size_bytes": [],
+        },
+    ],
+)
+def test_v1_adapter_malformed_inputs_are_typed(bad):
+    with pytest.raises(ProtocolError):
+        parse_v1_manifest(bad)

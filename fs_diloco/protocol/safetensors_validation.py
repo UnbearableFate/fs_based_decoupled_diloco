@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 import math
-from pathlib import Path
 import struct
 from typing import Any, Iterator
 
@@ -54,6 +53,13 @@ def _pairs_no_duplicates(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return result
 
 
+def _reject_constant(value: str) -> None:
+    raise ProtocolError(
+        "SAFETENSORS_HEADER",
+        f"non-finite JSON constant is forbidden in header: {value}",
+    )
+
+
 def parse_safetensors(payload: bytes) -> tuple[dict[str, TensorHeader], bytes]:
     if len(payload) < 8:
         raise ProtocolError("PAYLOAD_TRUNCATED", "safetensors payload is shorter than 8 bytes")
@@ -62,7 +68,11 @@ def parse_safetensors(payload: bytes) -> tuple[dict[str, TensorHeader], bytes]:
         raise ProtocolError("SAFETENSORS_HEADER", "invalid safetensors header length")
     header_bytes = payload[8 : 8 + header_size]
     try:
-        raw = json.loads(header_bytes, object_pairs_hook=_pairs_no_duplicates)
+        raw = json.loads(
+            header_bytes,
+            object_pairs_hook=_pairs_no_duplicates,
+            parse_constant=_reject_constant,
+        )
     except ProtocolError:
         raise
     except (UnicodeDecodeError, RecursionError, ValueError) as exc:
@@ -75,8 +85,14 @@ def parse_safetensors(payload: bytes) -> tuple[dict[str, TensorHeader], bytes]:
     ranges: list[tuple[int, int, str]] = []
     for key, value in raw.items():
         if key == "__metadata__":
-            if not isinstance(value, dict):
-                raise ProtocolError("SAFETENSORS_HEADER", "__metadata__ must be an object")
+            if not isinstance(value, dict) or not all(
+                isinstance(meta_key, str) and isinstance(meta_value, str)
+                for meta_key, meta_value in value.items()
+            ):
+                raise ProtocolError(
+                    "SAFETENSORS_HEADER",
+                    "__metadata__ must be a string-to-string object",
+                )
             continue
         if not isinstance(value, dict) or set(value) != {"dtype", "shape", "data_offsets"}:
             raise ProtocolError("SAFETENSORS_HEADER", f"invalid tensor descriptor for {key}")
@@ -133,14 +149,13 @@ def _values(dtype: str, data: bytes) -> Iterator[float]:
 
 
 def validate_tensor_payload(
-    path: str | Path,
+    payload: bytes,
     *,
     tensor_key: str,
     shape: tuple[int, ...],
     dtype: str,
     require_finite: bool = True,
 ) -> dict[str, Any]:
-    payload = Path(path).read_bytes()
     tensors, data = parse_safetensors(payload)
     if set(tensors) != {tensor_key}:
         raise ProtocolError(

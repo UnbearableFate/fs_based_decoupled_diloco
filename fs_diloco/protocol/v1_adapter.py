@@ -28,16 +28,38 @@ class LegacyProposal:
 
 
 def parse_v1_manifest(payload: Mapping[str, Any]) -> LegacyProposal:
+    if not isinstance(payload, Mapping):
+        raise ProtocolError("V1_SCHEMA", "legacy manifest root must be a mapping")
     required = {"run_id", "update_id", "learner_id", "file_path", "file_size_bytes"}
     missing = required - payload.keys()
     if missing:
         raise ProtocolError("V1_MISSING_FIELD", f"legacy manifest is missing {sorted(missing)}")
-    is_fragment = payload.get("update_kind") == "fragment"
-    fragment_id = int(payload.get("fragment_id", 0))
-    base_fragment = int(payload.get("base_fragment_version", payload.get("base_global_version", 0)))
-    base_global = int(payload.get("base_global_merge_event", payload.get("base_global_version", 0)))
-    token_key = "tokens_since_fragment_load" if is_fragment else "tokens_since_global_load"
-    target_tokens = int(payload.get(token_key, payload.get("tokens_this_update", 0)))
+    try:
+        is_fragment = payload.get("update_kind") == "fragment"
+        fragment_id = int(payload.get("fragment_id", 0))
+        base_fragment = int(
+            payload.get("base_fragment_version", payload.get("base_global_version", 0))
+        )
+        base_global = int(
+            payload.get("base_global_merge_event", payload.get("base_global_version", 0))
+        )
+        token_key = "tokens_since_fragment_load" if is_fragment else "tokens_since_global_load"
+        target_tokens = int(payload.get(token_key, payload.get("tokens_this_update", 0)))
+        local_step_start = int(payload.get("local_step_start", 0))
+        local_step_end = int(payload.get("local_step_end", 0))
+        file_size = int(payload["file_size_bytes"])
+    except (TypeError, ValueError) as exc:
+        raise ProtocolError("V1_SCHEMA", f"legacy numeric field is invalid: {exc}") from exc
+    if min(
+        fragment_id,
+        base_fragment,
+        base_global,
+        target_tokens,
+        local_step_start,
+        local_step_end,
+        file_size,
+    ) < 0:
+        raise ProtocolError("V1_SCHEMA", "legacy numeric fields must be non-negative")
     return LegacyProposal(
         run_id=str(payload["run_id"]),
         update_id=str(payload["update_id"]),
@@ -45,11 +67,11 @@ def parse_v1_manifest(payload: Mapping[str, Any]) -> LegacyProposal:
         fragment_id=fragment_id,
         base_fragment_version=base_fragment,
         base_global_sequence=base_global,
-        local_step_start=int(payload.get("local_step_start", 0)),
-        local_step_end=int(payload.get("local_step_end", 0)),
+        local_step_start=local_step_start,
+        local_step_end=local_step_end,
         target_tokens=target_tokens,
         file_path=str(payload["file_path"]),
-        file_size=int(payload["file_size_bytes"]),
+        file_size=file_size,
         sha256=str(payload["sha256"]) if payload.get("sha256") else None,
     )
 

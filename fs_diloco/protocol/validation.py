@@ -40,14 +40,6 @@ class ValidationContext:
     sequence_identities: dict[tuple[str, str, int, int], str] = field(default_factory=dict)
 
 
-def _hash_file(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
-
 def validate_metadata(proposal: ProposalManifest, context: ValidationContext) -> tuple[str, ...]:
     checks = ["schema", "canonical_identity"]
     if proposal.run_id != context.run_id:
@@ -135,11 +127,16 @@ def resolve_payload_path(proposal: ProposalManifest, namespace_root: Path) -> Pa
         pure.is_absolute()
         or not pure.parts
         or proposal.payload_key != pure.as_posix()
+        or any(ord(char) < 32 or ord(char) == 127 for char in proposal.payload_key)
+        or "\\" in proposal.payload_key
         or any(part in {"", ".", ".."} for part in pure.parts)
     ):
         raise ProtocolError("PAYLOAD_PATH_ESCAPE", "payload key is not a safe relative key")
-    root = namespace_root.resolve(strict=False)
-    path = (root / Path(*pure.parts)).resolve(strict=False)
+    try:
+        root = namespace_root.resolve(strict=False)
+        path = (root / Path(*pure.parts)).resolve(strict=False)
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise ProtocolError("PAYLOAD_PATH_ESCAPE", "payload key cannot be resolved safely") from exc
     try:
         path.relative_to(root)
     except ValueError as exc:
@@ -166,14 +163,22 @@ def validate_payload(
             f"payload does not exist: {proposal.payload_key}",
             category=ErrorCategory.RETRYABLE,
         )
-    size = path.stat().st_size
+    try:
+        payload = path.read_bytes()
+    except (OSError, ValueError) as exc:
+        raise ProtocolError(
+            "PAYLOAD_READ",
+            f"payload could not be read: {proposal.payload_key}",
+            category=ErrorCategory.RETRYABLE,
+        ) from exc
+    size = len(payload)
     if size != proposal.payload_size:
         raise ProtocolError("PAYLOAD_SIZE", f"payload size {size} != {proposal.payload_size}")
-    digest = _hash_file(path)
+    digest = hashlib.sha256(payload).hexdigest()
     if digest != proposal.payload_sha256:
         raise ProtocolError("PAYLOAD_HASH", "payload SHA-256 mismatch")
     metadata = validate_tensor_payload(
-        path,
+        payload,
         tensor_key=proposal.tensor_key,
         shape=proposal.shape,
         dtype=proposal.dtype,

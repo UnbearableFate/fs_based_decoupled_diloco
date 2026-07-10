@@ -184,6 +184,16 @@ def test_frontier_scheduler_state_has_an_exact_schema(tmp_path):
         FrontierManifest.from_dict(payload)
 
 
+@pytest.mark.parametrize("fragment_key", ["00", "\u00b2", "9" * 5000])
+def test_frontier_fragment_keys_require_canonical_decimal(tmp_path, fragment_key):
+    proposal = make_proposal(tmp_path)
+    commit = CommitManifest.from_dict(_commit_dict(proposal))
+    payload = _frontier_dict(commit.commit_id, proposal.proposal_id)
+    payload["fragments"] = {fragment_key: next(iter(payload["fragments"].values()))}
+    with pytest.raises(Exception):
+        FrontierManifest.from_dict(payload)
+
+
 def test_unhashable_enum_values_are_typed_schema_errors(tmp_path):
     proposal = make_proposal(tmp_path)
     proposal_payload = proposal.to_dict()
@@ -236,6 +246,14 @@ def test_commit_weights_require_exact_canonical_float_hex(tmp_path, spelling):
     payload = _commit_dict(proposal)
     payload["selected_proposals"][0]["weight_fp64_hex"] = spelling
     with pytest.raises(Exception, match="canonical float.hex"):
+        CommitManifest.from_dict(payload)
+
+
+def test_commit_weight_overflow_is_a_typed_schema_error(tmp_path):
+    proposal = make_proposal(tmp_path)
+    payload = _commit_dict(proposal)
+    payload["selected_proposals"][0]["weight_fp64_hex"] = "0x1p+999999999999"
+    with pytest.raises(Exception, match="hexadecimal float"):
         CommitManifest.from_dict(payload)
 
 
