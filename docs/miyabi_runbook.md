@@ -10,10 +10,12 @@ Allowed login-node checks:
 
 ```bash
 bash -n scripts/miyabi/*.pbs scripts/miyabi/*.sh scripts/local/*.sh
-python -m py_compile fs_diloco/*.py
+.venv/bin/python -m py_compile fs_diloco/*.py
 ```
 
 Runtime validation must run inside PBS compute/debug nodes.
+
+All checked-in PBS scripts intentionally use Miyabi-G's compute-node default module stack. They disable module pagers and record `module list` in the job log before resolving the project interpreter. If a workload later needs a non-default module, add an exact module/version to that script's `REQUIRED_MODULES` array and verify it inside the allocation.
 
 ## 1-Node Runtime Smoke
 

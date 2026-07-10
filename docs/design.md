@@ -10,9 +10,9 @@ References:
 - PCCL Async DiLoCo docs: https://pccl.primeintellect.ai/DiLoCo%20-%20Distributed%20Low-Communication/AsyncDiloco
 - PCCL example: https://github.com/PrimeIntellect-ai/pccl/blob/main/python/examples/nanogpt_diloco/async_diloco.py
 
-## Milestone 1 Scope
+## Baseline And Fragment Scope
 
-The first implementation uses full-model parameter vectors as one logical fragment. Learners train locally, serialize their current full trainable parameter vector to `local_params` in `safetensors`, and then write metadata JSON. The syncer only treats the metadata JSON as the update commit marker; orphan tensor files are ignored.
+The original path uses the full-model parameter vector as one logical fragment. The current implementation also supports `balanced_tensor` fragmentation: complete parameter tensors are assigned deterministically across multiple fragments, and learners publish the scheduled fragment for each interval. In both modes, learners write a `safetensors` payload and then metadata JSON. The syncer only treats metadata JSON as the update commit marker; orphan tensor files are ignored.
 
 No milestone 1 code depends on `torch.distributed`, NCCL collectives, RPC, Ray, DeepSpeed, FSDP, or PCCL. PBS scripts use MPI only as a process launcher across allocated nodes.
 
@@ -40,9 +40,9 @@ The sign follows the Async DiLoCo pseudo-gradient pattern where an outer optimiz
 
 Learners load the latest published global weight file, overwrite their full trainable model parameters, and rebuild the inner optimizer/scheduler. This reset is logged as `inner_optimizer_reset`.
 
-## Fragment Extension
+## Fragment Implementation
 
-Milestone 1 treats the full model as `fragment_id = 0`. A future fragment implementation can add:
+Full-vector mode uses `fragment_id = 0`. Fragment mode currently uses:
 
 ```text
 fragments/fragment_index.json
@@ -50,4 +50,4 @@ updates/pending/learner_000/update_<uuid>_fragment_000.params.safetensors
 mailbox/learner_000/global_v000123_fragment_000.safetensors
 ```
 
-The first practical extension should use layer-based fragments, followed by balanced tensor fragments if metrics show a need.
+The implemented strategy is `balanced_tensor` with a deterministic fragment index and round-robin scheduling. Direct parameter-level fragment gather/scatter and richer layout strategies remain future performance work.

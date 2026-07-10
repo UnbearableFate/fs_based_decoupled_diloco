@@ -86,8 +86,11 @@ io:
   compute_sha256: false
   keep_processed_updates: true
   cleanup_applied_after_versions: null
-  keep_last_global_versions: 3
-  keep_last_learner_update_versions: 3
+  keep_last_db_dumps: 2
+  # Debug-only: set these to N to retain the latest N training checkpoints.
+  keep_last_global_versions: null
+  keep_last_learner_update_versions: null
+  final_cleanup_wait_seconds: 120.0
   sqlite_local_dir: null
 
 learner:

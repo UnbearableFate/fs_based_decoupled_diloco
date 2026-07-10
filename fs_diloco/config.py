@@ -130,8 +130,12 @@ class IOSection:
     compute_sha256: bool = False
     keep_processed_updates: bool = True
     cleanup_applied_after_versions: int | None = None
-    keep_last_global_versions: int | None = 3
-    keep_last_learner_update_versions: int | None = 3
+    keep_last_db_dumps: int = 2
+    # These are opt-in debug retention flags. Normal successful runs keep only
+    # the final syncer checkpoint and delete every learner-local checkpoint.
+    keep_last_global_versions: int | None = None
+    keep_last_learner_update_versions: int | None = None
+    final_cleanup_wait_seconds: float = 120.0
     sqlite_local_dir: str | None = None
 
 
@@ -274,6 +278,14 @@ def resolve_config(
             raise ValueError(f"unsupported fragments.schedule: {config.fragments.schedule}")
         if config.fragments.strategy not in {"full", "balanced_tensor"}:
             raise ValueError(f"unsupported fragments.strategy: {config.fragments.strategy}")
+    if config.io.keep_last_db_dumps < 1:
+        raise ValueError("io.keep_last_db_dumps must be >= 1")
+    for field_name in ("keep_last_global_versions", "keep_last_learner_update_versions"):
+        value = getattr(config.io, field_name)
+        if value is not None and int(value) < 1:
+            raise ValueError(f"io.{field_name} must be >= 1 when set")
+    if config.io.final_cleanup_wait_seconds < 0:
+        raise ValueError("io.final_cleanup_wait_seconds must be >= 0")
     config.training.block_size = config.data.block_size
     return config
 

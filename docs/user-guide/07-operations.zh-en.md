@@ -92,7 +92,7 @@ stale_updates_dropped
 
 ## 已知限制
 
-- Full-model vector upload 对 GPT-2 约为数百 MB，每个 interval 都会写入共享文件系统；这是 Milestone 1 的刻意简化。
+- Full-vector 模式对 GPT-2 每个 interval 会写入数百 MB；多 fragment 模式可降低单次 payload，但当前仍会为部分 adoption/materialization 路径重建完整 flat vector。
 - `upload_mode=delta` 尚未实现为主路径。
 - SQLite 主库只应在 syncer-local storage 上使用，不应直接放在 Lustre 上作为高并发 DB。
 - 当前 learner inner optimizer 只支持 AdamW。
@@ -176,7 +176,7 @@ stale_updates_dropped
 
 ## Known Limitations
 
-- Full GPT-2 parameter-vector uploads are large; this is intentional for Milestone 1.
+- Full-vector GPT-2 uploads remain large. Multi-fragment mode reduces each payload, but some current adoption/materialization paths still rebuild the complete flat vector.
 - Delta upload mode is not the primary implemented path.
 - The SQLite primary DB must remain syncer-local, not on Lustre as a shared concurrent DB.
 - Learner inner optimizer support is currently AdamW.

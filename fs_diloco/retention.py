@@ -11,6 +11,8 @@ from .paths import RunPaths
 
 _GLOBAL_WEIGHT_RE = re.compile(r"^global_v(\d{6})\.safetensors$")
 _OUTER_OPTIM_RE = re.compile(r"^outer_v(\d{6})\.safetensors$")
+_FRAGMENT_ARTIFACT_RE = re.compile(r"^v(\d{6})\.safetensors$")
+_DB_DUMP_RE = re.compile(r"^metadata_.+_v(\d{6})\.db$")
 
 
 def _safe_unlink(path: Path, logger: Any | None = None) -> bool:
@@ -55,6 +57,91 @@ def cleanup_global_artifacts(paths: RunPaths, *, keep_last: int | None, logger: 
     return deleted
 
 
+def cleanup_fragment_artifacts(
+    paths: RunPaths,
+    *,
+    keep_last: int | None,
+    logger: Any | None = None,
+) -> int:
+    """Keep the newest fragment checkpoint versions for every fragment."""
+    if keep_last is None:
+        return 0
+    keep_last = max(0, int(keep_last))
+    deleted = 0
+    for root in (paths.fragment_weights, paths.fragment_optim):
+        if not root.exists():
+            continue
+        for fragment_dir in root.glob("fragment_*"):
+            if not fragment_dir.is_dir():
+                continue
+            artifacts = _versioned_files(fragment_dir, "v*.safetensors", _FRAGMENT_ARTIFACT_RE)
+            versions = sorted({version for version, _path in artifacts})
+            keep_versions = set(versions[-keep_last:]) if keep_last else set()
+            for version, path in artifacts:
+                if version in keep_versions:
+                    continue
+                if _safe_unlink(path, logger):
+                    deleted += 1
+    if deleted and logger is not None:
+        logger.event(
+            "retention_cleanup",
+            role="syncer",
+            artifact_kind="fragment",
+            deleted_files=deleted,
+            keep_last=keep_last,
+        )
+    return deleted
+
+
+def cleanup_syncer_model_artifacts(
+    paths: RunPaths,
+    *,
+    keep_last: int,
+    logger: Any | None = None,
+) -> int:
+    """Retain complete recent syncer checkpoints in full and fragment layouts."""
+    keep_last = max(1, int(keep_last))
+    return (
+        cleanup_global_artifacts(paths, keep_last=keep_last, logger=logger)
+        + cleanup_fragment_artifacts(
+            paths,
+            keep_last=keep_last,
+            logger=logger,
+        )
+    )
+
+
+def cleanup_db_dumps(
+    paths: RunPaths,
+    *,
+    keep_last: int = 2,
+    logger: Any | None = None,
+) -> int:
+    """Keep only the newest consistent SQLite backups."""
+    keep_last = max(0, int(keep_last))
+    dumps: list[Path] = []
+    for path in paths.db_dumps.glob("metadata_*_v*.db"):
+        if _DB_DUMP_RE.match(path.name) is not None:
+            dumps.append(path)
+    dumps.sort(key=lambda path: (path.stat().st_mtime_ns, path.name))
+    keep_paths = {path.resolve(strict=False) for path in (dumps[-keep_last:] if keep_last else [])}
+    deleted = 0
+    for path in dumps:
+        if path.resolve(strict=False) in keep_paths:
+            continue
+        if _safe_unlink(path, logger):
+            deleted += 1
+    if deleted and logger is not None:
+        logger.event(
+            "retention_cleanup",
+            role="syncer",
+            artifact_kind="db_dump",
+            deleted_files=deleted,
+            keep_last=keep_last,
+        )
+    return deleted
+
+
 def _inside_directory(path: Path, directory: Path) -> bool:
     try:
         path.resolve(strict=False).relative_to(directory.resolve(strict=False))
@@ -74,9 +161,11 @@ def cleanup_learner_update_artifacts(
         return 0
     keep_last = max(0, int(keep_last))
     entries: list[tuple[int, float, str, Path, Path | None]] = []
+    invalid_meta_paths: list[Path] = []
     for meta_path in update_dir.glob("update_*.meta.json"):
         payload = safe_read_json(meta_path)
-        if payload is None:
+        if not isinstance(payload, dict):
+            invalid_meta_paths.append(meta_path)
             continue
         try:
             local_step_end = int(payload.get("local_step_end", -1))
@@ -90,7 +179,14 @@ def cleanup_learner_update_artifacts(
         raw_file_path = payload.get("file_path")
         if raw_file_path:
             candidate = Path(raw_file_path)
+            if not candidate.is_absolute():
+                candidate = update_dir / candidate
             if _inside_directory(candidate, update_dir):
+                tensor_path = candidate
+        if tensor_path is None:
+            candidate = update_dir / meta_path.name.removesuffix(".meta.json")
+            candidate = candidate.with_name(candidate.name + ".params.safetensors")
+            if candidate.exists():
                 tensor_path = candidate
         entries.append((local_step_end, committed_at, meta_path.name, meta_path, tensor_path))
 
@@ -104,6 +200,9 @@ def cleanup_learner_update_artifacts(
     }
 
     deleted = 0
+    for meta_path in invalid_meta_paths:
+        if _safe_unlink(meta_path, logger):
+            deleted += 1
     for _step, _committed_at, _name, meta_path, tensor_path in entries:
         if meta_path.resolve(strict=False) in keep_meta_paths:
             continue
@@ -118,6 +217,10 @@ def cleanup_learner_update_artifacts(
         if _safe_unlink(tensor_path, logger):
             deleted += 1
 
+    for tmp_path in update_dir.glob(".update_*.tmp"):
+        if _safe_unlink(tmp_path, logger):
+            deleted += 1
+
     if deleted and logger is not None:
         logger.event(
             "retention_cleanup",
@@ -125,5 +228,24 @@ def cleanup_learner_update_artifacts(
             update_dir=str(update_dir),
             deleted_files=deleted,
             keep_last=keep_last,
+        )
+    return deleted
+
+
+def cleanup_all_learner_update_artifacts(
+    paths: RunPaths,
+    *,
+    keep_last: int | None,
+    logger: Any | None = None,
+) -> int:
+    """Apply learner retention to every learner mailbox in a run."""
+    deleted = 0
+    for update_dir in sorted(paths.updates_pending.glob("learner_*")):
+        if not update_dir.is_dir():
+            continue
+        deleted += cleanup_learner_update_artifacts(
+            update_dir,
+            keep_last=keep_last,
+            logger=logger,
         )
     return deleted

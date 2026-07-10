@@ -5,12 +5,15 @@ status: "planned"
 date: "2026-07-10"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
 planning_basis_branch: "codex/fs-diloco-miyabi"
-planning_basis_commit: "011e180980e90c500bcd479a594ba47e507bb5d1"
+planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
 target_branch: "codex/duraloco-p11-miyabi-acceptance"
 depends_on:
   - "P10"
 required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
+automatic_progression: true
+agent_decision_gates:
+  - "P00–P10 completed branches 按依赖图由 agent 集成并经独立 Checker 复核。"
 human_approval_gates:
   - "单个 Miyabi 作业超过 16 节点或 2 小时时必须批准；16 节点、2 小时以内（含 9 节点）由 agent 自主决定。"
   - "destructive GC 或作用于共享资源的真实故障操作必须批准。"
@@ -26,7 +29,7 @@ human_approval_gates:
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
-> 计划基于 `codex/fs-diloco-miyabi` 的 `011e180980e90c500bcd479a594ba47e507bb5d1` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
+> 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
 ## 1. 阶段使命
 
@@ -43,7 +46,7 @@ DuraLoCo 在目标 Lustre/PBS/GPU 环境中不仅通过模拟，还能在 8 lear
 ## 2. 前置条件
 
 - [ ] P00–P10 所有 correctness gates 通过；
-- [ ] feature branches 已按用户选择集成到 acceptance branch；
+- [ ] completed feature branches 已按依赖图自动集成到 acceptance branch，并通过集成 Checker；
 - [ ] Miyabi skill 已安装/可读；
 - [ ] 确认 group/project、shared root、cache paths、model/dataset availability；
 - [ ] 9-node 资源配置已确认不超过 `select=16`、`walltime=02:00:00` 的自主范围。
@@ -113,7 +116,7 @@ tests/test_acceptance_checker.py
 
 **先产生的失败证据或规范。**
 
-- [ ] 错误 commit、脏树、空 group、login host、重复 run root、混用 mpirun env。
+- [ ] 错误 commit、脏树、空 group、login host、重复 run root、缺失 module/interpreter 记录、混用 mpirun env。
 
 **实现任务。**
 
@@ -121,6 +124,7 @@ tests/test_acceptance_checker.py
 - [ ] 打印 roles/ranks/hosts；
 - [ ] timestamped run root；
 - [ ] shell trap；
+- [ ] 禁用 module pager，在作业 shell 记录 `module list` 和项目 Python 版本；非默认 module 使用精确版本显式加载；
 - [ ] static checker。
 
 **本循环验证。**
@@ -322,15 +326,16 @@ tests/test_acceptance_checker.py
 
 Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在原阶段分支修复并重新提交验证。
 
-## 11. 人工审批门
+## 11. 自动推进与外部风险审批门
 
 - [ ] 单个 Miyabi 作业超过 16 节点或 2 小时时必须获得明确批准；范围内作业（包括 9 节点）无需用户批准；
 - [ ] destructive GC 或作用于共享资源的真实故障操作必须批准。
+- [ ] P11 在自主资源范围和隔离 fault scope 内通过全部必需 gate 后自动进入 P12，无需人工审核；超限/破坏性动作可跳过并记录，不阻止有替代证据的安全工作继续。
 
 ## 12. 阻塞与停止规则
 
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
-- 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
+- 若实现当前目标需要调整 research contract、failure model、协议线性化点或数值语义：agent 记录 ADR、acceptance impact 和回滚方案，经 Checker 复核后继续；只有 materially 超出用户授权研究目标或涉及外部风险权限时才停止请求决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
 - 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
@@ -345,16 +350,16 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 使用 miyabi-development skill 执行 P11。
 
 仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
-规划基线：codex/fs-diloco-miyabi @ 011e180980e90c500bcd479a594ba47e507bb5d1
+规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
 目标分支：codex/duraloco-p11-miyabi-acceptance
-阶段计划：plans/duraloco/codex/12_P11_MIYABI_INTEGRATION_CHAOS_AND_9NODE_ACCEPTANCE.md
-共同契约：plans/duraloco/codex/00_CODEX_LOOP_OPERATING_CONTRACT.md
+阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/12_P11_MIYABI_INTEGRATION_CHAOS_AND_9NODE_ACCEPTANCE.md
+共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 
 按阶段文件中的 Loop 顺序工作。每个 Loop 都要先建立失败测试或可执行规范，再做最小实现，随后运行分层验证和独立 checker。持续更新 plans/duraloco/STATE.yaml；不要自动合并 main；不要在 Miyabi 登录节点运行 pytest、torch/transformers/datasets 导入、训练、mpirun 或其他 runtime 工作。
 
-结束时只在全部 gate 有证据时标记 ready_to_merge；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
+结束时在全部必需 gate 有证据且 Checker 通过时标记 completed，并按依赖图自动启动下一个可执行 goal/phase，不等待用户审核；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
 ```
 
 ## 15. 参考输入

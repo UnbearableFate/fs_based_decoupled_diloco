@@ -42,6 +42,8 @@ from .paths import RunPaths, prepare_run_dirs
 from .retention import cleanup_learner_update_artifacts
 from .tensor_codec import dtype_from_name, load_global_weights_flat, save_update_vector
 
+_SUCCESSFUL_STOP_REASONS = {"completed", "stop_after_outer_steps", "stop_after_global_tokens"}
+
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -146,9 +148,31 @@ def stop_requested(paths: RunPaths, local_step: int, config: Config) -> bool:
 
 
 def fragment_stop_requested(paths: RunPaths, local_step: int, config: Config) -> bool:
-    if config.training.max_local_steps is not None:
-        return local_step >= config.training.max_local_steps
+    if config.training.max_local_steps is not None and local_step >= config.training.max_local_steps:
+        return True
     return paths.stop_json.exists()
+
+
+def cleanup_local_models_after_success(
+    *,
+    paths: RunPaths,
+    config: Config,
+    learner_id: str,
+    logger: JsonlLogger,
+    had_error: bool,
+) -> None:
+    """Delete learner publications only after the syncer confirms normal completion."""
+    if had_error:
+        return
+    stop_payload = safe_read_json(paths.stop_json)
+    if not isinstance(stop_payload, dict) or stop_payload.get("reason") not in _SUCCESSFUL_STOP_REASONS:
+        return
+    debug_keep_last = config.io.keep_last_learner_update_versions
+    cleanup_learner_update_artifacts(
+        paths.updates_pending / learner_id,
+        keep_last=0 if debug_keep_last is None else debug_keep_last,
+        logger=logger,
+    )
 
 
 def build_inner_optimizer_and_scheduler(
@@ -795,6 +819,13 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
             last_local_step=local_step,
             last_update_id=last_update_id,
         )
+        cleanup_local_models_after_success(
+            paths=paths,
+            config=config,
+            learner_id=learner_id,
+            logger=logger,
+            had_error=had_error,
+        )
         logger.event(
             "process_exit",
             local_step=local_step,
@@ -860,6 +891,7 @@ def run_learner(config: Config, learner_id: str) -> None:
     tokens_since_global_load = 0
     last_heartbeat = time.monotonic()
     last_update_id: str | None = None
+    had_error = False
 
     try:
         while not stop_requested(paths, local_step, config):
@@ -951,11 +983,6 @@ def run_learner(config: Config, learner_id: str) -> None:
                 param_norm=param_norm,
                 flat=flat,
             )
-            cleanup_learner_update_artifacts(
-                paths.updates_pending / learner_id,
-                keep_last=config.io.keep_last_learner_update_versions,
-                logger=logger,
-            )
             write_seconds = time.monotonic() - write_start
             last_update_id = update_id
             elapsed = max(1e-6, time.monotonic() - interval_start_time)
@@ -1033,6 +1060,7 @@ def run_learner(config: Config, learner_id: str) -> None:
                     logger.event("inner_optimizer_reset", version=last_loaded_global_version)
             maybe_crash(config.failure_sim)
     except Exception:
+        had_error = True
         logger.exception("error", local_step=local_step, global_version=last_loaded_global_version)
         raise
     finally:
@@ -1048,6 +1076,13 @@ def run_learner(config: Config, learner_id: str) -> None:
             last_loaded_global_version=last_loaded_global_version,
             last_local_step=local_step,
             last_update_id=last_update_id,
+        )
+        cleanup_local_models_after_success(
+            paths=paths,
+            config=config,
+            learner_id=learner_id,
+            logger=logger,
+            had_error=had_error,
         )
         logger.event("process_exit", local_step=local_step, global_version=last_loaded_global_version)
 

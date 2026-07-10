@@ -20,10 +20,10 @@ Milestone 1 的核心约束如下：
 - 数据集：默认 WikiText-2，配置为 `wikitext` / `wikitext-2-raw-v1`。
 - 节点形态：8 个 learner 节点，每个 learner 单进程、单 GPU；1 个 syncer 节点，使用本地 GPU 做聚合、pseudo-gradient 和 outer optimizer step。
 - 通信模拟：大张量通过共享文件系统上的 `safetensors` 文件传输；控制状态通过 syncer 本地 SQLite 管理；learner 用 JSON metadata 文件作为提交标记；syncer 通过 `control/latest.json` 发布最新全局版本。
-- 上传粒度：Milestone 1 使用完整可训练参数向量作为单个逻辑 fragment，即 `fragment_id = 0`。
+- 上传粒度：支持完整可训练参数向量单 fragment（`fragment_id = 0`）和确定性的 `balanced_tensor` 多 fragment 模式。
 - learner 采用新全局版本时必须覆盖完整模型参数，并重置 inner optimizer 和 scheduler。
 
-这个系统不是高性能参数服务器实现。它的价值在于把 Decoupled DiLoCo 的异步训练协议拆成可检查、可复现、可调试的文件系统步骤，为后续 fragment 化、RPC 或真正通信后端打基础。
+这个系统不是高性能参数服务器实现。它的价值在于把 Decoupled DiLoCo 的异步训练协议拆成可检查、可复现、可调试的文件系统步骤，为后续事务日志、恢复协议、RPC 或真正通信后端打基础。
 
 ## 核心概念
 
@@ -36,7 +36,7 @@ Learner 是实际训练进程。每个 learner：
 3. 加载当前全局权重。
 4. 初始化 inner optimizer。
 5. 执行若干 `training.inner_steps` 本地训练 step。
-6. 将完整 trainable parameter vector 写为 `update_*.params.safetensors`。
+6. 按配置将完整 trainable parameter vector 或计划中的 fragment 写为 `safetensors` payload。
 7. 再写 `update_*.meta.json` 作为提交标记。
 8. 轮询 `control/latest.json`。
 9. 如果发现新全局版本，覆盖完整模型参数并重置 inner optimizer。
@@ -86,10 +86,10 @@ Milestone 1 has these constraints:
 - Dataset: default WikiText-2, configured as `wikitext` / `wikitext-2-raw-v1`.
 - Runtime shape: 8 learner nodes with one learner process and one GPU each, plus 1 syncer process that uses a local GPU for aggregation, pseudo-gradient computation, and outer optimizer updates.
 - Communication simulation: large tensors are exchanged as `safetensors` files on the shared filesystem; control state is stored in syncer-local SQLite; learner metadata JSON files are commit markers; syncer publishes global versions through `control/latest.json`.
-- Upload granularity: a full trainable parameter vector is treated as a single logical fragment, `fragment_id = 0`.
+- Upload granularity: both a full-vector single fragment (`fragment_id = 0`) and deterministic `balanced_tensor` multi-fragment mode are supported.
 - When learners adopt a newer global version, they overwrite the full model and reset the inner optimizer.
 
-This is not a high-performance parameter server. It is a debuggable protocol prototype that makes each Decoupled DiLoCo step inspectable before adding fragments, RPC, or a production communication backend.
+This is not a high-performance parameter server. It is a debuggable protocol prototype that makes each Decoupled DiLoCo step inspectable before adding a transactional log, stronger recovery, RPC, or a production communication backend.
 
 ## Main Concepts
 
@@ -102,7 +102,7 @@ A learner is a training process. It:
 3. Loads the current global weights.
 4. Builds the inner optimizer.
 5. Runs `training.inner_steps` local optimization steps.
-6. Writes the full trainable parameter vector to `update_*.params.safetensors`.
+6. Writes either the full trainable parameter vector or the scheduled fragment as a `safetensors` payload.
 7. Writes `update_*.meta.json` as the commit marker.
 8. Polls `control/latest.json`.
 9. If a newer global version exists, overwrites the full model and resets the inner optimizer.

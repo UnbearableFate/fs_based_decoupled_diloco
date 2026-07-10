@@ -1,9 +1,9 @@
 ---
 title: "DuraLoCo Codex Loop Operating Contract"
-version: "1.0"
+version: "1.2"
 date: "2026-07-10"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
-planning_basis: "codex/fs-diloco-miyabi @ 011e180980e90c500bcd479a594ba47e507bb5d1"
+planning_basis: "codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d"
 ---
 
 # DuraLoCo Codex Loop Operating Contract
@@ -116,14 +116,22 @@ artifacts/duraloco/<phase>/<run_id>/commands.log
 artifacts/duraloco/<phase>/<run_id>/checker_report.md
 ```
 
-`STATE.yaml` 必须能让一个全新的 Codex 会话在不依赖聊天历史的情况下恢复：当前阶段、当前 loop、通过/失败 gate、下一动作和所需审批。
+`STATE.yaml` 必须能让一个全新的 Codex 会话在不依赖聊天历史的情况下恢复：当前阶段、当前 loop、通过/失败 gate、下一动作和仅限外部风险操作所需的审批。
+
+### 2.7 自动目标与阶段推进
+
+- 一个 loop/goal 的必需 acceptance gates 全部有证据且独立 Checker 结论为 `PASS`，或 `PASS_WITH_FOLLOWUPS` 且 follow-up 不影响必需 gate 时，agent 立即把该 goal 标记为完成并自动进入下一个 goal，无需用户复核。
+- 一个 phase 的全部必需 acceptance IDs 通过后，agent 把 phase 标记为 `completed`，持久化报告和 verified commit，并按照依赖图自动创建/切换到下一 phase 分支继续执行；阶段之间不设置人工审核或等待状态。
+- 可逆且位于既定 research contract 内的协议、默认值和实现选择由 agent 决定，写入 `DECISIONS.md`，经独立 Checker 复核后生效。
+- 自动推进不授权 merge `main`、发布 artifact/公开数据、使用真实凭据或公共云/付费资源、超过 Miyabi 自主资源范围、删除共享数据或执行 destructive lifecycle 操作；这些外部风险动作仍按明确审批门处理，但不阻止不依赖该动作的后续工作。
+- 若下一 phase 有多个依赖，只有所有依赖 phase 都 `completed` 且集成 Checker 通过后才自动进入；P08/P09 等并行分支必须按依赖图汇合，不得以单分支完成冒充集成完成。
 
 ## 3. 分支与 Worktree 纪律
 
 - 每个阶段使用独立分支：`codex/duraloco-pXX-<slug>`。
 - 阶段开始时记录 base branch 和 base commit；基线漂移时生成 `drift_report.md`。
 - Codex 可以创建和 push feature branch，但不得默认合并 `main`。
-- 阶段分支通过全部 gate 后状态为 `ready_to_merge`，由用户决定 merge。
+- 阶段分支通过全部 gate 后状态为 `completed`；下一阶段从该 verified commit（或通过集成 Checker 的依赖汇合 commit）自动继续。是否最终 merge `main` 仍由用户决定，但不作为阶段推进条件。
 - Worktree 只用于独立任务。协议核心、frontier/head、syncer pipeline 等共享写热点必须单 writer。
 - Checker 必须使用不同工作树或至少干净 checkout，不能在 Maker 的未提交状态上判断。
 - 禁止 `git reset --hard`、覆盖用户未提交修改、无授权 force push 或重写共享分支历史。
@@ -142,7 +150,7 @@ WIP commit 可以存在于 feature branch；提交合并候选前可在用户授
 
 ```yaml
 phase: P00
-status: in_progress  # planned | in_progress | blocked | checking | ready_to_merge | merged
+status: in_progress  # planned | in_progress | blocked | checking | completed | ready_to_merge | merged
 base_branch: codex/fs-diloco-miyabi
 base_commit: <sha>
 feature_branch: codex/duraloco-p00-contract
@@ -161,7 +169,9 @@ open_decisions: []
 open_blockers: []
 artifacts: []
 next_action: "..."
+automatic_progression: true
 requires_human_approval: false
+approval_reason: null  # 仅用于外部风险动作，不用于 goal/phase 过渡
 ```
 
 ### 4.2 Run manifest 最小字段
@@ -214,6 +224,7 @@ requires_human_approval: false
 
 - 读写文件、git 操作；
 - `bash -n`；
+- 使用满足 `pyproject.toml` 版本要求的项目解释器做 `py_compile` 等纯静态检查；本仓库使用 `.venv/bin/python`，不得因登录节点裸 `python` 可用而忽略其版本；
 - 不执行项目 runtime 的静态检查；
 - `qsub`、`qstat`、日志检查；
 - 配置和命令 dry run。
@@ -225,6 +236,8 @@ requires_human_approval: false
 - 模型加载、训练、评估、预处理；
 - `mpirun`、`torchrun`、CUDA/NCCL；
 - 用“很小”作为绕过 PBS 的理由。
+
+所有 PBS/interactive runtime 在启动项目代码前必须禁用 module pager、记录 `module list`、记录 Python 版本，并在作业 shell 内加载所需的精确 module/version。若明确依赖 Miyabi-G compute-node 默认栈，可以使用空 `REQUIRED_MODULES`，但必须在脚本和日志中声明并记录实际默认栈。
 
 ### 5.3 验证阶梯
 
@@ -300,7 +313,7 @@ mpirun ... /usr/bin/env "KEY=value" ... bash -lc '...'
 
 - 同一根因连续三次修复仍失败；
 - 五个连续 loop 没有缩小失败面；
-- 需要修改 research contract、failure model、linearization point 或 optimizer 数值语义；
+- 当前问题要求超出用户授权的研究目标或 materially 扩大研究主张；既定目标内的可逆语义选择由 agent 记录 ADR、经 Checker 复核后自动继续；
 - 需要单个 Miyabi 作业超过 16 节点或 2 小时，或需要公共云/其他付费资源；
 - 需要真实凭据、删除共享数据、运行 destructive GC；
 - 出现可能污染论文结果的数据/代码版本不一致；
@@ -322,25 +335,25 @@ mpirun ... /usr/bin/env "KEY=value" ... bash -lc '...'
 - 凭据只能来自环境、Miyabi 允许的 secret 机制或用户明确提供的临时凭据；禁止写入 Git、配置、日志或 artifact。
 - Agent 可自行决定并提交单个 `select<=16` 且 `walltime<=02:00:00` 的 Miyabi 作业，包括 9-node 作业，无需用户批准；仍须遵守阶段前置 gate、作业预检和 1→2→9 验证阶梯。
 - 单个 Miyabi 作业超过 16 节点或 2 小时，以及 public cloud、跨区域 egress、其他付费资源和 destructive lifecycle policy，均需用户批准。
-- GC 默认 dry-run，直到 reachability proof、并发恢复测试和人工 gate 全部通过。
+- GC 默认 dry-run，直到 reachability proof 和并发恢复测试通过；实际 destructive apply 仍需外部风险审批，但不构成 phase-transition review。
 - 故障注入只能作用于隔离的 run root/bucket prefix，不得向共享根目录发送 kill/delete。
 
 ## 10. 完成定义
 
-阶段只有同时满足以下条件才可标记 `ready_to_merge`：
+阶段只有同时满足以下条件才可标记 `completed` 并自动进入下一阶段：
 
 1. 所有阶段 acceptance IDs 有证据；
-2. Checker 结论为 `PASS` 或人工接受的 `PASS_WITH_FOLLOWUPS`；
+2. Checker 结论为 `PASS`，或 `PASS_WITH_FOLLOWUPS` 且 follow-up 不影响任何必需 gate；
 3. 必需的 Miyabi 层级已运行，或明确标为 `BLOCKED`，不能用“未运行但应当可以”代替；
 4. 文档、迁移说明和 config schema 与实现一致；
 5. branch 已 push，工作树干净；
 6. 结果中没有未解释的 NaN、重复 apply、split-brain、live-object deletion 或状态漂移；
-7. 未自动 merge `main`。
+7. 未自动 merge `main`；阶段推进使用 verified phase/integration commit，不等待 main merge。
 
 ## 11. 共同启动指令
 
 ```text
-读取仓库根 AGENTS.md、miyabi-development skill、DuraLoCo 共同执行契约和当前阶段计划。先识别 hostname、branch、commit 和工作树状态。使用单 writer 的 maker loop；先写失败测试/规范，再做最小实现；独立 checker 复核。每轮更新 STATE.yaml 和 artifact manifest。遵守 Miyabi 登录节点 control-plane 限制与 1→2→9 节点验证阶梯。单个 select<=16 且 walltime<=02:00:00 的 Miyabi 作业（包括 9 节点）由 agent 自主决定和提交；超出此范围或使用公共云/其他付费资源前取得用户批准。不得自动合并 main，不得虚构实验结果。
+读取仓库根 AGENTS.md、miyabi-development skill、DuraLoCo 共同执行契约和当前阶段计划。先识别 hostname、branch、commit 和工作树状态。使用单 writer 的 maker loop；先写失败测试/规范，再做最小实现；独立 checker 复核。每轮更新 STATE.yaml 和 artifact manifest。goal/phase 必需 gate 达成并通过 Checker 后立即标记 completed，并按依赖图自动推进，不等待用户审核。遵守 Miyabi 登录节点 control-plane 限制与 1→2→9 节点验证阶梯。单个 select<=16 且 walltime<=02:00:00 的 Miyabi 作业（包括 9 节点）由 agent 自主决定和提交；超出此范围或使用公共云/其他付费资源前取得用户批准。不得自动合并 main，不得虚构实验结果。
 ```
 
 ## 12. 参考

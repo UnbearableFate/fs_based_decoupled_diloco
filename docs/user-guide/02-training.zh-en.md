@@ -18,7 +18,7 @@ English: Static checks, 1/2/9-node PBS runs, synthetic smoke, manual launch, and
 
 ```bash
 bash -n scripts/miyabi/*.pbs scripts/miyabi/*.sh scripts/local/*.sh
-python -m py_compile fs_diloco/*.py
+.venv/bin/python -m py_compile fs_diloco/*.py
 ```
 
 ### 1 节点真实 GPT-2/WikiText-2 debug
@@ -185,7 +185,7 @@ Allowed checks:
 
 ```bash
 bash -n scripts/miyabi/*.pbs scripts/miyabi/*.sh scripts/local/*.sh
-python -m py_compile fs_diloco/*.py
+.venv/bin/python -m py_compile fs_diloco/*.py
 ```
 
 ### 1-node real GPT-2/WikiText-2 debug run

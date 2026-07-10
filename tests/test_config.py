@@ -18,6 +18,9 @@ def test_config_defaults_and_cli_overrides(tmp_path):
     assert config.sync.quorum_min == 1
     assert config.inner_optimizer.betas == (0.9, 0.95)
     assert config.fragments.enabled is False
+    assert config.io.keep_last_db_dumps == 2
+    assert config.io.keep_last_global_versions is None
+    assert config.io.keep_last_learner_update_versions is None
 
 
 def test_fragment_config_and_unknown_keys(tmp_path):

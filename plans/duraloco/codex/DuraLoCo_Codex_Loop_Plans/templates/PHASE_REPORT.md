@@ -42,5 +42,7 @@
 
 - Worktree clean:
 - Branch pushed:
+- Phase completed:
+- Next phase automatically started:
 - Ready to merge:
-- Human approval still required:
+- External-risk approval still required (never phase-transition review):

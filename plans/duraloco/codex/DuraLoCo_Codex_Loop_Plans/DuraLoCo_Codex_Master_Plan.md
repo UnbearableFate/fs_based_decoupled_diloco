@@ -1,8 +1,8 @@
 ---
 title: "DuraLoCo Codex Loop-Engineering Implementation Plans"
-version: "1.0"
+version: "1.2"
 date: "2026-07-10"
-planning_basis: "codex/fs-diloco-miyabi @ 011e180980e90c500bcd479a594ba47e507bb5d1"
+planning_basis: "codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d"
 ---
 
 # DuraLoCo Codex Loop-Engineering Implementation Plans
@@ -15,14 +15,14 @@ planning_basis: "codex/fs-diloco-miyabi @ 011e180980e90c500bcd479a594ba47e507bb5
 - machine-checkable acceptance gates；
 - maker–checker 交接；
 - Miyabi 本地→登录节点→1 节点→2 节点→9 节点验证阶梯；
-- 人工审批与停止条件；
+- 自动 goal/phase 推进、外部风险审批与停止条件；
 - 可直接复制给 Codex 的启动 prompt。
 
 ## 1. 规划基线
 
 - 实现仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
 - 规划分支：`codex/fs-diloco-miyabi`
-- 规划提交：`011e180980e90c500bcd479a594ba47e507bb5d1`
+- 规划提交：`afc50a1e179c64321645b278b2497ea3ab3fe24d`
 - Miyabi skill：https://github.com/UnbearableFate/miyabi-development
 - 研究草稿：[`references/DuraLoCo_research_draft_zh.md`](references/DuraLoCo_research_draft_zh.md)
 
@@ -84,40 +84,42 @@ P08 与 P09 在 P06 之后可以使用独立 worktree 并行开发，但不能�
 
 ## 5. 如何使用
 
-### 5.1 放入仓库
+### 5.1 仓库内位置
 
-建议把本目录复制为：
-
-```text
-<repo>/plans/duraloco/codex/
-```
-
-把研究草稿保留为：
+本计划 bundle 的规范位置是：
 
 ```text
-<repo>/plans/duraloco/codex/references/DuraLoCo_research_draft_zh.md
+<repo>/plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/
 ```
+
+研究草稿随 bundle 保留为：
+
+```text
+<repo>/plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/references/DuraLoCo_research_draft_zh.md
+```
+
+运行期的 `STATE.yaml`、`DECISIONS.md`、`BLOCKERS.md` 和 `TRACEABILITY.md` 仍由 P00 创建在 `<repo>/plans/duraloco/`；不要把 bundle 模板当运行状态修改。
 
 ### 5.2 第一次启动
 
 先交给 Codex：
 
 ```text
-读取 plans/duraloco/codex/README.md、00_CODEX_LOOP_OPERATING_CONTRACT.md 和 01_P00_BASELINE_AND_RESEARCH_CONTRACT.md。使用 miyabi-development skill，从 P00 开始。不要跳过 research contract，不要在 Miyabi 登录节点运行 runtime，不要自动 merge main。
+读取 plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/README.md、plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md 和 plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/01_P00_BASELINE_AND_RESEARCH_CONTRACT.md。使用 miyabi-development skill，从 P00 开始。P00 没有上一阶段输入，应从模板初始化运行状态。不要跳过 research contract，不要在 Miyabi 登录节点运行 runtime，不要自动 merge main。
 ```
 
-### 5.3 后续阶段
+### 5.3 后续阶段与自动推进
 
-每次只打开一个新的 Codex 实现会话，并提供：
+每个 goal/phase 的必需 gate 达成并通过独立 Checker 后，agent 自动标记完成并按依赖图进入下一项，无需用户审核。跨会话恢复或主动拆分新会话时提供：
 
 - 当前阶段文件；
 - 上一阶段 `PHASE_REPORT.md`；
 - 最新 `STATE.yaml`；
 - feature branch/commit；
-- 已批准或拒绝的 decisions；
+- 已由 agent 决定并经 Checker 复核的 decisions；
 - 允许使用的 Miyabi/云资源范围。
 
-不要用一个无限会话连续实现所有阶段。阶段边界既是代码审查边界，也是研究语义审批边界。
+阶段边界仍是持久化、独立检查和分支边界，但不是人工审批或等待边界。可以在同一持续任务中自动推进；若切换会话，必须先完整写入 STATE、PHASE_REPORT、DECISIONS 和 artifact manifests。
 
 ## 6. 全局禁止跳过的 Gate
 
@@ -157,7 +159,7 @@ references/DuraLoCo_research_draft_zh.md
 - P07：GC 默认 dry-run；apply 需要批准。
 - P08：需要 1-node GPU profile 和 2-node pipeline。
 - P09：MinIO；真实公共云需要凭据/预算批准。
-- P10：controller 先 shadow；动态算法参数需要批准。
+- P10：controller 先 shadow；动态算法参数在 shadow/guardrail/Checker gate 通过后由 agent 自动启用。
 - P11：9-node acceptance 可由 agent 自主申请和执行，无需用户批准。
 - P12：单个 Miyabi 作业在 `select<=16`、`walltime<=02:00:00` 范围内由 agent 自主决定，包括 9-node 和 multi-seed 作业；超限作业、公共云和 artifact 发布分别审批。
 
@@ -184,10 +186,10 @@ sha256sum -c SHA256SUMS.txt
 
 ---
 title: "DuraLoCo Codex Loop Operating Contract"
-version: "1.0"
+version: "1.2"
 date: "2026-07-10"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
-planning_basis: "codex/fs-diloco-miyabi @ 011e180980e90c500bcd479a594ba47e507bb5d1"
+planning_basis: "codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d"
 ---
 
 # DuraLoCo Codex Loop Operating Contract
@@ -300,14 +302,22 @@ artifacts/duraloco/<phase>/<run_id>/commands.log
 artifacts/duraloco/<phase>/<run_id>/checker_report.md
 ```
 
-`STATE.yaml` 必须能让一个全新的 Codex 会话在不依赖聊天历史的情况下恢复：当前阶段、当前 loop、通过/失败 gate、下一动作和所需审批。
+`STATE.yaml` 必须能让一个全新的 Codex 会话在不依赖聊天历史的情况下恢复：当前阶段、当前 loop、通过/失败 gate、下一动作和仅限外部风险操作所需的审批。
+
+### 2.7 自动目标与阶段推进
+
+- 一个 loop/goal 的必需 acceptance gates 全部有证据且独立 Checker 结论为 `PASS`，或 `PASS_WITH_FOLLOWUPS` 且 follow-up 不影响必需 gate 时，agent 立即把该 goal 标记为完成并自动进入下一个 goal，无需用户复核。
+- 一个 phase 的全部必需 acceptance IDs 通过后，agent 把 phase 标记为 `completed`，持久化报告和 verified commit，并按照依赖图自动创建/切换到下一 phase 分支继续执行；阶段之间不设置人工审核或等待状态。
+- 可逆且位于既定 research contract 内的协议、默认值和实现选择由 agent 决定，写入 `DECISIONS.md`，经独立 Checker 复核后生效。
+- 自动推进不授权 merge `main`、发布 artifact/公开数据、使用真实凭据或公共云/付费资源、超过 Miyabi 自主资源范围、删除共享数据或执行 destructive lifecycle 操作；这些外部风险动作仍按明确审批门处理，但不阻止不依赖该动作的后续工作。
+- 若下一 phase 有多个依赖，只有所有依赖 phase 都 `completed` 且集成 Checker 通过后才自动进入；P08/P09 等并行分支必须按依赖图汇合，不得以单分支完成冒充集成完成。
 
 ## 3. 分支与 Worktree 纪律
 
 - 每个阶段使用独立分支：`codex/duraloco-pXX-<slug>`。
 - 阶段开始时记录 base branch 和 base commit；基线漂移时生成 `drift_report.md`。
 - Codex 可以创建和 push feature branch，但不得默认合并 `main`。
-- 阶段分支通过全部 gate 后状态为 `ready_to_merge`，由用户决定 merge。
+- 阶段分支通过全部 gate 后状态为 `completed`；下一阶段从该 verified commit（或通过集成 Checker 的依赖汇合 commit）自动继续。是否最终 merge `main` 仍由用户决定，但不作为阶段推进条件。
 - Worktree 只用于独立任务。协议核心、frontier/head、syncer pipeline 等共享写热点必须单 writer。
 - Checker 必须使用不同工作树或至少干净 checkout，不能在 Maker 的未提交状态上判断。
 - 禁止 `git reset --hard`、覆盖用户未提交修改、无授权 force push 或重写共享分支历史。
@@ -326,7 +336,7 @@ WIP commit 可以存在于 feature branch；提交合并候选前可在用户授
 
 ```yaml
 phase: P00
-status: in_progress  # planned | in_progress | blocked | checking | ready_to_merge | merged
+status: in_progress  # planned | in_progress | blocked | checking | completed | ready_to_merge | merged
 base_branch: codex/fs-diloco-miyabi
 base_commit: <sha>
 feature_branch: codex/duraloco-p00-contract
@@ -345,7 +355,9 @@ open_decisions: []
 open_blockers: []
 artifacts: []
 next_action: "..."
+automatic_progression: true
 requires_human_approval: false
+approval_reason: null  # 仅用于外部风险动作，不用于 goal/phase 过渡
 ```
 
 ### 4.2 Run manifest 最小字段
@@ -398,6 +410,7 @@ requires_human_approval: false
 
 - 读写文件、git 操作；
 - `bash -n`；
+- 使用满足 `pyproject.toml` 版本要求的项目解释器做 `py_compile` 等纯静态检查；本仓库使用 `.venv/bin/python`，不得因登录节点裸 `python` 可用而忽略其版本；
 - 不执行项目 runtime 的静态检查；
 - `qsub`、`qstat`、日志检查；
 - 配置和命令 dry run。
@@ -409,6 +422,8 @@ requires_human_approval: false
 - 模型加载、训练、评估、预处理；
 - `mpirun`、`torchrun`、CUDA/NCCL；
 - 用“很小”作为绕过 PBS 的理由。
+
+所有 PBS/interactive runtime 在启动项目代码前必须禁用 module pager、记录 `module list`、记录 Python 版本，并在作业 shell 内加载所需的精确 module/version。若明确依赖 Miyabi-G compute-node 默认栈，可以使用空 `REQUIRED_MODULES`，但必须在脚本和日志中声明并记录实际默认栈。
 
 ### 5.3 验证阶梯
 
@@ -484,7 +499,7 @@ mpirun ... /usr/bin/env "KEY=value" ... bash -lc '...'
 
 - 同一根因连续三次修复仍失败；
 - 五个连续 loop 没有缩小失败面；
-- 需要修改 research contract、failure model、linearization point 或 optimizer 数值语义；
+- 当前问题要求超出用户授权的研究目标或 materially 扩大研究主张；既定目标内的可逆语义选择由 agent 记录 ADR、经 Checker 复核后自动继续；
 - 需要单个 Miyabi 作业超过 16 节点或 2 小时，或需要公共云/其他付费资源；
 - 需要真实凭据、删除共享数据、运行 destructive GC；
 - 出现可能污染论文结果的数据/代码版本不一致；
@@ -506,25 +521,25 @@ mpirun ... /usr/bin/env "KEY=value" ... bash -lc '...'
 - 凭据只能来自环境、Miyabi 允许的 secret 机制或用户明确提供的临时凭据；禁止写入 Git、配置、日志或 artifact。
 - Agent 可自行决定并提交单个 `select<=16` 且 `walltime<=02:00:00` 的 Miyabi 作业，包括 9-node 作业，无需用户批准；仍须遵守阶段前置 gate、作业预检和 1→2→9 验证阶梯。
 - 单个 Miyabi 作业超过 16 节点或 2 小时，以及 public cloud、跨区域 egress、其他付费资源和 destructive lifecycle policy，均需用户批准。
-- GC 默认 dry-run，直到 reachability proof、并发恢复测试和人工 gate 全部通过。
+- GC 默认 dry-run，直到 reachability proof 和并发恢复测试通过；实际 destructive apply 仍需外部风险审批，但不构成 phase-transition review。
 - 故障注入只能作用于隔离的 run root/bucket prefix，不得向共享根目录发送 kill/delete。
 
 ## 10. 完成定义
 
-阶段只有同时满足以下条件才可标记 `ready_to_merge`：
+阶段只有同时满足以下条件才可标记 `completed` 并自动进入下一阶段：
 
 1. 所有阶段 acceptance IDs 有证据；
-2. Checker 结论为 `PASS` 或人工接受的 `PASS_WITH_FOLLOWUPS`；
+2. Checker 结论为 `PASS`，或 `PASS_WITH_FOLLOWUPS` 且 follow-up 不影响任何必需 gate；
 3. 必需的 Miyabi 层级已运行，或明确标为 `BLOCKED`，不能用“未运行但应当可以”代替；
 4. 文档、迁移说明和 config schema 与实现一致；
 5. branch 已 push，工作树干净；
 6. 结果中没有未解释的 NaN、重复 apply、split-brain、live-object deletion 或状态漂移；
-7. 未自动 merge `main`。
+7. 未自动 merge `main`；阶段推进使用 verified phase/integration commit，不等待 main merge。
 
 ## 11. 共同启动指令
 
 ```text
-读取仓库根 AGENTS.md、miyabi-development skill、DuraLoCo 共同执行契约和当前阶段计划。先识别 hostname、branch、commit 和工作树状态。使用单 writer 的 maker loop；先写失败测试/规范，再做最小实现；独立 checker 复核。每轮更新 STATE.yaml 和 artifact manifest。遵守 Miyabi 登录节点 control-plane 限制与 1→2→9 节点验证阶梯。单个 select<=16 且 walltime<=02:00:00 的 Miyabi 作业（包括 9 节点）由 agent 自主决定和提交；超出此范围或使用公共云/其他付费资源前取得用户批准。不得自动合并 main，不得虚构实验结果。
+读取仓库根 AGENTS.md、miyabi-development skill、DuraLoCo 共同执行契约和当前阶段计划。先识别 hostname、branch、commit 和工作树状态。使用单 writer 的 maker loop；先写失败测试/规范，再做最小实现；独立 checker 复核。每轮更新 STATE.yaml 和 artifact manifest。goal/phase 必需 gate 达成并通过 Checker 后立即标记 completed，并按依赖图自动推进，不等待用户审核。遵守 Miyabi 登录节点 control-plane 限制与 1→2→9 节点验证阶梯。单个 select<=16 且 walltime<=02:00:00 的 Miyabi 作业（包括 9 节点）由 agent 自主决定和提交；超出此范围或使用公共云/其他付费资源前取得用户批准。不得自动合并 main，不得虚构实验结果。
 ```
 
 ## 12. 参考
@@ -546,14 +561,16 @@ status: "planned"
 date: "2026-07-10"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
 planning_basis_branch: "codex/fs-diloco-miyabi"
-planning_basis_commit: "011e180980e90c500bcd479a594ba47e507bb5d1"
+planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
 target_branch: "codex/duraloco-p00-contract"
 depends_on:
   []
 required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
-human_approval_gates:
-  - "批准 research contract、failure model、恢复语义和协议 P0 不变量后才能进入 P01。"
+automatic_progression: true
+agent_decision_gates:
+  - "research contract、failure model、恢复语义和协议 P0 不变量由 agent 冻结并经独立 Checker 复核；通过后自动进入 P01。"
+human_approval_gates: []
 ---
 
 # P00 — 冻结基线、研究契约与 Agent Spine
@@ -563,10 +580,10 @@ human_approval_gates:
 > 1. 仓库根目录 `AGENTS.md`；
 > 2. `00_CODEX_LOOP_OPERATING_CONTRACT.md`；
 > 3. `miyabi-development` skill 的 `SKILL.md`；
-> 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
+> 4. P00 没有上一阶段输入；若 `plans/duraloco/STATE.yaml` 等运行状态不存在，则从本 bundle 的模板初始化；若已存在，则先校验并按持久化状态恢复；
 > 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
-> 计划基于 `codex/fs-diloco-miyabi` 的 `011e180980e90c500bcd479a594ba47e507bb5d1` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
+> 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
 ## 1. 阶段使命
 
@@ -583,8 +600,8 @@ human_approval_gates:
 ## 2. 前置条件
 
 - [ ] 确认能读取规划基线分支；
-- [ ] 复制本计划目录到仓库 `plans/duraloco/codex/`；
-- [ ] 确保 DuraLoCo 研究草稿位于 `plans/duraloco/references/` 或文档中记录其外部路径。
+- [ ] 确认计划 bundle 位于 `plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/`；
+- [ ] 确认 DuraLoCo 研究草稿位于 bundle 的 `references/`，并在运行期文档中记录该路径。
 
 ## 3. 范围
 
@@ -721,7 +738,7 @@ tests/
 **本循环验证。**
 
 - [ ] 模板可解析；
-- [ ] 无 checker report 时不能标记 ready_to_merge；
+- [ ] 无 checker report 时不能标记 completed 或自动推进；
 - [ ] 脏树和缺 commit 被 manifest 标记。
 
 **本循环持久化输出。**
@@ -744,8 +761,9 @@ tests/
 
 - [ ] 运行依赖可用环境中的现有 unit tests；
 - [ ] 运行 local tiny synthetic smoke；
-- [ ] 在批准/可用时走 Miyabi 1-node 现有 debug 路径；
+- [ ] 在前置 gate 通过且资源可用时走 Miyabi 1-node 现有 debug 路径；该范围内资源无需用户批准；
 - [ ] 保存 run roots、日志和 digests。
+- [ ] 将已有 `runs/` 视为 legacy evidence：只选择代表性 run 读取 control/config/log/DB 摘要和关键 artifact digest，不递归哈希或复制全部历史 tensor；新的最小 smoke 必须产生不可变 manifest。
 
 **本循环验证。**
 
@@ -757,6 +775,7 @@ tests/
 - [ ] baseline test report；
 - [ ] baseline smoke manifest；
 - [ ] 已知缺陷列表。
+- [ ] legacy run 采样清单及未纳入强证据的理由。
 
 **停止条件。** 上述验证全部通过，且未引入未记录的行为变化。
 
@@ -775,7 +794,7 @@ tests/
 - [ ] 规划基线与实际分支漂移；
 - [ ] 缺配置或脚本；
 - [ ] run manifest 缺 commit/config digest；
-- [ ] STATE 非法跳转到 ready_to_merge。
+- [ ] STATE 非法跳转到 completed/下一 phase。
 
 ## 8. 验收标准
 
@@ -788,7 +807,7 @@ tests/
 - [ ] P00-A05：所有现有可运行 tests/smokes 结果被保存，失败项有最小复现；
 - [ ] P00-A06：runtime 默认行为未改变；
 - [ ] P00-A07：Checker 复核 baseline 和研究契约；
-- [ ] P00-A08：人工批准研究契约。
+- [ ] P00-A08：独立 Checker 复核并接受 research contract；通过后自动进入 P01，无需用户批准。
 
 ## 9. 验证矩阵
 
@@ -823,14 +842,15 @@ tests/
 
 Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在原阶段分支修复并重新提交验证。
 
-## 11. 人工审批门
+## 11. 自动推进与 Agent 决策门
 
-- [ ] 批准 research contract、failure model、恢复语义和协议 P0 不变量后才能进入 P01。
+- [ ] research contract、failure model、恢复语义和协议 P0 不变量由 agent 冻结并写入 DECISIONS；独立 Checker 通过后，P00 标记 `completed` 并自动进入 P01。
+- [ ] P00→P01 不需要人工审核；本阶段没有外部风险审批门。
 
 ## 12. 阻塞与停止规则
 
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
-- 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
+- 若实现当前目标需要调整 research contract、failure model、协议线性化点或数值语义：agent 选择最小可逆方案，记录 ADR 和影响，经 Checker 复核后继续；只有 materially 超出用户授权研究目标时才停止请求决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
 - 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
@@ -840,7 +860,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 ```text
 P00 status:
 actual baseline:
-research-contract approval:
+research-contract checker verdict:
 existing tests: pass/fail/skipped
 local smoke run ID:
 Miyabi 1-node run ID or reason skipped:
@@ -854,16 +874,16 @@ next phase gate: P01 allowed / blocked
 使用 miyabi-development skill 执行 P00。
 
 仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
-规划基线：codex/fs-diloco-miyabi @ 011e180980e90c500bcd479a594ba47e507bb5d1
+规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
 目标分支：codex/duraloco-p00-contract
-阶段计划：plans/duraloco/codex/01_P00_BASELINE_AND_RESEARCH_CONTRACT.md
-共同契约：plans/duraloco/codex/00_CODEX_LOOP_OPERATING_CONTRACT.md
+阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/01_P00_BASELINE_AND_RESEARCH_CONTRACT.md
+共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
 
-先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
+先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件和相关研究草稿。P00 没有上一阶段报告；从 bundle 模板初始化运行状态。若基线漂移，先写 drift report；不要 reset 用户改动。
 
 按阶段文件中的 Loop 顺序工作。每个 Loop 都要先建立失败测试或可执行规范，再做最小实现，随后运行分层验证和独立 checker。持续更新 plans/duraloco/STATE.yaml；不要自动合并 main；不要在 Miyabi 登录节点运行 pytest、torch/transformers/datasets 导入、训练、mpirun 或其他 runtime 工作。
 
-结束时只在全部 gate 有证据时标记 ready_to_merge；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
+结束时在全部必需 gate 有证据且 Checker 通过时标记 completed，并按依赖图自动启动下一个可执行 goal/phase，不等待用户审核；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
 ```
 
 ## 15. 参考输入
@@ -882,14 +902,16 @@ status: "planned"
 date: "2026-07-10"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
 planning_basis_branch: "codex/fs-diloco-miyabi"
-planning_basis_commit: "011e180980e90c500bcd479a594ba47e507bb5d1"
+planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
 target_branch: "codex/duraloco-p01-protocol-v2"
 depends_on:
   - "P00"
 required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
-human_approval_gates:
-  - "若需要改变 P00 冻结的 proposal identity、payload kind、recovery 或 numeric contract，必须审批。"
+automatic_progression: true
+agent_decision_gates:
+  - "若需要调整 P00 冻结的 proposal identity、payload kind、recovery 或 numeric contract，agent 记录 ADR 与兼容性影响，经独立 Checker 复核后继续。"
+human_approval_gates: []
 ---
 
 # P01 — Protocol v2 Schema、身份与严格验证
@@ -902,7 +924,7 @@ human_approval_gates:
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
-> 计划基于 `codex/fs-diloco-miyabi` 的 `011e180980e90c500bcd479a594ba47e507bb5d1` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
+> 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
 ## 1. 阶段使命
 
@@ -918,9 +940,9 @@ DuraLoCo 的任何 crash consistency 与 exactly-once 结论都以前置输入�
 
 ## 2. 前置条件
 
-- [ ] P00 research contract 已批准；
+- [ ] P00 research contract 已冻结并通过独立 Checker；
 - [ ] 参数索引与 fragment layout digest 生成规则已有基线；
-- [ ] 确定是否允许新增 jsonschema/pydantic 依赖；若未批准，使用标准库实现。
+- [ ] agent 评估是否新增 jsonschema/pydantic 依赖并记录 ADR；若收益不足，使用标准库实现。
 
 ## 3. 范围
 
@@ -1167,14 +1189,15 @@ tests/protocol/
 
 Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在原阶段分支修复并重新提交验证。
 
-## 11. 人工审批门
+## 11. 自动推进与 Agent 决策门
 
-- [ ] 若需要改变 P00 冻结的 proposal identity、payload kind、recovery 或 numeric contract，必须审批。
+- [ ] 既定研究目标内的 proposal identity、payload kind、recovery 或 numeric contract 调整由 agent 选择最小可逆方案，记录 ADR，经 Checker 复核后生效。
+- [ ] P01 必需 gate 通过后自动进入 P02，无需人工审核。
 
 ## 12. 阻塞与停止规则
 
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
-- 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
+- 若实现当前目标需要调整 research contract、failure model、协议线性化点或数值语义：agent 记录 ADR、兼容性与证据，经 Checker 复核后继续；只有 materially 超出用户授权研究目标时才停止请求决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
 - 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
@@ -1189,16 +1212,16 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 使用 miyabi-development skill 执行 P01。
 
 仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
-规划基线：codex/fs-diloco-miyabi @ 011e180980e90c500bcd479a594ba47e507bb5d1
+规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
 目标分支：codex/duraloco-p01-protocol-v2
-阶段计划：plans/duraloco/codex/02_P01_PROTOCOL_V2_SCHEMAS_AND_VALIDATION.md
-共同契约：plans/duraloco/codex/00_CODEX_LOOP_OPERATING_CONTRACT.md
+阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/02_P01_PROTOCOL_V2_SCHEMAS_AND_VALIDATION.md
+共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 
 按阶段文件中的 Loop 顺序工作。每个 Loop 都要先建立失败测试或可执行规范，再做最小实现，随后运行分层验证和独立 checker。持续更新 plans/duraloco/STATE.yaml；不要自动合并 main；不要在 Miyabi 登录节点运行 pytest、torch/transformers/datasets 导入、训练、mpirun 或其他 runtime 工作。
 
-结束时只在全部 gate 有证据时标记 ready_to_merge；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
+结束时在全部必需 gate 有证据且 Checker 通过时标记 completed，并按依赖图自动启动下一个可执行 goal/phase，不等待用户审核；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
 ```
 
 ## 15. 参考输入
@@ -1217,14 +1240,16 @@ status: "planned"
 date: "2026-07-10"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
 planning_basis_branch: "codex/fs-diloco-miyabi"
-planning_basis_commit: "011e180980e90c500bcd479a594ba47e507bb5d1"
+planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
 target_branch: "codex/duraloco-p02-reference-model"
 depends_on:
   - "P01"
 required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
-human_approval_gates:
-  - "改变 outer optimizer 数学、quorum selection 或 staleness weighting 的参考语义时必须审批。"
+automatic_progression: true
+agent_decision_gates:
+  - "outer optimizer 数学、quorum selection 或 staleness weighting 的参考语义调整由 agent 记录 ADR 和 oracle 证据，经独立 Checker 复核。"
+human_approval_gates: []
 ---
 
 # P02 — 确定性参考模拟器与 In-Memory Backend
@@ -1237,7 +1262,7 @@ human_approval_gates:
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
-> 计划基于 `codex/fs-diloco-miyabi` 的 `011e180980e90c500bcd479a594ba47e507bb5d1` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
+> 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
 ## 1. 阶段使命
 
@@ -1254,7 +1279,7 @@ human_approval_gates:
 ## 2. 前置条件
 
 - [ ] P01 schema、identity 与 validator 已冻结；
-- [ ] P00 numeric contract 已批准；
+- [ ] P00 numeric contract 已冻结并通过独立 Checker；
 - [ ] 确定 reference compute dtype、rounding 和 proposal ordering。
 
 ## 3. 范围
@@ -1488,14 +1513,15 @@ tests/reference/
 
 Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在原阶段分支修复并重新提交验证。
 
-## 11. 人工审批门
+## 11. 自动推进与 Agent 决策门
 
-- [ ] 改变 outer optimizer 数学、quorum selection 或 staleness weighting 的参考语义时必须审批。
+- [ ] 参考语义调整由 agent 记录 ADR、golden trace 和兼容性影响，经 Checker 复核后生效。
+- [ ] P02 必需 gate 通过后自动进入 P03，无需人工审核。
 
 ## 12. 阻塞与停止规则
 
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
-- 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
+- 若实现当前目标需要调整 research contract、failure model、协议线性化点或数值语义：agent 记录 ADR 和 oracle 证据，经 Checker 复核后继续；只有 materially 超出用户授权研究目标时才停止请求决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
 - 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
@@ -1510,16 +1536,16 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 使用 miyabi-development skill 执行 P02。
 
 仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
-规划基线：codex/fs-diloco-miyabi @ 011e180980e90c500bcd479a594ba47e507bb5d1
+规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
 目标分支：codex/duraloco-p02-reference-model
-阶段计划：plans/duraloco/codex/03_P02_REFERENCE_SIMULATOR_AND_IN_MEMORY_BACKEND.md
-共同契约：plans/duraloco/codex/00_CODEX_LOOP_OPERATING_CONTRACT.md
+阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/03_P02_REFERENCE_SIMULATOR_AND_IN_MEMORY_BACKEND.md
+共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 
 按阶段文件中的 Loop 顺序工作。每个 Loop 都要先建立失败测试或可执行规范，再做最小实现，随后运行分层验证和独立 checker。持续更新 plans/duraloco/STATE.yaml；不要自动合并 main；不要在 Miyabi 登录节点运行 pytest、torch/transformers/datasets 导入、训练、mpirun 或其他 runtime 工作。
 
-结束时只在全部 gate 有证据时标记 ready_to_merge；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
+结束时在全部必需 gate 有证据且 Checker 通过时标记 completed，并按依赖图自动启动下一个可执行 goal/phase，不等待用户审核；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
 ```
 
 ## 15. 参考输入
@@ -1538,14 +1564,16 @@ status: "planned"
 date: "2026-07-10"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
 planning_basis_branch: "codex/fs-diloco-miyabi"
-planning_basis_commit: "011e180980e90c500bcd479a594ba47e507bb5d1"
+planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
 target_branch: "codex/duraloco-p03-posix-storage"
 depends_on:
   - "P02"
 required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
-human_approval_gates:
-  - "若 Lustre 实测无法支持计划中的 CAS/locking 语义，必须审批替代设计（single-writer namespace、external lock service 或 head sharding）。"
+automatic_progression: true
+agent_decision_gates:
+  - "若 Lustre 实测无法支持计划中的 CAS/locking 语义，agent 基于 contract evidence 选择最小替代设计，记录 ADR，经独立 Checker 复核。"
+human_approval_gates: []
 ---
 
 # P03 — 语义化 Storage API 与 POSIX/Lustre Contract
@@ -1558,7 +1586,7 @@ human_approval_gates:
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
-> 计划基于 `codex/fs-diloco-miyabi` 的 `011e180980e90c500bcd479a594ba47e507bb5d1` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
+> 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
 ## 1. 阶段使命
 
@@ -1819,14 +1847,15 @@ scripts/miyabi/
 
 Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在原阶段分支修复并重新提交验证。
 
-## 11. 人工审批门
+## 11. 自动推进与 Agent 决策门
 
-- [ ] 若 Lustre 实测无法支持计划中的 CAS/locking 语义，必须审批替代设计（single-writer namespace、external lock service 或 head sharding）。
+- [ ] 若 Lustre 无法支持原 CAS/locking 语义，agent 在 single-writer namespace、external lock service 或 head sharding 中选择有证据的最小可逆替代方案，写入 ADR，经 Checker 复核后继续。
+- [ ] P03 必需 gate 通过后自动进入 P04，无需人工审核。
 
 ## 12. 阻塞与停止规则
 
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
-- 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
+- 若实现当前目标需要调整 research contract、failure model、协议线性化点或数值语义：agent 记录 ADR、contract evidence 和兼容性影响，经 Checker 复核后继续；只有 materially 超出用户授权研究目标时才停止请求决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
 - 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
@@ -1841,16 +1870,16 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 使用 miyabi-development skill 执行 P03。
 
 仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
-规划基线：codex/fs-diloco-miyabi @ 011e180980e90c500bcd479a594ba47e507bb5d1
+规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
 目标分支：codex/duraloco-p03-posix-storage
-阶段计划：plans/duraloco/codex/04_P03_STORAGE_ABSTRACTION_AND_POSIX_LUSTRE_CONTRACT.md
-共同契约：plans/duraloco/codex/00_CODEX_LOOP_OPERATING_CONTRACT.md
+阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/04_P03_STORAGE_ABSTRACTION_AND_POSIX_LUSTRE_CONTRACT.md
+共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 
 按阶段文件中的 Loop 顺序工作。每个 Loop 都要先建立失败测试或可执行规范，再做最小实现，随后运行分层验证和独立 checker。持续更新 plans/duraloco/STATE.yaml；不要自动合并 main；不要在 Miyabi 登录节点运行 pytest、torch/transformers/datasets 导入、训练、mpirun 或其他 runtime 工作。
 
-结束时只在全部 gate 有证据时标记 ready_to_merge；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
+结束时在全部必需 gate 有证据且 Checker 通过时标记 completed，并按依赖图自动启动下一个可执行 goal/phase，不等待用户审核；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
 ```
 
 ## 15. 参考输入
@@ -1869,14 +1898,16 @@ status: "planned"
 date: "2026-07-10"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
 planning_basis_branch: "codex/fs-diloco-miyabi"
-planning_basis_commit: "011e180980e90c500bcd479a594ba47e507bb5d1"
+planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
 target_branch: "codex/duraloco-p04-transaction-log"
 depends_on:
   - "P03"
 required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
-human_approval_gates:
-  - "确认 single global head 作为初版唯一线性化点；改变为多 head/分片事务需另行审批。"
+automatic_progression: true
+agent_decision_gates:
+  - "初版默认 single global head；如证据要求多 head/分片事务，agent 记录 ADR、reference proof 和迁移影响，经独立 Checker 复核。"
+human_approval_gates: []
 ---
 
 # P04 — Transactional Fragment Log 与 Prefix Recovery
@@ -1889,7 +1920,7 @@ human_approval_gates:
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
-> 计划基于 `codex/fs-diloco-miyabi` 的 `011e180980e90c500bcd479a594ba47e507bb5d1` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
+> 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
 ## 1. 阶段使命
 
@@ -1908,7 +1939,7 @@ human_approval_gates:
 - [ ] P03 CAS contract 在目标 backend 通过；
 - [ ] P02 reference state machine 和 optimizer oracle 通过；
 - [ ] P01 schemas 已冻结；
-- [ ] single global head 决策获批。
+- [ ] single global head 决策已记录并通过独立 Checker；
 
 ## 3. 范围
 
@@ -2158,14 +2189,15 @@ tests/log/
 
 Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在原阶段分支修复并重新提交验证。
 
-## 11. 人工审批门
+## 11. 自动推进与 Agent 决策门
 
-- [ ] 确认 single global head 作为初版唯一线性化点；改变为多 head/分片事务需另行审批。
+- [ ] 初版 single global head 由 agent 按 P02/P03 evidence 冻结；如需多 head/分片事务，必须有 ADR、reference proof 和迁移计划并通过 Checker。
+- [ ] P04 必需 gate 通过后自动进入 P05，无需人工审核。
 
 ## 12. 阻塞与停止规则
 
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
-- 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
+- 若实现当前目标需要调整 research contract、failure model、协议线性化点或数值语义：agent 记录 ADR、proof obligation 和兼容性影响，经 Checker 复核后继续；只有 materially 超出用户授权研究目标时才停止请求决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
 - 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
@@ -2180,16 +2212,16 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 使用 miyabi-development skill 执行 P04。
 
 仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
-规划基线：codex/fs-diloco-miyabi @ 011e180980e90c500bcd479a594ba47e507bb5d1
+规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
 目标分支：codex/duraloco-p04-transaction-log
-阶段计划：plans/duraloco/codex/05_P04_TRANSACTIONAL_FRAGMENT_LOG_AND_PREFIX_RECOVERY.md
-共同契约：plans/duraloco/codex/00_CODEX_LOOP_OPERATING_CONTRACT.md
+阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/05_P04_TRANSACTIONAL_FRAGMENT_LOG_AND_PREFIX_RECOVERY.md
+共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 
 按阶段文件中的 Loop 顺序工作。每个 Loop 都要先建立失败测试或可执行规范，再做最小实现，随后运行分层验证和独立 checker。持续更新 plans/duraloco/STATE.yaml；不要自动合并 main；不要在 Miyabi 登录节点运行 pytest、torch/transformers/datasets 导入、训练、mpirun 或其他 runtime 工作。
 
-结束时只在全部 gate 有证据时标记 ready_to_merge；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
+结束时在全部必需 gate 有证据且 Checker 通过时标记 completed，并按依赖图自动启动下一个可执行 goal/phase，不等待用户审核；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
 ```
 
 ## 15. 参考输入
@@ -2208,14 +2240,16 @@ status: "planned"
 date: "2026-07-10"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
 planning_basis_branch: "codex/fs-diloco-miyabi"
-planning_basis_commit: "011e180980e90c500bcd479a594ba47e507bb5d1"
+planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
 target_branch: "codex/duraloco-p05-syncer-failover"
 depends_on:
   - "P04"
 required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
+automatic_progression: true
+agent_decision_gates:
+  - "v2 syncer 默认写路径在兼容性、迁移、1/2-node gates 和独立 Checker 通过后由 agent 自动 promotion。"
 human_approval_gates:
-  - "将 v2 syncer 设为默认写路径前需要人工批准；"
   - "任何 destructive migration/旧 run conversion 需要批准。"
 ---
 
@@ -2229,7 +2263,7 @@ human_approval_gates:
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
-> 计划基于 `codex/fs-diloco-miyabi` 的 `011e180980e90c500bcd479a594ba47e507bb5d1` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
+> 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
 ## 1. 阶段使命
 
@@ -2274,7 +2308,7 @@ syncer 不再是持有不可恢复本地状态的单点；在进程崩溃或 lea
 ## 4. 预期仓库变更
 
 ```text
-fs_diloco/syncer/
+fs_diloco/syncer_v2/
   __init__.py
   runtime.py
   ingest.py
@@ -2287,7 +2321,7 @@ fs_diloco/coordination/
   fencing.py
   clock.py
 fs_diloco/legacy/
-  syncer_v1.py  # 或保留原模块并加 adapter
+  syncer_v1.py
 tests/syncer_v2/
   test_ingest_quarantine.py
   test_commit_pipeline.py
@@ -2297,6 +2331,8 @@ tests/syncer_v2/
 scripts/chaos/
   run_dual_syncer.py
 ```
+
+不得同时保留 `fs_diloco/syncer.py` 和创建同名 `fs_diloco/syncer/` package。现有 `fs_diloco.syncer:main` entrypoint 必须保持兼容：P05 使用无冲突的 `syncer_v2` package，并由现有 `syncer.py` 在明确 promotion gate 后作为 dispatcher；在此之前默认仍走 legacy v1。
 
 ## 5. 需要先冻结的设计决策
 
@@ -2455,9 +2491,10 @@ scripts/chaos/
 - [ ] P05-A04：旧 epoch commit 全部被拒；
 - [ ] P05-A05：每个 failpoint 后无永久 selected 更新；
 - [ ] P05-A06：stop reason 与 terminal state 可重启恢复；
-- [ ] P05-A07：legacy v1 默认路径在未批准前保持可用；
+- [ ] P05-A07：legacy v1 默认路径在 v2 promotion gate 通过前保持可用；
 - [ ] P05-A08：Miyabi 2-node takeover 有 run artifact；
 - [ ] P05-A09：Checker 审查 lease/fencing 的 clock assumptions。
+- [ ] P05-A10：`fs-diloco-syncer` 和 `python -m fs_diloco.syncer` 的 legacy/default 行为及 v2 显式选择均通过入口兼容测试。
 
 ## 9. 验证矩阵
 
@@ -2491,15 +2528,16 @@ scripts/chaos/
 
 Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在原阶段分支修复并重新提交验证。
 
-## 11. 人工审批门
+## 11. 自动推进与外部风险审批门
 
-- [ ] 将 v2 syncer 设为默认写路径前需要人工批准；
+- [ ] v2 syncer 的兼容性、迁移、1/2-node 和 Checker gates 通过后由 agent 自动设为默认写路径，无需人工审核；
 - [ ] 任何 destructive migration/旧 run conversion 需要批准。
+- [ ] P05 必需 gate 通过后自动进入 P06；未获 destructive migration 批准时保留旧 run，不阻止新 namespace 的后续阶段。
 
 ## 12. 阻塞与停止规则
 
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
-- 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
+- 若实现当前目标需要调整 research contract、failure model、协议线性化点或数值语义：agent 记录 ADR、migration impact 和 failover evidence，经 Checker 复核后继续；只有 materially 超出用户授权研究目标或需要 destructive migration 时才停止请求决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
 - 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
@@ -2514,16 +2552,16 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 使用 miyabi-development skill 执行 P05。
 
 仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
-规划基线：codex/fs-diloco-miyabi @ 011e180980e90c500bcd479a594ba47e507bb5d1
+规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
 目标分支：codex/duraloco-p05-syncer-failover
-阶段计划：plans/duraloco/codex/06_P05_SYNCER_LEASE_FENCING_AND_FAILOVER.md
-共同契约：plans/duraloco/codex/00_CODEX_LOOP_OPERATING_CONTRACT.md
+阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/06_P05_SYNCER_LEASE_FENCING_AND_FAILOVER.md
+共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 
 按阶段文件中的 Loop 顺序工作。每个 Loop 都要先建立失败测试或可执行规范，再做最小实现，随后运行分层验证和独立 checker。持续更新 plans/duraloco/STATE.yaml；不要自动合并 main；不要在 Miyabi 登录节点运行 pytest、torch/transformers/datasets 导入、训练、mpirun 或其他 runtime 工作。
 
-结束时只在全部 gate 有证据时标记 ready_to_merge；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
+结束时在全部必需 gate 有证据且 Checker 通过时标记 completed，并按依赖图自动启动下一个可执行 goal/phase，不等待用户审核；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
 ```
 
 ## 15. 参考输入
@@ -2542,15 +2580,17 @@ status: "planned"
 date: "2026-07-10"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
 planning_basis_branch: "codex/fs-diloco-miyabi"
-planning_basis_commit: "011e180980e90c500bcd479a594ba47e507bb5d1"
+planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
 target_branch: "codex/duraloco-p06-learner-protocol"
 depends_on:
   - "P05"
 required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
-human_approval_gates:
-  - "决定 inner optimizer adoption policy 的默认值前需审批；"
-  - "将 v2 learner/syncer 作为默认训练路径前需审批。"
+automatic_progression: true
+agent_decision_gates:
+  - "inner optimizer adoption policy 默认值由 agent 基于 numeric/recovery evidence 决定并经独立 Checker 复核；"
+  - "v2 learner/syncer 默认训练路径在兼容性和 1/2-node gates 通过后由 agent 自动 promotion。"
+human_approval_gates: []
 ---
 
 # P06 — Learner Contribution Intervals、Adoption 与 Warm Recovery
@@ -2563,7 +2603,7 @@ human_approval_gates:
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
-> 计划基于 `codex/fs-diloco-miyabi` 的 `011e180980e90c500bcd479a594ba47e507bb5d1` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
+> 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
 ## 1. 阶段使命
 
@@ -2610,7 +2650,7 @@ DuraLoCo 的 selected proposal 表示一段唯一 local work，而不是可能�
 ## 4. 预期仓库变更
 
 ```text
-fs_diloco/learner/
+fs_diloco/learner_v2/
   __init__.py
   runtime.py
   session.py
@@ -2630,6 +2670,8 @@ tests/learner_v2/
   test_stop_priority.py
   test_inner_optimizer_policy.py
 ```
+
+不得同时保留 `fs_diloco/learner.py` 和创建同名 `fs_diloco/learner/` package。现有 `fs_diloco.learner:main` entrypoint 必须保持兼容：P06 使用无冲突的 `learner_v2` package，并由现有 `learner.py` 在明确 promotion gate 后作为 dispatcher；在此之前默认仍走 legacy v1。
 
 ## 5. 需要先冻结的设计决策
 
@@ -2791,6 +2833,7 @@ tests/learner_v2/
 - [ ] P06-A08：fragment_count=1 与 full/reference 在 numeric contract 内一致；
 - [ ] P06-A09：Miyabi 1-node real path ≤10 step finite；
 - [ ] P06-A10：2-node learner+syncer v2 E2E。
+- [ ] P06-A11：`fs-diloco-learner` 和 `python -m fs_diloco.learner` 的 legacy/default 行为及 v2 显式选择均通过入口兼容测试。
 
 ## 9. 验证矩阵
 
@@ -2823,15 +2866,16 @@ tests/learner_v2/
 
 Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在原阶段分支修复并重新提交验证。
 
-## 11. 人工审批门
+## 11. 自动推进与 Agent 决策门
 
-- [ ] 决定 inner optimizer adoption policy 的默认值前需审批；
-- [ ] 将 v2 learner/syncer 作为默认训练路径前需审批。
+- [ ] inner optimizer adoption policy 默认值由 agent 按 numeric/recovery evidence 决定，记录 ADR 和 manifest，经 Checker 复核后生效；
+- [ ] v2 learner/syncer 兼容性和 1/2-node gates 通过后由 agent 自动设为默认训练路径；
+- [ ] P06 必需 gate 通过后，按依赖图自动启动 P07、P08、P09；无需人工审核。
 
 ## 12. 阻塞与停止规则
 
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
-- 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
+- 若实现当前目标需要调整 research contract、failure model、协议线性化点或数值语义：agent 记录 ADR、numeric/recovery evidence 和兼容性影响，经 Checker 复核后继续；只有 materially 超出用户授权研究目标时才停止请求决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
 - 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
@@ -2846,16 +2890,16 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 使用 miyabi-development skill 执行 P06。
 
 仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
-规划基线：codex/fs-diloco-miyabi @ 011e180980e90c500bcd479a594ba47e507bb5d1
+规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
 目标分支：codex/duraloco-p06-learner-protocol
-阶段计划：plans/duraloco/codex/07_P06_LEARNER_INTERVALS_ADOPTION_AND_RECOVERY.md
-共同契约：plans/duraloco/codex/00_CODEX_LOOP_OPERATING_CONTRACT.md
+阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/07_P06_LEARNER_INTERVALS_ADOPTION_AND_RECOVERY.md
+共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 
 按阶段文件中的 Loop 顺序工作。每个 Loop 都要先建立失败测试或可执行规范，再做最小实现，随后运行分层验证和独立 checker。持续更新 plans/duraloco/STATE.yaml；不要自动合并 main；不要在 Miyabi 登录节点运行 pytest、torch/transformers/datasets 导入、训练、mpirun 或其他 runtime 工作。
 
-结束时只在全部 gate 有证据时标记 ready_to_merge；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
+结束时在全部必需 gate 有证据且 Checker 通过时标记 completed，并按依赖图自动启动下一个可执行 goal/phase，不等待用户审核；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
 ```
 
 ## 15. 参考输入
@@ -2874,15 +2918,17 @@ status: "planned"
 date: "2026-07-10"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
 planning_basis_branch: "codex/fs-diloco-miyabi"
-planning_basis_commit: "011e180980e90c500bcd479a594ba47e507bb5d1"
+planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
 target_branch: "codex/duraloco-p07-lifecycle"
 depends_on:
   - "P06"
 required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
+automatic_progression: true
+agent_decision_gates:
+  - "exact learner capsule 的存储预算/频率默认值由 agent 在自主资源范围和有界增长证据内决定，经独立 Checker 复核。"
 human_approval_gates:
   - "启用任何非 dry-run GC 前必须人工批准；"
-  - "exact learner capsule 的存储预算/频率默认值需批准。"
 ---
 
 # P07 — Compaction、Reachability GC、Ack 与 Learner Capsules
@@ -2895,7 +2941,7 @@ human_approval_gates:
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
-> 计划基于 `codex/fs-diloco-miyabi` 的 `011e180980e90c500bcd479a594ba47e507bb5d1` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
+> 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
 ## 1. 阶段使命
 
@@ -2948,10 +2994,10 @@ fs_diloco/log/
   gc.py
   pins.py
   acknowledgements.py
-fs_diloco/learner/
+fs_diloco/learner_v2/
   capsule.py
   exact_recovery.py
-fs_diloco/cli/
+fs_diloco/duraloco_cli/
   gc.py
   snapshot.py
   restore.py
@@ -2964,6 +3010,8 @@ tests/lifecycle/
   test_capsule_crash.py
   test_bounded_growth.py
 ```
+
+`fs_diloco/cli.py` 保持现有 dispatcher 兼容；不得创建同名 `fs_diloco/cli/` package。新增 lifecycle 命令放入 `duraloco_cli`，再通过显式 project entrypoint 或现有 dispatcher 子命令暴露。
 
 ## 5. 需要先冻结的设计决策
 
@@ -3154,6 +3202,7 @@ tests/lifecycle/
 - [ ] P07-A07：warm/exact recovery 语义和成本分开报告；
 - [ ] P07-A08：accelerated soak 显示有界 steady-state；
 - [ ] P07-A09：Checker 独立审查 reachability roots。
+- [ ] P07-A10：现有 `fs_diloco.cli` dispatcher 未被 package shadow，新增 lifecycle CLI 的 entrypoint/import 兼容测试通过。
 
 ## 9. 验证矩阵
 
@@ -3162,7 +3211,7 @@ tests/lifecycle/
 | 本地 | lifecycle unit、concurrent stress、accelerated soak。 |
 | Miyabi 1-node | snapshot/restore/capsule real filesystem + tiny model。 |
 | Miyabi 2-node | GC 与 learner/syncer/restore 并发；仅隔离 prefix，GC dry-run 默认。 |
-| 长时间/9-node | 9-node 与不超过 2 小时的作业由 agent 自主决定；正式 24/72h soak 延后 P12，因超过 2 小时需批准。 |
+| 长时间/9-node | 9-node 与不超过 2 小时的作业由 agent 自主决定；累计 24/72h soak 延后 P12，以可恢复的 ≤2h segments 自动续接；只有单次连续 >2h 才需外部资源批准。 |
 
 ## 10. Maker–Checker 交接
 
@@ -3186,15 +3235,16 @@ tests/lifecycle/
 
 Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在原阶段分支修复并重新提交验证。
 
-## 11. 人工审批门
+## 11. 自动推进与外部风险审批门
 
 - [ ] 启用任何非 dry-run GC 前必须人工批准；
-- [ ] exact learner capsule 的存储预算/频率默认值需批准。
+- [ ] exact learner capsule 的存储预算/频率默认值由 agent 在自主资源范围和有界增长证据内决定，经 Checker 复核后生效；
+- [ ] P07 必需 correctness gates 可用 GC dry-run 证据完成；未获 destructive apply 批准不阻止 phase `completed`。P08/P09 也完成并通过集成 Checker 后自动进入 P10。
 
 ## 12. 阻塞与停止规则
 
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
-- 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
+- 若实现当前目标需要调整 research contract、failure model、协议线性化点或数值语义：agent 记录 ADR、reachability proof 和恢复影响，经 Checker 复核后继续；只有 materially 超出用户授权研究目标或需要 destructive apply 时才停止请求决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
 - 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
@@ -3209,16 +3259,16 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 使用 miyabi-development skill 执行 P07。
 
 仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
-规划基线：codex/fs-diloco-miyabi @ 011e180980e90c500bcd479a594ba47e507bb5d1
+规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
 目标分支：codex/duraloco-p07-lifecycle
-阶段计划：plans/duraloco/codex/08_P07_COMPACTION_GC_ACKS_AND_LEARNER_CAPSULES.md
-共同契约：plans/duraloco/codex/00_CODEX_LOOP_OPERATING_CONTRACT.md
+阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/08_P07_COMPACTION_GC_ACKS_AND_LEARNER_CAPSULES.md
+共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 
 按阶段文件中的 Loop 顺序工作。每个 Loop 都要先建立失败测试或可执行规范，再做最小实现，随后运行分层验证和独立 checker。持续更新 plans/duraloco/STATE.yaml；不要自动合并 main；不要在 Miyabi 登录节点运行 pytest、torch/transformers/datasets 导入、训练、mpirun 或其他 runtime 工作。
 
-结束时只在全部 gate 有证据时标记 ready_to_merge；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
+结束时在全部必需 gate 有证据且 Checker 通过时标记 completed，并按依赖图自动启动下一个可执行 goal/phase，不等待用户审核；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
 ```
 
 ## 15. 参考输入
@@ -3237,14 +3287,16 @@ status: "planned"
 date: "2026-07-10"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
 planning_basis_branch: "codex/fs-diloco-miyabi"
-planning_basis_commit: "011e180980e90c500bcd479a594ba47e507bb5d1"
+planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
 target_branch: "codex/duraloco-p08-performance-core"
 depends_on:
   - "P06"
 required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
-human_approval_gates:
-  - "引入 CUDA/C++ extension、改变 tensor layout 或默认 precision 前需要审批。"
+automatic_progression: true
+agent_decision_gates:
+  - "引入 CUDA/C++ extension、改变 tensor layout 或默认 precision 由 agent 基于 profile、numeric equivalence 和回退方案决定，经独立 Checker 复核。"
+human_approval_gates: []
 ---
 
 # P08 — Direct Fragment I/O、Streaming Reducer 与 Telemetry
@@ -3257,7 +3309,7 @@ human_approval_gates:
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
-> 计划基于 `codex/fs-diloco-miyabi` 的 `011e180980e90c500bcd479a594ba47e507bb5d1` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
+> 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
 ## 1. 阶段使命
 
@@ -3517,14 +3569,15 @@ tests/performance_core/
 
 Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在原阶段分支修复并重新提交验证。
 
-## 11. 人工审批门
+## 11. 自动推进与 Agent 决策门
 
-- [ ] 引入 CUDA/C++ extension、改变 tensor layout 或默认 precision 前需要审批。
+- [ ] CUDA/C++ extension、tensor layout 或默认 precision 变更由 agent 依据 profile、numeric equivalence、portable fallback 和回滚证据决定，经 Checker 复核后生效。
+- [ ] P08 必需 gate 通过后标记 `completed`；等待依赖图中的 P07/P09 完成并通过集成 Checker 后自动进入 P10，不等待人工审核。
 
 ## 12. 阻塞与停止规则
 
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
-- 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
+- 若实现当前目标需要调整 research contract、failure model、协议线性化点或数值语义：agent 记录 ADR、profile/numeric evidence 和 fallback，经 Checker 复核后继续；只有 materially 超出用户授权研究目标时才停止请求决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
 - 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
@@ -3539,16 +3592,16 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 使用 miyabi-development skill 执行 P08。
 
 仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
-规划基线：codex/fs-diloco-miyabi @ 011e180980e90c500bcd479a594ba47e507bb5d1
+规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
 目标分支：codex/duraloco-p08-performance-core
-阶段计划：plans/duraloco/codex/09_P08_DIRECT_FRAGMENT_IO_STREAMING_REDUCER_AND_TELEMETRY.md
-共同契约：plans/duraloco/codex/00_CODEX_LOOP_OPERATING_CONTRACT.md
+阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/09_P08_DIRECT_FRAGMENT_IO_STREAMING_REDUCER_AND_TELEMETRY.md
+共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 
 按阶段文件中的 Loop 顺序工作。每个 Loop 都要先建立失败测试或可执行规范，再做最小实现，随后运行分层验证和独立 checker。持续更新 plans/duraloco/STATE.yaml；不要自动合并 main；不要在 Miyabi 登录节点运行 pytest、torch/transformers/datasets 导入、训练、mpirun 或其他 runtime 工作。
 
-结束时只在全部 gate 有证据时标记 ready_to_merge；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
+结束时在全部必需 gate 有证据且 Checker 通过时标记 completed，并按依赖图自动启动下一个可执行 goal/phase，不等待用户审核；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
 ```
 
 ## 15. 参考输入
@@ -3567,15 +3620,18 @@ status: "planned"
 date: "2026-07-10"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
 planning_basis_branch: "codex/fs-diloco-miyabi"
-planning_basis_commit: "011e180980e90c500bcd479a594ba47e507bb5d1"
+planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
 target_branch: "codex/duraloco-p09-object-store"
 depends_on:
   - "P06"
 required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
+automatic_progression: true
+agent_decision_gates:
+  - "对象存储依赖策略、SDK/version 和 lockfile 由 agent 记录 ADR，经独立 Checker 复核。"
 human_approval_gates:
   - "真实 S3/GCS/Azure 运行、凭据使用、跨区域流量或付费资源必须审批；"
-  - "新增长期运行服务/端口前需审批。"
+  - "新增持久化/共享服务或对外暴露端口前需审批；job-owned、隔离且随测试退出的 MinIO/临时端口由 agent 自主使用。"
 ---
 
 # P09 — S3-Compatible Backend、MinIO 与 Hybrid Baseline
@@ -3588,7 +3644,7 @@ human_approval_gates:
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
-> 计划基于 `codex/fs-diloco-miyabi` 的 `011e180980e90c500bcd479a594ba47e507bb5d1` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
+> 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
 ## 1. 阶段使命
 
@@ -3605,7 +3661,7 @@ DuraLoCo 是 storage-native abstraction，而不是 Lustre 特例；同一 commi
 ## 2. 前置条件
 
 - [ ] P04 log API 完全 backend-neutral；
-- [ ] 对象存储依赖策略和 lockfile 已批准；
+- [ ] 对象存储依赖策略和 lockfile 已由 agent 决定、记录 ADR 并通过独立 Checker；
 - [ ] 本地/CI 可运行 MinIO 或提供替代 integration environment；
 - [ ] 秘密管理约定已写入 AGENTS。
 
@@ -3877,15 +3933,16 @@ tests/hybrid/
 
 Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在原阶段分支修复并重新提交验证。
 
-## 11. 人工审批门
+## 11. 自动推进与外部风险审批门
 
 - [ ] 真实 S3/GCS/Azure 运行、凭据使用、跨区域流量或付费资源必须审批；
-- [ ] 新增长期运行服务/端口前需审批。
+- [ ] 新增持久化/共享服务或对外暴露端口前需审批；job-owned、隔离且随测试退出的 MinIO/临时端口由 agent 自主使用。
+- [ ] MinIO/local conformance 和默认不执行的 public-cloud harness 足以完成本 phase 的必需 gate；未获公共云批准不阻止 phase `completed`。P07/P08 也完成并通过集成 Checker 后自动进入 P10。
 
 ## 12. 阻塞与停止规则
 
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
-- 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
+- 若实现当前目标需要调整 research contract、failure model、协议线性化点或数值语义：agent 记录 ADR、backend capability evidence 和兼容性影响，经 Checker 复核后继续；只有 materially 超出用户授权研究目标或涉及真实凭据/付费资源时才停止请求决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
 - 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
@@ -3900,16 +3957,16 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 使用 miyabi-development skill 执行 P09。
 
 仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
-规划基线：codex/fs-diloco-miyabi @ 011e180980e90c500bcd479a594ba47e507bb5d1
+规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
 目标分支：codex/duraloco-p09-object-store
-阶段计划：plans/duraloco/codex/10_P09_OBJECT_STORE_BACKEND_AND_HYBRID_BASELINE.md
-共同契约：plans/duraloco/codex/00_CODEX_LOOP_OPERATING_CONTRACT.md
+阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/10_P09_OBJECT_STORE_BACKEND_AND_HYBRID_BASELINE.md
+共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 
 按阶段文件中的 Loop 顺序工作。每个 Loop 都要先建立失败测试或可执行规范，再做最小实现，随后运行分层验证和独立 checker。持续更新 plans/duraloco/STATE.yaml；不要自动合并 main；不要在 Miyabi 登录节点运行 pytest、torch/transformers/datasets 导入、训练、mpirun 或其他 runtime 工作。
 
-结束时只在全部 gate 有证据时标记 ready_to_merge；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
+结束时在全部必需 gate 有证据且 Checker 通过时标记 completed，并按依赖图自动启动下一个可执行 goal/phase，不等待用户审核；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
 ```
 
 ## 15. 参考输入
@@ -3928,7 +3985,7 @@ status: "planned"
 date: "2026-07-10"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
 planning_basis_branch: "codex/fs-diloco-miyabi"
-planning_basis_commit: "011e180980e90c500bcd479a594ba47e507bb5d1"
+planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
 target_branch: "codex/duraloco-p10-sacc"
 depends_on:
   - "P07"
@@ -3936,8 +3993,10 @@ depends_on:
   - "P09"
 required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
-human_approval_gates:
-  - "允许 controller 动态改变 local interval、quorum 或算法权重前必须批准；默认先 advisory/shadow mode。"
+automatic_progression: true
+agent_decision_gates:
+  - "controller 动态 action 必须先通过 advisory/shadow、guardrail、replay 和独立 Checker gates；通过后由 agent 自动 promotion。"
+human_approval_gates: []
 ---
 
 # P10 — Storage-Aware Commit Controller（SACC）与算法–系统协同
@@ -3950,7 +4009,7 @@ human_approval_gates:
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
-> 计划基于 `codex/fs-diloco-miyabi` 的 `011e180980e90c500bcd479a594ba47e507bb5d1` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
+> 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
 ## 1. 阶段使命
 
@@ -4157,7 +4216,7 @@ tests/controller/
 
 - [ ] cooldown/hysteresis；
 - [ ] 仅启用 grace/inflight/bundle 起步；
-- [ ] local interval/quorum 保持人工锁；
+- [ ] local interval/quorum 初始保持 policy lock，只有 shadow/guardrail/replay/Checker gates 通过后才由 agent 自动解锁；
 - [ ] 多 backend trace/small LM。
 
 **本循环验证。**
@@ -4205,7 +4264,7 @@ tests/controller/
 - [ ] P10-A04：fair selection 消除稳定 lexical bias且无长期饥饿；
 - [ ] P10-A05：eager/selected-only/bundling failure tests 通过；
 - [ ] P10-A06：cost/amplification 指标完整；
-- [ ] P10-A07：enforced 初版只启用获批 actions；
+- [ ] P10-A07：enforced 初版只启用通过 shadow/guardrail/replay/Checker gates 的 actions；
 - [ ] P10-A08：small-run fixed/shadow/enforced 对照完成；
 - [ ] P10-A09：Checker 审核 replay determinism、stability 和算法语义边界。
 
@@ -4241,14 +4300,15 @@ tests/controller/
 
 Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在原阶段分支修复并重新提交验证。
 
-## 11. 人工审批门
+## 11. 自动推进与 Agent 决策门
 
-- [ ] 允许 controller 动态改变 local interval、quorum 或算法权重前必须批准；默认先 advisory/shadow mode。
+- [ ] controller 动态改变 local interval、quorum 或算法权重前必须通过 advisory/shadow、guardrail、replay 和 Checker gates；通过后由 agent 自动 promotion。
+- [ ] P10 必需 gate 通过后自动进入 P11，无需人工审核。
 
 ## 12. 阻塞与停止规则
 
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
-- 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
+- 若实现当前目标需要调整 research contract、failure model、协议线性化点或数值语义：agent 记录 ADR、shadow/replay evidence 和 guardrail，经 Checker 复核后继续；只有 materially 超出用户授权研究目标时才停止请求决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
 - 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
@@ -4263,16 +4323,16 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 使用 miyabi-development skill 执行 P10。
 
 仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
-规划基线：codex/fs-diloco-miyabi @ 011e180980e90c500bcd479a594ba47e507bb5d1
+规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
 目标分支：codex/duraloco-p10-sacc
-阶段计划：plans/duraloco/codex/11_P10_SACC_AND_ALGORITHM_SYSTEM_CODESIGN.md
-共同契约：plans/duraloco/codex/00_CODEX_LOOP_OPERATING_CONTRACT.md
+阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/11_P10_SACC_AND_ALGORITHM_SYSTEM_CODESIGN.md
+共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 
 按阶段文件中的 Loop 顺序工作。每个 Loop 都要先建立失败测试或可执行规范，再做最小实现，随后运行分层验证和独立 checker。持续更新 plans/duraloco/STATE.yaml；不要自动合并 main；不要在 Miyabi 登录节点运行 pytest、torch/transformers/datasets 导入、训练、mpirun 或其他 runtime 工作。
 
-结束时只在全部 gate 有证据时标记 ready_to_merge；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
+结束时在全部必需 gate 有证据且 Checker 通过时标记 completed，并按依赖图自动启动下一个可执行 goal/phase，不等待用户审核；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
 ```
 
 ## 15. 参考输入
@@ -4291,12 +4351,15 @@ status: "planned"
 date: "2026-07-10"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
 planning_basis_branch: "codex/fs-diloco-miyabi"
-planning_basis_commit: "011e180980e90c500bcd479a594ba47e507bb5d1"
+planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
 target_branch: "codex/duraloco-p11-miyabi-acceptance"
 depends_on:
   - "P10"
 required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
+automatic_progression: true
+agent_decision_gates:
+  - "P00–P10 completed branches 按依赖图由 agent 集成并经独立 Checker 复核。"
 human_approval_gates:
   - "单个 Miyabi 作业超过 16 节点或 2 小时时必须批准；16 节点、2 小时以内（含 9 节点）由 agent 自主决定。"
   - "destructive GC 或作用于共享资源的真实故障操作必须批准。"
@@ -4312,7 +4375,7 @@ human_approval_gates:
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
-> 计划基于 `codex/fs-diloco-miyabi` 的 `011e180980e90c500bcd479a594ba47e507bb5d1` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
+> 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
 ## 1. 阶段使命
 
@@ -4329,7 +4392,7 @@ DuraLoCo 在目标 Lustre/PBS/GPU 环境中不仅通过模拟，还能在 8 lear
 ## 2. 前置条件
 
 - [ ] P00–P10 所有 correctness gates 通过；
-- [ ] feature branches 已按用户选择集成到 acceptance branch；
+- [ ] completed feature branches 已按依赖图自动集成到 acceptance branch，并通过集成 Checker；
 - [ ] Miyabi skill 已安装/可读；
 - [ ] 确认 group/project、shared root、cache paths、model/dataset availability；
 - [ ] 9-node 资源配置已确认不超过 `select=16`、`walltime=02:00:00` 的自主范围。
@@ -4399,7 +4462,7 @@ tests/test_acceptance_checker.py
 
 **先产生的失败证据或规范。**
 
-- [ ] 错误 commit、脏树、空 group、login host、重复 run root、混用 mpirun env。
+- [ ] 错误 commit、脏树、空 group、login host、重复 run root、缺失 module/interpreter 记录、混用 mpirun env。
 
 **实现任务。**
 
@@ -4407,6 +4470,7 @@ tests/test_acceptance_checker.py
 - [ ] 打印 roles/ranks/hosts；
 - [ ] timestamped run root；
 - [ ] shell trap；
+- [ ] 禁用 module pager，在作业 shell 记录 `module list` 和项目 Python 版本；非默认 module 使用精确版本显式加载；
 - [ ] static checker。
 
 **本循环验证。**
@@ -4608,15 +4672,16 @@ tests/test_acceptance_checker.py
 
 Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在原阶段分支修复并重新提交验证。
 
-## 11. 人工审批门
+## 11. 自动推进与外部风险审批门
 
 - [ ] 单个 Miyabi 作业超过 16 节点或 2 小时时必须获得明确批准；范围内作业（包括 9 节点）无需用户批准；
 - [ ] destructive GC 或作用于共享资源的真实故障操作必须批准。
+- [ ] P11 在自主资源范围和隔离 fault scope 内通过全部必需 gate 后自动进入 P12，无需人工审核；超限/破坏性动作可跳过并记录，不阻止有替代证据的安全工作继续。
 
 ## 12. 阻塞与停止规则
 
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
-- 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
+- 若实现当前目标需要调整 research contract、failure model、协议线性化点或数值语义：agent 记录 ADR、acceptance impact 和回滚方案，经 Checker 复核后继续；只有 materially 超出用户授权研究目标或涉及外部风险权限时才停止请求决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
 - 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
@@ -4631,16 +4696,16 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 使用 miyabi-development skill 执行 P11。
 
 仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
-规划基线：codex/fs-diloco-miyabi @ 011e180980e90c500bcd479a594ba47e507bb5d1
+规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
 目标分支：codex/duraloco-p11-miyabi-acceptance
-阶段计划：plans/duraloco/codex/12_P11_MIYABI_INTEGRATION_CHAOS_AND_9NODE_ACCEPTANCE.md
-共同契约：plans/duraloco/codex/00_CODEX_LOOP_OPERATING_CONTRACT.md
+阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/12_P11_MIYABI_INTEGRATION_CHAOS_AND_9NODE_ACCEPTANCE.md
+共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 
 按阶段文件中的 Loop 顺序工作。每个 Loop 都要先建立失败测试或可执行规范，再做最小实现，随后运行分层验证和独立 checker。持续更新 plans/duraloco/STATE.yaml；不要自动合并 main；不要在 Miyabi 登录节点运行 pytest、torch/transformers/datasets 导入、训练、mpirun 或其他 runtime 工作。
 
-结束时只在全部 gate 有证据时标记 ready_to_merge；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
+结束时在全部必需 gate 有证据且 Checker 通过时标记 completed，并按依赖图自动启动下一个可执行 goal/phase，不等待用户审核；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
 ```
 
 ## 15. 参考输入
@@ -4659,12 +4724,15 @@ status: "planned"
 date: "2026-07-10"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
 planning_basis_branch: "codex/fs-diloco-miyabi"
-planning_basis_commit: "011e180980e90c500bcd479a594ba47e507bb5d1"
+planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
 target_branch: "codex/duraloco-p12-evaluation"
 depends_on:
   - "P11"
 required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
+automatic_progression: true
+agent_decision_gates:
+  - "实验 registry、pre-registration、seed/stopping/exclusion policy 由 agent 冻结并经独立 Checker 复核；各 campaign 达标后自动推进。"
 human_approval_gates:
   - "单个 Miyabi 作业超过 16 节点或 2 小时，以及公共云实验，须先批准资源预算；范围内的 9-node 和 multi-seed 作业由 agent 自主决定。"
   - "发布 artifact 或公开数据前需审批。"
@@ -4680,7 +4748,7 @@ human_approval_gates:
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
-> 计划基于 `codex/fs-diloco-miyabi` 的 `011e180980e90c500bcd479a594ba47e507bb5d1` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
+> 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
 
 ## 1. 阶段使命
 
@@ -4815,7 +4883,7 @@ artifact/
 
 - [ ] 随机 fault tapes；
 - [ ] syncer/learner/catastrophic restart；
-- [ ] 24/72h soak（批准后）；
+- [ ] 累计 24/72h resumable segmented soak：每个 Miyabi 作业不超过 2 小时并由 agent 自动续接；只有要求单次连续 >2h 时才走外部资源审批；
 - [ ] POSIX/MinIO/云 backend。
 
 **本循环验证。**
@@ -5024,15 +5092,16 @@ artifact/
 
 Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在原阶段分支修复并重新提交验证。
 
-## 11. 人工审批门
+## 11. 自动推进与外部风险审批门
 
 - [ ] 单个 Miyabi 作业超过 16 节点或 2 小时，以及公共云实验，须先批准资源预算；范围内的 9-node 和 multi-seed 作业由 agent 自主决定；
 - [ ] 发布 artifact 或公开数据前需审批。
+- [ ] P12 内各 campaign/goal 在 registry gate 和 Checker 通过后自动推进；全部必需 evidence gates 通过后自动标记 P12 `completed`，无需人工完成审核。未获发布批准时只保留私有 artifact，不影响研究阶段完成。
 
 ## 12. 阻塞与停止规则
 
 - 同一根因连续三次修复后仍未通过同一 gate：写入 `BLOCKERS.md` 并停止扩大改动。
-- 需要改变 research contract、failure model、协议线性化点或数值语义：停止并请求人工决策。
+- 若实现当前目标需要调整 research contract、failure model、协议线性化点或数值语义：agent 记录 preregistration amendment、影响分析和 Checker verdict 后继续；只有 materially 超出用户授权研究目标或涉及外部风险权限时才停止请求决策。
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
 - 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点和 multi-seed）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
@@ -5047,16 +5116,16 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 使用 miyabi-development skill 执行 P12。
 
 仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
-规划基线：codex/fs-diloco-miyabi @ 011e180980e90c500bcd479a594ba47e507bb5d1
+规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
 目标分支：codex/duraloco-p12-evaluation
-阶段计划：plans/duraloco/codex/13_P12_FORMAL_EXPERIMENTS_ARTIFACT_AND_PAPER_EVIDENCE.md
-共同契约：plans/duraloco/codex/00_CODEX_LOOP_OPERATING_CONTRACT.md
+阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/13_P12_FORMAL_EXPERIMENTS_ARTIFACT_AND_PAPER_EVIDENCE.md
+共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 
 按阶段文件中的 Loop 顺序工作。每个 Loop 都要先建立失败测试或可执行规范，再做最小实现，随后运行分层验证和独立 checker。持续更新 plans/duraloco/STATE.yaml；不要自动合并 main；不要在 Miyabi 登录节点运行 pytest、torch/transformers/datasets 导入、训练、mpirun 或其他 runtime 工作。
 
-结束时只在全部 gate 有证据时标记 ready_to_merge；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
+结束时在全部必需 gate 有证据且 Checker 通过时标记 completed，并按依赖图自动启动下一个可执行 goal/phase，不等待用户审核；否则输出 BLOCKED，并给出最小复现、已尝试方案和下一项决策。
 ```
 
 ## 15. 参考输入

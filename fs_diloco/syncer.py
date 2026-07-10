@@ -41,7 +41,11 @@ from .param_index import (
     validate_compatible_index,
 )
 from .paths import RunPaths, prepare_run_dirs
-from .retention import cleanup_global_artifacts
+from .retention import (
+    cleanup_all_learner_update_artifacts,
+    cleanup_db_dumps,
+    cleanup_syncer_model_artifacts,
+)
 from .sqlite_store import SQLiteStore
 from .tensor_codec import (
     load_global_weights_flat,
@@ -58,6 +62,8 @@ from .wandb_logging import (
     wandb_config,
     wandb_is_disabled,
 )
+
+_SUCCESSFUL_STOP_REASONS = {"completed", "stop_after_outer_steps", "stop_after_global_tokens"}
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -638,11 +644,76 @@ def select_terminal_drain_updates(
     return selected
 
 
-def dump_db(store: SQLiteStore, paths: RunPaths, version: int, logger: JsonlLogger) -> None:
+def dump_db(
+    store: SQLiteStore,
+    paths: RunPaths,
+    version: int,
+    logger: JsonlLogger,
+    *,
+    keep_last: int = 2,
+) -> None:
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     path = paths.db_dump_path(timestamp, version)
     store.backup_to(path, global_version=version)
     logger.event("db_dumped", version=version, path=str(path))
+    cleanup_db_dumps(paths, keep_last=keep_last, logger=logger)
+
+
+def wait_for_learners_to_stop(
+    paths: RunPaths,
+    config: Config,
+    logger: JsonlLogger,
+) -> bool:
+    """Wait until no learner can still be reading an older published checkpoint."""
+    learner_ids = [learner_id_from_index(index) for index in range(config.sync.num_learners)]
+    deadline = time.monotonic() + config.io.final_cleanup_wait_seconds
+    while True:
+        stopped = 0
+        for learner_id in learner_ids:
+            heartbeat = safe_read_json(paths.heartbeats / f"{learner_id}.json")
+            if isinstance(heartbeat, dict) and heartbeat.get("status") == "stopped":
+                stopped += 1
+        if stopped == len(learner_ids):
+            logger.event("final_cleanup_learners_stopped", stopped=stopped)
+            return True
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            logger.event(
+                "final_cleanup_wait_timeout",
+                stopped=stopped,
+                expected=len(learner_ids),
+                timeout_seconds=config.io.final_cleanup_wait_seconds,
+            )
+            return False
+        time.sleep(min(1.0, remaining))
+
+
+def cleanup_successful_run_artifacts(
+    *,
+    paths: RunPaths,
+    config: Config,
+    logger: JsonlLogger,
+    stop_reason: str,
+) -> None:
+    """Apply final retention after every learner has stopped using checkpoints."""
+    if stop_reason not in _SUCCESSFUL_STOP_REASONS:
+        logger.event("final_cleanup_skipped", reason=stop_reason)
+        return
+    if not wait_for_learners_to_stop(paths, config, logger):
+        logger.event("final_cleanup_deferred", reason="learners_not_stopped")
+        return
+    debug_learner_keep_last = config.io.keep_last_learner_update_versions
+    cleanup_all_learner_update_artifacts(
+        paths,
+        keep_last=0 if debug_learner_keep_last is None else debug_learner_keep_last,
+        logger=logger,
+    )
+    debug_syncer_keep_last = config.io.keep_last_global_versions
+    cleanup_syncer_model_artifacts(
+        paths,
+        keep_last=1 if debug_syncer_keep_last is None else debug_syncer_keep_last,
+        logger=logger,
+    )
 
 
 def init_wandb_run(
@@ -930,7 +1001,6 @@ def run_fragment_syncer(
                 global_merge_event=new_global_merge_event,
                 previous_materialized_weight_path=materialized_weight_path,
             )
-            cleanup_global_artifacts(paths, keep_last=config.io.keep_last_global_versions, logger=logger)
             publish_seconds = time.monotonic() - publish_start
 
             store.mark_fragment_updates_applied(
@@ -946,7 +1016,13 @@ def run_fragment_syncer(
                 max_staleness_versions=config.sync.max_staleness_versions,
             )
             if config.sync.db_dump_every_versions and new_global_merge_event % config.sync.db_dump_every_versions == 0:
-                dump_db(store, paths, new_global_merge_event, logger)
+                dump_db(
+                    store,
+                    paths,
+                    new_global_merge_event,
+                    logger,
+                    keep_last=config.io.keep_last_db_dumps,
+                )
 
             stale_stats = _fragment_staleness_stats(selected, current_fragment_version)
             append_csv_row(
@@ -1039,7 +1115,19 @@ def run_fragment_syncer(
                 total_seen_tokens=total_seen_tokens,
             )
             logger.event("stop_published", reason=stop_reason, version=global_merge_event)
-            dump_db(store, paths, global_merge_event, logger)
+            dump_db(
+                store,
+                paths,
+                global_merge_event,
+                logger,
+                keep_last=config.io.keep_last_db_dumps,
+            )
+            cleanup_successful_run_artifacts(
+                paths=paths,
+                config=config,
+                logger=logger,
+                stop_reason=stop_reason,
+            )
             if wandb_run is not None:
                 wandb_run.summary["stop_reason"] = stop_reason
                 wandb_run.summary["final_version"] = global_merge_event
@@ -1249,7 +1337,6 @@ def run_syncer(config: Config) -> None:
                 total_update_tokens=total_update_tokens,
                 total_seen_tokens=total_seen_tokens,
             )
-            cleanup_global_artifacts(paths, keep_last=config.io.keep_last_global_versions, logger=logger)
             publish_seconds = time.monotonic() - publish_start
 
             store.mark_updates_applied(
@@ -1261,7 +1348,13 @@ def run_syncer(config: Config) -> None:
             if not terminal_drain:
                 dropped += store.drop_obsolete_updates(new_version, config.sync.max_staleness_versions)
             if config.sync.db_dump_every_versions and new_version % config.sync.db_dump_every_versions == 0:
-                dump_db(store, paths, new_version, logger)
+                dump_db(
+                    store,
+                    paths,
+                    new_version,
+                    logger,
+                    keep_last=config.io.keep_last_db_dumps,
+                )
             append_csv_row(
                 paths.metrics / "syncer_metrics.csv",
                 {
@@ -1322,7 +1415,19 @@ def run_syncer(config: Config) -> None:
                 total_seen_tokens=total_seen_tokens,
             )
             logger.event("stop_published", reason=stop_reason, version=version)
-            dump_db(store, paths, version, logger)
+            dump_db(
+                store,
+                paths,
+                version,
+                logger,
+                keep_last=config.io.keep_last_db_dumps,
+            )
+            cleanup_successful_run_artifacts(
+                paths=paths,
+                config=config,
+                logger=logger,
+                stop_reason=stop_reason,
+            )
             if wandb_run is not None:
                 wandb_run.summary["stop_reason"] = stop_reason
                 wandb_run.summary["final_version"] = version

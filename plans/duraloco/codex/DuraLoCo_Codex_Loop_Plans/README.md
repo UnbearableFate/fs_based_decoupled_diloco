@@ -1,8 +1,8 @@
 ---
 title: "DuraLoCo Codex Loop-Engineering Implementation Plans"
-version: "1.0"
+version: "1.2"
 date: "2026-07-10"
-planning_basis: "codex/fs-diloco-miyabi @ 011e180980e90c500bcd479a594ba47e507bb5d1"
+planning_basis: "codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d"
 ---
 
 # DuraLoCo Codex Loop-Engineering Implementation Plans
@@ -15,14 +15,14 @@ planning_basis: "codex/fs-diloco-miyabi @ 011e180980e90c500bcd479a594ba47e507bb5
 - machine-checkable acceptance gates；
 - maker–checker 交接；
 - Miyabi 本地→登录节点→1 节点→2 节点→9 节点验证阶梯；
-- 人工审批与停止条件；
+- 自动 goal/phase 推进、外部风险审批与停止条件；
 - 可直接复制给 Codex 的启动 prompt。
 
 ## 1. 规划基线
 
 - 实现仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
 - 规划分支：`codex/fs-diloco-miyabi`
-- 规划提交：`011e180980e90c500bcd479a594ba47e507bb5d1`
+- 规划提交：`afc50a1e179c64321645b278b2497ea3ab3fe24d`
 - Miyabi skill：https://github.com/UnbearableFate/miyabi-development
 - 研究草稿：[`references/DuraLoCo_research_draft_zh.md`](references/DuraLoCo_research_draft_zh.md)
 
@@ -84,40 +84,42 @@ P08 与 P09 在 P06 之后可以使用独立 worktree 并行开发，但不能�
 
 ## 5. 如何使用
 
-### 5.1 放入仓库
+### 5.1 仓库内位置
 
-建议把本目录复制为：
-
-```text
-<repo>/plans/duraloco/codex/
-```
-
-把研究草稿保留为：
+本计划 bundle 的规范位置是：
 
 ```text
-<repo>/plans/duraloco/codex/references/DuraLoCo_research_draft_zh.md
+<repo>/plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/
 ```
+
+研究草稿随 bundle 保留为：
+
+```text
+<repo>/plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/references/DuraLoCo_research_draft_zh.md
+```
+
+运行期的 `STATE.yaml`、`DECISIONS.md`、`BLOCKERS.md` 和 `TRACEABILITY.md` 仍由 P00 创建在 `<repo>/plans/duraloco/`；不要把 bundle 模板当运行状态修改。
 
 ### 5.2 第一次启动
 
 先交给 Codex：
 
 ```text
-读取 plans/duraloco/codex/README.md、00_CODEX_LOOP_OPERATING_CONTRACT.md 和 01_P00_BASELINE_AND_RESEARCH_CONTRACT.md。使用 miyabi-development skill，从 P00 开始。不要跳过 research contract，不要在 Miyabi 登录节点运行 runtime，不要自动 merge main。
+读取 plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/README.md、plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md 和 plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/01_P00_BASELINE_AND_RESEARCH_CONTRACT.md。使用 miyabi-development skill，从 P00 开始。P00 没有上一阶段输入，应从模板初始化运行状态。不要跳过 research contract，不要在 Miyabi 登录节点运行 runtime，不要自动 merge main。
 ```
 
-### 5.3 后续阶段
+### 5.3 后续阶段与自动推进
 
-每次只打开一个新的 Codex 实现会话，并提供：
+每个 goal/phase 的必需 gate 达成并通过独立 Checker 后，agent 自动标记完成并按依赖图进入下一项，无需用户审核。跨会话恢复或主动拆分新会话时提供：
 
 - 当前阶段文件；
 - 上一阶段 `PHASE_REPORT.md`；
 - 最新 `STATE.yaml`；
 - feature branch/commit；
-- 已批准或拒绝的 decisions；
+- 已由 agent 决定并经 Checker 复核的 decisions；
 - 允许使用的 Miyabi/云资源范围。
 
-不要用一个无限会话连续实现所有阶段。阶段边界既是代码审查边界，也是研究语义审批边界。
+阶段边界仍是持久化、独立检查和分支边界，但不是人工审批或等待边界。可以在同一持续任务中自动推进；若切换会话，必须先完整写入 STATE、PHASE_REPORT、DECISIONS 和 artifact manifests。
 
 ## 6. 全局禁止跳过的 Gate
 
@@ -157,7 +159,7 @@ references/DuraLoCo_research_draft_zh.md
 - P07：GC 默认 dry-run；apply 需要批准。
 - P08：需要 1-node GPU profile 和 2-node pipeline。
 - P09：MinIO；真实公共云需要凭据/预算批准。
-- P10：controller 先 shadow；动态算法参数需要批准。
+- P10：controller 先 shadow；动态算法参数在 shadow/guardrail/Checker gate 通过后由 agent 自动启用。
 - P11：9-node acceptance 可由 agent 自主申请和执行，无需用户批准。
 - P12：单个 Miyabi 作业在 `select<=16`、`walltime<=02:00:00` 范围内由 agent 自主决定，包括 9-node 和 multi-seed 作业；超限作业、公共云和 artifact 发布分别审批。
 

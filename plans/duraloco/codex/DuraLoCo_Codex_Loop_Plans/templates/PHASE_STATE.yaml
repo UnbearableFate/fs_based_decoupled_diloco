@@ -1,7 +1,7 @@
 phase: P00
-status: planned
+status: planned  # planned | in_progress | blocked | checking | completed | ready_to_merge | merged
 planning_basis_branch: codex/fs-diloco-miyabi
-planning_basis_commit: 011e180980e90c500bcd479a594ba47e507bb5d1
+planning_basis_commit: afc50a1e179c64321645b278b2497ea3ab3fe24d
 actual_base_branch: null
 actual_base_commit: null
 feature_branch: null
@@ -20,5 +20,6 @@ open_decisions: []
 open_blockers: []
 artifacts: []
 next_action: "initialize phase"
+automatic_progression: true
 requires_human_approval: false
-approval_reason: null
+approval_reason: null  # only for external-risk actions, never for goal/phase transitions
