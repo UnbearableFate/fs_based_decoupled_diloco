@@ -2,20 +2,20 @@
 plan_id: "P05"
 title: "生产 Syncer 集成、Lease/Fencing 与 Failover"
 status: "planned"
-date: "2026-07-10"
+date: "2026-07-11"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
-planning_basis_branch: "codex/fs-diloco-miyabi"
-planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
+planning_basis_branch: "codex/duraloco-m00-sqlite-free-rebase"
+planning_basis_commit: "resolve_from_M00_verified_report"
 target_branch: "codex/duraloco-p05-syncer-failover"
 depends_on:
-  - "P04"
+  - "M00"
 required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
 automatic_progression: true
 agent_decision_gates:
-  - "v2 syncer 默认写路径在兼容性、迁移、1/2-node gates 和独立 Checker 通过后由 agent 自动 promotion。"
+  - "M00 已将 SQLite-free runtime 设为唯一路径；P05 只在 lease/fencing 和 1/2/9-node gates 通过后推进。"
 human_approval_gates:
-  - "任何 destructive migration/旧 run conversion 需要批准。"
+  - "任何 destructive lifecycle 操作需要批准；历史 SQLite run 不转换。"
 ---
 
 # P05 — 生产 Syncer 集成、Lease/Fencing 与 Failover
@@ -27,13 +27,14 @@ human_approval_gates:
 > 3. `miyabi-development` skill 的 `SKILL.md`；
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
-> 6. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 6. `SQLITE_FREE_SYSTEM_DESIGN.md` 和 M00 最终报告；
+> 7. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
-> 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
+> P05 必须以 M00 双语报告记录的 verified commit 为基线。Codex 必须在执行开始时解析并验证该 commit；若仓库已经前进，先产生 drift report，不得强制 reset 或丢弃用户改动。
 
 ## 1. 阶段使命
 
-把现有 syncer 的发现、选择、merge、outer step 和发布迁移到 transactional fragment log，并加入 lease/fencing、standby takeover、启动 reconciliation 和明确 stop state。SQLite 仅保留为可重建 cache。
+在 M00 已建立的 SQLite-free production runtime 上加入 lease/fencing、standby takeover、启动 reconciliation 和明确 stop state。发现、选择、merge、outer step 和发布继续只依赖 transactional log/head 和进程内 `RuntimeView`。
 
 ### 1.1 本阶段支撑的研究主张
 
@@ -41,14 +42,14 @@ syncer 不再是持有不可恢复本地状态的单点；在进程崩溃或 lea
 
 ### 1.2 完成后的系统增量
 
-新增 v2 syncer runtime，可通过配置与 legacy v1 并存；支持 synthetic production path、双 syncer chaos 和 failover。
+在唯一 SQLite-free syncer runtime 上支持 synthetic production path、双 syncer chaos 和 failover；不保留数据库版 runtime 或双写开关。
 
 ## 2. 前置条件
 
-- [ ] P04 log correctness 通过；
+- [ ] M00 全部 gate 和 P00–P04 重验收通过；
 - [ ] P03 Miyabi CAS contract 通过；
 - [ ] 明确 lease 时钟/TTL failure assumptions；
-- [ ] 保留 legacy configs 用作回归。
+- [ ] active config/CLI forbidden-surface 扫描中 SQLite/embedded DB 为零。
 
 ## 3. 范围
 
@@ -59,19 +60,19 @@ syncer 不再是持有不可恢复本地状态的单点；在进程崩溃或 lea
 - [ ] lease acquisition/renewal、monotonic fencing epoch；
 - [ ] lease/commit/stop mutation 使用持久化 request ID，区分丢响应重试与独立的相同调用；
 - [ ] head commit 检查 epoch；
-- [ ] standby startup replay/cache rebuild；
+- [ ] standby startup full replay/`RuntimeView` rebuild；
 - [ ] response-loss reconciliation 查询 committed ancestry，不只比较当前 head；
 - [ ] 取消持久 `selected` 状态；
 - [ ] stop/request/terminal 状态通过 log 提交；
 - [ ] 可控 failpoints；
-- [ ] v1 legacy 与 v2 config namespace。
+- [ ] 对应 M00 单一 runtime config namespace，不新增 DB 兼容开关。
 
 ### 3.2 明确不做
 
 - 不完成 learner v2 publication/adoption；可用 test producer；
 - 不实现 compaction/GC；
 - 不实现 SACC；
-- 不自动迁移旧 run。
+- 不读取、迁移或转换旧 SQLite run；历史 checkpoint 只能按 M00 的新 generation warm-start 流程使用。
 
 ## 4. 预期仓库变更
 
@@ -88,8 +89,6 @@ fs_diloco/coordination/
   lease.py
   fencing.py
   clock.py
-fs_diloco/legacy/
-  syncer_v1.py
 tests/syncer_v2/
   test_ingest_quarantine.py
   test_commit_pipeline.py
@@ -100,7 +99,7 @@ scripts/chaos/
   run_dual_syncer.py
 ```
 
-不得同时保留 `fs_diloco/syncer.py` 和创建同名 `fs_diloco/syncer/` package。现有 `fs_diloco.syncer:main` entrypoint 必须保持兼容：P05 使用无冲突的 `syncer_v2` package，并由现有 `syncer.py` 在明确 promotion gate 后作为 dispatcher；在此之前默认仍走 legacy v1。
+不得同时保留 `fs_diloco/syncer.py` 和创建同名 `fs_diloco/syncer/` package。现有 `fs_diloco.syncer:main` entrypoint 必须继续指向 M00 确立的 SQLite-free runtime；不得恢复 legacy DB dispatcher。
 
 ## 5. 需要先冻结的设计决策
 
@@ -108,7 +107,7 @@ scripts/chaos/
 - [ ] D-0502：clock skew 假设和 lease safety/liveness 分界；
 - [ ] D-0503：旧 leader 在 lease 过期后如何被 head CAS fencing；
 - [ ] D-0504：stop 作为 commit event 还是 head metadata；
-- [ ] D-0505：legacy/v2 runtime selection 和 run namespace 隔离。
+- [ ] D-0505：M00 runtime 的 run/generation namespace 隔离，以及禁止历史 DB run 原地续跑的 fail-closed 语义。
 - [ ] D-0506：lease/commit/stop request identity 的持久化位置、conflict 语义和 retry 结果；
 - [ ] D-0507：response-loss 在 successor head 已推进时的 ancestry-aware reconciliation 界限。
 
@@ -116,7 +115,7 @@ scripts/chaos/
 
 ## 6. Codex 执行循环
 
-### Loop 1 — Syncer 模块化与 v2 ingest
+### Loop 1 — Syncer 模块化与 ingest
 
 **目标。** 将当前 monolithic syncer 分解，并让所有候选通过 Protocol v2 validator。
 
@@ -128,14 +127,14 @@ scripts/chaos/
 
 - [ ] 提取 ingest/selection/commit/recovery；
 - [ ] 引入 typed event log；
-- [ ] SQLite 改 cache；
-- [ ] 保留 v1 entrypoint。
+- [ ] 复用 M00 `RuntimeView`，不创建持久化索引；
+- [ ] 保留公共 entrypoint 并删除 DB-specific options。
 
 **本循环验证。**
 
-- [ ] legacy tests 仍通过；
+- [ ] M00 重验收 tests 仍通过；
 - [ ] v2 invalid corpus 被 quarantine；
-- [ ] 删除 cache 后重启。
+- [ ] 删除全部进程本地派生状态后重启。
 
 **本循环持久化输出。**
 
@@ -181,7 +180,7 @@ scripts/chaos/
 **先产生的失败证据或规范。**
 
 - [ ] kill ingest/compute/output/record/frontier/pre/post CAS；
-- [ ] 删除本地 SQLite。
+- [ ] 删除全部进程本地派生状态。
 
 **实现任务。**
 
@@ -189,7 +188,7 @@ scripts/chaos/
 - [ ] 识别已提交 response-loss；
 - [ ] 在 successor commit 已推进 head 后仍能从权威 ancestry 识别原操作；
 - [ ] 忽略/记录 orphan；
-- [ ] 重建 metrics/cache；
+- [ ] 从 committed log 重建 metrics/`RuntimeView`；
 - [ ] 去除 selected-stuck state。
 
 **本循环验证。**
@@ -240,7 +239,7 @@ scripts/chaos/
 
 - [ ] 任何 head advance 的 fencing_epoch 不低于当前 lease epoch；
 - [ ] 过期/旧 leader 不能 commit；
-- [ ] SQLite/cache 丢失不改变 authority；
+- [ ] 不存在本地持久化状态；清空进程内 view 不改变 authority；
 - [ ] 没有 durable `selected` 中间状态；
 - [ ] stop 状态可从 log 恢复；
 - [ ] 所有 proposal 先验证再选择。
@@ -251,7 +250,8 @@ scripts/chaos/
 - [ ] leader pause beyond TTL then resume；
 - [ ] renew response loss；
 - [ ] leader kill every stage；
-- [ ] cache deletion/corruption；
+- [ ] process restart 和空本地目录；
+- [ ] SQLite/embedded-DB forbidden-surface mutant；
 - [ ] bad/future proposal flood；
 - [ ] stop before/after CAS crash。
 
@@ -260,18 +260,20 @@ scripts/chaos/
 以下条件是阶段 gate，不是建议。Maker 必须给出命令、退出码和 artifact 路径；Checker 必须逐项复核。
 
 - [ ] P05-A01：v2 syncer 所有 apply 通过 P04 commit API；
-- [ ] P05-A02：SQLite 仅为 cache，删除后可恢复；
+- [ ] P05-A02：清空全部本地派生状态后，仅凭 committed log/head 重建 `RuntimeView` 并继续；
 - [ ] P05-A03：双 syncer 测试无 split-brain；
 - [ ] P05-A04：旧 epoch commit 全部被拒；
 - [ ] P05-A05：每个 failpoint 后无永久 selected 更新；
 - [ ] P05-A06：stop reason 与 terminal state 可重启恢复；
-- [ ] P05-A07：legacy v1 默认路径在 v2 promotion gate 通过前保持可用；
+- [ ] P05-A07：公共 syncer entrypoint 只进入 SQLite-free runtime，旧 DB flags/config keys 明确 fail closed；
 - [ ] P05-A08：Miyabi 2-node takeover 有 run artifact；
 - [ ] P05-A09：Checker 审查 lease/fencing 的 clock assumptions。
-- [ ] P05-A10：`fs-diloco-syncer` 和 `python -m fs_diloco.syncer` 的 legacy/default 行为及 v2 显式选择均通过入口兼容测试。
+- [ ] P05-A10：`fs-diloco-syncer` 和 `python -m fs_diloco.syncer` 一致进入 SQLite-free runtime，并通过入口兼容测试。
 - [ ] P05-A11：lease/commit/stop response-loss 测试证明 request identity 可区分原请求重试和独立的相同调用；
 - [ ] P05-A12：successor 已推进后的延迟重试从 committed ancestry 得到唯一、可重放的结果；
 - [ ] P05-A13：最终干净 commit 的 1/2-node Maker 与 Checker 证据均有完整 attempt manifests/retry lineage，当前 suite、state 和双语 report 同步为绿。
+- [ ] P05-A14：active source/config/CLI/scripts/tests/new artifacts 的 SQLite/embedded-DB forbidden-surface 扫描为零。
+- [ ] P05-A15：9-node GPT-2/WikiText-2 terminal run 以 1 syncer + 8 learners、`inner_steps=50`、10 outer transitions 在 15 分钟 walltime 内通过，并覆盖 lease/fencing/takeover 断言。
 
 ## 9. 验证矩阵
 
@@ -281,14 +283,14 @@ scripts/chaos/
 | Miyabi login | branch/config/script static only。 |
 | Miyabi 1-node | v2 synthetic syncer + test producers；实际 GPU outer path targeted。 |
 | Miyabi 2-node | 必须：leader/standby、kill/takeover、旧 leader 恢复；≤10 分钟。 |
-| 9-node | 不要求。 |
+| 9-node | 必须：GPT-2/WikiText-2 1S+8L、50×10、15 分钟 terminal gate，包含 lease/fencing/takeover 断言。 |
 
 ## 10. Maker–Checker 交接
 
 ### Maker 必须提交
 
 - 只包含本阶段范围的 feature branch；
-- 实现、测试、文档和迁移说明；
+- 实现、测试、文档和历史 run warm-start 说明；
 - `plans/duraloco/STATE.yaml` 的最新状态；
 - `artifacts/duraloco/<phase>/<run_id>/manifest.json`；
 - 每条验收标准对应的证据路径；
@@ -307,9 +309,9 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 
 ## 11. 自动推进与外部风险审批门
 
-- [ ] v2 syncer 的兼容性、迁移、1/2-node 和 Checker gates 通过后由 agent 自动设为默认写路径，无需人工审核；
-- [ ] 任何 destructive migration/旧 run conversion 需要批准。
-- [ ] P05 必需 gate 通过后自动进入 P06；未获 destructive migration 批准时保留旧 run，不阻止新 namespace 的后续阶段。
+- [ ] lease/fencing、1/2/9-node 和 Checker gates 通过后，在 M00 的唯一 runtime 上自动推进；
+- [ ] 历史 DB run 保持不变，不存在 migration/conversion gate。
+- [ ] P05 必需 gate 通过后自动进入 P06。
 
 ## 12. 阻塞与停止规则
 
@@ -321,7 +323,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 
 ## 13. 阶段完成报告模板
 
-报告 epoch sequence、leader changes、head commits、kill points、takeover RTO（observed，不预设）、double/split count、cache rebuild。
+报告 epoch sequence、leader changes、head commits、kill points、takeover RTO（observed，不预设）、double/split count、full replay 与 `RuntimeView` rebuild。
 
 ## 14. 可直接复制给 Codex 的启动指令
 
@@ -329,10 +331,11 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 使用 miyabi-development skill 执行 P05。
 
 仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
-规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
+规划基线：M00 双语报告中的 verified commit（执行时解析）
 目标分支：codex/duraloco-p05-syncer-failover
-阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/06_P05_SYNCER_LEASE_FENCING_AND_FAILOVER.md
+阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/07_P05_SYNCER_LEASE_FENCING_AND_FAILOVER.md
 共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
+系统设计：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/SQLITE_FREE_SYSTEM_DESIGN.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 

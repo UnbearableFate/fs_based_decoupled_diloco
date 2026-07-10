@@ -228,11 +228,11 @@ run generation plus an explicit compatibility amendment.
 - Compatibility: P04 uses the P02 standard-library float64 oracle; tensor encodings remain a later performance refinement.
 - Reversibility: another payload codec may be selected with an implementation digest and equivalence evidence.
 
-## D-0404 — Authoritative proposal consumption
+## D-0404 — Authoritative proposal consumption (historical; materialization superseded by D-M0001)
 
 - Context: a proposal must be logically included at most once even if caches disappear or writers race.
 - Candidates: mutable SQLite table; separate mutable index; commit selections folded into the frontier.
-- Choice: commit records are the authoritative evidence and the frontier carries the canonical cumulative consumed-ID set; SQLite is a fully rebuildable materialization only.
+- Choice at P04 completion: commit records are the authoritative evidence and the frontier carries the canonical cumulative consumed-ID set; SQLite was treated as a rebuildable materialization. D-M0001 preserves the authority choice but deletes that materialization completely.
 - Rejected: mutable index authority can diverge from the committed prefix.
 - Compatibility: this refines D-0202/D-0203 and preserves explicit revalidation after CAS conflict.
 - Reversibility: compaction may summarize the same facts but may not redefine them.
@@ -254,3 +254,48 @@ run generation plus an explicit compatibility amendment.
 - Rejected: listing-based authority is unsafe; immediate deletion can race an in-flight prepare.
 - Compatibility: P03 listing remains discovery-only and all tests use isolated run prefixes.
 - Reversibility: later GC may delete only after the P07 reachability/grace proof.
+
+## D-M0001 — Remove SQLite and reject replacement embedded databases
+
+- Context: P00–P04 left SQLite-backed proposal state, resume dumps, retention hooks, analysis queries, and a P04 replay cache even though the committed transition log/head had become the target authority. The second persistence system adds crash states and operational surface without measured benefit.
+- Candidates: keep SQLite as a cache; retain a read-only compatibility layer; replace it with another embedded database; remove database persistence completely.
+- Choice: M00 removes SQLite from active source, configuration, CLI, scripts, tests, and new artifacts. No embedded database replacement, read-only compatibility reader, dual-write bridge, or converter is allowed. The committed transition log and one head CAS are the only persistent authority.
+- Rejected: a cache still carries schema/migration/locking/dump complexity; a compatibility reader keeps the dependency alive; another database merely renames the same split-state problem.
+- Compatibility: old run directories and P00–P04 evidence remain immutable historical artifacts but are not readable by the active runtime.
+- Reversibility: adding any database later requires a new protocol decision and evidence that it is purely observational and worth its cost; it may never become authority without a protocol generation change.
+
+## D-M0002 — Replay-derived volatile RuntimeView
+
+- Context: syncer discovery, selection, analysis, and recovery need efficient query state, but correctness must survive loss of all local process state.
+- Candidates: persisted materialized view; mutable sidecar indexes; process-local immutable view rebuilt by replay.
+- Choice: use a process-local immutable `RuntimeView` derived from checksum-verified committed log/head plus validated discovery inputs. Initial recovery uses full replay; P07 may add snapshot+suffix replay only after digest equivalence gates.
+- Rejected: persisted indexes create a second recovery protocol and can silently outrun or lag authority.
+- Compatibility: `latest.json`, JSONL, CSV, heartbeats, and metrics remain derived/observational and cannot drive correctness decisions.
+- Reversibility: view layout and indexing can change freely because no on-disk view format is part of the protocol.
+
+## D-M0003 — Historical runs use checkpoint-only new-generation bootstrap
+
+- Context: removing SQLite makes exact continuation of DB-era runs impossible without preserving a legacy reader and its semantics.
+- Candidates: in-place migration; automatic conversion; read-only DB compatibility; explicit checkpoint bootstrap into a fresh generation.
+- Choice: preserve old runs unchanged. An operator may explicitly bootstrap a checksum-verified model checkpoint, and optionally its self-contained optimizer checkpoint, into a new SQLite-free generation with new run/session identities. Imported tensors are initialization data only. This is documented as warm-start, never exact continuation, and imports no proposal/selection/sequence authority from the old DB.
+- Rejected: conversion is difficult to verify against split historical state and would make M00 depend on the component being eliminated.
+- Compatibility: published historical evidence remains inspectable with its archived environment, outside the active runtime.
+- Reversibility: exact legacy migration could only return as a separate, explicitly approved archival tool, not as a production dependency.
+
+## D-M0004 — File/object-native analysis evidence
+
+- Context: analysis and experiment registries previously benefited from SQL-shaped queries but do not need transactional database authority.
+- Candidates: SQLite analysis database; external service; canonical manifests/JSONL/CSV with deterministic reducers.
+- Choice: manifests and immutable objects are primary evidence; normalized JSONL/CSV tables and deterministic reducers provide analysis inputs and published tables. Every row retains run/commit/config lineage.
+- Rejected: a database bundle obscures provenance and introduces another format, migration, and corruption surface.
+- Compatibility: P12 clean reproduction must rebuild figures and claims without `.db`, `.sqlite`, or DB dumps.
+- Reversibility: deterministic reducers or columnar plain-file exports may be added without changing primary evidence; database generation is outside the supported workflow.
+
+## D-M0005 — Requalify P00–P04 under the SQLite-free design
+
+- Context: historical PASS evidence includes DB-specific configuration and cache-rebuild gates, so it cannot establish correctness of the replacement runtime.
+- Candidates: accept historical passes; rerun only modified tests; create M00 as a full requalification milestone.
+- Choice: M00 is the new roadmap milestone zero and must produce current evidence for all P00–P04 acceptance IDs. P00-A06 is remapped to the SQLite-free config/CLI surface and fail-closed old keys; P04-A06 is remapped to deleting all local derived state and rebuilding solely from committed log/head. All other semantics remain at least as strict as their historical gates.
+- Rejected: partial reuse could miss authority leaks in unmodified-looking paths.
+- Compatibility: historical reports are retained and clearly labeled; M00 evidence, not the old SQLite-era pass, authorizes P05.
+- Reversibility: the mapping may be tightened by Checker findings but may not be weakened to accept database dependencies.

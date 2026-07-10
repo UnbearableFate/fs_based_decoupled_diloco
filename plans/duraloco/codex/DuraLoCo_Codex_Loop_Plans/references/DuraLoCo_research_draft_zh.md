@@ -610,7 +610,7 @@ Chandy–Lamport snapshot 和 vector clock 为一致性快照、因果关系和 
 
 DuraLoCo 遵循七项原则：
 
-1. **Durable log is authoritative。** syncer-local SQLite、目录 cache 和内存索引都不是权威状态。
+1. **Durable log is authoritative。** 系统不使用 SQLite 或替代嵌入式数据库；目录发现结果和进程内索引都不是权威状态。
 2. **Large objects are immutable。** tensor payload、outer state、commit record 和 compaction snapshot 一旦发布不再原位修改。
 3. **One small CAS is the linearization point。** 多对象数据先写完，最后用一个小型 frontier/head 条件更新提交。
 4. **Transport is at-least-once; semantics are idempotent。** 超时后允许重试和重复观察。
@@ -1909,7 +1909,7 @@ DuraLoCo 区分：
 8. 按 current head 重新验证 proposals；
 9. 开始新的 commit。
 
-syncer-local SQLite 可以保存扫描 cursor 和查询索引，但其内容必须可删除后自动重建。
+扫描 cursor 和查询索引只存在于进程内 `RuntimeView`，并由 committed log/full replay 重建。P07 之后可用已提交 snapshot+suffix 加速重放，但不使用本地数据库。
 
 ## 9.2 Global Model Recovery
 
@@ -2248,18 +2248,18 @@ per-learner selection starvation <= J_max
 - parameter index 与 deterministic fragmentation；
 - full-vector 和 fragment merge 路径；
 - explicit outer SGD/momentum/Nesterov/AdamW；
-- syncer-local SQLite 索引；
+- 历史 syncer-local SQLite 索引（M00 删除）；
 - `latest.json` 全局指针；
 - synthetic tests、failure simulation、metrics 和 Miyabi launch scripts。
 
-这些组件适合作为机制验证基础，但当前权威状态仍分散在 filesystem objects、`latest.json` 与本地 SQLite 中。DuraLoCo 需要对状态管理做架构反转。
+这些组件适合作为机制验证基础，但历史权威状态曾分散在 filesystem objects、`latest.json` 与本地 SQLite 中。M00 必须完全删除 SQLite，把 committed log/head 建立为唯一持久 authority。
 
 ## 11.2 关键替换
 
 | 现有组件 | DuraLoCo 替换 |
 |---|---|
 | learner update JSON + payload | immutable proposal object + strict schema |
-| syncer-local SQLite 状态机 | committed log 为权威；SQLite 仅作 cache |
+| syncer-local SQLite 状态机 | 完全删除；committed log/head 为唯一 authority，进程内 `RuntimeView` 由 replay 派生 |
 | `control/latest.json` | CAS-protected head + immutable frontier |
 | 多步 `selected → applied` 本地事务 | prepare immutable objects + one CAS |
 | 单 syncer 假设 | lease、fencing、standby recovery |
@@ -3237,7 +3237,7 @@ local-interval adjustment
 
 - object count；
 - directory entries；
-- SQLite/cache size；
+- `RuntimeView` memory、full/suffix replay 时间与 snapshot 大小；
 - scanner CPU；
 - memory leak；
 - compaction cadence；
@@ -3862,7 +3862,7 @@ DuraLoCo 的研究价值不在于“用文件系统模拟 RPC”，而在于把�
 3. 是否通过公平 network/hybrid/checkpoint baselines 证明 failure 下的 end-to-end goodput 收益；
 4. 是否清楚刻画 storage-native 方法的有效区间和失败边界。
 
-现有 filesystem prototype 是合适的起点，但必须把权威状态从本地 SQLite 与松散文件状态迁移到 durable commit log，并完成 backend abstraction、fencing、recovery、compaction、GC 和算法等价性验证。只有在这些基础上，Miyabi Lustre 与 object-store 实验才足以支撑“event-sourced storage-native optimizer”这一论文主张。
+现有 filesystem prototype 是合适的起点，但必须完全删除本地 SQLite 和松散权威状态，仅保留 durable commit log/head，并完成 backend abstraction、fencing、recovery、compaction、GC 和算法等价性验证。只有在这些基础上，Miyabi Lustre 实验才足以支撑“event-sourced storage-native optimizer”这一论文主张；object-store 实现保留为 P12 之后的可选扩展。
 
 ---
 
@@ -4282,4 +4282,3 @@ https://arxiv.org/abs/2503.09799
 
 [21] Abdullah Al Asif et al. **HeLoCo: Efficient Asynchronous Low-Communication Training under Data and Device Heterogeneity.** arXiv:2606.00271, 2026.  
 https://arxiv.org/abs/2606.00271
-

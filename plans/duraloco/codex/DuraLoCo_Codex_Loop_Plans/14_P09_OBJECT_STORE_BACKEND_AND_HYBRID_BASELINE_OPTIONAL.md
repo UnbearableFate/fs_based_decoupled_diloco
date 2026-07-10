@@ -2,10 +2,10 @@
 plan_id: "P09"
 title: "可选：S3-Compatible Backend、MinIO 与 Hybrid Baseline"
 status: "planned"
-date: "2026-07-10"
+date: "2026-07-11"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
-planning_basis_branch: "codex/fs-diloco-miyabi"
-planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
+planning_basis_branch: "codex/duraloco-p12-evaluation"
+planning_basis_commit: "resolve_from_P12_verified_report"
 target_branch: "codex/duraloco-p09-object-store"
 depends_on:
   - "P12"
@@ -30,9 +30,10 @@ human_approval_gates:
 > 3. `miyabi-development` skill 的 `SKILL.md`；
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
-> 6. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 6. `SQLITE_FREE_SYSTEM_DESIGN.md`；
+> 7. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
-> 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
+> 若未来显式启动 P09，必须以 P12 双语报告记录的 verified commit 为基线；执行时验证 commit 并对任何前进生成 drift report，不得强制 reset。
 
 ## 1. 阶段使命
 
@@ -50,7 +51,7 @@ DuraLoCo 是 storage-native abstraction，而不是 Lustre 特例；同一 commi
 
 ## 2. 前置条件
 
-- [ ] P04 log API 完全 backend-neutral；
+- [ ] M00 至 P12 的 SQLite-free log/runtime API 已验证且 backend-neutral；
 - [ ] 对象存储依赖策略和 lockfile 已由 agent 决定、记录 ADR 并通过独立 Checker；
 - [ ] 本地/CI 可运行 MinIO 或提供替代 integration environment；
 - [ ] 秘密管理约定已写入 AGENTS。
@@ -179,7 +180,7 @@ tests/hybrid/
 
 ### Loop 3 — MinIO E2E 与 listing independence
 
-**目标。** 在真实 object API 上运行 P04/P05/P06 的小型路径。
+**目标。** 在真实 object API 上运行 M00/P05/P06 的 SQLite-free 小型路径。
 
 **先产生的失败证据或规范。**
 
@@ -268,6 +269,7 @@ tests/hybrid/
 - [ ] multipart 未完成对象不可被 manifest 引用；
 - [ ] credentials 不进入 Git/log/artifact；
 - [ ] MinIO 与 public cloud 结果严格区分。
+- [ ] object-store 适配必须保持 M00 的单一 log/head authority 和进程内 `RuntimeView`，不引入 SQLite、嵌入式 DB 或 metadata database service。
 
 ### 7.2 必须覆盖的故障与反例
 
@@ -295,6 +297,8 @@ tests/hybrid/
 - [ ] P09-A09：Checker 检查 secret/cost/list assumptions。
 - [ ] P09-A10：所有可重试 mutation 用 request identity 区分 after-effect retry 与独立调用，并对 SDK setup/publish/abort/cleanup 完成 typed-error matrix；
 - [ ] P09-A11：MinIO/云 probe 的 fail、inconclusive、queued-cancelled 和 retry 均保留 manifest lineage，最终 Checker 在最终干净 commit 重放 contract 和历史反例。
+- [ ] P09-A12：backend conformance 和 hybrid baseline 不包含 SQLite/embedded DB/metadata DB dependency，且空本地目录 replay digest 与 POSIX 基线一致。
+- [ ] P09-A13：若显式启动本可选 milestone，9-node 1S+8L、50×10、15 分钟 terminal run 必须在无数据库的 object/hybrid path 上通过；未启动 P09 时本 gate 不适用且不阻塞 P12。
 
 ## 9. 验证矩阵
 
@@ -304,7 +308,7 @@ tests/hybrid/
 | Miyabi login | 仅静态；不得启动服务或 runtime。 |
 | Miyabi compute | 只有站点策略允许时运行 MinIO/client E2E；否则在独立环境完成。 |
 | 公共云 | 人工批准后；记录 provider/region/API consistency/cost。 |
-| 9-node | 不要求。 |
+| 9-node | 只在显式启动 P09 后必须：object/hybrid 1S+8L、50×10、15 分钟 terminal gate。 |
 
 ## 10. Maker–Checker 交接
 
@@ -352,10 +356,11 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 仅在用户显式选择 object-store 可选实现后，使用 miyabi-development skill 执行 P09。
 
 仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
-规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
+规划基线：P12 双语报告中的 verified commit（仅显式启动 P09 时解析）
 目标分支：codex/duraloco-p09-object-store
 阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/14_P09_OBJECT_STORE_BACKEND_AND_HYBRID_BASELINE_OPTIONAL.md
 共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
+系统设计：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/SQLITE_FREE_SYSTEM_DESIGN.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 

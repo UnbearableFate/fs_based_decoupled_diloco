@@ -2,10 +2,10 @@
 plan_id: "P07"
 title: "Compaction、Reachability GC、Ack 与 Learner Capsules"
 status: "planned"
-date: "2026-07-10"
+date: "2026-07-11"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
-planning_basis_branch: "codex/fs-diloco-miyabi"
-planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
+planning_basis_branch: "codex/duraloco-p06-learner-protocol"
+planning_basis_commit: "resolve_from_P06_verified_report"
 target_branch: "codex/duraloco-p07-lifecycle"
 depends_on:
   - "P06"
@@ -27,9 +27,10 @@ human_approval_gates:
 > 3. `miyabi-development` skill 的 `SKILL.md`；
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
-> 6. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 6. `SQLITE_FREE_SYSTEM_DESIGN.md`；
+> 7. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
-> 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
+> P07 必须以 P06 双语报告记录的 verified commit 为基线；执行时验证 commit 并对任何前进生成 drift report，不得强制 reset。
 
 ## 1. 阶段使命
 
@@ -268,6 +269,7 @@ tests/lifecycle/
 - [ ] ack 不被误解释为 proposal 已提交；
 - [ ] 所有 delete 可审计且幂等；
 - [ ] 默认 GC dry-run。
+- [ ] snapshot 是 immutable log object，snapshot+suffix 只重建进程内 `RuntimeView`；不引入 SQLite 或其他持久化索引。
 
 ### 7.2 必须覆盖的故障与反例
 
@@ -297,6 +299,8 @@ tests/lifecycle/
 - [ ] P07-A11：GC delete response-loss 用 request identity 证明幂等，并将独立的相同 delete 与冲突请求分类正确；
 - [ ] P07-A12：reachability/GC 在 immutable root snapshot 上计算，listing omission、head 并发推进和 setup/cleanup 失败都不造成 live deletion；
 - [ ] P07-A13：最终 soak/1-node 与 Checker 证据包含完整 attempt lineage，当前 state/report/tests/checksums 一致。
+- [ ] P07-A14：snapshot+suffix 和 full replay 在空本地目录下 digest 等价，active surface 不含 SQLite/embedded DB。
+- [ ] P07-A15：9-node GPT-2/WikiText-2 terminal run 在 15 分钟内完成 1S+8L、50×10，并验证 snapshot/replay/capsule 与 GC dry-run 断言。
 
 ## 9. 验证矩阵
 
@@ -305,7 +309,7 @@ tests/lifecycle/
 | 本地 | lifecycle unit、concurrent stress、accelerated soak。 |
 | Miyabi 1-node | snapshot/restore/capsule real filesystem + tiny model。 |
 | Miyabi 2-node | GC 与 learner/syncer/restore 并发；仅隔离 prefix，GC dry-run 默认。 |
-| 长时间/9-node | 9-node 与不超过 2 小时的作业由 agent 自主决定；累计 24/72h soak 延后 P12，以可恢复的 ≤2h segments 自动续接；只有单次连续 >2h 才需外部资源批准。 |
+| 9-node/长时间 | 必须先完成 1S+8L、50×10、15 分钟 terminal gate；累计 24/72h soak 延后 P12，以可恢复的 ≤2h segments 自动续接。 |
 
 ## 10. Maker–Checker 交接
 
@@ -353,10 +357,11 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 使用 miyabi-development skill 执行 P07。
 
 仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
-规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
+规划基线：P06 双语报告中的 verified commit（执行时解析）
 目标分支：codex/duraloco-p07-lifecycle
-阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/08_P07_COMPACTION_GC_ACKS_AND_LEARNER_CAPSULES.md
+阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/09_P07_COMPACTION_GC_ACKS_AND_LEARNER_CAPSULES.md
 共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
+系统设计：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/SQLITE_FREE_SYSTEM_DESIGN.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 

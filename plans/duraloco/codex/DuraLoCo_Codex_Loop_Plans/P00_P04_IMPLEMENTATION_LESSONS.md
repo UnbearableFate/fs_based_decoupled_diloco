@@ -3,7 +3,7 @@
 本文从 `plans/duraloco/phases/P00_PHASE_REPORT.md`至
 `P04_PHASE_REPORT.md`、`P04_DRIFT_REPORT.md`、阶段状态、独立 Checker
 报告以及 `artifacts/duraloco/P00`至`P04` 的 manifests/运行记录中
-提取已由实际失败和修复验证的经验。P05 及后续阶段必须把
+提取已由实际失败和修复验证的经验。M00 及后续阶段必须把
 这些经验当作必需 gate，而不是可选建议。
 
 ## 1. 幂等性必须绑定请求身份
@@ -104,10 +104,10 @@ P04 的首个 9-node regular-queue 作业因预计等待超过一小时而在分
 
 | 经验 | 必须落地的阶段 |
 |---|---|
-| request identity 与 response-loss 辨识 | P05、P06、P07、可选 P09 |
-| ancestry-aware reconciliation | P05、P06、P07、P11 |
+| request identity 与 response-loss 辨识 | M00、P05、P06、P07、可选 P09 |
+| ancestry-aware reconciliation | M00、P05、P06、P07、P11 |
 | 单 policy kernel/replay equivalence | P06、P08、P10、P12 |
 | 全边界 typed failure 与 immutable snapshot | P05–P08、P10–P12、可选 P09 |
-| manifest retry lineage、state/report 同步、最终 commit Checker | 所有后续阶段 |
+| manifest retry lineage、state/report 同步、最终 commit Checker | M00 及所有后续阶段 |
 | backend capability/non-claim | P05、P07、P08、P11、P12、可选 P09 |
 | queue/cancel/resubmit provenance | 所有 Miyabi runtime 阶段 |

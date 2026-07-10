@@ -2,10 +2,10 @@
 plan_id: "P06"
 title: "Learner Contribution Intervals、Adoption 与 Warm Recovery"
 status: "planned"
-date: "2026-07-10"
+date: "2026-07-11"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
-planning_basis_branch: "codex/fs-diloco-miyabi"
-planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
+planning_basis_branch: "codex/duraloco-p05-syncer-failover"
+planning_basis_commit: "resolve_from_P05_verified_report"
 target_branch: "codex/duraloco-p06-learner-protocol"
 depends_on:
   - "P05"
@@ -14,7 +14,7 @@ execution_mode: "single-writer maker + independent checker"
 automatic_progression: true
 agent_decision_gates:
   - "inner optimizer adoption policy 默认值由 agent 基于 numeric/recovery evidence 决定并经独立 Checker 复核；"
-  - "v2 learner/syncer 默认训练路径在兼容性和 1/2-node gates 通过后由 agent 自动 promotion。"
+  - "SQLite-free learner/syncer 路径在兼容性和 1/2/9-node gates 通过后由 agent 自动推进。"
 human_approval_gates: []
 ---
 
@@ -27,9 +27,10 @@ human_approval_gates: []
 > 3. `miyabi-development` skill 的 `SKILL.md`；
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
-> 6. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 6. `SQLITE_FREE_SYSTEM_DESIGN.md`；
+> 7. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
-> 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
+> P06 必须以 P05 双语报告记录的 verified commit 为基线。执行开始时验证真实 commit；若仓库已经前进，先产生 drift report，不得强制 reset 或丢弃用户改动。
 
 ## 1. 阶段使命
 
@@ -49,6 +50,7 @@ DuraLoCo 的 selected proposal 表示一段唯一 local work，而不是可能�
 - [ ] proposal payload kind 已冻结；
 - [ ] fragment schedule 初版定义；
 - [ ] warm restart 的非精确性已在 research contract 中明确。
+- [ ] M00/P05 forbidden-surface gate 仍证明没有 SQLite 或替代嵌入式数据库。
 
 ## 3. 范围
 
@@ -73,6 +75,7 @@ DuraLoCo 的 selected proposal 表示一段唯一 local work，而不是可能�
 - 不实现 lazy streaming dataset 完整重构，除非为 cursor 正确性所需；
 - 不实现 SACC 动态 local interval；
 - 不保证 warm restart bitwise continuation。
+- 不为 session、sequence、cursor 或 adoption 引入本地数据库；持久事实必须是 immutable object/commit，查询状态必须由 replay 派生。
 
 ## 4. 预期仓库变更
 
@@ -88,7 +91,6 @@ fs_diloco/learner_v2/
   recovery.py
   data_cursor.py
   rng_state.py
-fs_diloco/legacy/learner_v1.py
 tests/learner_v2/
   test_interval_base_freeze.py
   test_sequence_idempotency.py
@@ -98,7 +100,7 @@ tests/learner_v2/
   test_inner_optimizer_policy.py
 ```
 
-不得同时保留 `fs_diloco/learner.py` 和创建同名 `fs_diloco/learner/` package。现有 `fs_diloco.learner:main` entrypoint 必须保持兼容：P06 使用无冲突的 `learner_v2` package，并由现有 `learner.py` 在明确 promotion gate 后作为 dispatcher；在此之前默认仍走 legacy v1。
+不得同时保留 `fs_diloco/learner.py` 和创建同名 `fs_diloco/learner/` package。公共 entrypoint 必须继续使用 M00/P05 确立的 SQLite-free authority，不得保留或恢复 DB-backed learner 路径。
 
 ## 5. 需要先冻结的设计决策
 
@@ -107,7 +109,7 @@ tests/learner_v2/
 - [ ] D-0603：fragment schedule 是 committed round-robin、acceptable set 还是 learner-local cursor；
 - [ ] D-0604：inner optimizer reset-all/reset-fragment/preserve 的默认策略；
 - [ ] D-0605：target token 计数定义；
-- [ ] D-0606：session sequence 的 durable location。
+- [ ] D-0606：session sequence 在 immutable publication/request object 中的 durable identity，以及如何从 log/listing 恢复；不得使用数据库 counter。
 - [ ] D-0607：publication/adoption request identity 与 committed-ancestry reconciliation；
 - [ ] D-0608：reference、runtime 与 replay 共用的 interval/adoption policy kernel 边界。
 
@@ -239,6 +241,7 @@ tests/learner_v2/
 - [ ] global stop 优先于本地 max step；
 - [ ] warm restart 不宣称恢复 inner optimizer/RNG/data exact state；
 - [ ] proposal token count 使用冻结定义。
+- [ ] learner restart 只从 committed frontier 与 immutable publication facts 恢复，本地 `RuntimeView` 丢失不影响 correctness。
 
 ### 7.2 必须覆盖的故障与反例
 
@@ -264,10 +267,12 @@ tests/learner_v2/
 - [ ] P06-A08：fragment_count=1 与 full/reference 在 numeric contract 内一致；
 - [ ] P06-A09：Miyabi 1-node real path ≤10 step finite；
 - [ ] P06-A10：2-node learner+syncer v2 E2E。
-- [ ] P06-A11：`fs-diloco-learner` 和 `python -m fs_diloco.learner` 的 legacy/default 行为及 v2 显式选择均通过入口兼容测试。
+- [ ] P06-A11：`fs-diloco-learner` 和 `python -m fs_diloco.learner` 一致使用 SQLite-free authority，旧 DB flags/config keys 明确 fail closed。
 - [ ] P06-A12：publication response-loss 以 request identity 辨识，并覆盖同 ID/同内容、不同 ID/同内容和同 ID/冲突内容；
 - [ ] P06-A13：reference/runtime/replay 在 adversarial proposal order、restart 与 cross-session boundary 上生成相同 adoption digest；
 - [ ] P06-A14：最终 1/2-node 证据包含失败/取消/重试 manifests 和 `parent_run_id` lineage，当前 state/report/tests 一致。
+- [ ] P06-A15：active source/config/CLI/scripts/tests/new artifacts 中没有 SQLite/embedded-DB 依赖，session/sequence 可在空本地目录下恢复且不重用。
+- [ ] P06-A16：9-node GPT-2/WikiText-2 terminal run 以 1 syncer + 8 learners、`inner_steps=50`、10 outer transitions 在 15 分钟 walltime 内通过，且 interval/adoption/warm-restart 断言全部成立。
 
 ## 9. 验证矩阵
 
@@ -276,7 +281,7 @@ tests/learner_v2/
 | 本地 | interval/publication/restart tests；tiny synthetic E2E。 |
 | Miyabi 1-node | 必须：真实 model/data ≤10 optimizer steps，finite loss，至少一个 v2 commit/adoption。 |
 | Miyabi 2-node | 必须：syncer 与 learner 分节点，proposal→commit→adopt→stop。 |
-| 9-node | 尚不要求。 |
+| 9-node | 必须：GPT-2/WikiText-2 1S+8L、50×10、15 分钟 terminal gate，包含 interval/adoption/warm-restart 断言。 |
 
 ## 10. Maker–Checker 交接
 
@@ -303,7 +308,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 ## 11. 自动推进与 Agent 决策门
 
 - [ ] inner optimizer adoption policy 默认值由 agent 按 numeric/recovery evidence 决定，记录 ADR 和 manifest，经 Checker 复核后生效；
-- [ ] v2 learner/syncer 兼容性和 1/2-node gates 通过后由 agent 自动设为默认训练路径；
+- [ ] SQLite-free learner/syncer 兼容性和 1/2/9-node gates 通过后由 agent 自动推进；
 - [ ] P06 必需 gate 通过后，按依赖图自动启动 P07 和 P08；无需人工审核。可选 P09 不在此处启动。
 
 ## 12. 阻塞与停止规则
@@ -324,10 +329,11 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 使用 miyabi-development skill 执行 P06。
 
 仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
-规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
+规划基线：P05 双语报告中的 verified commit（执行时解析）
 目标分支：codex/duraloco-p06-learner-protocol
-阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/07_P06_LEARNER_INTERVALS_ADOPTION_AND_RECOVERY.md
+阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/08_P06_LEARNER_INTERVALS_ADOPTION_AND_RECOVERY.md
 共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
+系统设计：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/SQLITE_FREE_SYSTEM_DESIGN.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 

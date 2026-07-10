@@ -1,7 +1,7 @@
-phase: P00
+phase: PXX  # use M00 for the new milestone zero, otherwise the current PXX
 status: planned  # planned | in_progress | blocked | checking | completed | ready_to_merge | merged
-planning_basis_branch: codex/fs-diloco-miyabi
-planning_basis_commit: afc50a1e179c64321645b278b2497ea3ab3fe24d
+planning_basis_branch: null
+planning_basis_commit: null  # resolve from the verified predecessor report
 actual_base_branch: null
 actual_base_commit: null
 feature_branch: null

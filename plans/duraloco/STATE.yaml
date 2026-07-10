@@ -34,7 +34,7 @@ artifacts:
   - artifacts/duraloco/P04/20260711_p04_a655413_gpt2_9n_50x10
   - artifacts/duraloco/P04/20260711_checker_p04_79373ec_1node
   - artifacts/duraloco/P04/20260711_checker_p04_883511f_1node
-next_action: "start P05 syncer lease fencing and failover from the completed P04 branch tip"
+next_action: "start M00 SQLite-free runtime rebase from the completed P04 branch tip; do not start P05 until M00 requalifies every P00-P04 gate"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

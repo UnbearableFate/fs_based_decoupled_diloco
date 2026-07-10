@@ -2,10 +2,10 @@
 plan_id: "P10"
 title: "Storage-Aware Commit Controller（SACC）与算法–系统协同"
 status: "planned"
-date: "2026-07-10"
+date: "2026-07-11"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
-planning_basis_branch: "codex/fs-diloco-miyabi"
-planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
+planning_basis_branch: "P07_P08_verified_integration"
+planning_basis_commit: "resolve_from_P07_P08_integration_report"
 target_branch: "codex/duraloco-p10-sacc"
 depends_on:
   - "P07"
@@ -27,9 +27,10 @@ human_approval_gates: []
 > 3. `miyabi-development` skill 的 `SKILL.md`；
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
-> 6. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 6. `SQLITE_FREE_SYSTEM_DESIGN.md`；
+> 7. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
-> 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
+> P10 必须以 P07/P08 通过集成 Checker 的 verified commit 为基线；执行时验证 commit 并对任何前进生成 drift report，不得强制 reset。
 
 ## 1. 阶段使命
 
@@ -264,6 +265,7 @@ tests/controller/
 - [ ] selection fairness 不依赖固定 learner lexical order；
 - [ ] selected-only failure 不重复/丢失已提交 contribution；
 - [ ] controller 不静默改变 optimizer 数学。
+- [ ] controller 持久事实只能是 committed decision object；观测窗口和派生状态仅存于 `RuntimeView`，不使用数据库。
 
 ### 7.2 必须覆盖的故障与反例
 
@@ -290,8 +292,10 @@ tests/controller/
 - [ ] P10-A08：small-run fixed/shadow/enforced 对照完成；
 - [ ] P10-A09：Checker 审核 replay determinism、stability 和算法语义边界。
 - [ ] P10-A10：simulator/runtime/replay 共用 policy kernel 或通过 adversarial ordering 和 mutant tests 证明完全等价；
-- [ ] P10-A11：enforced action 的 response-loss/restart 可从 committed decision ancestry 重建，且不依赖 wall-clock/cache；
+- [ ] P10-A11：enforced action 的 response-loss/restart 可从 committed decision ancestry 重建，且不依赖 wall-clock 或本地持久化状态；
 - [ ] P10-A12：fixed/shadow/enforced 每个 run 的失败、取消与重试有 manifest lineage，最终 Checker 在最终干净 commit 重放当前套件。
+- [ ] P10-A13：删除进程派生状态后 controller replay 结果不变，active source/config/artifacts 不含 SQLite/embedded DB。
+- [ ] P10-A14：9-node GPT-2/WikiText-2 terminal run 在 15 分钟内完成 1S+8L、50×10，并验证经 shadow/guardrail 授权的 SACC 路径及 replay。
 
 ## 9. 验证矩阵
 
@@ -302,7 +306,7 @@ tests/controller/
 | Miyabi 2-node | tail delay/failure injection、fair quorum、backpressure。 |
 | POSIX/Lustre | 必须：至少一个真实 backend trace。 |
 | MinIO/object store | 可选；缺失不阻塞 P10，不得写成已支持。 |
-| 9-node | P11 acceptance 才启用已通过前置 gate 的稳定策略；资源申请无需用户批准。 |
+| 9-node | 必须：1S+8L、50×10、15 分钟 terminal gate，仅启用已通过 shadow/guardrail/replay 的稳定策略。 |
 
 ## 10. Maker–Checker 交接
 
@@ -349,10 +353,11 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 使用 miyabi-development skill 执行 P10。
 
 仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
-规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
+规划基线：P07/P08 verified integration commit（执行时解析）
 目标分支：codex/duraloco-p10-sacc
 阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/11_P10_SACC_AND_ALGORITHM_SYSTEM_CODESIGN.md
 共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
+系统设计：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/SQLITE_FREE_SYSTEM_DESIGN.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 

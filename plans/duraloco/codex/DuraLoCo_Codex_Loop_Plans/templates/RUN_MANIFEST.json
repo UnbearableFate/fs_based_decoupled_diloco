@@ -3,7 +3,7 @@
   "run_id": "<uuid-or-content-id>",
   "parent_run_id": null,
   "purpose": "unit|contract|smoke|chaos|benchmark|experiment",
-  "phase": "P00",
+  "phase": "PXX",
   "git_commit": "<40-lowercase-hex>",
   "git_branch": "<branch>",
   "dirty_tree": false,

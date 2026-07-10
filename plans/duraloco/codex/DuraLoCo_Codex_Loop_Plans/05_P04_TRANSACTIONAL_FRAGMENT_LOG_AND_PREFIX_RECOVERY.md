@@ -19,6 +19,8 @@ human_approval_gates: []
 
 # P04 — Transactional Fragment Log 与 Prefix Recovery
 
+> **历史计划声明（2026-07-11）：** 本阶段已按旧系统完成，文中 SQLite/DB 相关内容只记录当时基线与证据。活跃路线由 M00 的 SQLite-free 设计取代；不得从本文恢复、保留或新建 SQLite 依赖。M00 将重新执行 P00–P04 gate，其新证据才能授权 P05。
+
 > 本文件是可直接交给 Codex 执行的阶段计划，不是背景说明。执行前必须同时读取：
 >
 > 1. 仓库根目录 `AGENTS.md`；

@@ -2,10 +2,10 @@
 plan_id: "P08"
 title: "Direct Fragment I/O、Streaming Reducer 与 Telemetry"
 status: "planned"
-date: "2026-07-10"
+date: "2026-07-11"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
-planning_basis_branch: "codex/fs-diloco-miyabi"
-planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
+planning_basis_branch: "codex/duraloco-p06-learner-protocol"
+planning_basis_commit: "resolve_from_P06_verified_report"
 target_branch: "codex/duraloco-p08-performance-core"
 depends_on:
   - "P06"
@@ -26,9 +26,10 @@ human_approval_gates: []
 > 3. `miyabi-development` skill 的 `SKILL.md`；
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
-> 6. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 6. `SQLITE_FREE_SYSTEM_DESIGN.md`；
+> 7. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
-> 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
+> P08 必须以 P06 双语报告记录的 verified commit 为基线；执行时验证 commit 并对任何前进生成 drift report，不得强制 reset。
 
 ## 1. 阶段使命
 
@@ -233,6 +234,7 @@ tests/performance_core/
 - [ ] corrupt/incomplete input 不产生 commit；
 - [ ] telemetry 不成为 authority；
 - [ ] scanner listing 只发现，不决定 committed state。
+- [ ] incremental cursor 只存在于进程内 `RuntimeView` 或 committed watermark，不存入 SQLite/嵌入式数据库。
 
 ### 7.2 必须覆盖的故障与反例
 
@@ -258,6 +260,8 @@ tests/performance_core/
 - [ ] P08-A08：Miyabi 1-node GPU profile 与 2-node storage pipeline evidence。
 - [ ] P08-A09：optimized/runtime/reference 在 adversarial order、restart 和并发 prefetch 下的 decision/state digest 等价，且回归能杀死一个独立 policy 实现 mutant；
 - [ ] P08-A10：profile/benchmark 的 fail、inconclusive、queued-cancelled 和 retry 都有 raw manifest lineage，最终 Checker 在最终干净 commit 重放当前等价套件。
+- [ ] P08-A11：scanner restart 在空本地目录下不丢失 correctness，active surface 与 telemetry artifacts 不含 SQLite/DB。
+- [ ] P08-A12：9-node GPT-2/WikiText-2 terminal run 在 15 分钟内完成 1S+8L、50×10，同时产生 direct-I/O/streaming/telemetry 断言和 raw profile。
 
 ## 9. 验证矩阵
 
@@ -266,7 +270,7 @@ tests/performance_core/
 | 本地 | 数值等价、CPU memory、scanner tests。 |
 | Miyabi 1-node | 必须：真实 GPU/model fragment gather/scatter、streaming reduce、10-step E2E profile。 |
 | Miyabi 2-node | 必须：learner→Lustre→syncer pipeline latency与backpressure。 |
-| 9-node | P11 才做扩展接受。 |
+| 9-node | 必须：1S+8L、50×10、15 分钟 terminal gate，启用并验证本阶段 direct-I/O/streaming/telemetry 路径。 |
 
 性能 gate 以相对复杂度和完整测量为主；不得把单次噪声测量硬编码成通用绝对阈值。
 
@@ -315,10 +319,11 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 使用 miyabi-development skill 执行 P08。
 
 仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
-规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
+规划基线：P06 双语报告中的 verified commit（执行时解析）
 目标分支：codex/duraloco-p08-performance-core
-阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/09_P08_DIRECT_FRAGMENT_IO_STREAMING_REDUCER_AND_TELEMETRY.md
+阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/10_P08_DIRECT_FRAGMENT_IO_STREAMING_REDUCER_AND_TELEMETRY.md
 共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
+系统设计：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/SQLITE_FREE_SYSTEM_DESIGN.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 

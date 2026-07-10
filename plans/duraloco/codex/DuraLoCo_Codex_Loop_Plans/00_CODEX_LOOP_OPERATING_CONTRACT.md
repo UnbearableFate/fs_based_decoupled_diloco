@@ -1,7 +1,7 @@
 ---
 title: "DuraLoCo Codex Loop Operating Contract"
-version: "1.4"
-date: "2026-07-10"
+version: "2.0"
+date: "2026-07-11"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
 planning_basis: "codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d"
 ---
@@ -20,6 +20,7 @@ planning_basis: "codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe2
 4. **Maker–checker separation**：实现者和检查者使用不同上下文；Checker 不接受“测试通过”作为唯一证据。
 5. **Environment-aware execution**：本地、Miyabi 登录节点、PBS compute node 的权限和验证职责严格分离。
 6. **Research integrity**：计划值、目标值和实测值严格区分；任何论文 claim 都必须追溯到不可变 run manifest。
+7. **No embedded database**：活跃系统不得依赖 SQLite 或任何替代的嵌入式数据库；持久化 authority 只有 committed transition log 与 head CAS。
 
 ## 2. Agent Loop
 
@@ -46,7 +47,8 @@ git log -5 --oneline
 
 - 根目录和当前目录链上的 `AGENTS.md`；
 - 当前阶段文件；
-- P05 及后续阶段的 `P00_P04_IMPLEMENTATION_LESSONS.md`；
+- M00 及后续阶段的 `P00_P04_IMPLEMENTATION_LESSONS.md`；
+- M00 及后续阶段的 `SQLITE_FREE_SYSTEM_DESIGN.md`；
 - `plans/duraloco/STATE.yaml`；
 - 尚未关闭的 `DECISIONS.md`、`BLOCKERS.md`；
 - 上一阶段 `PHASE_REPORT.md`；
@@ -74,9 +76,9 @@ git log -5 --oneline
 
 - 只实现让当前最小失败证据通过所需的变更；
 - 不借机重写无关模块；
-- 保留迁移期兼容路径，除非阶段计划明确删除；
+- 保留迁移期兼容路径，除非阶段计划明确删除；SQLite 是 M00 明确要删除的例外，不得以兼容为由保留读路径；
 - 新增依赖必须有 ADR、版本约束和无依赖替代方案评估；
-- 权威状态只能有一个来源，缓存必须可以从权威状态重建；
+- 权威状态只能有一个来源；运行时索引只能是进程内 `RuntimeView`，必须能从 log 重放，不得落盘为数据库；
 - 协议行为必须通过类型、schema 和显式错误表达，不能依靠目录名或隐含排序。
 
 ### 2.4 HARDEN
@@ -123,7 +125,7 @@ plans/duraloco/phases/<phase>_PHASE_REPORT.md
 
 ### 2.7 双语里程碑与 Checker 失败报告
 
-这里的 milestone 指必需主线 `P00`–`P08`、`P10`–`P12` 的 gate 结果，以及在显式选择后才生效的可选 `P09` gate 结果。阶段首次进入 `checking`，以及随后到达 `completed` 或 `blocked` 时，Maker 必须创建或更新：
+这里的 milestone 包括已完成的历史基线 `P00`–`P04`、新路线的第 0 里程碑 `M00`、必需主线 `P05`–`P08`、`P10`–`P12`，以及在显式选择后才生效的可选 `P09`。历史 P00–P04 报告中的 SQLite 记录只是当时证据，不是后续实现依据。阶段首次进入 `checking`，以及随后到达 `completed` 或 `blocked` 时，Maker 必须创建或更新：
 
 ```text
 plans/duraloco/phases/PXX_PHASE_REPORT.md
@@ -150,11 +152,12 @@ plans/duraloco/phases/PXX_PHASE_REPORT.md
 - 可逆且位于既定 research contract 内的协议、默认值和实现选择由 agent 决定，写入 `DECISIONS.md`，经独立 Checker 复核后生效。
 - 自动推进不授权 merge `main`、发布 artifact/公开数据、使用真实凭据或公共云/付费资源、超过 Miyabi 自主资源范围、删除共享数据或执行 destructive lifecycle 操作；这些外部风险动作仍按明确审批门处理，但不阻止不依赖该动作的后续工作。
 - 若下一 phase 有多个依赖，只有所有依赖 phase 都 `completed` 且集成 Checker 通过后才自动进入；P07/P08 等并行分支必须按依赖图汇合，不得以单分支完成冒充集成完成。可选 P09 不得阻塞 P10–P12 或主线完成，且不得被自动启动。
+- 历史 P04 完成后必须先完成 M00；M00 未通过全部 P00–P04 重验收 gate 和独立 Checker 时，P05 不得启动。
 
-### 2.9 P00–P04 经验驱动的后续必需 gate
+### 2.9 P00–P04 经验驱动的 M00 与后续必需 gate
 
-P05 及后续阶段必须读取并执行
-`P00_P04_IMPLEMENTATION_LESSONS.md`。以下约束来自已经发生且由独立
+M00 及后续阶段必须读取并执行
+`P00_P04_IMPLEMENTATION_LESSONS.md` 和 `SQLITE_FREE_SYSTEM_DESIGN.md`。以下约束来自已经发生且由独立
 Checker 复现的失败：
 
 - 所有可重试 mutation 以持久化 request identity 区分原请求重试与
@@ -173,10 +176,12 @@ Checker 复现的失败：
   历史反例后无 required-gate follow-up，才能完成 phase；
 - 真实 backend 结论必须绑定 capability/mount/stripe/module 证据和明确
   non-claim；queue/cancel/resubmit 必须绑定相同 commit/config/gates 并记录 lineage。
+- 活跃代码、配置、CLI、脚本、测试和新 artifact 不得导入、创建、备份或恢复 SQLite/DB；静态 forbidden-surface 扫描是每个后续 milestone 的必需 gate。
+- 历史 SQLite run 不得就地迁移；如需利用其 checkpoint，只能显式 bootstrap 到新 generation，并标记为 warm-start 而非 exact continuation。
 
 ## 3. 分支与 Worktree 纪律
 
-- 每个阶段使用独立分支：`codex/duraloco-pXX-<slug>`。
+- 每个阶段使用独立分支：PXX 使用 `codex/duraloco-pXX-<slug>`，M00 使用 `codex/duraloco-m00-sqlite-free-rebase`。
 - 阶段开始时记录 base branch 和 base commit；基线漂移时生成 `drift_report.md`。
 - Codex 可以创建和 push feature branch，但不得默认合并 `main`。
 - 阶段分支通过全部 gate 后状态为 `completed`；下一阶段从该 verified commit（或通过集成 Checker 的依赖汇合 commit）自动继续。是否最终 merge `main` 仍由用户决定，但不作为阶段推进条件。
@@ -397,7 +402,7 @@ mpirun ... /usr/bin/env "KEY=value" ... bash -lc '...'
 5. branch 已 push，工作树干净；
 6. 结果中没有未解释的 NaN、重复 apply、split-brain、live-object deletion 或状态漂移；
 7. 未自动 merge `main`；阶段推进使用 verified phase/integration commit，不等待 main merge。
-8. 从 P04 起，每个尚未归档的 PXX milestone 必须以一次真实 Miyabi 9-node
+8. 从 P04 起，每个尚未归档的 milestone（包括 M00）必须以一次真实 Miyabi 9-node
    GPT-2 + WikiText-2 训练作为 terminal gate：1 个 syncer、8 个 learner，
    `training.inner_steps=50`，并且恰好提交 10 个 global/outer optimizer
    transitions。synthetic、tiny model、少节点或仅 pytest 结果不得替代。
@@ -412,7 +417,8 @@ mpirun ... /usr/bin/env "KEY=value" ... bash -lc '...'
 10. 到达 milestone 时生成 English/中文双语 Markdown phase report，并在
     Checker 授权后提交独立 milestone Git commit。P00–P03 是本规则加入前
     已归档的历史阶段；P04 terminal run 必须以累计方式覆盖当前 harness 可见的
-    P00–P04 功能，P05 及以后不得再使用该历史豁免。
+    P00–P04 功能；M00 必须用无 SQLite 实现重新覆盖这些功能，P05 及以后不得再使用该历史豁免。
+11. 从 M00 起，forbidden-surface 扫描必须证明活跃代码、配置、CLI、脚本、测试和新 artifacts 中没有 SQLite/嵌入式数据库依赖；历史报告和设计说明中的否定性文字除外。
 
 ## 11. 共同启动指令
 

@@ -2,10 +2,10 @@
 plan_id: "P11"
 title: "Miyabi 集成、Chaos Runner 与 9 节点 Acceptance"
 status: "planned"
-date: "2026-07-10"
+date: "2026-07-11"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
-planning_basis_branch: "codex/fs-diloco-miyabi"
-planning_basis_commit: "afc50a1e179c64321645b278b2497ea3ab3fe24d"
+planning_basis_branch: "codex/duraloco-p10-sacc"
+planning_basis_commit: "resolve_from_P10_verified_report"
 target_branch: "codex/duraloco-p11-miyabi-acceptance"
 depends_on:
   - "P10"
@@ -13,7 +13,7 @@ required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
 automatic_progression: true
 agent_decision_gates:
-  - "必需主线 P00–P08 与 P10 completed branches 按依赖图由 agent 集成并经独立 Checker 复核；可选 P09 不参与本 gate。"
+  - "历史 P00–P04、M00 与必需主线 P05–P08/P10 verified commits 按依赖图由 agent 集成并经独立 Checker 复核；可选 P09 不参与本 gate。"
 human_approval_gates:
   - "单个 Miyabi 作业超过 16 节点或 2 小时时必须批准；16 节点、2 小时以内（含 9 节点）由 agent 自主决定。"
   - "destructive GC 或作用于共享资源的真实故障操作必须批准。"
@@ -28,9 +28,10 @@ human_approval_gates:
 > 3. `miyabi-development` skill 的 `SKILL.md`；
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
-> 6. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 6. `SQLITE_FREE_SYSTEM_DESIGN.md`；
+> 7. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
-> 计划基于 `codex/fs-diloco-miyabi` 的 `afc50a1e179c64321645b278b2497ea3ab3fe24d` 编写。Codex 必须在执行开始时验证真实基线；若仓库已经前进，先产生 drift report，不得为了匹配本文而强制 reset 或丢弃用户改动。
+> P11 必须以 P10 双语报告记录的 verified commit 为基线；执行时验证 commit 并对任何前进生成 drift report，不得强制 reset。
 
 ## 1. 阶段使命
 
@@ -46,10 +47,10 @@ DuraLoCo 在目标 Lustre/PBS/GPU 环境中不仅通过模拟，还能在 8 lear
 
 ## 2. 前置条件
 
-- [ ] 必需主线 P00–P08 与 P10 的所有 correctness gates 通过；可选 P09 不要求；
+- [ ] 历史 P00–P04、M00 重验收与 P05–P08/P10 的所有 correctness gates 通过；可选 P09 不要求；
 - [ ] completed feature branches 已按依赖图自动集成到 acceptance branch，并通过集成 Checker；
 - [ ] Miyabi skill 已安装/可读；
-- [ ] 确认 group/project、shared root、cache paths、model/dataset availability；
+- [ ] 确认 group/project、shared root、进程临时目录、model/dataset availability；
 - [ ] 9-node 资源配置已确认不超过 `select=16`、`walltime=02:00:00` 的自主范围。
 
 ## 3. 范围
@@ -103,7 +104,7 @@ tests/test_acceptance_checker.py
 - [ ] D-1101：9-node role/GPU mapping；
 - [ ] D-1102：PBS group、queue、walltime 由实际账户/项目确认，且单个作业不超过 16 节点和 2 小时；
 - [ ] D-1103：fault tape 允许的 signal/process scope；
-- [ ] D-1104：Lustre run root/stripe 与 cache paths；
+- [ ] D-1104：Lustre run root/stripe、进程临时目录与 model/dataset 缓存路径（不含协议状态或数据库）；
 - [ ] D-1105：9-node acceptance 的 commit/fragment/step 上限；
 - [ ] D-1106：acceptance 后保留哪些 artifacts。
 
@@ -269,6 +270,7 @@ tests/test_acceptance_checker.py
 - [ ] 9-node 可自主提交，但单个作业不得超过 16 节点或 2 小时；
 - [ ] acceptance checker 验证 protocol state 而非只看进程退出；
 - [ ] 所有角色日志可关联同 run ID。
+- [ ] PBS/config/preflight/artifact packager 禁止 SQLite flags、`.db`/`.sqlite` 路径和 DB dumps；恢复只依赖 committed log/head。
 
 ### 7.2 必须覆盖的故障与反例
 
@@ -289,13 +291,14 @@ tests/test_acceptance_checker.py
 - [ ] P11-A02：1-node real ≤10-step v2 run 完成且 finite；
 - [ ] P11-A03：2-node failover 无 split-brain/double inclusion；
 - [ ] P11-A04：fault tape 与 state verify artifact 完整；
-- [ ] P11-A05：agent 自主提交的 9-node 8L+1S acceptance 通过，且作业资源不超过 16 节点和 2 小时；
+- [ ] P11-A05：agent 自主提交的 9-node GPT-2/WikiText-2 8L+1S acceptance 以 `inner_steps=50`、10 outer transitions 在 15 分钟 walltime 内通过；
 - [ ] P11-A06：9-node 每个角色 hostname/rank/GPU/run ID 可追踪；
 - [ ] P11-A07：所有 commits 可 replay/verify；
 - [ ] P11-A08：artifact packager 在缺证据时 fail closed；
 - [ ] P11-A09：Checker 独立从 bundle 复核。
 - [ ] P11-A10：1/2/9-node 的 pass/fail/inconclusive/queued-cancelled 尝试都有 commit/config/queue/qstat 绑定的 manifest 和每个 validation shape 的 `parent_run_id` lineage；
 - [ ] P11-A11：最终 Checker 从最终干净 commit/bundle 重跑当前 persisted suite、至少一个历史反例和一个新反例，state/report/checksum 同步为绿。
+- [ ] P11-A12：集成 preflight 对 active source/config/CLI/PBS/tests/new artifacts 执行 forbidden-surface 扫描，证明无 SQLite/嵌入式数据库依赖和 DB dump。
 
 ## 9. 验证矩阵
 
@@ -305,7 +308,7 @@ tests/test_acceptance_checker.py
 | Miyabi login | 必须：git/static/qsub/qstat/log only。 |
 | Miyabi 1-node | 必须。 |
 | Miyabi 2-node | 必须，最大 debug walltime 10 分钟。 |
-| Miyabi 9-node | agent 可自主提交，无需用户批准；单个作业最多 16 节点、2 小时，这是本阶段最终 runtime gate。 |
+| Miyabi 9-node | agent 自主提交 1S+8L、50×10、15 分钟 terminal gate；不得以更长 walltime 替代失败。 |
 
 1/2/9-node runtime 每次尝试后必须检查 `qstat "$PBS_JOBID"`。9-node 不再设置 `READY_FOR_9NODE_APPROVAL` 状态；前置 gate 通过后由 agent 自主提交，未实际通过则不得标记 P11 完成。
 
@@ -355,10 +358,11 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 使用 miyabi-development skill 执行 P11。
 
 仓库：https://github.com/UnbearableFate/fs_based_decoupled_diloco
-规划基线：codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d
+规划基线：P10 双语报告中的 verified commit（执行时解析）
 目标分支：codex/duraloco-p11-miyabi-acceptance
 阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/12_P11_MIYABI_INTEGRATION_CHAOS_AND_9NODE_ACCEPTANCE.md
 共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
+系统设计：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/SQLITE_FREE_SYSTEM_DESIGN.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 
