@@ -161,3 +161,35 @@ records:
       rationale: "single verifier mismatch isolated by one test; same smallest qualification shape"
       parent_run_id: 20260711_p06c_unit_2ba1242_1node
     artifacts: [artifacts/duraloco/P06C/20260711_p06c_unit_2ba1242_1node]
+  - error_id: E-P06C-20260711-06
+    phase_and_gate: P06C/LOGIN-static
+    observed_at_utc: "2026-07-11T13:06:50Z"
+    pbs_job_id: null
+    hosts: [miyabi-g1]
+    git_commit: f84408f9b64a0cfd2190052e5a1464301119798d
+    classification: unexpected_failure
+    phenomenon:
+      exit_code: 1
+      exception: "IndentationError: expected an indented block in fs_diloco/log/replay.py line 875"
+      terminal_state: "the subsequent git commit still ran and captured the syntactically invalid edit"
+      log_excerpt: null
+    expected: "py_compile succeeds and only then may the repair be committed"
+    impact:
+      acceptance_ids: [P06C-A12, P06C-A23]
+      invariants: ["static validation failure must stop the persistence command sequence"]
+      committed_prefix_safe: true
+    cause:
+      confirmed: ["the replay block patch had inconsistent indentation", "the multi-line shell command did not enable errexit, so git add/commit continued after py_compile failed"]
+      unknown: []
+    repair:
+      change: "restore the complete request verification block indentation; run validation and commit as separate tool calls"
+      rationale: "separating the calls makes a failed static gate incapable of persisting later steps"
+    verification:
+      minimal_reproduction: "python -m py_compile fs_diloco/log/replay.py"
+      targeted_gate: "py_compile and git diff --check succeed before a distinct commit call"
+      qualification_ladder: ["login static", "Miyabi 1-node unit rerun"]
+    retry_decision:
+      authorized: true
+      rationale: "syntax-only regression caught before PBS submission"
+      parent_run_id: null
+    artifacts: []
