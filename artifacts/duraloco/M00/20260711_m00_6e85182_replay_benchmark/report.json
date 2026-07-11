@@ -1,0 +1,18 @@
+{
+  "authority_root": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_680126a_gpt2_9n_50x10/authority",
+  "commit_seq": 1,
+  "committed_state_digest": "ec649b53fcdf9f59602d75b61e7a5d80b5ea760d5e3694299ff45ba9f97b2e21",
+  "git_commit": "6e851821ea9c849b7dff3dad868352bf41a6b120",
+  "hostname": "mg0003",
+  "kind": "m00-production-replay-real-prefix-benchmark",
+  "large_object_count": 12,
+  "memoized_get_count": 12,
+  "memoized_large_get_count": 0,
+  "memoized_seconds": 0.012654174002818763,
+  "proposal_count": 8,
+  "run_generation": 0,
+  "run_id": "20260711_m00_680126a_gpt2_9n_50x10",
+  "status": "PASS",
+  "strict_cpu_seconds": 6.176996770023834,
+  "strict_gpu_seconds": 6.874905679986114
+}

@@ -1,0 +1,237 @@
+{
+  "authority": "committed-transition-log",
+  "commit_id": "c-764f5393d32e68a2c6f7ef3ae789a1016581add3f488d4b327e38b6b7e8766a0",
+  "commit_seq": 10,
+  "committed_selected_counts_by_event": {
+    "1": 8,
+    "10": 8,
+    "2": 8,
+    "3": 8,
+    "4": 8,
+    "5": 8,
+    "6": 8,
+    "7": 8,
+    "8": 8,
+    "9": 8
+  },
+  "committed_state_digest": "f3e26030b0ef92dc46f5f2239b67140cb21b152f345f5524c025d266d58afb0f",
+  "consumed_proposal_count": 80,
+  "fragment_versions": {
+    "0": 10
+  },
+  "frontier_sha256": "81049ad051853fbe7b9ff80738dba6b5c4ce8de622490d91854b463a42f4a2ef",
+  "global_merge_event": 10,
+  "heartbeats": {
+    "learner_000": {
+      "format_version": 1,
+      "hostname": "mg0585",
+      "last_loaded_global_version": 10,
+      "last_local_step": 500,
+      "last_update_id": "learner_000_00000500_9bddb967a296",
+      "learner_id": "learner_000",
+      "phase": "process_exit",
+      "pid": 3035479,
+      "run_id": "20260711_m00_c052438_gpt2_9n_50x10",
+      "status": "stopped",
+      "timestamp": 1783732804.9403343,
+      "tokens_per_sec": null
+    },
+    "learner_001": {
+      "format_version": 1,
+      "hostname": "mg0587",
+      "last_loaded_global_version": 10,
+      "last_local_step": 500,
+      "last_update_id": "learner_001_00000500_7c8f855b0d6d",
+      "learner_id": "learner_001",
+      "phase": "process_exit",
+      "pid": 2659286,
+      "run_id": "20260711_m00_c052438_gpt2_9n_50x10",
+      "status": "stopped",
+      "timestamp": 1783732804.3800998,
+      "tokens_per_sec": null
+    },
+    "learner_002": {
+      "format_version": 1,
+      "hostname": "mg0592",
+      "last_loaded_global_version": 10,
+      "last_local_step": 500,
+      "last_update_id": "learner_002_00000500_3673f250504e",
+      "learner_id": "learner_002",
+      "phase": "process_exit",
+      "pid": 4094551,
+      "run_id": "20260711_m00_c052438_gpt2_9n_50x10",
+      "status": "stopped",
+      "timestamp": 1783732804.8236263,
+      "tokens_per_sec": null
+    },
+    "learner_003": {
+      "format_version": 1,
+      "hostname": "mg0593",
+      "last_loaded_global_version": 10,
+      "last_local_step": 500,
+      "last_update_id": "learner_003_00000500_def44c4b9db2",
+      "learner_id": "learner_003",
+      "phase": "process_exit",
+      "pid": 304813,
+      "run_id": "20260711_m00_c052438_gpt2_9n_50x10",
+      "status": "stopped",
+      "timestamp": 1783732804.1422272,
+      "tokens_per_sec": null
+    },
+    "learner_004": {
+      "format_version": 1,
+      "hostname": "mg0594",
+      "last_loaded_global_version": 10,
+      "last_local_step": 500,
+      "last_update_id": "learner_004_00000500_9c93425c206d",
+      "learner_id": "learner_004",
+      "phase": "process_exit",
+      "pid": 228550,
+      "run_id": "20260711_m00_c052438_gpt2_9n_50x10",
+      "status": "stopped",
+      "timestamp": 1783732804.7144504,
+      "tokens_per_sec": null
+    },
+    "learner_005": {
+      "format_version": 1,
+      "hostname": "mg0595",
+      "last_loaded_global_version": 10,
+      "last_local_step": 500,
+      "last_update_id": "learner_005_00000500_9f96e6a63c75",
+      "learner_id": "learner_005",
+      "phase": "process_exit",
+      "pid": 244303,
+      "run_id": "20260711_m00_c052438_gpt2_9n_50x10",
+      "status": "stopped",
+      "timestamp": 1783732804.1421962,
+      "tokens_per_sec": null
+    },
+    "learner_006": {
+      "format_version": 1,
+      "hostname": "mg0601",
+      "last_loaded_global_version": 10,
+      "last_local_step": 500,
+      "last_update_id": "learner_006_00000500_103eaebb34c9",
+      "learner_id": "learner_006",
+      "phase": "process_exit",
+      "pid": 1385290,
+      "run_id": "20260711_m00_c052438_gpt2_9n_50x10",
+      "status": "stopped",
+      "timestamp": 1783732804.8119297,
+      "tokens_per_sec": null
+    },
+    "learner_007": {
+      "format_version": 1,
+      "hostname": "mg0606",
+      "last_loaded_global_version": 10,
+      "last_local_step": 500,
+      "last_update_id": "learner_007_00000500_7a84bdf7234e",
+      "learner_id": "learner_007",
+      "phase": "process_exit",
+      "pid": 188666,
+      "run_id": "20260711_m00_c052438_gpt2_9n_50x10",
+      "status": "stopped",
+      "timestamp": 1783732804.4052122,
+      "tokens_per_sec": null
+    }
+  },
+  "latest": {
+    "authority": "committed-transition-log",
+    "commit_id": "c-764f5393d32e68a2c6f7ef3ae789a1016581add3f488d4b327e38b6b7e8766a0",
+    "commit_seq": 10,
+    "committed_state_digest": "f3e26030b0ef92dc46f5f2239b67140cb21b152f345f5524c025d266d58afb0f",
+    "created_at": 1783732803.5901117,
+    "format_version": 1,
+    "frontier_sha256": "81049ad051853fbe7b9ff80738dba6b5c4ce8de622490d91854b463a42f4a2ef",
+    "global_merge_event": 10,
+    "optim_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_c052438_gpt2_9n_50x10/optim/outer_v000010.safetensors",
+    "param_index_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_c052438_gpt2_9n_50x10/control/param_index.json",
+    "run_generation": 0,
+    "run_id": "20260711_m00_c052438_gpt2_9n_50x10",
+    "runtime_view_digest": "408521f0658ff1df7c8897b6cfb7194a9afef6d6f59e9fbadbbd2b68e795f68c",
+    "total_seen_tokens": 512000,
+    "version": 10,
+    "weight_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_c052438_gpt2_9n_50x10/weights/global_v000010.safetensors"
+  },
+  "latest_export_valid": true,
+  "latest_kind": "full",
+  "learner_fragment_adoption": {
+    "learner_000": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    },
+    "learner_001": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    },
+    "learner_002": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    },
+    "learner_003": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    },
+    "learner_004": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    },
+    "learner_005": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    },
+    "learner_006": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    },
+    "learner_007": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    }
+  },
+  "learner_local_steps": {
+    "learner_000": 500,
+    "learner_001": 500,
+    "learner_002": 500,
+    "learner_003": 500,
+    "learner_004": 500,
+    "learner_005": 500,
+    "learner_006": 500,
+    "learner_007": 500
+  },
+  "learner_metrics": {
+    "exists": true,
+    "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_c052438_gpt2_9n_50x10/metrics/learner_metrics.csv",
+    "rows": 80
+  },
+  "loss_summary": {
+    "count": 80,
+    "invalid_or_nonfinite": 0,
+    "max": 4.55599953174591,
+    "min": 3.5475476026535033,
+    "obvious_divergence": false
+  },
+  "materialized_weight_exists": true,
+  "payload_codec": "safetensors-flat-v1",
+  "run_generation": 0,
+  "run_id": "20260711_m00_c052438_gpt2_9n_50x10",
+  "runtime_view_digest": "408521f0658ff1df7c8897b6cfb7194a9afef6d6f59e9fbadbbd2b68e795f68c",
+  "shared_root": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_c052438_gpt2_9n_50x10",
+  "stop_reason": "stop_after_outer_steps",
+  "syncer_log_flags": {
+    "error": false,
+    "no_progress_timeout": false,
+    "uncaught_exception": false
+  },
+  "syncer_metrics": {
+    "exists": true,
+    "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_c052438_gpt2_9n_50x10/metrics/syncer_metrics.csv",
+    "rows": 10
+  },
+  "total_seen_tokens": 512000,
+  "update_manifest": {
+    "exists": true,
+    "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_c052438_gpt2_9n_50x10/metrics/update_manifest.csv",
+    "rows": 80
+  }
+}

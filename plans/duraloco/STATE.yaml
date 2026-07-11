@@ -1,68 +1,33 @@
 phase: M00
-status: in_progress
-planning_basis_branch: codex/fs-diloco-miyabi
-planning_basis_commit: afc50a1e179c64321645b278b2497ea3ab3fe24d
+status: checking
+planning_basis_branch: codex/duraloco-p04-transaction-log
+planning_basis_commit: a655413cea6ebe9bc368b5827318efd766683b5a
 actual_base_branch: no_sql
 actual_base_commit: f32b9ddf3fd6443947c178aee667029df1c7f86d
 feature_branch: codex/duraloco-m00-sqlite-free-rebase
-current_loop: 1
-current_goal: "remove every embedded-database runtime surface and rebase production sync through the committed log"
-attempts_for_current_failure: 1
-last_verified_commit: null
+current_loop: 4
+current_goal: "independently check the SQLite-free runtime and P00-P04 requalification"
+attempts_for_current_failure: 0
+last_verified_commit: c052438a3cfe5e16c3b154fc842f32dcd61ec6ff
 checks:
   local_static: static_pass
   local_runtime: contract_pass
   miyabi_login_static: static_pass
   miyabi_1node: miyabi_1node_pass
   miyabi_2node: miyabi_2node_pass
-  miyabi_9node: failed
+  miyabi_9node: miyabi_9node_pass
 acceptance:
-  M00-A01: {result: not_run, evidence: []}
-  M00-A02: {result: not_run, evidence: []}
-  M00-A03: {result: not_run, evidence: []}
-  M00-A04: {result: not_run, evidence: []}
-  M00-A05: {result: not_run, evidence: []}
-  M00-A06: {result: not_run, evidence: []}
-  M00-A07: {result: not_run, evidence: []}
-  M00-A08: {result: not_run, evidence: []}
-  M00-A09:
-    result: pass
-    evidence:
-      - artifacts/duraloco/M00/20260711_m00_97a6876_1node/manifest.json
-      - artifacts/duraloco/M00/20260711_m00_97a6876_1node/one_node_contract.json
-      - artifacts/duraloco/M00/20260711_m00_97a6876_1node/20260711_m00_97a6876_1node-full_after_recovery.json
-      - artifacts/duraloco/M00/20260711_m00_97a6876_1node/20260711_m00_97a6876_1node-fragment_after_recovery.json
-      - artifacts/duraloco/M00/20260711_m00_1bd8e10_1node_requal/manifest.json
-      - artifacts/duraloco/M00/20260711_m00_1bd8e10_1node_requal/junit.xml
-      - artifacts/duraloco/M00/20260711_m00_680126a_1node_requal/manifest.json
-  M00-A10:
-    result: pass
-    evidence:
-      - artifacts/duraloco/M00/20260711_m00_81b442c_2node/manifest.json
-      - artifacts/duraloco/M00/20260711_m00_81b442c_2node/two_node_summary.json
-      - artifacts/duraloco/M00/20260711_m00_81b442c_2node/takeover_ranks/rank_0.json
-      - artifacts/duraloco/M00/20260711_m00_81b442c_2node/takeover_ranks/rank_1.json
-  M00-A11:
-    result: fail
-    evidence:
-      - artifacts/duraloco/M00/20260711_m00_dec182e_gpt2_9n_50x10/manifest.json
-      - artifacts/duraloco/M00/20260711_m00_dec182e_gpt2_9n_50x10/training.log
-      - artifacts/duraloco/M00/20260711_m00_dec182e_gpt2_9n_50x10/qstat_final.log
-      - artifacts/duraloco/M00/20260711_m00_342e975_gpt2_9n_50x10/manifest.json
-      - artifacts/duraloco/M00/20260711_m00_342e975_gpt2_9n_50x10/training.log
-      - artifacts/duraloco/M00/20260711_m00_2d572d4_gpt2_9n_50x10/manifest.json
-      - artifacts/duraloco/M00/20260711_m00_2d572d4_gpt2_9n_50x10/training.log
-      - artifacts/duraloco/M00/20260711_m00_c1c2404_gpt2_9n_50x10/manifest.json
-      - artifacts/duraloco/M00/20260711_m00_c1c2404_gpt2_9n_50x10/training.log
-      - artifacts/duraloco/M00/20260711_m00_d3a7dce_gpt2_9n_50x10/manifest.json
-      - artifacts/duraloco/M00/20260711_m00_d3a7dce_gpt2_9n_50x10/training.log
-      - artifacts/duraloco/M00/20260711_m00_cd5bd73_gpt2_9n_50x10/manifest.json
-      - artifacts/duraloco/M00/20260711_m00_cd5bd73_gpt2_9n_50x10/training.log
-      - artifacts/duraloco/M00/20260711_m00_1056f0d_gpt2_9n_50x10/manifest.json
-      - artifacts/duraloco/M00/20260711_m00_1056f0d_gpt2_9n_50x10/training.log
-      - artifacts/duraloco/M00/20260711_m00_1056f0d_payload_benchmark/report.json
-      - artifacts/duraloco/M00/20260711_m00_680126a_gpt2_9n_50x10/manifest.json
-      - artifacts/duraloco/M00/20260711_m00_680126a_gpt2_9n_50x10/qstat_final.log
+  M00-A01: {result: pass, evidence: [artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/forbidden_surface.json, scripts/agent/check_no_embedded_database.py]}
+  M00-A02: {result: pass, evidence: [fs_diloco/log/production.py, fs_diloco/log/commit.py, artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/terminal_gate_report.json]}
+  M00-A03: {result: pass, evidence: [fs_diloco/runtime_view.py, fs_diloco/log/replay.py, tests/log/test_production_runtime.py]}
+  M00-A04: {result: pass, evidence: [fs_diloco/proposal_catalog.py, tests/test_proposal_catalog.py, tests/log/test_production_runtime.py]}
+  M00-A05: {result: pass, evidence: [fs_diloco/log/production_codec.py, tests/log/test_production_runtime.py, artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/terminal_gate_report.json]}
+  M00-A06: {result: pass, evidence: [fs_diloco/log/bootstrap.py, tests/log/test_production_runtime.py, artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/manifest.json]}
+  M00-A07: {result: pass, evidence: [fs_diloco/analysis.py, fs_diloco/log/training_probe.py, artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/training_summary.json]}
+  M00-A08: {result: pass, evidence: [plans/duraloco/M00_P00_P04_ACCEPTANCE_MAPPING.json, plans/duraloco/M00_P00_P04_ACCEPTANCE_MAPPING.md]}
+  M00-A09: {result: pass, evidence: [artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/manifest.json, artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/junit.xml]}
+  M00-A10: {result: pass, evidence: [artifacts/duraloco/M00/20260711_m00_c052438_2node_requal/manifest.json, artifacts/duraloco/M00/20260711_m00_c052438_2node_requal/two_node_summary.json]}
+  M00-A11: {result: pass, evidence: [artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/manifest.json, artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/terminal_gate_report.json]}
   M00-A12: {result: not_run, evidence: []}
 open_decisions: []
 open_blockers: []
@@ -74,28 +39,19 @@ artifacts:
   - artifacts/duraloco/M00/20260711_m00_81b442c_2node
   - artifacts/duraloco/M00/20260711_m00_dec182e_gpt2_9n_50x10
   - artifacts/duraloco/M00/20260711_m00_342e975_gpt2_9n_50x10
-  - artifacts/duraloco/M00/20260711_m00_2d572d4_1node_requal
-  - artifacts/duraloco/M00/20260711_m00_2d572d4_2node_requal
   - artifacts/duraloco/M00/20260711_m00_2d572d4_gpt2_9n_50x10
-  - artifacts/duraloco/M00/20260711_m00_c1c2404_1node_requal
-  - artifacts/duraloco/M00/20260711_m00_c1c2404_2node_requal
   - artifacts/duraloco/M00/20260711_m00_c1c2404_gpt2_9n_50x10
-  - artifacts/duraloco/M00/20260711_m00_d3a7dce_1node_requal
-  - artifacts/duraloco/M00/20260711_m00_d3a7dce_2node_requal
   - artifacts/duraloco/M00/20260711_m00_d3a7dce_gpt2_9n_50x10
-  - artifacts/duraloco/M00/20260711_m00_cd5bd73_1node_requal
-  - artifacts/duraloco/M00/20260711_m00_cd5bd73_2node_requal
   - artifacts/duraloco/M00/20260711_m00_cd5bd73_gpt2_9n_50x10
-  - artifacts/duraloco/M00/20260711_m00_1056f0d_1node_requal
-  - artifacts/duraloco/M00/20260711_m00_1056f0d_2node_requal
   - artifacts/duraloco/M00/20260711_m00_1056f0d_gpt2_9n_50x10
-  - artifacts/duraloco/M00/20260711_m00_1056f0d_payload_benchmark
-  - artifacts/duraloco/M00/20260711_m00_1bd8e10_1node_requal
-  - artifacts/duraloco/M00/20260711_m00_680126a_1node_requal
-  - artifacts/duraloco/M00/20260711_m00_680126a_2node_requal
   - artifacts/duraloco/M00/20260711_m00_680126a_gpt2_9n_50x10
+  - artifacts/duraloco/M00/20260711_m00_6e85182_replay_benchmark
+  - artifacts/duraloco/M00/20260711_m00_6e85182_1node_requal
+  - artifacts/duraloco/M00/20260711_m00_c052438_1node_requal
+  - artifacts/duraloco/M00/20260711_m00_c052438_2node_requal
+  - artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10
   - plans/duraloco/reviews/M00_PRODUCTION_REPLAY_WORKFLOW_REVIEW.md
-next_action: "pause submissions; review the full production replay workflow, replace scalar production replay validation, and design bounded incremental verification before any further qsub"
+next_action: "run the independent final M00 Checker on the persisted clean commit"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

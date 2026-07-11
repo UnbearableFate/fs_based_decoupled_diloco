@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "phase": "M00",
+  "verified_implementation": "c052438a3cfe5e16c3b154fc842f32dcd61ec6ff",
+  "status": "maker_pass_pending_independent_checker",
+  "common_evidence": {
+    "one_node": "artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/manifest.json",
+    "one_node_junit": "artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/junit.xml",
+    "two_node": "artifacts/duraloco/M00/20260711_m00_c052438_2node_requal/two_node_summary.json",
+    "terminal": "artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/terminal_gate_report.json",
+    "terminal_log_junit": "artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/m00_log_junit.xml",
+    "real_prefix_replay": "artifacts/duraloco/M00/20260711_m00_6e85182_replay_benchmark/report.json"
+  },
+  "explicit_remaps": {
+    "P00-A06": {
+      "result": "pass",
+      "old_semantics": "legacy runtime compatibility without changing the default",
+      "m00_semantics": "removed embedded-database config and CLI keys fail closed while supported non-database configuration remains compatible",
+      "evidence": [
+        "tests/test_removed_config_keys.py",
+        "tests/test_baseline_compatibility.py",
+        "artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/forbidden_surface.json"
+      ]
+    },
+    "P04-A06": {
+      "result": "pass",
+      "old_semantics": "rebuild a disposable SQLite cache from replay",
+      "m00_semantics": "delete all process-local and compatibility exports, reopen in a fresh process, and reconstruct the exact RuntimeView solely from committed authority",
+      "evidence": [
+        "tests/log/test_production_runtime.py",
+        "artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/20260711_m00_c052438_1node_requal-full_after_recovery.json",
+        "artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/20260711_m00_c052438_1node_requal-fragment_after_recovery.json"
+      ]
+    }
+  },
+  "gates": {
+    "P00-A01": {"result": "pass", "evidence": ["docs/duraloco/baseline_inventory.md", "docs/duraloco/migration_map.md", "plans/duraloco/phases/M00_DRIFT_REPORT.md"]},
+    "P00-A02": {"result": "pass", "evidence": ["docs/duraloco/research_contract.md", "docs/duraloco/failure_model.md", "docs/duraloco/numeric_contract.md"]},
+    "P00-A03": {"result": "pass", "evidence": ["docs/duraloco/invariants.md", "plans/duraloco/TRACEABILITY.md", "fs_diloco/runtime_view.py"]},
+    "P00-A04": {"result": "pass", "evidence": ["scripts/agent/check_phase_state.py", "tests/test_agent_state_contract.py"]},
+    "P00-A05": {"result": "pass", "evidence": ["artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/manifest.json", "docs/duraloco/baseline_limitations.md"]},
+    "P00-A06": {"result": "pass", "remap": true, "evidence": ["tests/test_removed_config_keys.py", "tests/test_baseline_compatibility.py"]},
+    "P00-A07": {"result": "pass", "evidence": ["tests/test_run_manifest_contract.py", "artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/manifest.json"]},
+    "P00-A08": {"result": "pass", "evidence": ["plans/duraloco/M00_P00_P04_ACCEPTANCE_MAPPING.md", "plans/duraloco/phases/M00_PHASE_REPORT.md"]},
+
+    "P01-A01": {"result": "pass", "evidence": ["tests/protocol/golden/manifest_digests.json", "tests/protocol/test_manifest_goldens.py"]},
+    "P01-A02": {"result": "pass", "evidence": ["tests/protocol/test_validation_matrix.py", "artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/junit.xml"]},
+    "P01-A03": {"result": "pass", "evidence": ["tests/protocol/test_quarantine.py", "fs_diloco/proposal_catalog.py"]},
+    "P01-A04": {"result": "pass", "evidence": ["tests/protocol/test_identities.py", "tests/protocol/test_validation_matrix.py"]},
+    "P01-A05": {"result": "pass", "evidence": ["fs_diloco/protocol/v1_adapter.py", "tests/protocol/test_v1_adapter.py"]},
+    "P01-A06": {"result": "pass", "evidence": ["fs_diloco/protocol/validation.py", "tests/test_proposal_catalog.py"]},
+    "P01-A07": {"result": "pass", "evidence": ["artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/junit.xml", "artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/manifest.json"]},
+    "P01-A08": {"result": "pass", "evidence": ["tests/protocol/test_validation_matrix.py", "tests/protocol/test_quarantine.py"]},
+
+    "P02-A01": {"result": "pass", "evidence": ["tests/reference/test_reference_independence.py", "fs_diloco/testing/deterministic_reference.py"]},
+    "P02-A02": {"result": "pass", "evidence": ["fs_diloco/log/model.py", "tests/reference/test_reference_transitions.py"]},
+    "P02-A03": {"result": "pass", "evidence": ["tests/reference/test_crash_prefixes.py", "tests/log/test_commit_crash_matrix.py"]},
+    "P02-A04": {"result": "pass", "evidence": ["tests/reference/test_double_inclusion.py", "tests/log/test_production_runtime.py"]},
+    "P02-A05": {"result": "pass", "evidence": ["tests/reference/test_model_checker_mutants.py", "fs_diloco/testing/model_checker.py"]},
+    "P02-A06": {"result": "pass", "evidence": ["tests/reference/test_reference_outer_optim.py", "artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/junit.xml"]},
+    "P02-A07": {"result": "pass", "evidence": ["tests/reference/test_random_traces.py", "tests/reference/golden/reference_digests.json"]},
+    "P02-A08": {"result": "pass", "evidence": ["tests/reference/test_random_traces.py", "tests/reference/test_reference_transitions.py"]},
+
+    "P03-A01": {"result": "pass", "evidence": ["tests/storage/contract.py", "tests/storage/test_conformance.py"]},
+    "P03-A02": {"result": "pass", "evidence": ["tests/storage/test_conformance.py", "tests/storage/test_capability_probe.py"]},
+    "P03-A03": {"result": "pass", "evidence": ["artifacts/duraloco/M00/20260711_m00_c052438_2node_requal/two_node_summary.json", "artifacts/duraloco/M00/20260711_m00_c052438_2node_requal/backend_races.log"]},
+    "P03-A04": {"result": "pass", "evidence": ["tests/storage/test_fault_injection.py", "tests/test_proposal_catalog.py"]},
+    "P03-A05": {"result": "pass", "evidence": ["docs/duraloco/storage_contract.md", "artifacts/duraloco/M00/20260711_m00_c052438_2node_requal/mount.log"]},
+    "P03-A06": {"result": "pass", "evidence": ["tests/storage/test_fault_injection.py", "artifacts/duraloco/M00/20260711_m00_c052438_2node_requal/backend_ranks/rank_0_operations.jsonl"]},
+    "P03-A07": {"result": "pass", "evidence": ["tests/storage/test_capability_probe.py", "tests/test_removed_config_keys.py"]},
+    "P03-A08": {"result": "pass", "evidence": ["artifacts/duraloco/M00/20260711_m00_c052438_2node_requal/manifest.json", "artifacts/duraloco/M00/20260711_m00_c052438_2node_requal/two_node_summary.json"]},
+
+    "P04-A01": {"result": "pass", "evidence": ["fs_diloco/log/commit.py", "fs_diloco/log/production.py", "artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/terminal_gate_report.json"]},
+    "P04-A02": {"result": "pass", "evidence": ["tests/log/test_commit_crash_matrix.py", "artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/one_node_contract.json"]},
+    "P04-A03": {"result": "pass", "evidence": ["tests/log/test_cas_conflict.py", "tests/log/test_production_runtime.py"]},
+    "P04-A04": {"result": "pass", "evidence": ["artifacts/duraloco/M00/20260711_m00_c052438_2node_requal/two_node_summary.json", "artifacts/duraloco/M00/20260711_m00_c052438_2node_requal/transaction_races.log"]},
+    "P04-A05": {"result": "pass", "evidence": ["fs_diloco/log/replay.py", "tests/log/test_production_runtime.py", "artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/terminal_gate_report.json"]},
+    "P04-A06": {"result": "pass", "remap": true, "evidence": ["tests/log/test_production_runtime.py", "artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/20260711_m00_c052438_1node_requal-full_after_recovery.json", "artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/20260711_m00_c052438_1node_requal-fragment_after_recovery.json"]},
+    "P04-A07": {"result": "pass", "evidence": ["tests/log/test_replay_prefix.py", "tests/log/test_production_runtime.py", "artifacts/duraloco/M00/20260711_m00_6e85182_replay_benchmark/report.json"]},
+    "P04-A08": {"result": "pass", "evidence": ["fs_diloco/log/inspect_cli.py", "tests/log/test_inspect_cli.py", "artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/m00_log_junit.xml"]},
+    "P04-A09": {"result": "pass", "evidence": ["plans/duraloco/reviews/M00_PRODUCTION_REPLAY_WORKFLOW_REVIEW.md", "artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/terminal_gate_report.json"]}
+  }
+}

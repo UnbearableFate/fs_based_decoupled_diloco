@@ -1,0 +1,108 @@
+{
+  "assertions": {
+    "all_learners_at_least_50_local_steps": true,
+    "checkpoints_complete": true,
+    "exactly_10_head_cas_transitions": true,
+    "losses_finite": true,
+    "nine_process_layout": true,
+    "no_forbidden_runtime_artifacts": true,
+    "params_outer_state_paired": true,
+    "production_log_is_authority": true,
+    "proposal_inclusion_exactly_once": true,
+    "real_gpt2_wikitext": true
+  },
+  "checkpoint_count": 11,
+  "checkpoints": [
+    {
+      "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_c052438_gpt2_9n_50x10/weights/global_v000000.safetensors",
+      "sha256": "6f9a8d24d1b67e48287e07445b44b4d75a151951eea01e55a90c9c7dc608d8f2"
+    },
+    {
+      "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_c052438_gpt2_9n_50x10/weights/global_v000001.safetensors",
+      "sha256": "4f85e24834e2a91dd25f9ac6cef68d6842bf808076cb9102c4e31031a8a51151"
+    },
+    {
+      "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_c052438_gpt2_9n_50x10/weights/global_v000002.safetensors",
+      "sha256": "ff681b19446d8cd4b7d9f8bf3e979fd868eef31c7812fd20dafc33cdcf1088c4"
+    },
+    {
+      "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_c052438_gpt2_9n_50x10/weights/global_v000003.safetensors",
+      "sha256": "31728965b786dcee7bdbc2a248e4041b050e63d8c3d6b86ac40c315402ae2c51"
+    },
+    {
+      "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_c052438_gpt2_9n_50x10/weights/global_v000004.safetensors",
+      "sha256": "f1cfee7fa2556b86b4164d96054fd8ce1d4fac3ada8ae3c41692ab8385356e08"
+    },
+    {
+      "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_c052438_gpt2_9n_50x10/weights/global_v000005.safetensors",
+      "sha256": "075847f499e0080f60bb08778f6e62e554b89bc1ff4acb3d15c9dd1e6d3433e2"
+    },
+    {
+      "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_c052438_gpt2_9n_50x10/weights/global_v000006.safetensors",
+      "sha256": "63fe3fea80cc74a47ade82118955a4822503dbeb39dd5c69ea48eccc07dedfac"
+    },
+    {
+      "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_c052438_gpt2_9n_50x10/weights/global_v000007.safetensors",
+      "sha256": "86ecbecca5a3752d5c32b43191f7789bb0fce3bc35326a95a2c3a84cb83ace3f"
+    },
+    {
+      "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_c052438_gpt2_9n_50x10/weights/global_v000008.safetensors",
+      "sha256": "cb209e111bc2e6c4241ae1443a15ba1f3aa9b30fbbcab64fef98807ad84082a0"
+    },
+    {
+      "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_c052438_gpt2_9n_50x10/weights/global_v000009.safetensors",
+      "sha256": "67f80a33116a875291fc15bbe02680896c4b007cf59edb4bce126c5ee7b89763"
+    },
+    {
+      "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_c052438_gpt2_9n_50x10/weights/global_v000010.safetensors",
+      "sha256": "ec149b3cd83cc5770adfd58bb5d44347b53edc3808e5a7a5db2536dfc4cbfd58"
+    }
+  ],
+  "committed_selection_counts": [
+    8,
+    8,
+    8,
+    8,
+    8,
+    8,
+    8,
+    8,
+    8,
+    8
+  ],
+  "committed_state_digest": "f3e26030b0ef92dc46f5f2239b67140cb21b152f345f5524c025d266d58afb0f",
+  "config": "/work/xg24i002/x10041/fs_based_decoupled_diloco/configs/duraloco_milestone_gpt2_9node_50x10.yaml",
+  "config_sha256": "5b27d81165cebedbae551e4b7b3ba003fc9bd157700e7c9d4e96975c1f91e288",
+  "consumed_proposal_count": 80,
+  "dataset": "wikitext-2-raw-v1",
+  "finite_loss_count": 80,
+  "forbidden_runtime_artifacts": [],
+  "global_outer_transitions": 10,
+  "inner_steps": 50,
+  "kind": "m00-terminal-real-gpt2-9node-50x10",
+  "learner_local_steps": {
+    "learner_000": 500,
+    "learner_001": 500,
+    "learner_002": 500,
+    "learner_003": 500,
+    "learner_004": 500,
+    "learner_005": 500,
+    "learner_006": 500,
+    "learner_007": 500
+  },
+  "learners": 8,
+  "limitations": [
+    "M00 assumes one active syncer; lease and fencing begin in P05",
+    "learner recovery is warm until later capsule work"
+  ],
+  "loss_max": 4.55599953174591,
+  "loss_min": 3.5475476026535033,
+  "model": "gpt2",
+  "nonfinite_or_invalid_loss_count": 0,
+  "prepared_orphan_count": 0,
+  "runtime_view_digest": "408521f0658ff1df7c8897b6cfb7194a9afef6d6f59e9fbadbbd2b68e795f68c",
+  "schema_version": 2,
+  "status": "PASS",
+  "stop_reason": "stop_after_outer_steps",
+  "training_root": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_c052438_gpt2_9n_50x10"
+}

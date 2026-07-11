@@ -1,0 +1,33 @@
+{
+  "assertions": [
+    "strict CPU and GPU replay of the preserved real sequence-1 production prefix produced the same committed digest",
+    "memoized replay performed zero reads of proposal, params, or outer-state tensor objects"
+  ],
+  "backend": "lustre",
+  "commands_log": "commands.log",
+  "config_digest": "060317e9d1c6bb486cfb9fc28f640b000d8e10d2989ecb7b4823b4ac3d06ac7f",
+  "config_path": "scripts/miyabi/benchmark_m00_production_replay.pbs",
+  "dataset_revision": "wikitext-2-raw-v1",
+  "dirty_paths": [],
+  "dirty_tree": false,
+  "ended_at_utc": "2026-07-11T01:12:08.352987Z",
+  "exit_code": 0,
+  "git_branch": "codex/duraloco-m00-sqlite-free-rebase",
+  "git_commit": "6e851821ea9c849b7dff3dad868352bf41a6b120",
+  "hostname": "mg0003",
+  "manifest_sha256": "68932caef37967024181a9a9b100b91e99f1978ac05dd987c3304a42f6827e1b",
+  "model_revision": "gpt2",
+  "parent_run_id": "20260711_m00_680126a_gpt2_9n_50x10",
+  "pbs_job_id": "2359243.opbs",
+  "pbs_nodefile_digest": null,
+  "phase": "M00",
+  "purpose": "benchmark",
+  "python_version": "3.9.25",
+  "result": "pass",
+  "run_id": "20260711_m00_6e85182_replay_benchmark",
+  "schema_version": 1,
+  "seed": null,
+  "started_at_utc": "2026-07-11T01:12:08.352987Z",
+  "stderr": "stderr.log",
+  "stdout": "stdout.log"
+}

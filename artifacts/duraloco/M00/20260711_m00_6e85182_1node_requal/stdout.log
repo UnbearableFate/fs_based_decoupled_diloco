@@ -1,0 +1,46 @@
+{
+  "finding_count": 0,
+  "findings": [],
+  "scanned_files": 193,
+  "status": "PASS"
+}
+..................................F..................................... [ 25%]
+........................................................................ [ 51%]
+...................s.................................................... [ 76%]
+..................................................................       [100%]
+=================================== FAILURES ===================================
+__ test_corrupt_new_object_fails_before_replay_cache_replacement[outer_state] __
+
+object_kind = 'outer_state'
+
+    @pytest.mark.parametrize(
+        "object_kind",
+        ["proposal", "params", "outer_state", "commit", "frontier"],
+    )
+    def test_corrupt_new_object_fails_before_replay_cache_replacement(object_kind):
+        backend, log = _initialize(f"production-corrupt-new-{object_kind}")
+        manifest = _proposal(log, learner="learner-0", sequence=1, values=[1.0, 2.0])
+        prepared = _prepare(log, manifest, [0.5, 1.0])
+        log.commit_prepared(prepared)
+        key = {
+            "proposal": manifest.payload_key,
+            "params": prepared.commit.new_params_ref.key,
+            "outer_state": prepared.commit.new_outer_state_ref.key,
+            "commit": prepared.commit_ref.key,
+            "frontier": prepared.frontier_ref.key,
+        }[object_kind]
+        original = _corrupt_object(backend, key)
+        cache_before = (
+            set(log._replay_cache.proposal_payloads),
+            dict(log._replay_cache.params_numels),
+            dict(log._replay_cache.outer_numels),
+        )
+    
+>       with pytest.raises(VerificationError):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE VerificationError
+
+tests/log/test_production_runtime.py:270: Failed
+=========================== short test summary info ============================
+FAILED tests/log/test_production_runtime.py::test_corrupt_new_object_fails_before_replay_cache_replacement[outer_state]
+1 failed, 280 passed, 1 skipped in 19.82s

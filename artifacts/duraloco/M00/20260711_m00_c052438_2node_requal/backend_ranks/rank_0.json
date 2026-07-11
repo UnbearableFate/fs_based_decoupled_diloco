@@ -1,0 +1,24 @@
+{
+  "capabilities": {
+    "advisory_lock": true,
+    "atomic_replace": true,
+    "backend": "posix",
+    "batch_delete": true,
+    "conditional_replace": true,
+    "directory_fsync": true,
+    "immutable_create": true,
+    "listing": true,
+    "range_reads": true,
+    "verified_reads": true
+  },
+  "double_winner_rounds": 0,
+  "hostname": "mg0003",
+  "operation_count": 1907,
+  "operation_trace": "rank_0_operations.jsonl",
+  "rank": 0,
+  "rounds": 100,
+  "stale_lock_takeover": "pass",
+  "visibility_failures": 0,
+  "winner_count": 97,
+  "world_size": 2
+}

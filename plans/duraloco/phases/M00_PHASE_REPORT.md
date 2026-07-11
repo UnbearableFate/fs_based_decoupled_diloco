@@ -7,17 +7,18 @@
 - Phase: M00 — SQLite-free runtime rebase and P00–P04 requalification
 - Branch: `codex/duraloco-m00-sqlite-free-rebase`
 - Base: user design commit `f32b9ddf3fd6443947c178aee667029df1c7f86d`
-- State: `in_progress`
-- Completed acceptance targets: none yet
-- Pending acceptance targets: M00-A01 through M00-A12
-- Checker verdict: not run
+- State: `checking`
+- Completed Maker acceptance targets: M00-A01 through M00-A11
+- Pending acceptance target: M00-A12 independent Checker
+- Verified implementation: `c052438a3cfe5e16c3b154fc842f32dcd61ec6ff`
+- Checker verdict: pending
 
 The implementation removes the legacy persistence surface, adds
 the production safetensors transaction path, replay-derived `RuntimeView`,
 re-entrant proposal catalog, file-native analysis, explicit warm-start
 generation metadata, and M00 static/runtime harnesses. Static source/config/
-script/test scanning passes. The clean one-node qualification now passes;
-two-node and nine-node compute qualification remain in progress.
+script/test scanning passes. The final clean one-node, two-node, real-prefix
+replay benchmark, and nine-node GPT-2/WikiText-2 50×10 gates all pass.
 
 ### Checker and qualification failure history
 
@@ -318,11 +319,54 @@ two-node and nine-node compute qualification remain in progress.
   catalog, enforce them again at production prepare, and let learners configured
   for post-upload adoption wait through one scan/grace window for a successor.
 
+### Review-driven replay remediation and final Maker ladder
+
+After attempt 8 failed, no immediate nine-node retry was submitted. The full
+workflow was reconstructed in
+`plans/duraloco/reviews/M00_PRODUCTION_REPLAY_WORKFLOW_REVIEW.md`. Production
+replay now routes large tensors through vectorized validation while a
+process-local cache memoizes only already-verified immutable tensor ObjectRefs.
+Every call still reloads the head and verifies the complete manifest/causal
+chain; fresh open and explicit fallback use an empty cache. Transaction stage
+events and CSV fields now isolate catalog, proposal observation, aggregation,
+outer step, successor preparation, head CAS, post-CAS replay, and export.
+
+The read-only preserved-prefix benchmark `20260711_m00_6e85182_replay_benchmark`
+(PBS `2359243.opbs`, `mg0003`) passed: strict CPU replay took 6.177 s, strict
+GPU replay 6.875 s, memoized replay 0.013 s, and memoized replay read zero large
+proposal/params/outer objects.
+
+The first post-review one-node run, PBS `2359245.opbs`, correctly exposed one
+test-fixture error after 280 tests passed: its “new outer-state corruption” case
+reused the content-addressed genesis outer state, so the verified immutable
+cache correctly skipped it. The fixture was changed to create a distinct
+successor outer state; no runtime code was weakened.
+
+The final clean ladder at implementation `c052438` then passed:
+
+- PBS `2359248.opbs`, `mg0003`: forbidden scan, 281 passed/1 skipped, ten-commit
+  crash/replay contract, and exact full/fragment fresh-process log-only recovery;
+- PBS `2359250.opbs`, `mg0003` + `mg0004`: 100 backend races, 20 same-parent
+  transaction races, zero double winners/inclusions, and production takeover;
+- PBS `2359253.opbs`, nine distinct hosts: real GPT-2/WikiText-2 with one
+  syncer and eight learners completed 500 local steps each and exactly ten
+  outer transitions in 7m24s under the 15-minute hard limit. All 80 losses were
+  finite, all ten commits consumed eight proposals exactly once, and eleven
+  checkpoints were retained and hashed.
+
+Terminal steady-state timing was stable: post-CAS replay stayed between 4.835
+and 4.940 seconds, head CAS between 0.007 and 0.012 seconds, and complete
+transition intervals after the first were 16.4–18.0 seconds. The terminal
+authority probe and the 39-test log slice both passed. The complete 41-ID
+P00–P04 mapping is persisted in
+`plans/duraloco/M00_P00_P04_ACCEPTANCE_MAPPING.{json,md}`.
+
 ### Limitations and next action
 
 M00 still assumes one active syncer. Lease/fencing begins in P05; learner exact
-restart and authoritative GC remain later work. Next action is the clean
-nine-node GPT-2/WikiText-2 50×10 terminal gate.
+restart and authoritative GC remain later work. Next action is the independent
+final Checker on the persisted clean commit; no additional Maker experiment is
+required.
 
 ## 中文
 
@@ -331,15 +375,17 @@ nine-node GPT-2/WikiText-2 50×10 terminal gate.
 - 阶段：M00 — 无 SQLite 运行时重构与 P00–P04 再验收
 - 分支：`codex/duraloco-m00-sqlite-free-rebase`
 - 基线：用户设计提交 `f32b9ddf3fd6443947c178aee667029df1c7f86d`
-- 状态：`in_progress`
-- 已完成验收项：暂无
-- 待完成验收项：M00-A01 至 M00-A12
-- Checker 结论：尚未运行
+- 状态：`checking`
+- Maker 已完成验收项：M00-A01 至 M00-A11
+- 待完成验收项：M00-A12 独立 Checker
+- 已验证实现：`c052438a3cfe5e16c3b154fc842f32dcd61ec6ff`
+- Checker 结论：待运行
 
 首个实现提交删除旧持久化表面，加入 production safetensors transaction、由 replay
 派生的 `RuntimeView`、可重入 proposal catalog、文件原生 analysis、显式 warm-start
 generation metadata 与 M00 静态/运行 harness。源码、配置、脚本与测试的静态禁止项
-扫描已通过；干净单节点资格验证也已通过，双节点与九节点 compute 再验收仍在进行。
+扫描已通过；最终干净单节点、双节点、真实前缀 replay benchmark 与九节点
+GPT-2/WikiText-2 50×10 gate 均已通过。
 
 ### Checker 与资格验证失败历史
 
@@ -599,7 +645,43 @@ generation metadata 与 M00 静态/运行 harness。源码、配置、脚本与�
   production replay 必须使用 production 向量化 validator；steady-state sync 不应反复
   验证完整历史 payload，而 restart/checker replay 仍保持严格。
 
+### 复盘驱动的 replay 修复与最终 Maker 阶梯
+
+第 8 次尝试失败后，没有立即再次提交九节点任务。完整工作流复盘已持久化在
+`plans/duraloco/reviews/M00_PRODUCTION_REPLAY_WORKFLOW_REVIEW.md`。production
+replay 现在对大 tensor 使用向量化 validator；进程内 cache 只记忆已经验证过的
+immutable tensor ObjectRef。每次 replay 仍重新读取 head 并验证完整 manifest/因果链；
+fresh open 与显式 fallback 使用空 cache。新增 stage event 与 CSV 字段分别覆盖 catalog、
+proposal observation、aggregation、outer step、successor prepare、head CAS、CAS 后 replay
+以及导出。
+
+只读真实前缀 benchmark `20260711_m00_6e85182_replay_benchmark`（PBS
+`2359243.opbs`，`mg0003`）通过：严格 CPU replay 6.177 秒，严格 GPU replay
+6.875 秒，memoized replay 0.013 秒，且后者没有读取任何大 proposal/params/outer object。
+
+复盘后的首次单节点任务 PBS `2359245.opbs` 在 280 项测试通过后发现一个 fixture
+错误：“新 outer-state 损坏”case 实际复用了 content-addressed genesis outer state，
+因此已验证 immutable cache 正确跳过。fixture 改为生成不同的 successor outer state；
+没有放宽运行时校验。
+
+随后实现 `c052438` 的最终干净阶梯全部通过：
+
+- PBS `2359248.opbs`，`mg0003`：禁止项扫描、281 项通过/1 项跳过、十次 commit
+  crash/replay contract，以及 full/fragment 新进程 log-only 精确恢复；
+- PBS `2359250.opbs`，`mg0003` 与 `mg0004`：100 轮 backend race、20 轮同 parent
+  transaction race，double winner/inclusion 均为零，production takeover 通过；
+- PBS `2359253.opbs`，九个不同节点：一个 syncer 加八个 learner 的真实
+  GPT-2/WikiText-2 运行，每个 learner 完成 500 local steps，恰好十次 outer
+  transition，总耗时 7 分 24 秒，满足 15 分钟硬限制。80 个 loss 全部有限，十次
+  commit 各自恰好消费八个 proposal，保留并哈希了 11 个 checkpoint。
+
+终端 steady-state timing 稳定：CAS 后 replay 为 4.835–4.940 秒，head CAS 为
+0.007–0.012 秒，首轮之后完整 transition interval 为 16.4–18.0 秒。终端权威 probe
+与 39 项 log 测试均通过。完整 41 项 P00–P04 映射位于
+`plans/duraloco/M00_P00_P04_ACCEPTANCE_MAPPING.{json,md}`。
+
 ### 限制与下一动作
 
 M00 仍假设只有一个 active syncer；lease/fencing 属于 P05，learner exact restart 与
-权威 GC 属于后续阶段。下一动作是干净九节点 GPT-2/WikiText-2 50×10 terminal gate。
+权威 GC 属于后续阶段。下一动作是在已持久化干净提交上运行最终独立 Checker；
+无需再提交 Maker 实验。

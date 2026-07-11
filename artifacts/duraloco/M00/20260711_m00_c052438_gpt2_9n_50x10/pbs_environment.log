@@ -1,0 +1,6 @@
+PBS_JOBID=2359253.opbs
+PBS_NODEFILE=/var/spool/pbs/aux/2359253.opbs
+PHASE=M00
+RUN_ID=20260711_m00_c052438_gpt2_9n_50x10
+SHARED_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_c052438_gpt2_9n_50x10
+PROBE_STORAGE_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10_terminal_probe
