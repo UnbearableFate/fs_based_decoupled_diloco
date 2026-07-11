@@ -49,7 +49,7 @@ supervise() {
       executor_killed=1
       write_event executor_process_killed "$member_id"
       touch "$faults/${member_id}_executor_killed"
-      sleep 1
+      while [[ ! -f "$faults/${member_id}_release_executor" ]]; do sleep 0.1; done
       CUDA_VISIBLE_DEVICES="" "${executor[@]}" >> "$ARTIFACT_ROOT/${member_id}_executor.log" 2>&1 & executor_pid=$!
     fi
     if [[ -f "$faults/kill_committer" ]] && [[ "$(<"$faults/kill_committer")" == "$member_id" ]] && [[ "$committer_killed" -eq 0 ]]; then
@@ -116,33 +116,46 @@ print(value['owner_member_ids'][index])
 PY
   }
 
-  wait_for_new_order
-  order1="$current"
-  primary=$(owner_role 0)
+  static_owner_role() {
+    "$PYTHON_BIN" - "$RUN_ID" "$NODE_IDS" "$1" <<'PY'
+import sys
+from fs_diloco.distributed_syncer.bootstrap import revision_zero_membership
+from fs_diloco.distributed_syncer.executor import ExecutorBudget
+from fs_diloco.distributed_syncer.ownership import derive_ownership
+run_id,raw,index=sys.argv[1:]
+nodes=tuple(raw.split(',')); learners=tuple(f'learner_{i:03d}' for i in range(2))
+membership=revision_zero_membership(run_id=run_id,learner_ids=learners,node_ids=nodes,budget=ExecutorBudget(threads=4))
+print(derive_ownership(membership,fragment_ids=(0,),replication_factor=2).owner_ids(0)[int(index)])
+PY
+  }
+
+  primary=$(static_owner_role 0)
   printf '%s\n' "$primary" > "$faults/kill_executor"
   while [[ ! -f "$faults/${primary}_executor_killed" ]]; do [[ "$SECONDS" -lt "$deadline" ]]; sleep 0.1; done
+  wait_for_new_order
+  order1="$current"
   mark_dispatch_failed "$primary"
   wait_for_count 1
+  touch "$faults/${primary}_release_executor"
 
   rm -f "$faults/kill_executor"
-  wait_for_new_order "$order1"
-  order2="$current"
-  backup=$(owner_role 1)
+  backup=$(static_owner_role 1)
   printf '%s\n' "$backup" > "$faults/kill_executor"
   while [[ ! -f "$faults/${backup}_executor_killed" ]]; do [[ "$SECONDS" -lt "$deadline" ]]; sleep 0.1; done
+  wait_for_new_order "$order1"
+  order2="$current"
   mark_dispatch_failed "$backup"
   wait_for_count 2
+  touch "$faults/${backup}_release_executor"
 
   rm -f "$faults/kill_executor"
   printf '%s\n' member-000 > "$faults/kill_committer"
   while [[ ! -f "$faults/member-000_committer_killed" ]]; do [[ "$SECONDS" -lt "$deadline" ]]; sleep 0.1; done
   wait_for_count 3
 
-  wait_for_new_order "$order2"
-  order4="$current"
   printf '%s\n' member-001 > "$faults/kill_whole_member"
   while [[ ! -f "$faults/member-001_whole_killed" ]]; do [[ "$SECONDS" -lt "$deadline" ]]; sleep 0.1; done
-  wait_for_new_order "$order4"
+  wait_for_new_order "$order2"
   mark_dispatch_failed member-001
   wait_for_count 4
   while [[ ! -f "$SHARED_ROOT/control/stop.json" ]]; do [[ "$SECONDS" -lt "$deadline" ]]; sleep 0.1; done

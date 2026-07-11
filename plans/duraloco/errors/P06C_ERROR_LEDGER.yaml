@@ -289,3 +289,35 @@ records:
       rationale: "runtime succeeded but required manifest did not; one clean 1-node qualification rerun is required"
       parent_run_id: 20260711_p06c_d1_r2_9d1c093
     artifacts: [artifacts/duraloco/P06C/20260711_p06c_d1_r2_9d1c093, runs/P06C/20260711_p06c_d1_r2_9d1c093]
+  - error_id: E-P06C-20260711-10
+    phase_and_gate: P06C/D2-R2
+    observed_at_utc: "2026-07-11T13:24:19Z"
+    pbs_job_id: 2363071.opbs
+    hosts: [mg0005, mg0008]
+    git_commit: ee0552984e2c39d484b8c59f9cfc8cfb960b37ad
+    classification: unexpected_failure
+    phenomenon:
+      exit_code: 1
+      exception: "target is not an active redundant owner"
+      terminal_state: "two transitions completed with two attempts each before the first intended failure could be bound to its active dispatch"
+      log_excerpt: artifacts/duraloco/P06C/20260711_p06c_d2_r2_ee05529/stdout.log
+    expected: "primary and backup are killed before their target FWO can finish, then the surviving owner commits under explicit failure evidence"
+    impact:
+      acceptance_ids: [P06C-A14, P06C-A15]
+      invariants: ["failure injection must be causally inside the intended active-work interval"]
+      committed_prefix_safe: true
+    cause:
+      confirmed: ["synthetic prepare completed in roughly 30 ms", "the controller waited for active_work_order.json before requesting SIGKILL, so the dispatch could disappear before its read-modify-write"]
+      unknown: []
+    repair:
+      change: "derive canonical primary/backup roles before dispatch, pre-arm each SIGKILL, hold the killed executor until its transition commits, then release it for the next FWO"
+      rationale: "pre-arming removes the observation-to-injection race without adding runtime sleeps or changing numeric identity"
+    verification:
+      minimal_reproduction: "D2-R2 first two transitions each contain one surviving attempt and matching fault-tape event"
+      targeted_gate: "repeat unit, D1-R2, then D2-R2 on the same clean script-repair commit"
+      qualification_ladder: ["Miyabi 1-node unit", "Miyabi D1-R2", "Miyabi D2-R2"]
+    retry_decision:
+      authorized: true
+      rationale: "non-terminal 2-node harness race; repair is proven from the smallest failure shape before D8"
+      parent_run_id: 20260711_p06c_d2_r2_ee05529
+    artifacts: [artifacts/duraloco/P06C/20260711_p06c_d2_r2_ee05529, runs/P06C/20260711_p06c_d2_r2_ee05529]
