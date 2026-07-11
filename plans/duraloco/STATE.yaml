@@ -1,5 +1,5 @@
 phase: P06C
-status: checking
+status: completed
 planning_basis_branch: codex/duraloco-p06b-learner-hosted-sync
 planning_basis_commit: 98c1b92d943f9aef290b6b549db5baf06c225428
 verified_dependency_implementation: d5e2901b75ef504a31a365790b7b9518c329dbe7
@@ -8,7 +8,7 @@ actual_base_branch: codex/duraloco-p06b-learner-hosted-sync
 actual_base_commit: 98c1b92d943f9aef290b6b549db5baf06c225428
 feature_branch: codex/duraloco-p06c-redundant-fragment-executors
 current_loop: 6
-current_goal: "independent P06C Checker audit of factor-two, failure, D8, and error evidence"
+current_goal: "P06C complete; hand off frozen lifecycle contract to P07"
 attempts_for_current_failure: 0
 last_terminal_failure_review: plans/duraloco/reviews/P06C_D8_R2_LEASE_EXPIRY_REVIEW.md
 terminal_retry_authorized: true
@@ -60,8 +60,10 @@ artifacts:
   - artifacts/duraloco/P06C/20260711_p06c_d1_r2_cba9f48
   - artifacts/duraloco/P06C/20260711_p06c_d2_r2_cba9f48
   - artifacts/duraloco/P06C/20260711_p06c_d8_r2_cba9f48
-next_action: "run the independent P06C Checker; PASS authorizes completed and P07"
+  - plans/duraloco/checker_reports/P06C_FINAL_CHECKER_REPORT.md
+  - artifacts/duraloco/P06C/20260711_p06c_checker_45d1d1f
+next_action: P07
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
-checker_report: null
+checker_report: plans/duraloco/checker_reports/P06C_FINAL_CHECKER_REPORT.md

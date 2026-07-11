@@ -9,7 +9,7 @@
 - P06B basis: `98c1b92d943f9aef290b6b549db5baf06c225428`
 - Qualified runtime implementation: `cba9f487dcc697a6df7930b22280e4f0d512377b`
 - Maker acceptance: P06C-A01 through P06C-A24 pass
-- Current status: `checking`
+- Current status: `completed`
 
 P06C freezes replication factor two in the fresh distributed RunSpec. Every redundant FWO binds an
 ordered primary/backup member pair and one strict `warm_standby`, `active_active`, or `hedged` policy;
@@ -64,6 +64,11 @@ observations. Divergence must fail closed; evidence alone must not change owners
 required-gate follow-up authorizes `checking → completed` and `next_action=P07`; it does not authorize
 merging `main`.
 
+Checker PBS `2363373.opbs` returned `PASS` with no required-gate follow-up after 10,000 unique traces,
+426 passing tests, one explicit skip, checksum/error/retry audit, a private false-suspicion test, and a
+private same-FWO divergence injection. `checking → completed` is authorized; `next_action=P07` is now
+persisted.
+
 ## 中文
 
 ### 状态与实现
@@ -73,7 +78,7 @@ merging `main`.
 - P06B基线：`98c1b92d943f9aef290b6b549db5baf06c225428`
 - 已资格验证runtime：`cba9f487dcc697a6df7930b22280e4f0d512377b`
 - Maker验收：P06C-A01至P06C-A24全部通过
-- 当前状态：`checking`
+- 当前状态：`completed`
 
 P06C在fresh distributed RunSpec中冻结replication factor 2。每个冗余FWO绑定有序的
 primary/backup member以及严格的`warm_standby`、`active_active`或`hedged` policy；D8使用可重放
@@ -120,3 +125,7 @@ Checker必须校验全部Maker manifest与checksum，执行完整suite和10,000�
 构造私有false-suspicion反例并注入same-FWO divergent PFR。divergence必须fail closed；evidence本身
 不得改变ownership。没有required-gate follow-up的PASS才授权`checking → completed`及
 `next_action=P07`，且不授权合并`main`。
+
+Checker作业`2363373.opbs`执行10,000条唯一trace、426项通过测试、1项显式skip、checksum/error/
+retry复核、私有false-suspicion测试与私有same-FWO divergence注入后，给出无required-gate
+follow-up的`PASS`。`checking → completed`已获授权，且`next_action=P07`已固化。
