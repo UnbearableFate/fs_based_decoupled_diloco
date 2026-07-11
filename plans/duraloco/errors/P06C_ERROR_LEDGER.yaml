@@ -129,3 +129,35 @@ records:
       rationale: "preflight-only failure with no runtime execution; same smallest validation shape"
       parent_run_id: 20260711_p06c_unit_d9afb10_1node
     artifacts: [duraloco_p06c_unit.o2362984]
+  - error_id: E-P06C-20260711-05
+    phase_and_gate: P06C/UNIT-1node
+    observed_at_utc: "2026-07-11T13:05:35Z"
+    pbs_job_id: 2362987.opbs
+    hosts: [mg0005]
+    git_commit: 2ba12421d09ba339be07bf9fb47c97a8fd3e4fee
+    classification: unexpected_failure
+    phenomenon:
+      exit_code: 1
+      exception: "VerificationError: commit_seq=2 optimizer transition differs from committed fencing owner"
+      terminal_state: "119 tests passed; the new distributed final-transition binding replay test failed"
+      log_excerpt: artifacts/duraloco/P06C/20260711_p06c_unit_2ba1242_1node/stdout.log
+    expected: "strict full replay reconstructs the same distributed request digest including FWO/PFR identity"
+    impact:
+      acceptance_ids: [P06C-A04, P06C-A09, P06C-A12]
+      invariants: ["fresh strict replay must verify every field bound into optimizer request identity"]
+      committed_prefix_safe: true
+    cause:
+      confirmed: ["prepare_transition added distributed_work_order_id and prepared_result_id to request_digest, but replay reconstructed the legacy request body without those fields"]
+      unknown: []
+    repair:
+      change: "extend strict replay request-body reconstruction with paired FWO/PFR fields and reject them under a central protocol"
+      rationale: "writer and verifier must hash the same complete authoritative identity"
+    verification:
+      minimal_reproduction: "test_final_transition_binds_exact_work_order_and_prepared_result"
+      targeted_gate: "full P06C unit PBS passes all distributed and regression tests"
+      qualification_ladder: ["Miyabi 1-node unit rerun"]
+    retry_decision:
+      authorized: true
+      rationale: "single verifier mismatch isolated by one test; same smallest qualification shape"
+      parent_run_id: 20260711_p06c_unit_2ba1242_1node
+    artifacts: [artifacts/duraloco/P06C/20260711_p06c_unit_2ba1242_1node]

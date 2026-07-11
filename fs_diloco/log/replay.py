@@ -839,7 +839,7 @@ def _replay_production_log(
                     "fenced optimizer transition has no running authoritative owner",
                     commit_seq=index,
                 )
-            request_body = {
+                request_body = {
                 "operation": "optimizer",
                 "request_id": commit.request_id,
                 "owner_id": commit.owner_id,
@@ -849,9 +849,21 @@ def _replay_production_log(
                 "selected_proposal_ids": [
                     item.proposal_id for item in commit.selected_proposals
                 ],
-                "aggregate_digest": commit.aggregate_digest,
-            }
-            if (
+                    "aggregate_digest": commit.aggregate_digest,
+                }
+                if commit.distributed_work_order_id is not None:
+                    if log.spec.coordination_protocol != "distributed-head-fenced-v1":
+                        raise VerificationError(
+                            "central optimizer transition carries distributed identity",
+                            commit_seq=index,
+                        )
+                    request_body.update(
+                        {
+                            "distributed_work_order_id": commit.distributed_work_order_id,
+                            "prepared_result_id": commit.prepared_result_id,
+                        }
+                    )
+                if (
                 commit.owner_id != prior_coordination.owner_id
                 or commit.owner_session_id != prior_coordination.owner_session_id
                 or commit.fencing_epoch != previous.fencing_epoch
