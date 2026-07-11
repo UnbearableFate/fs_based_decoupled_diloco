@@ -638,3 +638,54 @@ P05+ 的规范性路线决策生效。
 - Rejected: either static or runtime evidence alone misses dynamic construction or unused imports.
 - Compatibility: the claim is explicitly software least authority under the crash/omission model, not malicious same-user isolation.
 - Reversibility: stronger process/credential isolation may be added without weakening this baseline.
+
+## D-06B01 — Separate learner-hosted executor process
+
+- Choice: each learner host runs one separate LFE process with bounded CPU/thread/RSS/I/O budgets. Executor crash and restart are independent of the learner GPU process.
+- Compatibility: the public learner remains unchanged; launch integration owns the sidecar lifecycle.
+
+## D-06B02 — One existing lease and one global head
+
+- Choice: Floating Committers reuse the P05 conditional lease, committed fencing epoch, and single global head CAS. Executors receive neither lease nor head mutation capability.
+- Rejected: a second coordination head would become a forbidden second authority.
+
+## D-06B03 — Atomic revision-zero bootstrap in a fresh generation
+
+- Choice: the distributed RunSpec canonically freezes revision-zero members, sessions, capability and numeric backend digests, and factor-one ownership. Only those candidates may acquire the first lease.
+- Compatibility: P06 authority stays read-only; this is a fresh matched generation, never exact continuation.
+
+## D-06B04 — Session-bound membership eligibility
+
+- Choice: member identity binds learner/executor IDs and sessions, node identity, and capability digest. Heartbeats are evidence only and never mutate eligibility.
+
+## D-06B05 — Canonical rendezvous ownership v1
+
+- Choice: owner ranking is SHA-256 over canonical membership revision, fragment ID, and member identity, with member identity as the tie-break. P06B freezes factor one.
+
+## D-06B06 — Authoritative FWO request identity
+
+- Choice: at most one active FWO binds parent, selection, hex weights, membership/ownership, fencing, numeric implementation, layout, and parameter-index identities. Response loss reconciles by immutable ID.
+
+## D-06B07 — Marker-last PFT discovery and stale classification
+
+- Choice: publish parameter/state objects, canonical prepared result, attempt envelope, then immutable marker. The committer validates every ref and rejects stale parent, membership, ownership, work-order, or implementation facts.
+
+## D-06B08 — Conservative co-location budget
+
+- Choice: D8 defaults to eight LFE CPU threads, one in-flight work order, and one payload pair in memory. Topology evidence records affinity, RSS, thread, and I/O counters.
+
+## D-06B09 — CRS is a read-only oracle
+
+- Choice: CRS remains for offline replay and matched comparison but receives no distributed-generation write capability.
+
+## D-06B10 — One active work order
+
+- Choice: P06B permits one active authoritative FWO at a time, bounding recovery and head-advance ambiguity.
+
+## D-06B11 — Frozen CPU numeric backend identity
+
+- Choice: FWO freezes device, dtype, Torch/BLAS/thread settings, and ordered reduction. Same-backend duplicates require exact core digests; C9 GPU comparison retains both digests and uses declared tolerance.
+
+## D-06B12 — Semantic result excludes attempt evidence
+
+- Choice: canonical result and final transition identities exclude executor, attempt, timing, telemetry, and arrival order. Those facts live only in attempt envelopes.
