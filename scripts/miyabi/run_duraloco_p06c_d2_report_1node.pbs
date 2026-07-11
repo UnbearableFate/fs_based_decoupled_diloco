@@ -32,12 +32,12 @@ finish() {
   qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
   "$PYTHON_BIN" scripts/agent/create_run_manifest.py \
     --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json" \
-    --phase P06C --purpose analysis --run-id "$RUN_ID" --parent-run-id "$PARENT_RUN_ID" --schema-version 2 \
+    --phase P06C --purpose contract --run-id "$RUN_ID" --parent-run-id "$PARENT_RUN_ID" --schema-version 2 \
     --validation-shape p06c-d2-r2-preserved-authority-strict-reanalysis \
     --backend lustre --model-revision synthetic-tiny --dataset-revision synthetic-v1 \
     --config scripts/miyabi/run_duraloco_p06c_d2_report_1node.pbs --commands-log commands.log \
     --stdout stdout.log --stderr stderr.log --exit-code "$exit_code" --result "$result" \
-    --termination-kind "$([[ "$result" == pass ]] && echo success || echo analysis_failure)" \
+    --termination-kind "$([[ "$result" == pass ]] && echo success || echo test_failure)" \
     --pbs-queue debug-g --requested-resources select=1:mpiprocs=1,walltime=00:10:00 --last-qstat-state R \
     --termination-detail "Strict reanalysis of preserved successful D2-R2 runtime and old-epoch abandoned attempts" \
     --stage-metrics-path d2_r2_report.json \

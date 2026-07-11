@@ -353,3 +353,35 @@ records:
       rationale: "runtime and terminal fault matrix succeeded; optimized plan requires reanalysis of preserved raw evidence for an analysis-only defect"
       parent_run_id: 20260711_p06c_d2_r2_33a8a68
     artifacts: [artifacts/duraloco/P06C/20260711_p06c_d2_r2_33a8a68, runs/P06C/20260711_p06c_d2_r2_33a8a68]
+  - error_id: E-P06C-20260711-12
+    phase_and_gate: P06C/D2-R2-reanalysis
+    observed_at_utc: "2026-07-11T13:33:36Z"
+    pbs_job_id: 2363116.opbs
+    hosts: [mg0005]
+    git_commit: 68698c9e0ca82a9f1dec475f26b0fa83be418e34
+    classification: unexpected_failure
+    phenomenon:
+      exit_code: 2
+      exception: "create_run_manifest rejected purpose=analysis and termination_kind=analysis_failure; subsequent inspection found manifest.json absent"
+      terminal_state: "both strict D2 reports are PASS, but the report-only PBS job has no run manifest"
+      log_excerpt: duraloco_p06c_d2rep.o2363116
+    expected: "report-only evidence uses enumerated manifest vocabulary and produces a PASS manifest"
+    impact:
+      acceptance_ids: [P06C-A14, P06C-A15, P06C-A23]
+      invariants: ["every evidence job must finish with a schema-valid manifest"]
+      committed_prefix_safe: true
+    cause:
+      confirmed: ["create_run_manifest purpose enum has no analysis value", "termination_kind enum has no analysis_failure value", "the report and fault audit themselves completed successfully before EXIT cleanup"]
+      unknown: []
+    repair:
+      change: "use purpose=contract and success/test_failure termination kinds; rerun only the preserved-evidence report job"
+      rationale: "matches manifest schema without changing the already-PASS report semantics or rerunning D2"
+    verification:
+      minimal_reproduction: "invoke create_run_manifest with the corrected enumerated values"
+      targeted_gate: "report-only job retains PASS reports and emits a PASS manifest"
+      qualification_ladder: ["Miyabi 1-node analysis of preserved D2-R2 evidence"]
+    retry_decision:
+      authorized: true
+      rationale: "manifest-only failure after strict reports passed; smallest report-only retry"
+      parent_run_id: 20260711_p06c_d2_report_68698c9
+    artifacts: [artifacts/duraloco/P06C/20260711_p06c_d2_report_68698c9]
