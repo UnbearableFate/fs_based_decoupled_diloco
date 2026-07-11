@@ -79,6 +79,16 @@ class SyncSection:
 
 
 @dataclass
+class CoordinationSection:
+    enabled: bool = True
+    lease_ttl_seconds: float = 45.0
+    renew_interval_seconds: float = 10.0
+    renew_margin_seconds: float = 15.0
+    max_clock_skew_seconds: float = 2.0
+    standby_poll_seconds: float = 2.0
+
+
+@dataclass
 class LivenessSection:
     heartbeat_interval_seconds: float = 30.0
     stale_after_seconds: float = 120.0
@@ -177,6 +187,7 @@ class Config:
     model: ModelSection = field(default_factory=ModelSection)
     data: DataSection = field(default_factory=DataSection)
     sync: SyncSection = field(default_factory=SyncSection)
+    coordination: CoordinationSection = field(default_factory=CoordinationSection)
     liveness: LivenessSection = field(default_factory=LivenessSection)
     training: TrainingSection = field(default_factory=TrainingSection)
     inner_optimizer: InnerOptimizerSection = field(default_factory=InnerOptimizerSection)
@@ -284,6 +295,25 @@ def resolve_config(
         raise ValueError("sync.staleness_lambda must equal the frozen Protocol v2 value 0.2")
     if config.sync.selection_policy != "oldest_pending":
         raise ValueError("sync.selection_policy must be oldest_pending")
+    if not config.coordination.enabled:
+        raise ValueError("P05 production runtime requires coordination.enabled=true")
+    if config.coordination.lease_ttl_seconds <= 0:
+        raise ValueError("coordination.lease_ttl_seconds must be positive")
+    if config.coordination.renew_interval_seconds <= 0:
+        raise ValueError("coordination.renew_interval_seconds must be positive")
+    if config.coordination.renew_margin_seconds <= 0:
+        raise ValueError("coordination.renew_margin_seconds must be positive")
+    if (
+        config.coordination.renew_margin_seconds
+        >= config.coordination.lease_ttl_seconds
+    ):
+        raise ValueError("coordination renew margin must be smaller than lease TTL")
+    if config.coordination.renew_interval_seconds > config.coordination.renew_margin_seconds:
+        raise ValueError("coordination renew interval must fit inside renew margin")
+    if config.coordination.max_clock_skew_seconds < 0:
+        raise ValueError("coordination.max_clock_skew_seconds must be non-negative")
+    if config.coordination.standby_poll_seconds <= 0:
+        raise ValueError("coordination.standby_poll_seconds must be positive")
     for field_name in ("keep_last_global_versions", "keep_last_learner_update_versions"):
         value = getattr(config.io, field_name)
         if value is not None and int(value) < 1:

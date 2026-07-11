@@ -9,12 +9,14 @@ from pathlib import Path
 import socket
 import time
 from typing import Any
+import uuid
 
 import torch
 from safetensors.torch import load as load_safetensors_bytes
 
 from .atomic_io import atomic_write_json, safe_read_json
 from .config import Config, resolve_config, write_resolved_config
+from .coordination import CoordinationConflict, LeaseManager, LeaseMutation, OwnerToken
 from .constants import FORMAT_VERSION, LEARNER_STATUS_STOPPED, learner_id_from_index
 from .fragment_codec import extract_fragment, materialize_full_from_fragments, save_fragment_weight
 from .fragment_index import build_fragment_index, fragment_layout_digest, load_fragment_index, save_fragment_index
@@ -28,7 +30,7 @@ from .proposal_catalog import CatalogEntry, ProposalCatalog
 from .protocol.canonical_json import canonical_digest
 from .retention import cleanup_all_learner_update_artifacts, cleanup_syncer_model_artifacts
 from .runtime_view import RuntimeView, build_runtime_view
-from .storage import InjectedTimeout, PosixStorageBackend
+from .storage import InjectedTimeout, NotFound, PosixStorageBackend
 from .tensor_codec import save_global_weights, save_outer_state
 from .testing.deterministic_reference import ReferenceOptimizerConfig, ReferenceWeightingConfig, normalized_weights
 from .wandb_logging import (
@@ -39,7 +41,7 @@ from .wandb_logging import (
     wandb_is_disabled,
 )
 from .log.codec import verified_get
-from .log.errors import CommitConflict
+from .log.errors import CommitConflict, RunInitializationError
 from .log.production import ProductionTransactionalLog
 from .log.production_codec import (
     PRODUCTION_CODEC,
@@ -61,6 +63,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--run-id")
     parser.add_argument("--shared-root")
     parser.add_argument("--num-learners", type=int)
+    parser.add_argument("--owner-id")
+    parser.add_argument("--owner-session-id")
+    parser.add_argument("--standby", action="store_true")
     return parser.parse_args(argv)
 
 
@@ -97,6 +102,7 @@ def _run_spec(
         max_global_staleness=config.sync.max_staleness_versions,
         max_fragment_staleness=config.sync.max_staleness_versions,
         payload_codec=PRODUCTION_CODEC,
+        coordination_protocol="head-fenced-v1",
     )
 
 
@@ -106,7 +112,8 @@ def _latest_common(config: Config, view: RuntimeView) -> dict[str, Any]:
         "run_id": config.run.run_id,
         "run_generation": view.run_generation,
         "version": view.commit_seq,
-        "global_merge_event": view.commit_seq,
+        "global_merge_event": view.optimizer_transition_count,
+        "optimizer_transition_count": view.optimizer_transition_count,
         "commit_id": view.commit_id,
         "commit_seq": view.commit_seq,
         "frontier_sha256": view.frontier_sha256,
@@ -114,7 +121,10 @@ def _latest_common(config: Config, view: RuntimeView) -> dict[str, Any]:
         "runtime_view_digest": view.view_digest,
         "created_at": time.time(),
         "total_seen_tokens": view.total_seen_tokens,
-        "authority": "committed-transition-log",
+        "fencing_epoch": view.fencing_epoch,
+        "owner_id": view.owner_id,
+        "owner_session_id": view.owner_session_id,
+        "authority": "committed-transition-log-and-head-fence",
     }
 
 
@@ -360,6 +370,10 @@ def _publish_stop(
     view: RuntimeView,
     reason: str,
 ) -> None:
+    if view.authoritative_stop is None:
+        raise RuntimeError("cannot export stop.json without a committed stop fact")
+    if view.authoritative_stop.reason != reason:
+        raise RuntimeError("derived stop reason differs from committed stop fact")
     atomic_write_json(
         paths.stop_json,
         {
@@ -372,9 +386,178 @@ def _publish_stop(
             "frontier_sha256": view.frontier_sha256,
             "total_seen_tokens": view.total_seen_tokens,
             "created_at": time.time(),
-            "authority": "derived-from-committed-head-and-frozen-stop-policy",
+            "stop_request_id": view.authoritative_stop.request_id,
+            "stop_committed_at_seq": view.authoritative_stop.committed_at_seq,
+            "authority": "derived-from-committed-stop-control-transition",
         },
     )
+
+
+def _seconds_ns(value: float) -> int:
+    return int(value * 1_000_000_000)
+
+
+def _acquire_and_activate_owner(
+    *,
+    log: ProductionTransactionalLog,
+    config: Config,
+    owner_id: str,
+    owner_session_id: str,
+    logger: JsonlLogger,
+    standby: bool = False,
+) -> tuple[LeaseManager, Any, RuntimeView]:
+    lease_manager = LeaseManager(
+        log.backend,
+        log.layout,
+        max_clock_skew_ns=_seconds_ns(config.coordination.max_clock_skew_seconds),
+    )
+    wait_started = time.monotonic()
+    attempt = 0
+    while True:
+        if standby:
+            observed_view = build_runtime_view(log)
+            if observed_view.authoritative_stop is not None:
+                logger.event(
+                    "standby_observed_authoritative_stop",
+                    reason=observed_view.authoritative_stop.reason,
+                    commit_seq=observed_view.commit_seq,
+                )
+                return lease_manager, None, observed_view
+        head = log.load_head().manifest
+        requested_at = time.time_ns()
+        if standby:
+            try:
+                current_lease = lease_manager.load()
+            except NotFound:
+                current_lease = None
+            if current_lease is not None:
+                eligible_at = (
+                    current_lease.record.expires_at_utc_ns
+                    + _seconds_ns(config.coordination.max_clock_skew_seconds)
+                )
+                if requested_at < eligible_at:
+                    logger.event(
+                        "standby_wait",
+                        observed_fencing_epoch=head.fencing_epoch,
+                        lease_owner_id=current_lease.record.owner_id,
+                        lease_sequence=current_lease.record.lease_sequence,
+                        wait_seconds=(eligible_at - requested_at) / 1e9,
+                    )
+                    time.sleep(
+                        min(
+                            config.coordination.standby_poll_seconds,
+                            max(0.0, (eligible_at - requested_at) / 1e9),
+                        )
+                    )
+                    continue
+        acquire_request_id = "lease-acquire-" + canonical_digest(
+            {
+                "run_id": log.spec.run_id,
+                "run_generation": log.spec.run_generation,
+                "owner_id": owner_id,
+                "owner_session_id": owner_session_id,
+                "observed_fencing_epoch": head.fencing_epoch,
+                "attempt": attempt,
+            }
+        )
+        mutation = LeaseMutation(
+            operation="acquire",
+            request_id=acquire_request_id,
+            owner_id=owner_id,
+            owner_session_id=owner_session_id,
+            observed_fencing_epoch=head.fencing_epoch,
+            requested_at_utc_ns=requested_at,
+            ttl_ns=_seconds_ns(config.coordination.lease_ttl_seconds),
+        )
+        acquire_start = time.monotonic()
+        try:
+            loaded_lease = lease_manager.acquire(mutation)
+            break
+        except CoordinationConflict as exc:
+            if not standby:
+                raise
+            logger.event(
+                "standby_acquire_conflict",
+                error=repr(exc),
+                observed_fencing_epoch=head.fencing_epoch,
+                attempt=attempt,
+            )
+            attempt += 1
+            if time.monotonic() - wait_started > config.liveness.no_progress_timeout_seconds:
+                raise TimeoutError("standby timed out waiting for takeover") from exc
+            time.sleep(config.coordination.standby_poll_seconds)
+    logger.event(
+        "coordination_stage_completed",
+        stage="lease_acquire",
+        owner_id=owner_id,
+        owner_session_id=owner_session_id,
+        proposed_fencing_epoch=loaded_lease.record.proposed_fencing_epoch,
+        lease_sequence=loaded_lease.record.lease_sequence,
+        seconds=time.monotonic() - acquire_start,
+    )
+    token = loaded_lease.record.owner_token
+    fence_request_id = "fence-" + canonical_digest(
+        {
+            "run_id": log.spec.run_id,
+            "run_generation": log.spec.run_generation,
+            **token.identity(),
+            "lease_sequence": loaded_lease.record.lease_sequence,
+        }
+    )
+    fence_start = time.monotonic()
+    result = log.activate_owner(token=token, request_id=fence_request_id)
+    view = build_runtime_view(log)
+    logger.event(
+        "coordination_stage_completed",
+        stage="fence_commit_and_strict_replay",
+        owner_id=owner_id,
+        owner_session_id=owner_session_id,
+        fencing_epoch=view.fencing_epoch,
+        commit_seq=result.commit_seq,
+        optimizer_transition_count=view.optimizer_transition_count,
+        seconds=time.monotonic() - fence_start,
+    )
+    return lease_manager, loaded_lease, view
+
+
+def _renew_owner_lease(
+    *,
+    lease_manager: LeaseManager,
+    loaded_lease,
+    config: Config,
+    logger: JsonlLogger,
+):
+    now = time.time_ns()
+    record = loaded_lease.record
+    request_id = "lease-renew-" + canonical_digest(
+        {
+            "owner_id": record.owner_id,
+            "owner_session_id": record.owner_session_id,
+            "fencing_epoch": record.proposed_fencing_epoch,
+            "lease_sequence": record.lease_sequence + 1,
+        }
+    )
+    start = time.monotonic()
+    renewed = lease_manager.renew(
+        LeaseMutation(
+            operation="renew",
+            request_id=request_id,
+            owner_id=record.owner_id,
+            owner_session_id=record.owner_session_id,
+            observed_fencing_epoch=record.proposed_fencing_epoch,
+            requested_at_utc_ns=now,
+            ttl_ns=_seconds_ns(config.coordination.lease_ttl_seconds),
+        )
+    )
+    logger.event(
+        "coordination_stage_completed",
+        stage="lease_renew",
+        fencing_epoch=renewed.record.proposed_fencing_epoch,
+        lease_sequence=renewed.record.lease_sequence,
+        renew_margin_seconds=(renewed.record.expires_at_utc_ns - now) / 1e9,
+        seconds=time.monotonic() - start,
+    )
+    return renewed
 
 
 def _init_wandb(config: Config, paths: RunPaths, logger: JsonlLogger, device, hostname):
@@ -423,13 +606,21 @@ def _cleanup_success(
         )
 
 
-def run_syncer(config: Config) -> None:
+def run_syncer(
+    config: Config,
+    *,
+    owner_id: str | None = None,
+    owner_session_id: str | None = None,
+    standby: bool = False,
+) -> None:
     paths = RunPaths(Path(config.run.shared_root or "."))
     prepare_run_dirs(paths, config.sync.num_learners)
     logger = JsonlLogger(paths.logs / "syncer.jsonl", "syncer")
     log_uncaught_exception(logger)
     device = choose_device()
     hostname = socket.gethostname()
+    owner_id = owner_id or f"syncer-{hostname}"
+    owner_session_id = owner_session_id or str(uuid.uuid4())
     backend = PosixStorageBackend(paths.authority)
     logger.event(
         "process_start",
@@ -440,18 +631,67 @@ def run_syncer(config: Config) -> None:
         hostname=hostname,
         device=str(device),
         cuda_visible_devices=os.environ.get("CUDA_VISIBLE_DEVICES"),
+        owner_id=owner_id,
+        owner_session_id=owner_session_id,
+        standby=standby,
     )
     wandb_run = _init_wandb(config, paths, logger, device, hostname)
-    if config.init.resume:
-        log, view, param_index, fragment_index, fragments, states = resume_generation(
-            config, paths, backend, device=device
-        )
+    if config.init.resume or standby:
+        if standby:
+            wait_deadline = time.monotonic() + config.liveness.no_progress_timeout_seconds
+            while True:
+                try:
+                    log, view, param_index, fragment_index, fragments, states = resume_generation(
+                        config, paths, backend, device=device
+                    )
+                    break
+                except (RunInitializationError, FileNotFoundError):
+                    if time.monotonic() >= wait_deadline:
+                        raise
+                    logger.event("standby_wait_for_generation")
+                    time.sleep(config.coordination.standby_poll_seconds)
+        else:
+            log, view, param_index, fragment_index, fragments, states = resume_generation(
+                config, paths, backend, device=device
+            )
         logger.event("log_only_resume", commit_seq=view.commit_seq, view_digest=view.view_digest)
     else:
         log, view, param_index, fragment_index, fragments, states = initialize_generation(
             config, paths, backend, device=device
         )
         logger.event("generation_initialized", commit_seq=0, view_digest=view.view_digest)
+    lease_manager, loaded_lease, view = _acquire_and_activate_owner(
+        log=log,
+        config=config,
+        owner_id=owner_id,
+        owner_session_id=owner_session_id,
+        logger=logger,
+        standby=standby,
+    )
+    if loaded_lease is None:
+        publish_materialized_view(
+            config=config,
+            paths=paths,
+            view=view,
+            param_index=param_index,
+            fragment_index=fragment_index,
+            fragment_thetas=fragments,
+            outer_states=states,
+        )
+        _publish_stop(
+            paths,
+            config=config,
+            view=view,
+            reason=view.authoritative_stop.reason,
+        )
+        logger.event(
+            "process_exit",
+            reason=view.authoritative_stop.reason,
+            commit_seq=view.commit_seq,
+        )
+        if wandb_run is not None:
+            wandb_run.finish(exit_code=0)
+        return
     publish_materialized_view(
         config=config,
         paths=paths,
@@ -470,11 +710,30 @@ def run_syncer(config: Config) -> None:
     last_progress = time.time()
     last_global = last_progress
     stop_reason = "completed"
+    next_renew_monotonic = time.monotonic() + config.coordination.renew_interval_seconds
     try:
         while True:
+            if view.authoritative_stop is not None:
+                stop_reason = view.authoritative_stop.reason
+                break
+            if (
+                time.monotonic() >= next_renew_monotonic
+                or time.time_ns()
+                >= loaded_lease.record.expires_at_utc_ns
+                - _seconds_ns(config.coordination.renew_margin_seconds)
+            ):
+                loaded_lease = _renew_owner_lease(
+                    lease_manager=lease_manager,
+                    loaded_lease=loaded_lease,
+                    config=config,
+                    logger=logger,
+                )
+                next_renew_monotonic = (
+                    time.monotonic() + config.coordination.renew_interval_seconds
+                )
             if (
                 config.sync.stop_after_outer_steps is not None
-                and view.commit_seq >= config.sync.stop_after_outer_steps
+                and view.optimizer_transition_count >= config.sync.stop_after_outer_steps
             ):
                 stop_reason = "stop_after_outer_steps"
                 break
@@ -584,6 +843,17 @@ def run_syncer(config: Config) -> None:
                 new_outer_state=encode_production_outer_state(new_state),
                 aggregate_digest=aggregate_digest,
                 outer_optimizer_impl_digest=optimizer_impl_digest,
+                request_id="optimizer-" + canonical_digest(
+                    {
+                        "owner_id": owner_id,
+                        "owner_session_id": owner_session_id,
+                        "fencing_epoch": view.fencing_epoch,
+                        "parent_commit_id": view.commit_id,
+                        "selected_proposal_ids": [
+                            entry.proposal_id for entry in selected
+                        ],
+                    }
+                ),
             )
             prepare_done = time.monotonic()
             logger.event(
@@ -644,7 +914,8 @@ def run_syncer(config: Config) -> None:
                 {
                     "timestamp": time.time(),
                     "version": view.commit_seq,
-                    "global_merge_event": view.commit_seq,
+                    "global_merge_event": view.optimizer_transition_count,
+                    "optimizer_transition_count": view.optimizer_transition_count,
                     "fragment_id": fragment_id,
                     "fragment_version": view.fragments[fragment_id].version,
                     "selected_count": len(selected),
@@ -691,6 +962,8 @@ def run_syncer(config: Config) -> None:
                 wandb_run.log(
                     {
                         "syncer/version": view.commit_seq,
+                        "syncer/global_merge_event": view.optimizer_transition_count,
+                        "syncer/optimizer_transition_count": view.optimizer_transition_count,
                         "syncer/fragment_id": fragment_id,
                         "syncer/selected_count": len(selected),
                         "syncer/total_update_tokens": total_tokens,
@@ -706,17 +979,62 @@ def run_syncer(config: Config) -> None:
         raise
     finally:
         try:
-            _publish_stop(paths, config=config, view=view, reason=stop_reason)
-            logger.event(
-                "stop_published",
-                reason=stop_reason,
-                commit_seq=view.commit_seq,
-                commit_id=view.commit_id,
-            )
-            _cleanup_success(paths=paths, config=config, logger=logger, stop_reason=stop_reason)
+            if view.authoritative_stop is None:
+                stop_request_id = "stop-" + canonical_digest(
+                    {
+                        "owner_id": owner_id,
+                        "owner_session_id": owner_session_id,
+                        "fencing_epoch": view.fencing_epoch,
+                        "parent_commit_id": view.commit_id,
+                        "reason": stop_reason,
+                    }
+                )
+                stop_start = time.monotonic()
+                try:
+                    log.commit_stop(reason=stop_reason, request_id=stop_request_id)
+                    view = build_runtime_view(log)
+                    logger.event(
+                        "coordination_stage_completed",
+                        stage="authoritative_stop",
+                        commit_seq=view.commit_seq,
+                        optimizer_transition_count=view.optimizer_transition_count,
+                        seconds=time.monotonic() - stop_start,
+                    )
+                except CommitConflict as exc:
+                    logger.event(
+                        "stale_owner_stop_rejected",
+                        error=repr(exc),
+                        owner_id=owner_id,
+                        owner_session_id=owner_session_id,
+                    )
+                    view = build_runtime_view(log, force_full=True)
+            if view.authoritative_stop is not None:
+                stop_reason = view.authoritative_stop.reason
+                _publish_stop(paths, config=config, view=view, reason=stop_reason)
+                logger.event(
+                    "stop_published",
+                    reason=stop_reason,
+                    commit_seq=view.commit_seq,
+                    commit_id=view.commit_id,
+                )
+                _cleanup_success(
+                    paths=paths,
+                    config=config,
+                    logger=logger,
+                    stop_reason=stop_reason,
+                )
+            else:
+                logger.event(
+                    "stop_not_published_without_authority",
+                    reason=stop_reason,
+                    commit_seq=view.commit_seq,
+                )
             if wandb_run is not None:
                 wandb_run.summary["stop_reason"] = stop_reason
                 wandb_run.summary["final_version"] = view.commit_seq
+                wandb_run.summary["final_optimizer_transition_count"] = (
+                    view.optimizer_transition_count
+                )
                 wandb_run.summary["total_seen_tokens"] = view.total_seen_tokens
             logger.event("process_exit", reason=stop_reason, commit_seq=view.commit_seq)
         finally:
@@ -732,7 +1050,12 @@ def main(argv: list[str] | None = None) -> None:
         shared_root=args.shared_root,
         num_learners=args.num_learners,
     )
-    run_syncer(config)
+    run_syncer(
+        config,
+        owner_id=args.owner_id,
+        owner_session_id=args.owner_session_id,
+        standby=args.standby,
+    )
 
 
 if __name__ == "__main__":

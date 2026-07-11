@@ -26,6 +26,7 @@ SYNCER_METRIC_FIELDS = [
     "timestamp",
     "version",
     "global_merge_event",
+    "optimizer_transition_count",
     "fragment_id",
     "fragment_version",
     "selected_count",
