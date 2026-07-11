@@ -385,3 +385,35 @@ records:
       rationale: "manifest-only failure after strict reports passed; smallest report-only retry"
       parent_run_id: 20260711_p06c_d2_report_68698c9
     artifacts: [artifacts/duraloco/P06C/20260711_p06c_d2_report_68698c9]
+  - error_id: E-P06C-20260711-13
+    phase_and_gate: P06C/D8-R2
+    observed_at_utc: "2026-07-11T13:51:43Z"
+    pbs_job_id: 2363156.opbs
+    hosts: [mg0237, mg0239, mg0241, mg0242, mg0243, mg0245, mg0247, mg0248]
+    git_commit: 90cb9a9d50dbe8b193e693a69a8836c905ed1de2
+    classification: unexpected_failure
+    phenomenon:
+      exit_code: 1
+      exception: "CoordinationConflict: expired lease cannot be renewed"
+      terminal_state: "three transitions and membership revision one committed; active standby committer then terminated and operator stopped the non-progressing batch"
+      log_excerpt: artifacts/duraloco/P06C/20260711_p06c_d8_r2_90cb9a9/member-003_committer.log
+    expected: "stage-aware renewal keeps the fenced owner live across takeover replay, membership transition, and hedged prepare until ten terminal transitions"
+    impact:
+      acceptance_ids: [P06C-A11, P06C-A15, P06C-A17, P06C-A19, P06C-A23]
+      invariants: ["a synchronous authoritative stage must begin with enough renewable lease budget", "terminal D8 must not be inferred from a partial committed prefix"]
+      committed_prefix_safe: true
+    cause:
+      confirmed: ["epoch-2 takeover strict replay took about 22 seconds", "membership revision publication/replay then took about 14 seconds", "the next hedged transition took about 24 seconds", "renewal was scheduled only at loop entry and could not run within those consecutive synchronous stages", "45-second lease expired before the next renewal call"]
+      unknown: ["exact filesystem share of the 22/14-second stages; not required to establish the renewal-budget defect"]
+    repair:
+      change: "force and telemetry-tag renewal after activation replay, before membership commit, and before work dispatch"
+      rationale: "each expensive authoritative stage receives a fresh TTL while fencing and CAS authority remain unchanged"
+    verification:
+      minimal_reproduction: "targeted stage-guard unit/compute gate with all three call sites"
+      targeted_gate: "1-node unit plus D1-R2 and D2-R2 on one clean repair commit"
+      qualification_ladder: ["login static", "targeted Miyabi 1-node", "Miyabi D1-R2", "Miyabi D2-R2", "one D8-R2 retry"]
+    retry_decision:
+      authorized: false
+      rationale: "same-shape retry is forbidden until root-cause review and full repair qualification ladder pass"
+      parent_run_id: 20260711_p06c_d8_r2_90cb9a9
+    artifacts: [artifacts/duraloco/P06C/20260711_p06c_d8_r2_90cb9a9, runs/P06C/20260711_p06c_d8_r2_90cb9a9, plans/duraloco/reviews/P06C_D8_R2_LEASE_EXPIRY_REVIEW.md]

@@ -71,6 +71,21 @@ def _committed_membership_candidates(selected, membership: MembershipRevisionV1)
     )
 
 
+def _renew_for_authoritative_stage(
+    *, lease_manager, loaded_lease, config, logger, stage: str
+):
+    if stage not in {"post_activation", "membership_transition", "work_dispatch"}:
+        raise ValueError("unknown authoritative lease-renewal stage")
+    renewed = _renew_owner_lease(
+        lease_manager=lease_manager,
+        loaded_lease=loaded_lease,
+        config=config,
+        logger=logger,
+    )
+    logger.event("lease_stage_guard", stage=stage)
+    return renewed
+
+
 def _wait_for_result(
     backend,
     layout: DistributedLayout,
@@ -278,6 +293,13 @@ def run_committer(
         validation_device="cpu",
     )
     optimizer_impl = production_optimizer_digest(log.spec.optimizer_config.identity())
+    loaded_lease = _renew_for_authoritative_stage(
+        lease_manager=lease_manager,
+        loaded_lease=loaded_lease,
+        config=config,
+        logger=logger,
+        stage="post_activation",
+    )
     last_progress = time.monotonic()
     next_renew = time.monotonic() + config.coordination.renew_interval_seconds
     stop_reason = "completed"
@@ -328,6 +350,16 @@ def run_committer(
                         "reconfiguration_request_id": reconfiguration.request_id,
                         "failure_evidence_id": reconfiguration.evidence.evidence_id,
                     }
+                )
+                loaded_lease = _renew_for_authoritative_stage(
+                    lease_manager=lease_manager,
+                    loaded_lease=loaded_lease,
+                    config=config,
+                    logger=logger,
+                    stage="membership_transition",
+                )
+                next_renew = (
+                    time.monotonic() + config.coordination.renew_interval_seconds
                 )
                 log.commit_membership(
                     membership=successor, request_id=membership_request_id
@@ -456,6 +488,14 @@ def run_committer(
                     ],
                 }
             )
+            loaded_lease = _renew_for_authoritative_stage(
+                lease_manager=lease_manager,
+                loaded_lease=loaded_lease,
+                config=config,
+                logger=logger,
+                stage="work_dispatch",
+            )
+            next_renew = time.monotonic() + config.coordination.renew_interval_seconds
             publish_work_order(backend, layout, order)
             publish_input_bundle(backend, layout, bundle)
             dispatch_started = time.monotonic()
