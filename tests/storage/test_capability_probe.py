@@ -35,5 +35,7 @@ def test_m00_runtime_uses_the_verified_posix_backend_for_authority():
     syncer = (root / "fs_diloco/syncer.py").read_text(encoding="utf-8")
     learner = (root / "fs_diloco/learner.py").read_text(encoding="utf-8")
     assert "PosixStorageBackend(paths.authority)" in syncer
-    assert "PosixStorageBackend" not in learner
+    assert "publish_proposal_payload" in learner
+    assert "conditional_replace" not in learner
+    assert "head_key" not in learner
     assert "ProductionTransactionalLog" in syncer
