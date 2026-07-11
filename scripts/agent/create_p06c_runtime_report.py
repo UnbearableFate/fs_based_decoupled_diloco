@@ -31,6 +31,7 @@ def main() -> int:
     parser.add_argument("--run-generation", type=int, default=1)
     parser.add_argument("--expected-mode", required=True)
     parser.add_argument("--expected-learners", type=int, required=True)
+    parser.add_argument("--allow-degraded-attempts", action="store_true")
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
@@ -63,7 +64,11 @@ def main() -> int:
         attempt_ids = {envelope.attempt_envelope_id for _, envelope in attempts}
         if result_ids != {commit.prepared_result_id}:
             raise AssertionError("same-FWO attempts do not equal the committed result identity")
-        if args.expected_mode == "active_active" and len(executor_ids) != 2:
+        if (
+            args.expected_mode == "active_active"
+            and len(executor_ids) != 2
+            and not (args.allow_degraded_attempts and len(executor_ids) == 1)
+        ):
             raise AssertionError("active-active transition lacks two distinct executors")
         if len(attempt_ids) != len(attempts):
             raise AssertionError("prepared marker set repeats an attempt identity")

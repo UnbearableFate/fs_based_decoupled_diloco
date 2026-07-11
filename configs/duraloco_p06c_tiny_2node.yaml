@@ -1,0 +1,70 @@
+run: {name: duraloco_p06c_tiny_2node, run_id: null, shared_root: null, log_level: INFO}
+init: {resume: false, resume_version: latest, allow_overwrite_existing_run: false, run_generation: 1}
+model:
+  name_or_path: synthetic-tiny
+  trust_remote_code: false
+  dtype: float32
+  compile: false
+  synthetic_vocab_size: 128
+  synthetic_hidden_size: 32
+data:
+  dataset_name: synthetic
+  dataset_config_name: null
+  train_split: train
+  validation_split: validation
+  block_size: 32
+  num_proc: 1
+  cache_dir: null
+  streaming: false
+  synthetic_num_batches: 512
+sync:
+  num_learners: 2
+  upload_mode: params
+  quorum_min: 1
+  quorum_max: 1
+  max_staleness_versions: 4
+  staleness_lambda: 0.2
+  selection_policy: oldest_pending
+  scan_interval_seconds: 0.2
+  grace_window: {mode: fixed, fixed_seconds: 0.2, max_seconds: 0.2}
+  stop_after_outer_steps: 4
+  stop_after_global_tokens: null
+  stop_file_poll_seconds: 0.2
+coordination:
+  enabled: true
+  lease_ttl_seconds: 20.0
+  renew_interval_seconds: 5.0
+  renew_margin_seconds: 7.0
+  max_clock_skew_seconds: 1.0
+  standby_poll_seconds: 1.0
+liveness:
+  heartbeat_interval_seconds: 1.0
+  stale_after_seconds: 15.0
+  dead_after_seconds: 45.0
+  no_progress_timeout_seconds: 180.0
+  quorum_policy: fixed
+training:
+  inner_steps: 2
+  micro_batch_size: 1
+  gradient_accumulation_steps: 1
+  block_size: 32
+  max_local_steps: 24
+  precision: float32
+  seed: 1337
+  log_every_steps: 1
+  grad_clip: 1.0
+inner_optimizer: {name: adamw, lr: 0.001, betas: [0.9, 0.95], eps: 1.0e-8, weight_decay: 0.0, scheduler: none, warmup_steps: 0, reset_on_global_update: true}
+outer_optimizer: {name: nesterov, lr: 0.7, momentum: 0.9, weight_decay: 0.0, betas: [0.9, 0.999], eps: 1.0e-8}
+io:
+  tensor_dtype: bfloat16
+  atomic_write: true
+  compute_sha256: true
+  keep_processed_updates: true
+  cleanup_applied_after_versions: null
+  keep_last_global_versions: 6
+  keep_last_learner_update_versions: 6
+  final_cleanup_wait_seconds: 2.0
+learner: {poll_latest_during_inner_steps: true, adopt_global_after_upload: true, inner_optimizer_adoption_policy: reset_all}
+fragments: {enabled: false, strategy: full, num_fragments: 1, schedule: round_robin_global, fragments_per_update: 1, reset_inner_optimizer_on_fragment_adopt: true, materialize_full_every_events: null}
+failure_sim: {enabled: false, sleep_jitter_seconds: 0.0, upload_skip_probability: 0.0, crash_probability: 0.0}
+wandb: {enabled: false, mode: offline, entity: null, group: null, tags: []}

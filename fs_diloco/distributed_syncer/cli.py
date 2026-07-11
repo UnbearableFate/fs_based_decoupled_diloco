@@ -122,6 +122,27 @@ def _executor(args: argparse.Namespace) -> int:
             if owner_member_ids != order.owner_member_ids:
                 raise ValueError("derived owner roles differ from authoritative work order")
             owner_role = "primary" if args.member_id == order.primary_member_id else "backup"
+            failed_member_ids = dispatch.get("failed_member_ids", [])
+            if (
+                not isinstance(failed_member_ids, list)
+                or any(not isinstance(value, str) for value in failed_member_ids)
+                or not set(failed_member_ids).issubset(order.owner_member_ids)
+            ):
+                raise ValueError("derived dispatch has invalid failed-member evidence")
+            if args.member_id in failed_member_ids:
+                atomic_write_json(
+                    heartbeat_path,
+                    {
+                        "member_id": args.member_id,
+                        "status": "failure_observed",
+                        "work_order_id": order.work_order_id,
+                        "owner_role": owner_role,
+                        "redundancy_mode": order.redundancy_policy.mode,
+                        "timestamp": time.time(),
+                    },
+                )
+                time.sleep(args.poll_seconds)
+                continue
             published_at = dispatch.get("published_at")
             if not isinstance(published_at, (int, float)) or isinstance(published_at, bool):
                 raise ValueError("derived dispatch has invalid publication time")
