@@ -1,0 +1,18 @@
+#!/bin/bash
+#PBS -N duraloco_p06b_cmp
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:10:00
+#PBS -j oe
+#PBS -m ae
+set -eEuo pipefail
+PROJECT_ROOT="${PROJECT_ROOT:-${PBS_O_WORKDIR:?}}"; PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
+: "${EXPECTED_COMMIT:?}" "${ARTIFACT_ROOT:?}" "${RUN_ID:?}" "${PARENT_RUN_ID:?}" "${CRS_ROOT:?}" "${DISTRIBUTED_ROOT:?}"
+cd "$PROJECT_ROOT"; [[ "$(git rev-parse HEAD)" == "$EXPECTED_COMMIT" ]]; [[ -z "$(git status --porcelain=v1)" ]]; mkdir -p "$ARTIFACT_ROOT"; touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log" "$ARTIFACT_ROOT/commands.log"; export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}" CUDA_VISIBLE_DEVICES=""
+result=fail; exit_code=1
+finish() { observed=$?; [[ "$result" == pass ]] && exit_code=0 || { [[ "$observed" -eq 0 ]] || exit_code=$observed; }; qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true; "$PYTHON_BIN" scripts/agent/create_run_manifest.py --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json" --phase P06B --purpose analysis --run-id "$RUN_ID" --parent-run-id "$PARENT_RUN_ID" --schema-version 2 --validation-shape p06b-matched-c9-d8-policy-content-numeric-comparison --backend lustre --config scripts/miyabi/run_duraloco_p06b_compare_1node.pbs --commands-log commands.log --stdout stdout.log --stderr stderr.log --exit-code "$exit_code" --result "$result" --termination-kind "$([[ "$result" == pass ]] && echo success || echo test_failure)" --pbs-queue debug-g --requested-resources select=1:mpiprocs=1,walltime=00:10:00 --last-qstat-state R --termination-detail "P06B C9/D8 policy, FWO/PFT/final content, numeric tolerance, and quality-smoke comparison" --stage-metrics-path comparison.json --assertion "CRS and D8 policy, selected count, hexadecimal weights, and optimizer implementation identity are exact" --assertion "each D8 FWO/PFT/final transition has exact selected, weight, aggregate, parameter, and outer-state linkage" --assertion "cross-topology final tensors retain both content digests and pass declared numeric tolerance without claiming content identity" || true; }
+trap finish EXIT; trap 'echo "[ERROR] P06B comparison failed at line $LINENO" | tee -a "$ARTIFACT_ROOT/stderr.log"' ERR
+git status --short --branch | tee "$ARTIFACT_ROOT/git_status.log"; git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"; "$PYTHON_BIN" --version 2>&1 | tee "$ARTIFACT_ROOT/python_version.log"; module list 2>&1 | cat > "$ARTIFACT_ROOT/modules.log"
+command=("$PYTHON_BIN" scripts/agent/create_p06b_comparison.py --crs-root "$CRS_ROOT" --distributed-root "$DISTRIBUTED_ROOT" --output "$ARTIFACT_ROOT/comparison.json"); printf '%q ' "${command[@]}" | tee "$ARTIFACT_ROOT/commands.log"; printf '\n' | tee -a "$ARTIFACT_ROOT/commands.log"; "${command[@]}" 2>&1 | tee "$ARTIFACT_ROOT/stdout.log"
+result=pass; exit_code=0

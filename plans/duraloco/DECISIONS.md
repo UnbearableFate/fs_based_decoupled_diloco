@@ -685,6 +685,7 @@ P05+ 的规范性路线决策生效。
 ## D-06B11 — Frozen CPU numeric backend identity
 
 - Choice: FWO freezes device, dtype, Torch/BLAS/thread settings, and ordered reduction. Same-backend duplicates require exact core digests; C9 GPU comparison retains both digests and uses declared tolerance.
+- Frozen comparison gate: the matched C9/D8 final tensor smoke uses `atol=0.05` and `rtol=0.10`, reports max-absolute and relative-L2 differences, and never relabels numeric equivalence as content identity.
 
 ## D-06B12 — Semantic result excludes attempt evidence
 
