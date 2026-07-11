@@ -778,3 +778,36 @@ corrected without changing runtime code.
 commit 1。随后 Checker 错误地把 `ReplayResult.consumption[proposal_id]`（公开定义的
 logical inclusion 序号整数）与 commit-ID 字符串比较，从而拒绝了自身成功结果。复核
 replay 数据模型后确认正确值为整数 `1`；仅修正 Checker 断言，runtime 代码未变。
+
+### Corrected independent Checker PASS / 修正后的独立 Checker 通过
+
+PBS `2359355.opbs` ran from clean persistence commit
+`c4753d4eea0be58f68b3f888c83212778fff3a3f` on `mg0003` and exited 0 in
+2 minutes 27 seconds. Plan checksums, research/state validators, every Miyabi
+PBS syntax check, and the embedded-database forbidden scan passed. The current
+suite passed 295 tests with one intentional nightly skip; five explicitly named
+historical P02/P03/P04 counterexamples passed separately; and the deterministic
+reference CLI completed all 10,000 traces with 10,000 unique state digests.
+
+The exact handoff counterexample passed: a child writer was killed with exit 41
+immediately after POSIX immutable publication, the next immutable listing was
+forced to return empty, direct Head replay recovered commit 0, and the proposal
+then reached commit 1 with one logical inclusion. The inspected working tree
+contained no database file. The stale-process/corrupt-successor counterexample
+also failed closed and recovered to memoized/strict equality. Checker verdict is
+`PASS`, `required_gate_followups: none`, and `checking_to_completed: AUTHORIZED`.
+This closes the literal M00 plan audit without another two-node or nine-node run.
+
+PBS `2359355.opbs` 在 `mg0003` 上从干净持久化提交
+`c4753d4eea0be58f68b3f888c83212778fff3a3f` 运行，2 分 27 秒后以 0 退出。
+计划 checksum、research/state validator、全部 Miyabi PBS 语法检查和嵌入式数据库禁止项
+扫描均通过。当前套件 295 项通过、1 项按设计跳过 nightly；五个具名 P02/P03/P04 历史
+反例独立通过；deterministic reference CLI 完成 10,000 traces，并产生 10,000 个不同
+state digest。
+
+计划要求的精确组合反例通过：子 writer 在 POSIX immutable publication 后立即以 41
+退出；下一次 immutable listing 被强制返回空；direct Head replay 在 commit 0 恢复；
+随后 proposal 在 commit 1 恰好 logical inclusion 一次。检查的工作目录中没有数据库
+文件。旧进程/损坏 successor 反例同样 fail closed，并恢复到 memoized/strict 相等。
+Checker 结论为 `PASS`、`required_gate_followups: none`、
+`checking_to_completed: AUTHORIZED`。逐项 M00 计划复核至此关闭，不再运行双节点或九节点。

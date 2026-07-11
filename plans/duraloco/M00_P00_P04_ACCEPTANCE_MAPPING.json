@@ -10,7 +10,7 @@
     "terminal": "artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/terminal_gate_report.json",
     "terminal_log_junit": "artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/m00_log_junit.xml",
     "real_prefix_replay": "artifacts/duraloco/M00/20260711_m00_6e85182_replay_benchmark/report.json",
-    "independent_checker": "artifacts/duraloco/M00/20260711_m00_checker_358ecc0_1node/checker_report.md"
+    "independent_checker": "artifacts/duraloco/M00/20260711_m00_checker_c4753d4_1node/checker_report.md"
   },
   "explicit_remaps": {
     "P00-A06": {
@@ -59,7 +59,7 @@
     "P02-A04": {"result": "pass", "evidence": ["tests/reference/test_double_inclusion.py", "tests/log/test_production_runtime.py"]},
     "P02-A05": {"result": "pass", "evidence": ["tests/reference/test_model_checker_mutants.py", "fs_diloco/testing/model_checker.py"]},
     "P02-A06": {"result": "pass", "evidence": ["tests/reference/test_reference_outer_optim.py", "artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/junit.xml"]},
-    "P02-A07": {"result": "pass", "evidence": ["tests/reference/test_random_traces.py", "tests/reference/golden/reference_digests.json"]},
+    "P02-A07": {"result": "pass", "evidence": ["tests/reference/test_random_traces.py", "tests/reference/golden/reference_digests.json", "artifacts/duraloco/M00/20260711_m00_checker_c4753d4_1node/reference_10000.json"]},
     "P02-A08": {"result": "pass", "evidence": ["tests/reference/test_random_traces.py", "tests/reference/test_reference_transitions.py"]},
 
     "P03-A01": {"result": "pass", "evidence": ["tests/storage/contract.py", "tests/storage/test_conformance.py"]},

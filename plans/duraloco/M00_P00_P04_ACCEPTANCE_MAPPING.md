@@ -1,7 +1,7 @@
 # M00 P00–P04 Acceptance Mapping
 
 Verified implementation: `c052438a3cfe5e16c3b154fc842f32dcd61ec6ff`
-Status: PASS; independent Checker PBS `2359306.opbs` approved all 41 IDs and
+Status: PASS; independent Checker PBS `2359355.opbs` approved all 41 IDs and
 both explicit remaps with `required_gate_followups: none`.
 
 All historical acceptance IDs are requalified by current SQLite-free source and
@@ -23,7 +23,7 @@ not used as current PASS evidence.
 | Backend races + transaction races + production takeover | `20260711_m00_c052438_2node_requal`, PBS `2359250.opbs` | PASS |
 | Preserved real-prefix strict/memoized replay | `20260711_m00_6e85182_replay_benchmark`, PBS `2359243.opbs` | PASS |
 | GPT-2/WikiText-2 1+8, 50×10 terminal | `20260711_m00_c052438_gpt2_9n_50x10`, PBS `2359253.opbs`, elapsed 7m24s | PASS |
-| Independent final Checker | `20260711_m00_checker_358ecc0_1node`, PBS `2359306.opbs` | PASS |
+| Corrected independent final Checker | `20260711_m00_checker_c4753d4_1node`, PBS `2359355.opbs`; 295 passed/1 skipped, explicit 10,000 traces, five named historical counterexamples, required combined counterexample | PASS |
 
 ## Gate-by-gate mapping
 

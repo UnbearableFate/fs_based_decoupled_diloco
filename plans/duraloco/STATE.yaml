@@ -1,13 +1,13 @@
 phase: M00
-status: checking
+status: completed
 planning_basis_branch: codex/duraloco-p04-transaction-log
 planning_basis_commit: a655413cea6ebe9bc368b5827318efd766683b5a
 actual_base_branch: no_sql
 actual_base_commit: f32b9ddf3fd6443947c178aee667029df1c7f86d
 feature_branch: codex/duraloco-m00-sqlite-free-rebase
 current_loop: 4
-current_goal: "close post-completion M00 requirement-audit gaps and rerun independent Checker"
-attempts_for_current_failure: 2
+current_goal: "M00 SQLite-free runtime and P00-P04 requalification completed after literal requirement audit"
+attempts_for_current_failure: 0
 last_verified_commit: c052438a3cfe5e16c3b154fc842f32dcd61ec6ff
 checks:
   local_static: static_pass
@@ -25,10 +25,10 @@ acceptance:
   M00-A06: {result: pass, evidence: [fs_diloco/log/bootstrap.py, tests/log/test_bootstrap.py, tests/log/test_production_runtime.py, artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/manifest.json]}
   M00-A07: {result: pass, evidence: [fs_diloco/analysis.py, fs_diloco/log/training_probe.py, artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/training_summary.json]}
   M00-A08: {result: pass, evidence: [plans/duraloco/M00_P00_P04_ACCEPTANCE_MAPPING.json, plans/duraloco/M00_P00_P04_ACCEPTANCE_MAPPING.md]}
-  M00-A09: {result: pass, evidence: [artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/manifest.json, artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/junit.xml]}
+  M00-A09: {result: pass, evidence: [artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/manifest.json, artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/junit.xml, artifacts/duraloco/M00/20260711_m00_checker_c4753d4_1node/junit.xml]}
   M00-A10: {result: pass, evidence: [artifacts/duraloco/M00/20260711_m00_c052438_2node_requal/manifest.json, artifacts/duraloco/M00/20260711_m00_c052438_2node_requal/two_node_summary.json]}
   M00-A11: {result: pass, evidence: [artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/manifest.json, artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/terminal_gate_report.json]}
-  M00-A12: {result: not_run, evidence: []}
+  M00-A12: {result: pass, evidence: [artifacts/duraloco/M00/20260711_m00_checker_c4753d4_1node/checker_report.md, artifacts/duraloco/M00/20260711_m00_checker_c4753d4_1node/checker_results.json]}
 open_decisions: []
 open_blockers: []
 artifacts:
@@ -53,9 +53,10 @@ artifacts:
   - artifacts/duraloco/M00/20260711_m00_checker_358ecc0_1node
   - artifacts/duraloco/M00/20260711_m00_checker_040a95a_1node
   - artifacts/duraloco/M00/20260711_m00_checker_b558f76_1node
+  - artifacts/duraloco/M00/20260711_m00_checker_c4753d4_1node
   - plans/duraloco/reviews/M00_PRODUCTION_REPLAY_WORKFLOW_REVIEW.md
-next_action: "run updated one-node independent Checker with explicit 10000 traces and required combined counterexample"
+next_action: "start P05 syncer lease, fencing, and failover from the corrected archived M00 branch tip"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
-checker_report: null
+checker_report: artifacts/duraloco/M00/20260711_m00_checker_c4753d4_1node/checker_report.md
