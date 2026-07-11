@@ -506,7 +506,7 @@ def run_syncer(config: Config) -> None:
             tensors: list[torch.Tensor] = []
             for entry in selected:
                 payload = catalog.load_payload(entry)
-                log.publish_proposal(entry.manifest, payload)
+                log.publish_validated_proposal(entry.manifest, entry.payload)
                 payloads.append(payload)
                 tensors.append(_load_selected_tensor(entry, payload, device))
             current_fragment = fragments[fragment_id]

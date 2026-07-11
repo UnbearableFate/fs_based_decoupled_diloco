@@ -32,6 +32,7 @@ from .errors import CommitConflict, RunInitializationError, VerificationError
 from .layout import LogLayout
 from .production_codec import (
     PRODUCTION_CODEC,
+    ValidatedProductionPayload,
     decode_production_outer_state,
     decode_production_params,
     validate_production_tensor_payload,
@@ -191,16 +192,43 @@ class ProductionTransactionalLog:
             raise CommitConflict("proposal payload key is not canonical for its content")
         if len(payload) != proposal.payload_size or hashlib.sha256(payload).hexdigest() != proposal.payload_sha256:
             raise CommitConflict("proposal payload bytes differ from its manifest")
-        validate_production_tensor_payload(
+        validated = validate_production_tensor_payload(
             payload,
             tensor_key=proposal.tensor_key,
             shape=proposal.shape,
             dtype=proposal.dtype,
             require_finite=True,
         )
+        return self.publish_validated_proposal(proposal, validated)
+
+    def publish_validated_proposal(
+        self,
+        proposal: ProposalManifest,
+        payload: ValidatedProductionPayload,
+    ) -> ObjectRef:
+        """Publish a codec-validated immutable payload without revalidating its bytes."""
+
+        if proposal.run_id != self.spec.run_id or proposal.run_generation != self.spec.run_generation:
+            raise CommitConflict("proposal belongs to another run generation")
+        expected_payload_key = self.layout.proposal_payload_key(proposal.payload_sha256)
+        if proposal.payload_key != expected_payload_key:
+            raise CommitConflict("proposal payload key is not canonical for its content")
+        if (
+            payload.sha256 != proposal.payload_sha256
+            or len(payload.data) != proposal.payload_size
+            or payload.tensor_key != proposal.tensor_key
+            or payload.shape != proposal.shape
+            or payload.dtype != proposal.dtype
+            or not payload.finite_checked
+        ):
+            raise CommitConflict("validated proposal payload differs from its manifest")
         data = proposal.canonical_bytes()
         ref = content_ref(self.layout.proposal_key(proposal.proposal_id), data)
-        self.backend.put_immutable(proposal.payload_key, payload, sha256=proposal.payload_sha256)
+        self.backend.put_immutable(
+            proposal.payload_key,
+            payload.data,
+            sha256=proposal.payload_sha256,
+        )
         self.backend.put_immutable(ref.key, data, sha256=ref.sha256)
         return ref
 

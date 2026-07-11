@@ -16,7 +16,10 @@ from fs_diloco.protocol.schemas import ProposalManifest
 from fs_diloco.protocol.validation import ValidationContext, validate_causal, validate_metadata
 
 from .runtime_view import RuntimeView
-from .log.production_codec import validate_production_tensor_payload
+from .log.production_codec import (
+    ValidatedProductionPayload,
+    validate_production_tensor_payload,
+)
 
 
 _SAFE_TO_PROTOCOL = {"F16": "float16", "BF16": "bfloat16", "F32": "float32", "F64": "float64"}
@@ -28,6 +31,7 @@ class CatalogEntry:
     metadata_path: Path
     payload_path: Path
     metadata_sha256: str
+    payload: ValidatedProductionPayload
 
     @property
     def proposal_id(self) -> str:
@@ -125,7 +129,6 @@ class ProposalCatalog:
                 f"cannot read proposal payload: {exc}",
                 category=ErrorCategory.RETRYABLE,
             ) from exc
-        payload_sha256 = hashlib.sha256(payload).hexdigest()
         headers, _ = parse_safetensors(payload)
         if len(headers) != 1:
             raise ProtocolError("PAYLOAD_TENSOR_KEY", "proposal payload must contain one tensor")
@@ -134,13 +137,14 @@ class ProposalCatalog:
         if tensor_key != expected_key:
             raise ProtocolError("PAYLOAD_TENSOR_KEY", f"expected {expected_key}, found {tensor_key}")
         dtype = _SAFE_TO_PROTOCOL[header.dtype]
-        validate_production_tensor_payload(
+        validated_payload = validate_production_tensor_payload(
             payload,
             tensor_key=tensor_key,
             shape=header.shape,
             dtype=dtype,
             require_finite=True,
         )
+        payload_sha256 = validated_payload.sha256
         local_start = int(metadata.get("local_step_start", -1))
         local_end = int(metadata.get("local_step_end", -1))
         if local_start < 0 or local_end <= local_start:
@@ -207,6 +211,7 @@ class ProposalCatalog:
             metadata_path=metadata_path,
             payload_path=payload_path,
             metadata_sha256=hashlib.sha256(metadata_bytes).hexdigest(),
+            payload=validated_payload,
         )
 
     def scan(
@@ -293,17 +298,4 @@ class ProposalCatalog:
 
     @staticmethod
     def load_payload(entry: CatalogEntry) -> bytes:
-        payload = entry.payload_path.read_bytes()
-        if (
-            len(payload) != entry.manifest.payload_size
-            or hashlib.sha256(payload).hexdigest() != entry.manifest.payload_sha256
-        ):
-            raise ProtocolError("PAYLOAD_CHANGED", "proposal payload changed after validation")
-        validate_production_tensor_payload(
-            payload,
-            tensor_key=entry.manifest.tensor_key,
-            shape=entry.manifest.shape,
-            dtype=entry.manifest.dtype,
-            require_finite=True,
-        )
-        return payload
+        return entry.payload.data

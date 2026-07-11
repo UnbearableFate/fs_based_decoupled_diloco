@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+from dataclasses import dataclass
 from typing import Mapping
 
 import torch
@@ -36,6 +37,16 @@ _PROTOCOL_TORCH_DTYPES = {
 }
 
 
+@dataclass(frozen=True)
+class ValidatedProductionPayload:
+    data: bytes
+    sha256: str
+    tensor_key: str
+    shape: tuple[int, ...]
+    dtype: str
+    finite_checked: bool
+
+
 def _cpu_contiguous(tensor: torch.Tensor, *, dtype: torch.dtype | None = None) -> torch.Tensor:
     result = tensor.detach().to(device="cpu")
     if dtype is not None:
@@ -55,7 +66,7 @@ def validate_production_tensor_payload(
     shape: tuple[int, ...],
     dtype: str,
     require_finite: bool = True,
-) -> dict[str, object]:
+) -> ValidatedProductionPayload:
     """Strictly validate a large production tensor with vectorized finiteness."""
 
     try:
@@ -78,13 +89,14 @@ def validate_production_tensor_payload(
             )
         if require_finite and not bool(torch.isfinite(tensor).all().item()):
             raise ProtocolError("PAYLOAD_NONFINITE", "payload contains non-finite values")
-        return {
-            "tensor_key": tensor_key,
-            "shape": list(shape),
-            "dtype": dtype,
-            "numel": tensor.numel(),
-            "finite_checked": require_finite,
-        }
+        return ValidatedProductionPayload(
+            data=payload,
+            sha256=hashlib.sha256(payload).hexdigest(),
+            tensor_key=tensor_key,
+            shape=shape,
+            dtype=dtype,
+            finite_checked=require_finite,
+        )
     except ProtocolError:
         raise
     except Exception as exc:
