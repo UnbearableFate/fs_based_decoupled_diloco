@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+import time
 from typing import Any
 
 from .atomic_io import safe_read_json
@@ -122,12 +123,15 @@ def cleanup_learner_update_artifacts(
     update_dir: Path,
     *,
     keep_last: int | None,
+    orphan_grace_seconds: float = 300.0,
     logger: Any | None = None,
 ) -> int:
     """Keep only the newest update metadata/tensor pairs produced by one learner."""
     if keep_last is None:
         return 0
     keep_last = max(0, int(keep_last))
+    orphan_grace_seconds = max(0.0, float(orphan_grace_seconds))
+    orphan_cutoff = time.time() - orphan_grace_seconds
     entries: list[tuple[int, float, str, Path, Path | None]] = []
     invalid_meta_paths: list[Path] = []
     for meta_path in update_dir.glob("update_*.meta.json"):
@@ -182,10 +186,20 @@ def cleanup_learner_update_artifacts(
     for tensor_path in update_dir.glob("update_*.params.safetensors"):
         if tensor_path.resolve(strict=False) in keep_tensor_paths:
             continue
+        try:
+            if tensor_path.stat().st_mtime > orphan_cutoff:
+                continue
+        except OSError:
+            continue
         if _safe_unlink(tensor_path, logger):
             deleted += 1
 
     for tmp_path in update_dir.glob(".update_*.tmp"):
+        try:
+            if tmp_path.stat().st_mtime > orphan_cutoff:
+                continue
+        except OSError:
+            continue
         if _safe_unlink(tmp_path, logger):
             deleted += 1
 
@@ -204,6 +218,7 @@ def cleanup_all_learner_update_artifacts(
     paths: RunPaths,
     *,
     keep_last: int | None,
+    orphan_grace_seconds: float = 300.0,
     logger: Any | None = None,
 ) -> int:
     """Apply learner retention to every learner mailbox in a run."""
@@ -214,6 +229,7 @@ def cleanup_all_learner_update_artifacts(
         deleted += cleanup_learner_update_artifacts(
             update_dir,
             keep_last=keep_last,
+            orphan_grace_seconds=orphan_grace_seconds,
             logger=logger,
         )
     return deleted

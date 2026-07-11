@@ -6,8 +6,8 @@ current_loop: 5
 current_goal: "C1 to C2 to C9 central topology qualification"
 checks:
   login_static: pass
-  c1: provisional_pass_before_final_same_commit_ladder
-  c2: not_run
+  c1: pass_on_fce378f
+  c2: failed_retention_race_on_fce378f
   c9: not_run
 focused_1node_attempt:
   run_id: 20260711_p06a_archive_723e64a_1node

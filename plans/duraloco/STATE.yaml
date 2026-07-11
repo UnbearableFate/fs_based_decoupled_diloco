@@ -9,9 +9,9 @@ actual_base_commit: 06e3ca2299d5eb1a720c1d8f9107af5223095525
 feature_branch: codex/duraloco-p06a-syncer-kernel
 plan_handoff_commit: c4b34d961b7d3a82ece4f16324cf6a69c7b2f5b7
 current_loop: 5
-current_goal: "qualify the decomposed central reference syncer through C1, C2, and C9"
-attempts_for_current_failure: 0
-last_terminal_failure_review: null
+current_goal: "repair the C2 terminal cleanup race without weakening marker-last publication"
+attempts_for_current_failure: 1
+last_terminal_failure_review: plans/duraloco/reviews/P06A_C2_RETENTION_RACE_REVIEW.md
 terminal_retry_authorized: false
 terminal_retry_qualification:
   targeted_1node_benchmark: null
@@ -57,7 +57,9 @@ artifacts:
   - artifacts/duraloco/P06A/20260711_p06a_kernel_6ac394d_1node
   - artifacts/duraloco/P06A/20260711_p06a_archive_723e64a_1node
   - artifacts/duraloco/P06A/20260711_p06a_c1_c834e57
-next_action: "freeze one clean implementation candidate containing C1/C2/C9 launchers, then run the entire C1 to C2 to C9 ladder on that commit"
+  - artifacts/duraloco/P06A/20260711_p06a_final_fce378f_c1
+  - artifacts/duraloco/P06A/20260711_p06a_final_fce378f_c2
+next_action: "prove fresh unmarked update payloads survive retention, then rerun C1 and C2 on the repaired clean commit before C9"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

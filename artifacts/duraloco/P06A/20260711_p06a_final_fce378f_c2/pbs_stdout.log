@@ -1,0 +1,61 @@
+mg0006
+mg0008
+## codex/duraloco-p06a-syncer-kernel
+fce378fcc6d8438045d4a3f54ef78e36d0d50fc8
+Python 3.13.13
+mpirun --bind-to none -np 2 --hostfile /var/spool/pbs/aux/2362087.opbs /usr/bin/env PROJECT_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco PYTHON_BIN=/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python CONFIG=/work/xg24i002/x10041/fs_based_decoupled_diloco/configs/duraloco_p06_tiny_2node_restart.yaml RUN_ID=20260711_p06a_final_fce378f_c2-training SHARED_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_final_fce378f_c2/training ARTIFACT_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P06A/20260711_p06a_final_fce378f_c2 PYTHONPATH=/work/xg24i002/x10041/fs_based_decoupled_diloco WANDB_MODE=disabled bash -lc set\ -eEuo\ pipefail\;\ rank=\"\$\{OMPI_COMM_WORLD_RANK:\?\}\"\;\ cd\ \"\$PROJECT_ROOT\"\;\ if\ \[\[\ \"\$rank\"\ -eq\ 0\ \]\]\;\ then\ export\ CUDA_VISIBLE_DEVICES=0\;\ exec\ \"\$PYTHON_BIN\"\ -m\ fs_diloco.syncer\ --config\ \"\$CONFIG\"\ --run-id\ \"\$RUN_ID\"\ --shared-root\ \"\$SHARED_ROOT\"\ --num-learners\ 1\ --owner-id\ syncer-a\ --owner-session-id\ \"\$RUN_ID-owner\"\;\ else\ exec\ bash\ scripts/chaos/run_p06_learner_restart.sh\;\ fi 
+{"actor": "syncer", "authority_root": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_final_fce378f_c2/training/authority", "cuda_visible_devices": "0", "device": "cuda", "event_type": "process_start", "hostname": "mg0006", "owner_id": "syncer-a", "owner_session_id": "20260711_p06a_final_fce378f_c2-training-owner", "run_generation": 0, "run_id": "20260711_p06a_final_fce378f_c2-training", "shared_root": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_final_fce378f_c2/training", "standby": false, "timestamp": 1783761293.2290823}
+{"actor": "syncer", "event_type": "wandb_disabled", "hostname": "mg0006", "timestamp": 1783761293.2320163}
+{"actor": "syncer", "commit_seq": 0, "event_type": "generation_initialized", "hostname": "mg0006", "timestamp": 1783761293.4945407, "view_digest": "5ffa3371beb8b4361301aa8942072953ba39b6ee219dbc3aa11c66a253dafbd6"}
+{"actor": "syncer", "event_type": "coordination_stage_completed", "hostname": "mg0006", "lease_sequence": 1, "owner_id": "syncer-a", "owner_session_id": "20260711_p06a_final_fce378f_c2-training-owner", "proposed_fencing_epoch": 1, "seconds": 0.005347647005692124, "stage": "lease_acquire", "timestamp": 1783761293.502466}
+{"actor": "syncer", "commit_seq": 1, "event_type": "coordination_stage_completed", "fencing_epoch": 1, "hostname": "mg0006", "optimizer_transition_count": 0, "owner_id": "syncer-a", "owner_session_id": "20260711_p06a_final_fce378f_c2-training-owner", "seconds": 0.040982853970490396, "stage": "fence_commit_and_strict_replay", "timestamp": 1783761293.544392}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0006", "quorum_min": 1, "timestamp": 1783761293.7722762}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0006", "quorum_min": 1, "timestamp": 1783761294.174161}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0006", "quorum_min": 1, "timestamp": 1783761294.5762432}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0006", "quorum_min": 1, "timestamp": 1783761294.9781685}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0006", "quorum_min": 1, "timestamp": 1783761295.3801293}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0006", "quorum_min": 1, "timestamp": 1783761295.7821965}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0006", "quorum_min": 1, "timestamp": 1783761296.1839998}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0006", "quorum_min": 1, "timestamp": 1783761296.5858765}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0006", "quorum_min": 1, "timestamp": 1783761296.989314}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0006", "seconds": 0.20615674502914771, "selected_count": 1, "stage": "catalog", "target_commit_seq": 2, "timestamp": 1783761297.398464}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0006", "seconds": 0.012899047986138612, "stage": "proposal_observation", "target_commit_seq": 2, "timestamp": 1783761297.4094555}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0006", "seconds": 0.04121661599492654, "stage": "aggregation", "target_commit_seq": 2, "timestamp": 1783761297.4506745}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0006", "seconds": 0.009654549998231232, "stage": "outer_step", "target_commit_seq": 2, "timestamp": 1783761297.460327}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0006", "seconds": 0.029161348997149616, "stage": "successor_prepare", "target_commit_seq": 2, "timestamp": 1783761297.4909356}
+{"actor": "syncer", "commit_id": "c-f78fb47e208c403b1e292b0fcac391fbaf93cf32423cdb10e3c374f50c1fdfe0", "commit_seq": 2, "event_type": "head_cas_completed", "hostname": "mg0006", "seconds": 0.00845787103753537, "timestamp": 1783761297.4993927}
+{"actor": "syncer", "commit_id": "c-f78fb47e208c403b1e292b0fcac391fbaf93cf32423cdb10e3c374f50c1fdfe0", "commit_seq": 2, "event_type": "post_cas_replay_completed", "hostname": "mg0006", "seconds": 0.011753793980460614, "timestamp": 1783761297.5120373}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0006", "seconds": 0.025355087011121213, "stage": "materialized_export", "target_commit_seq": 2, "timestamp": 1783761297.5386355}
+{"actor": "syncer", "commit_id": "c-f78fb47e208c403b1e292b0fcac391fbaf93cf32423cdb10e3c374f50c1fdfe0", "commit_seq": 2, "event_type": "transition_committed", "fragment_id": 0, "hostname": "mg0006", "selected_proposal_ids": ["p-f68a4c476b6a15c186c55c2e00ed11bb8720eeffb88070508a1711ab5f90e229"], "timestamp": 1783761297.5407403, "view_digest": "ac19cede707532f32926ec3f8a9024a98d14d6149fe7797406be8f79290f39dc"}
+{"actor": "syncer", "commit_seq": 2, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0006", "quorum_min": 1, "timestamp": 1783761297.748066}
+{"actor": "syncer", "commit_seq": 2, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0006", "quorum_min": 1, "timestamp": 1783761298.155416}
+{"actor": "syncer", "commit_seq": 2, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0006", "quorum_min": 1, "timestamp": 1783761298.5622106}
+{"actor": "syncer", "commit_seq": 2, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0006", "quorum_min": 1, "timestamp": 1783761298.9690695}
+{"actor": "syncer", "commit_seq": 2, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0006", "quorum_min": 1, "timestamp": 1783761299.3778536}
+{"actor": "syncer", "commit_seq": 2, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0006", "quorum_min": 1, "timestamp": 1783761299.7863626}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0006", "seconds": 0.2087868070229888, "selected_count": 1, "stage": "catalog", "target_commit_seq": 3, "timestamp": 1783761300.198339}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0006", "seconds": 0.010495449998416007, "stage": "proposal_observation", "target_commit_seq": 3, "timestamp": 1783761300.206705}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0006", "seconds": 0.0012837839894928038, "stage": "aggregation", "target_commit_seq": 3, "timestamp": 1783761300.2079887}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0006", "seconds": 0.0020592749933712184, "stage": "outer_step", "target_commit_seq": 3, "timestamp": 1783761300.2100472}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0006", "seconds": 0.03060567704960704, "stage": "successor_prepare", "target_commit_seq": 3, "timestamp": 1783761300.2419512}
+{"actor": "syncer", "commit_id": "c-06b2b585d07bc9ac0a065cd35327a890a28349cb84b08ac4c2c02f130b850927", "commit_seq": 3, "event_type": "head_cas_completed", "hostname": "mg0006", "seconds": 0.008420462952926755, "timestamp": 1783761300.2503712}
+{"actor": "syncer", "commit_id": "c-06b2b585d07bc9ac0a065cd35327a890a28349cb84b08ac4c2c02f130b850927", "commit_seq": 3, "event_type": "post_cas_replay_completed", "hostname": "mg0006", "seconds": 0.015814231999684125, "timestamp": 1783761300.2671185}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0006", "seconds": 0.020154034020379186, "stage": "materialized_export", "target_commit_seq": 3, "timestamp": 1783761300.2893138}
+{"actor": "syncer", "commit_id": "c-06b2b585d07bc9ac0a065cd35327a890a28349cb84b08ac4c2c02f130b850927", "commit_seq": 3, "event_type": "transition_committed", "fragment_id": 0, "hostname": "mg0006", "selected_proposal_ids": ["p-15c0eb7a4adc8d9a2071b97cff3df81040de2ae9ab42a470615787d423a120d0"], "timestamp": 1783761300.2911131, "view_digest": "d71b2c498e02d2868119b604e76d1dfa3f7d71156f2c58fd00eeec6b286b5604"}
+{"actor": "syncer", "commit_seq": 4, "event_type": "coordination_stage_completed", "hostname": "mg0006", "optimizer_transition_count": 2, "seconds": 0.05060031701577827, "stage": "authoritative_stop", "timestamp": 1783761300.342716}
+{"actor": "syncer", "commit_id": "c-9e26601d9027599e984afbcf7e53524da3b324b85eeac2e216ad284c9bdbc46c", "commit_seq": 4, "event_type": "stop_published", "hostname": "mg0006", "reason": "stop_after_outer_steps", "timestamp": 1783761300.3688571}
+{"actor": "syncer", "deleted_files": 2, "event_type": "retention_cleanup", "hostname": "mg0006", "keep_last": 3, "role": "syncer", "timestamp": 1783761300.3725564}
+{"actor": "syncer", "deleted_files": 1, "event_type": "retention_cleanup", "hostname": "mg0006", "keep_last": 3, "role": "learner", "timestamp": 1783761300.3801825, "update_dir": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_final_fce378f_c2/training/updates/pending/learner_000"}
+{"actor": "syncer", "commit_seq": 4, "event_type": "process_exit", "hostname": "mg0006", "reason": "stop_after_outer_steps", "timestamp": 1783761300.3810694}
+--------------------------------------------------------------------------
+Primary job  terminated normally, but 1 process returned
+a non-zero exit code. Per user-direction, the job has been aborted.
+--------------------------------------------------------------------------
+--------------------------------------------------------------------------
+mpirun detected that one or more processes exited with non-zero status, thus causing
+the job to be terminated. The first process to do so was:
+
+  Process name: [[52345,1],1]
+  Exit code:    1
+--------------------------------------------------------------------------
+[ERROR] P06 two-node gate failed at line 77

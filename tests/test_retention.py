@@ -82,10 +82,26 @@ def test_cleanup_learner_update_artifacts_deletes_fragment_and_orphan_files(tmp_
     (update_dir / "update_invalid.meta.json").write_text("not-json")
     (update_dir / ".update_partial.params.safetensors.abc.tmp").write_text("partial")
 
-    deleted = cleanup_learner_update_artifacts(update_dir, keep_last=0)
+    deleted = cleanup_learner_update_artifacts(
+        update_dir,
+        keep_last=0,
+        orphan_grace_seconds=0,
+    )
 
     assert deleted == 5
     assert list(update_dir.iterdir()) == []
+
+
+def test_cleanup_preserves_fresh_inflight_tensor_without_marker(tmp_path):
+    update_dir = tmp_path / "updates" / "pending" / "learner_000"
+    update_dir.mkdir(parents=True)
+    inflight = update_dir / "update_inflight.params.safetensors"
+    inflight.write_text("payload being published")
+
+    deleted = cleanup_learner_update_artifacts(update_dir, keep_last=0)
+
+    assert deleted == 0
+    assert inflight.read_text() == "payload being published"
 
 
 def test_cleanup_fragment_artifacts_keeps_newest_version_per_fragment(tmp_path):
