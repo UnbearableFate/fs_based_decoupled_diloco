@@ -232,6 +232,7 @@ def initialize_generation(
     backend: PosixStorageBackend,
     *,
     device: torch.device | str,
+    run_spec_factory=_run_spec,
 ) -> tuple[
     ProductionTransactionalLog,
     RuntimeView,
@@ -270,7 +271,7 @@ def initialize_generation(
             encode_production_params(fragment),
             encode_production_outer_state(state),
         )
-    spec = _run_spec(
+    spec = run_spec_factory(
         config,
         parameter_digest=param_index_digest(param_index),
         layout_digest=fragment_layout_digest(fragment_index),

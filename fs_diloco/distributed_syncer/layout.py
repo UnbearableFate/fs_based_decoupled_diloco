@@ -22,6 +22,9 @@ class DistributedLayout:
     def work_order_key(self, work_order_id: str) -> str:
         return f"{self.work_order_prefix}{work_order_id}.json"
 
+    def input_bundle_key(self, work_order_id: str) -> str:
+        return f"{self.work_order_prefix}{work_order_id}.inputs.json"
+
     def result_key(self, prepared_result_id: str) -> str:
         return f"{self.prepared_prefix}results/{prepared_result_id}.json"
 

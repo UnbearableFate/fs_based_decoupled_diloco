@@ -128,6 +128,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--shared-root")
     parser.add_argument("--learner-id", required=True)
     parser.add_argument("--num-learners", type=int)
+    parser.add_argument("--session-id")
     return parser.parse_args(argv)
 
 
@@ -572,7 +573,9 @@ def write_fragment_update(
     return update_id, tensor_path, meta_path, metadata, publication
 
 
-def run_fragment_learner(config: Config, learner_id: str) -> None:
+def run_fragment_learner(
+    config: Config, learner_id: str, *, session_id: str | None = None
+) -> None:
     paths = RunPaths(Path(config.run.shared_root or "."))
     prepare_run_dirs(paths, config.sync.num_learners)
     logger = JsonlLogger(paths.logs / f"{learner_id}.jsonl", learner_id)
@@ -582,6 +585,7 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
         config.run.run_id or "",
         config.init.run_generation,
         learner_id,
+        session_id=session_id,
     )
     torch.manual_seed(config.training.seed + learner_index)
     device = choose_device()
@@ -1074,9 +1078,9 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
         )
 
 
-def run_learner(config: Config, learner_id: str) -> None:
+def run_learner(config: Config, learner_id: str, *, session_id: str | None = None) -> None:
     if config.fragments.enabled:
-        run_fragment_learner(config, learner_id)
+        run_fragment_learner(config, learner_id, session_id=session_id)
         return
     paths = RunPaths(Path(config.run.shared_root or "."))
     prepare_run_dirs(paths, config.sync.num_learners)
@@ -1087,6 +1091,7 @@ def run_learner(config: Config, learner_id: str) -> None:
         config.run.run_id or "",
         config.init.run_generation,
         learner_id,
+        session_id=session_id,
     )
     torch.manual_seed(config.training.seed + learner_index)
     device = choose_device()
@@ -1452,7 +1457,7 @@ def main(argv: list[str] | None = None) -> None:
         shared_root=args.shared_root,
         num_learners=args.num_learners,
     )
-    run_learner(config, args.learner_id)
+    run_learner(config, args.learner_id, session_id=args.session_id)
 
 
 if __name__ == "__main__":

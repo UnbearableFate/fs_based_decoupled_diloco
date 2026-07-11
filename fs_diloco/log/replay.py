@@ -839,10 +839,6 @@ def _replay_production_log(
                     "fenced optimizer transition has no running authoritative owner",
                     commit_seq=index,
                 )
-        if frontier.membership != previous.membership:
-            raise VerificationError(
-                "optimizer transition changed membership", commit_seq=index
-            )
             request_body = {
                 "operation": "optimizer",
                 "request_id": commit.request_id,
@@ -880,6 +876,10 @@ def _replay_production_log(
         elif commit.owner_id is not None:
             raise VerificationError(
                 "legacy run contains fenced optimizer fields", commit_seq=index
+            )
+        if frontier.membership != previous.membership:
+            raise VerificationError(
+                "optimizer transition changed membership", commit_seq=index
             )
         old_fragment = previous.fragments.get(commit.fragment_id)
         if old_fragment is None:
