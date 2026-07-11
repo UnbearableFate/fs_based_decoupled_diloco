@@ -747,3 +747,17 @@ malformed/future/stale catalog flood，以及 CAS 冲突后重新 prepare 也缺
 完整套件、显式历史反例、10,000 traces 和精确组合反例后，M00 才能再次完成。已验证
 runtime 实现及成功的单/双/九节点 Maker lineage 不变；这些仅测试/证据变更不需要、
 也不应触发新的九节点提交。
+
+The first audit Checker attempt, PBS `2359343.opbs` at `040a95a`, completed the
+static gates and explicit 10,000 traces, then reported 11 failures. All failures
+were in two newly added tests and had one test-only cause: they queried a
+nonexistent `ReplayResult.consumed_proposal_ids` attribute instead of the
+authoritative `ReplayResult.consumption` map. The existing runtime did not fail
+a semantic assertion. The tests now use the public replay result correctly;
+the failed artifact is retained in attempt lineage.
+
+第一次复核 Checker 尝试为提交 `040a95a` 上的 PBS `2359343.opbs`。静态 gate 与显式
+10,000 traces 已通过，随后新增的两个测试产生 11 个失败。所有失败只有一个测试代码
+原因：测试读取了不存在的 `ReplayResult.consumed_proposal_ids`，而正确的权威字段是
+`ReplayResult.consumption`。现有 runtime 没有违反语义断言。测试已改为使用公开 replay
+结果，失败 artifact 保留在 attempt lineage 中。

@@ -177,7 +177,7 @@ def test_production_crash_matrix_recovers_from_durable_head_only(crash_at):
     expected_seq = 1 if crash_at == "after_head_cas" else 0
     recovered = log.replay(force_full=True)
     assert recovered.head_frontier.commit_seq == expected_seq
-    assert (manifest.proposal_id in recovered.consumed_proposal_ids) is (
+    assert (manifest.proposal_id in recovered.consumption) is (
         expected_seq == 1
     )
     reopened = ProductionTransactionalLog.open(
@@ -232,13 +232,13 @@ def test_production_cas_conflict_requires_replay_and_fresh_prepare():
 
     refreshed = log.replay(force_full=True)
     assert refreshed.head_frontier.commit_seq == 1
-    assert right.proposal_id not in refreshed.consumed_proposal_ids
+    assert right.proposal_id not in refreshed.consumption
     prepared_right = _prepare(log, right, [1.0, 1.5])
     assert prepared_right.parent_head != stale_right.parent_head
     log.commit_prepared(prepared_right)
     final = log.replay(force_full=True)
     assert final.head_frontier.commit_seq == 2
-    assert final.consumed_proposal_ids == {left.proposal_id, right.proposal_id}
+    assert set(final.consumption) == {left.proposal_id, right.proposal_id}
 
 
 def test_production_replay_routes_around_scalar_protocol_validator():

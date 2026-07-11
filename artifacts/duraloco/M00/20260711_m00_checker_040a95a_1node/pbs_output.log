@@ -1,0 +1,457 @@
+## codex/duraloco-m00-sqlite-free-rebase
+040a95ae23390a9279627e5d3475fcd0a55c0370
+mg0003
+Python 3.13.13
+00_CODEX_LOOP_OPERATING_CONTRACT.md: OK
+01_P00_BASELINE_AND_RESEARCH_CONTRACT.md: OK
+02_P01_PROTOCOL_V2_SCHEMAS_AND_VALIDATION.md: OK
+03_P02_REFERENCE_SIMULATOR_AND_IN_MEMORY_BACKEND.md: OK
+04_P03_STORAGE_ABSTRACTION_AND_POSIX_LUSTRE_CONTRACT.md: OK
+05_P04_TRANSACTIONAL_FRAGMENT_LOG_AND_PREFIX_RECOVERY.md: OK
+06_M00_SQLITE_FREE_RUNTIME_REBASE_AND_P00_P04_REQUALIFICATION.md: OK
+07_P05_SYNCER_LEASE_FENCING_AND_FAILOVER.md: OK
+08_P06_LEARNER_INTERVALS_ADOPTION_AND_RECOVERY.md: OK
+09_P07_COMPACTION_GC_ACKS_AND_LEARNER_CAPSULES.md: OK
+10_P08_DIRECT_FRAGMENT_IO_STREAMING_REDUCER_AND_TELEMETRY.md: OK
+11_P10_SACC_AND_ALGORITHM_SYSTEM_CODESIGN.md: OK
+12_P11_MIYABI_INTEGRATION_CHAOS_AND_9NODE_ACCEPTANCE.md: OK
+13_P12_FORMAL_EXPERIMENTS_ARTIFACT_AND_PAPER_EVIDENCE.md: OK
+14_P09_OBJECT_STORE_BACKEND_AND_HYBRID_BASELINE_OPTIONAL.md: OK
+DuraLoCo_Codex_Master_Plan.md: OK
+P00_P04_IMPLEMENTATION_LESSONS.md: OK
+README.md: OK
+SQLITE_FREE_SYSTEM_DESIGN.md: OK
+references/DuraLoCo_research_draft_zh.md: OK
+templates/BLOCKER.md: OK
+templates/PHASE_REPORT.md: OK
+templates/PHASE_STATE.yaml: OK
+templates/RUN_MANIFEST.json: OK
+{
+  "finding_count": 0,
+  "findings": [],
+  "scanned_files": 196,
+  "status": "PASS"
+}
+{
+  "action_counts": {
+    "commit": 26276,
+    "decide": 11019,
+    "invalid_unknown_selection": 8827,
+    "publish": 73878,
+    "restart": 14347
+  },
+  "count": 10000,
+  "start_seed": 0,
+  "suite_digest": "7840b0ebcad828184ae5bdbb5d8b5f39427d66cf37343c7c8966f1549655ee7e",
+  "unique_state_digests": 10000
+}
+............................FFFFFFFFFF..F............................... [ 24%]
+........................................................................ [ 48%]
+................................s....................................... [ 72%]
+........................................................................ [ 97%]
+........                                                                 [100%]
+=================================== FAILURES ===================================
+_ test_production_crash_matrix_recovers_from_durable_head_only[before_params_put] _
+
+crash_at = 'before_params_put'
+
+    @pytest.mark.parametrize("crash_at", CRASH_POINTS)
+    def test_production_crash_matrix_recovers_from_durable_head_only(crash_at):
+        _, log = _initialize(f"production-crash-{crash_at}")
+        manifest = _proposal(log, learner="learner-0", sequence=1, values=[1.0, 2.0])
+    
+        with pytest.raises(InjectedLogCrash):
+            log.commit_transition(
+                fragment_id=manifest.fragment_id,
+                selected_proposal_ids=[manifest.proposal_id],
+                new_params=encode_production_params(torch.tensor([0.5, 1.0])),
+                new_outer_state=encode_production_outer_state(
+                    init_outer_state(
+                        torch.tensor([0.5, 1.0]),
+                        log.spec.optimizer_config,
+                    )
+                ),
+                aggregate_digest=canonical_digest({"proposal": manifest.proposal_id}),
+                outer_optimizer_impl_digest=production_optimizer_digest(
+                    log.spec.optimizer_config.identity()
+                ),
+                crash_at=crash_at,
+            )
+    
+        expected_seq = 1 if crash_at == "after_head_cas" else 0
+        recovered = log.replay(force_full=True)
+        assert recovered.head_frontier.commit_seq == expected_seq
+>       assert (manifest.proposal_id in recovered.consumed_proposal_ids) is (
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            expected_seq == 1
+        )
+E       AttributeError: 'ReplayResult' object has no attribute 'consumed_proposal_ids'
+
+tests/log/test_production_runtime.py:180: AttributeError
+_ test_production_crash_matrix_recovers_from_durable_head_only[after_params_put] _
+
+crash_at = 'after_params_put'
+
+    @pytest.mark.parametrize("crash_at", CRASH_POINTS)
+    def test_production_crash_matrix_recovers_from_durable_head_only(crash_at):
+        _, log = _initialize(f"production-crash-{crash_at}")
+        manifest = _proposal(log, learner="learner-0", sequence=1, values=[1.0, 2.0])
+    
+        with pytest.raises(InjectedLogCrash):
+            log.commit_transition(
+                fragment_id=manifest.fragment_id,
+                selected_proposal_ids=[manifest.proposal_id],
+                new_params=encode_production_params(torch.tensor([0.5, 1.0])),
+                new_outer_state=encode_production_outer_state(
+                    init_outer_state(
+                        torch.tensor([0.5, 1.0]),
+                        log.spec.optimizer_config,
+                    )
+                ),
+                aggregate_digest=canonical_digest({"proposal": manifest.proposal_id}),
+                outer_optimizer_impl_digest=production_optimizer_digest(
+                    log.spec.optimizer_config.identity()
+                ),
+                crash_at=crash_at,
+            )
+    
+        expected_seq = 1 if crash_at == "after_head_cas" else 0
+        recovered = log.replay(force_full=True)
+        assert recovered.head_frontier.commit_seq == expected_seq
+>       assert (manifest.proposal_id in recovered.consumed_proposal_ids) is (
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            expected_seq == 1
+        )
+E       AttributeError: 'ReplayResult' object has no attribute 'consumed_proposal_ids'
+
+tests/log/test_production_runtime.py:180: AttributeError
+_ test_production_crash_matrix_recovers_from_durable_head_only[before_outer_state_put] _
+
+crash_at = 'before_outer_state_put'
+
+    @pytest.mark.parametrize("crash_at", CRASH_POINTS)
+    def test_production_crash_matrix_recovers_from_durable_head_only(crash_at):
+        _, log = _initialize(f"production-crash-{crash_at}")
+        manifest = _proposal(log, learner="learner-0", sequence=1, values=[1.0, 2.0])
+    
+        with pytest.raises(InjectedLogCrash):
+            log.commit_transition(
+                fragment_id=manifest.fragment_id,
+                selected_proposal_ids=[manifest.proposal_id],
+                new_params=encode_production_params(torch.tensor([0.5, 1.0])),
+                new_outer_state=encode_production_outer_state(
+                    init_outer_state(
+                        torch.tensor([0.5, 1.0]),
+                        log.spec.optimizer_config,
+                    )
+                ),
+                aggregate_digest=canonical_digest({"proposal": manifest.proposal_id}),
+                outer_optimizer_impl_digest=production_optimizer_digest(
+                    log.spec.optimizer_config.identity()
+                ),
+                crash_at=crash_at,
+            )
+    
+        expected_seq = 1 if crash_at == "after_head_cas" else 0
+        recovered = log.replay(force_full=True)
+        assert recovered.head_frontier.commit_seq == expected_seq
+>       assert (manifest.proposal_id in recovered.consumed_proposal_ids) is (
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            expected_seq == 1
+        )
+E       AttributeError: 'ReplayResult' object has no attribute 'consumed_proposal_ids'
+
+tests/log/test_production_runtime.py:180: AttributeError
+_ test_production_crash_matrix_recovers_from_durable_head_only[after_outer_state_put] _
+
+crash_at = 'after_outer_state_put'
+
+    @pytest.mark.parametrize("crash_at", CRASH_POINTS)
+    def test_production_crash_matrix_recovers_from_durable_head_only(crash_at):
+        _, log = _initialize(f"production-crash-{crash_at}")
+        manifest = _proposal(log, learner="learner-0", sequence=1, values=[1.0, 2.0])
+    
+        with pytest.raises(InjectedLogCrash):
+            log.commit_transition(
+                fragment_id=manifest.fragment_id,
+                selected_proposal_ids=[manifest.proposal_id],
+                new_params=encode_production_params(torch.tensor([0.5, 1.0])),
+                new_outer_state=encode_production_outer_state(
+                    init_outer_state(
+                        torch.tensor([0.5, 1.0]),
+                        log.spec.optimizer_config,
+                    )
+                ),
+                aggregate_digest=canonical_digest({"proposal": manifest.proposal_id}),
+                outer_optimizer_impl_digest=production_optimizer_digest(
+                    log.spec.optimizer_config.identity()
+                ),
+                crash_at=crash_at,
+            )
+    
+        expected_seq = 1 if crash_at == "after_head_cas" else 0
+        recovered = log.replay(force_full=True)
+        assert recovered.head_frontier.commit_seq == expected_seq
+>       assert (manifest.proposal_id in recovered.consumed_proposal_ids) is (
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            expected_seq == 1
+        )
+E       AttributeError: 'ReplayResult' object has no attribute 'consumed_proposal_ids'
+
+tests/log/test_production_runtime.py:180: AttributeError
+_ test_production_crash_matrix_recovers_from_durable_head_only[before_commit_put] _
+
+crash_at = 'before_commit_put'
+
+    @pytest.mark.parametrize("crash_at", CRASH_POINTS)
+    def test_production_crash_matrix_recovers_from_durable_head_only(crash_at):
+        _, log = _initialize(f"production-crash-{crash_at}")
+        manifest = _proposal(log, learner="learner-0", sequence=1, values=[1.0, 2.0])
+    
+        with pytest.raises(InjectedLogCrash):
+            log.commit_transition(
+                fragment_id=manifest.fragment_id,
+                selected_proposal_ids=[manifest.proposal_id],
+                new_params=encode_production_params(torch.tensor([0.5, 1.0])),
+                new_outer_state=encode_production_outer_state(
+                    init_outer_state(
+                        torch.tensor([0.5, 1.0]),
+                        log.spec.optimizer_config,
+                    )
+                ),
+                aggregate_digest=canonical_digest({"proposal": manifest.proposal_id}),
+                outer_optimizer_impl_digest=production_optimizer_digest(
+                    log.spec.optimizer_config.identity()
+                ),
+                crash_at=crash_at,
+            )
+    
+        expected_seq = 1 if crash_at == "after_head_cas" else 0
+        recovered = log.replay(force_full=True)
+        assert recovered.head_frontier.commit_seq == expected_seq
+>       assert (manifest.proposal_id in recovered.consumed_proposal_ids) is (
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            expected_seq == 1
+        )
+E       AttributeError: 'ReplayResult' object has no attribute 'consumed_proposal_ids'
+
+tests/log/test_production_runtime.py:180: AttributeError
+_ test_production_crash_matrix_recovers_from_durable_head_only[after_commit_put] _
+
+crash_at = 'after_commit_put'
+
+    @pytest.mark.parametrize("crash_at", CRASH_POINTS)
+    def test_production_crash_matrix_recovers_from_durable_head_only(crash_at):
+        _, log = _initialize(f"production-crash-{crash_at}")
+        manifest = _proposal(log, learner="learner-0", sequence=1, values=[1.0, 2.0])
+    
+        with pytest.raises(InjectedLogCrash):
+            log.commit_transition(
+                fragment_id=manifest.fragment_id,
+                selected_proposal_ids=[manifest.proposal_id],
+                new_params=encode_production_params(torch.tensor([0.5, 1.0])),
+                new_outer_state=encode_production_outer_state(
+                    init_outer_state(
+                        torch.tensor([0.5, 1.0]),
+                        log.spec.optimizer_config,
+                    )
+                ),
+                aggregate_digest=canonical_digest({"proposal": manifest.proposal_id}),
+                outer_optimizer_impl_digest=production_optimizer_digest(
+                    log.spec.optimizer_config.identity()
+                ),
+                crash_at=crash_at,
+            )
+    
+        expected_seq = 1 if crash_at == "after_head_cas" else 0
+        recovered = log.replay(force_full=True)
+        assert recovered.head_frontier.commit_seq == expected_seq
+>       assert (manifest.proposal_id in recovered.consumed_proposal_ids) is (
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            expected_seq == 1
+        )
+E       AttributeError: 'ReplayResult' object has no attribute 'consumed_proposal_ids'
+
+tests/log/test_production_runtime.py:180: AttributeError
+_ test_production_crash_matrix_recovers_from_durable_head_only[before_frontier_put] _
+
+crash_at = 'before_frontier_put'
+
+    @pytest.mark.parametrize("crash_at", CRASH_POINTS)
+    def test_production_crash_matrix_recovers_from_durable_head_only(crash_at):
+        _, log = _initialize(f"production-crash-{crash_at}")
+        manifest = _proposal(log, learner="learner-0", sequence=1, values=[1.0, 2.0])
+    
+        with pytest.raises(InjectedLogCrash):
+            log.commit_transition(
+                fragment_id=manifest.fragment_id,
+                selected_proposal_ids=[manifest.proposal_id],
+                new_params=encode_production_params(torch.tensor([0.5, 1.0])),
+                new_outer_state=encode_production_outer_state(
+                    init_outer_state(
+                        torch.tensor([0.5, 1.0]),
+                        log.spec.optimizer_config,
+                    )
+                ),
+                aggregate_digest=canonical_digest({"proposal": manifest.proposal_id}),
+                outer_optimizer_impl_digest=production_optimizer_digest(
+                    log.spec.optimizer_config.identity()
+                ),
+                crash_at=crash_at,
+            )
+    
+        expected_seq = 1 if crash_at == "after_head_cas" else 0
+        recovered = log.replay(force_full=True)
+        assert recovered.head_frontier.commit_seq == expected_seq
+>       assert (manifest.proposal_id in recovered.consumed_proposal_ids) is (
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            expected_seq == 1
+        )
+E       AttributeError: 'ReplayResult' object has no attribute 'consumed_proposal_ids'
+
+tests/log/test_production_runtime.py:180: AttributeError
+_ test_production_crash_matrix_recovers_from_durable_head_only[after_frontier_put] _
+
+crash_at = 'after_frontier_put'
+
+    @pytest.mark.parametrize("crash_at", CRASH_POINTS)
+    def test_production_crash_matrix_recovers_from_durable_head_only(crash_at):
+        _, log = _initialize(f"production-crash-{crash_at}")
+        manifest = _proposal(log, learner="learner-0", sequence=1, values=[1.0, 2.0])
+    
+        with pytest.raises(InjectedLogCrash):
+            log.commit_transition(
+                fragment_id=manifest.fragment_id,
+                selected_proposal_ids=[manifest.proposal_id],
+                new_params=encode_production_params(torch.tensor([0.5, 1.0])),
+                new_outer_state=encode_production_outer_state(
+                    init_outer_state(
+                        torch.tensor([0.5, 1.0]),
+                        log.spec.optimizer_config,
+                    )
+                ),
+                aggregate_digest=canonical_digest({"proposal": manifest.proposal_id}),
+                outer_optimizer_impl_digest=production_optimizer_digest(
+                    log.spec.optimizer_config.identity()
+                ),
+                crash_at=crash_at,
+            )
+    
+        expected_seq = 1 if crash_at == "after_head_cas" else 0
+        recovered = log.replay(force_full=True)
+        assert recovered.head_frontier.commit_seq == expected_seq
+>       assert (manifest.proposal_id in recovered.consumed_proposal_ids) is (
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            expected_seq == 1
+        )
+E       AttributeError: 'ReplayResult' object has no attribute 'consumed_proposal_ids'
+
+tests/log/test_production_runtime.py:180: AttributeError
+_ test_production_crash_matrix_recovers_from_durable_head_only[before_head_cas] _
+
+crash_at = 'before_head_cas'
+
+    @pytest.mark.parametrize("crash_at", CRASH_POINTS)
+    def test_production_crash_matrix_recovers_from_durable_head_only(crash_at):
+        _, log = _initialize(f"production-crash-{crash_at}")
+        manifest = _proposal(log, learner="learner-0", sequence=1, values=[1.0, 2.0])
+    
+        with pytest.raises(InjectedLogCrash):
+            log.commit_transition(
+                fragment_id=manifest.fragment_id,
+                selected_proposal_ids=[manifest.proposal_id],
+                new_params=encode_production_params(torch.tensor([0.5, 1.0])),
+                new_outer_state=encode_production_outer_state(
+                    init_outer_state(
+                        torch.tensor([0.5, 1.0]),
+                        log.spec.optimizer_config,
+                    )
+                ),
+                aggregate_digest=canonical_digest({"proposal": manifest.proposal_id}),
+                outer_optimizer_impl_digest=production_optimizer_digest(
+                    log.spec.optimizer_config.identity()
+                ),
+                crash_at=crash_at,
+            )
+    
+        expected_seq = 1 if crash_at == "after_head_cas" else 0
+        recovered = log.replay(force_full=True)
+        assert recovered.head_frontier.commit_seq == expected_seq
+>       assert (manifest.proposal_id in recovered.consumed_proposal_ids) is (
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            expected_seq == 1
+        )
+E       AttributeError: 'ReplayResult' object has no attribute 'consumed_proposal_ids'
+
+tests/log/test_production_runtime.py:180: AttributeError
+_ test_production_crash_matrix_recovers_from_durable_head_only[after_head_cas] _
+
+crash_at = 'after_head_cas'
+
+    @pytest.mark.parametrize("crash_at", CRASH_POINTS)
+    def test_production_crash_matrix_recovers_from_durable_head_only(crash_at):
+        _, log = _initialize(f"production-crash-{crash_at}")
+        manifest = _proposal(log, learner="learner-0", sequence=1, values=[1.0, 2.0])
+    
+        with pytest.raises(InjectedLogCrash):
+            log.commit_transition(
+                fragment_id=manifest.fragment_id,
+                selected_proposal_ids=[manifest.proposal_id],
+                new_params=encode_production_params(torch.tensor([0.5, 1.0])),
+                new_outer_state=encode_production_outer_state(
+                    init_outer_state(
+                        torch.tensor([0.5, 1.0]),
+                        log.spec.optimizer_config,
+                    )
+                ),
+                aggregate_digest=canonical_digest({"proposal": manifest.proposal_id}),
+                outer_optimizer_impl_digest=production_optimizer_digest(
+                    log.spec.optimizer_config.identity()
+                ),
+                crash_at=crash_at,
+            )
+    
+        expected_seq = 1 if crash_at == "after_head_cas" else 0
+        recovered = log.replay(force_full=True)
+        assert recovered.head_frontier.commit_seq == expected_seq
+>       assert (manifest.proposal_id in recovered.consumed_proposal_ids) is (
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            expected_seq == 1
+        )
+E       AttributeError: 'ReplayResult' object has no attribute 'consumed_proposal_ids'
+
+tests/log/test_production_runtime.py:180: AttributeError
+________ test_production_cas_conflict_requires_replay_and_fresh_prepare ________
+
+    def test_production_cas_conflict_requires_replay_and_fresh_prepare():
+        _, log = _initialize("production-cas-reprepare")
+        left = _proposal(log, learner="learner-left", sequence=1, values=[1.0, 2.0])
+        right = _proposal(log, learner="learner-right", sequence=1, values=[2.0, 3.0])
+        prepared_left = _prepare(log, left, [0.5, 1.0])
+        stale_right = _prepare(log, right, [1.0, 1.5])
+    
+        log.commit_prepared(prepared_left)
+        with pytest.raises(CommitConflict):
+            log.commit_prepared(stale_right)
+    
+        refreshed = log.replay(force_full=True)
+        assert refreshed.head_frontier.commit_seq == 1
+>       assert right.proposal_id not in refreshed.consumed_proposal_ids
+                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'ReplayResult' object has no attribute 'consumed_proposal_ids'
+
+tests/log/test_production_runtime.py:235: AttributeError
+=========================== short test summary info ============================
+FAILED tests/log/test_production_runtime.py::test_production_crash_matrix_recovers_from_durable_head_only[before_params_put]
+FAILED tests/log/test_production_runtime.py::test_production_crash_matrix_recovers_from_durable_head_only[after_params_put]
+FAILED tests/log/test_production_runtime.py::test_production_crash_matrix_recovers_from_durable_head_only[before_outer_state_put]
+FAILED tests/log/test_production_runtime.py::test_production_crash_matrix_recovers_from_durable_head_only[after_outer_state_put]
+FAILED tests/log/test_production_runtime.py::test_production_crash_matrix_recovers_from_durable_head_only[before_commit_put]
+FAILED tests/log/test_production_runtime.py::test_production_crash_matrix_recovers_from_durable_head_only[after_commit_put]
+FAILED tests/log/test_production_runtime.py::test_production_crash_matrix_recovers_from_durable_head_only[before_frontier_put]
+FAILED tests/log/test_production_runtime.py::test_production_crash_matrix_recovers_from_durable_head_only[after_frontier_put]
+FAILED tests/log/test_production_runtime.py::test_production_crash_matrix_recovers_from_durable_head_only[before_head_cas]
+FAILED tests/log/test_production_runtime.py::test_production_crash_matrix_recovers_from_durable_head_only[after_head_cas]
+FAILED tests/log/test_production_runtime.py::test_production_cas_conflict_requires_replay_and_fresh_prepare
+11 failed, 284 passed, 1 skipped in 16.90s
+[ERROR] M00 final Checker failed at line 77

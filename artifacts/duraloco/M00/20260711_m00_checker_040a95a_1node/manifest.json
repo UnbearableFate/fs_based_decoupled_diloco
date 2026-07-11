@@ -1,0 +1,33 @@
+{
+  "assertions": [
+    "explicit 10000-trace reference suite passed before runtime tests",
+    "new test assertions used the wrong ReplayResult field and failed without exposing a runtime defect"
+  ],
+  "backend": "lustre",
+  "commands_log": "commands.log",
+  "config_digest": "3a4d57b6edfb433993d3896aee4b53a732af2f4c0b697e0b1ba0e2270171c25f",
+  "config_path": "scripts/miyabi/run_duraloco_m00_checker_1node.pbs",
+  "dataset_revision": null,
+  "dirty_paths": [],
+  "dirty_tree": false,
+  "ended_at_utc": "2026-07-11T01:55:01.520916Z",
+  "exit_code": 1,
+  "git_branch": "codex/duraloco-m00-sqlite-free-rebase",
+  "git_commit": "040a95ae23390a9279627e5d3475fcd0a55c0370",
+  "hostname": "mg0003",
+  "manifest_sha256": "f091c71518d4ae9dab20b1ea585822f5c0f6b12c73cfb816b4a4b79e03f13e5b",
+  "model_revision": null,
+  "parent_run_id": "20260711_m00_c052438_gpt2_9n_50x10",
+  "pbs_job_id": "2359343.opbs",
+  "pbs_nodefile_digest": null,
+  "phase": "M00",
+  "purpose": "contract",
+  "python_version": "3.9.25",
+  "result": "fail",
+  "run_id": "20260711_m00_checker_040a95a_1node",
+  "schema_version": 1,
+  "seed": null,
+  "started_at_utc": "2026-07-11T01:55:01.520916Z",
+  "stderr": "pbs_output.log",
+  "stdout": "pytest.log"
+}
