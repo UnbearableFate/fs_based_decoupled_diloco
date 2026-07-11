@@ -1,0 +1,129 @@
+#!/bin/bash
+#PBS -N duraloco_p05_2n
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=2:mpiprocs=1
+#PBS -l walltime=00:10:00
+#PBS -j oe
+#PBS -m ae
+
+set -eEuo pipefail
+
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat
+REQUIRED_MODULES=()
+for module_name in "${REQUIRED_MODULES[@]}"; do
+  module load "$module_name"
+done
+module list 2>&1 | cat
+
+PROJECT_ROOT="${PROJECT_ROOT:-${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}}"
+PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
+: "${EXPECTED_COMMIT:?EXPECTED_COMMIT is required}"
+: "${RUN_ID:?RUN_ID is required}"
+: "${ARTIFACT_ROOT:?ARTIFACT_ROOT is required}"
+: "${STORAGE_ROOT:?STORAGE_ROOT is required}"
+PARENT_RUN_ID="${PARENT_RUN_ID:-}"
+
+cd "$PROJECT_ROOT"
+mkdir -p "$ARTIFACT_ROOT" "$STORAGE_ROOT"
+touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log" \
+  "$ARTIFACT_ROOT/commands.log"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+export CUDA_VISIBLE_DEVICES=""
+
+[[ "$(hostname)" == mg* ]]
+[[ -n "${PBS_JOBID:-}" && -n "${PBS_NODEFILE:-}" ]]
+[[ "$(sort -u "$PBS_NODEFILE" | wc -l)" -eq 2 ]]
+[[ "$(git rev-parse HEAD)" == "$EXPECTED_COMMIT" ]]
+[[ -z "$(git status --porcelain=v1)" ]]
+
+result=fail
+exit_code=1
+termination_kind=test_failure
+finish() {
+  observed=$?
+  if [[ "$result" == pass ]]; then
+    exit_code=0
+    termination_kind=success
+  elif [[ "$observed" -ne 0 ]]; then
+    exit_code=$observed
+  fi
+  qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
+  args=(
+    --root "$PROJECT_ROOT"
+    --output "$ARTIFACT_ROOT/manifest.json"
+    --phase P05
+    --purpose chaos
+    --run-id "$RUN_ID"
+    --schema-version 2
+    --validation-shape p05-maker-2node-lease-fencing-takeover
+    --backend lustre
+    --config scripts/miyabi/run_duraloco_p05_2node.pbs
+    --commands-log commands.log
+    --stdout stdout.log
+    --stderr stderr.log
+    --exit-code "$exit_code"
+    --result "$result"
+    --termination-kind "$termination_kind"
+    --pbs-queue debug-g
+    --requested-resources select=2:mpiprocs=1,walltime=00:10:00
+    --last-qstat-state R
+    --termination-detail "P05 two-node real lease expiry, strict-replay takeover, old-owner resume, optimizer commit, and authoritative stop"
+    --assertion "standby takeover begins with empty-cache strict replay"
+    --assertion "old epoch optimizer and stop commits are rejected after epoch-2 head fencing"
+    --assertion "exactly one optimizer transition and one authoritative stop survive fresh replay"
+    --assertion "both nodes report identical authority and state digests with zero split brain or double inclusion"
+  )
+  if [[ -n "$PARENT_RUN_ID" ]]; then
+    args+=(--parent-run-id "$PARENT_RUN_ID")
+  fi
+  "$PYTHON_BIN" scripts/agent/create_run_manifest.py "${args[@]}" || true
+}
+trap finish EXIT
+trap 'echo "[ERROR] P05 2-node gate failed at line $LINENO" | tee -a "$ARTIFACT_ROOT/stderr.log"' ERR
+
+hostname | tee "$ARTIFACT_ROOT/hostname.log"
+sort -u "$PBS_NODEFILE" | tee "$ARTIFACT_ROOT/nodes.log"
+"$PYTHON_BIN" --version 2>&1 | tee "$ARTIFACT_ROOT/python_version.log"
+module list 2>&1 | cat > "$ARTIFACT_ROOT/modules.log"
+git status --short --branch | tee "$ARTIFACT_ROOT/git_status.log"
+git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"
+findmnt -T "$STORAGE_ROOT" 2>&1 | tee "$ARTIFACT_ROOT/mount.log" || true
+if command -v lfs >/dev/null 2>&1; then
+  lfs getstripe "$STORAGE_ROOT" 2>&1 | tee "$ARTIFACT_ROOT/stripe.log" || true
+fi
+
+printf '%q ' mpirun -np 2 --hostfile "$PBS_NODEFILE" /usr/bin/env \
+  PYTHONPATH="$PYTHONPATH" CUDA_VISIBLE_DEVICES= "$PYTHON_BIN" \
+  -m fs_diloco.coordination.miyabi_worker --root "$STORAGE_ROOT" \
+  --run-id "$RUN_ID" --output-dir "$ARTIFACT_ROOT/ranks" \
+  | tee -a "$ARTIFACT_ROOT/commands.log"
+printf '\n' | tee -a "$ARTIFACT_ROOT/commands.log"
+mpirun -np 2 --hostfile "$PBS_NODEFILE" /usr/bin/env \
+  PYTHONPATH="$PYTHONPATH" CUDA_VISIBLE_DEVICES= "$PYTHON_BIN" \
+  -m fs_diloco.coordination.miyabi_worker --root "$STORAGE_ROOT" \
+  --run-id "$RUN_ID" --output-dir "$ARTIFACT_ROOT/ranks" \
+  2>&1 | tee -a "$ARTIFACT_ROOT/stdout.log"
+
+"$PYTHON_BIN" - "$ARTIFACT_ROOT/ranks" <<'PY' \
+  2>&1 | tee -a "$ARTIFACT_ROOT/stdout.log"
+import json
+from pathlib import Path
+import sys
+
+root = Path(sys.argv[1])
+reports = [json.loads((root / f"rank_{rank}.json").read_text()) for rank in (0, 1)]
+assert all(report["status"] == "PASS" for report in reports)
+assert len({report["hostname"] for report in reports}) == 2
+assert len({report["committed_state_digest"] for report in reports}) == 1
+assert len({report["view_digest"] for report in reports}) == 1
+assert all(report["optimizer_transition_count"] == 1 for report in reports)
+assert all(report["split_brain_commits"] == 0 for report in reports)
+assert all(report["double_inclusions"] == 0 for report in reports)
+assert reports[0]["stale_commit_rejected"]
+assert reports[0]["stale_stop_rejected"]
+print(json.dumps({"status": "PASS", "ranks": reports}, sort_keys=True))
+PY
+
+result=pass
+exit_code=0
