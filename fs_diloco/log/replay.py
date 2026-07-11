@@ -8,7 +8,15 @@ from typing import Any
 
 from fs_diloco.optimizer.reference_adapter import transition
 from fs_diloco.protocol.canonical_json import canonical_bytes, canonical_digest
-from fs_diloco.protocol.schemas import CommitManifest, FrontierManifest, HeadManifest, ObjectRef
+from fs_diloco.protocol.schemas import (
+    CommitManifest,
+    CommittedManifest,
+    ControlCommitManifest,
+    FrontierManifest,
+    HeadManifest,
+    ObjectRef,
+    StopProjection,
+)
 from fs_diloco.protocol.manifests import load_manifest_bytes
 from fs_diloco.protocol.schemas import ProposalManifest
 from fs_diloco.testing.deterministic_reference import normalized_weights
@@ -29,12 +37,13 @@ from .errors import VerificationError
 class ReplayResult:
     loaded_head: LoadedHead
     frontiers: tuple[FrontierManifest, ...]
-    commits: tuple[CommitManifest, ...]
+    commits: tuple[CommittedManifest, ...]
     proposals: dict[str, object]
     consumption: dict[str, int]
     prefix_digests: tuple[str, ...]
     committed_state_digest: str
     reachable_keys: frozenset[str]
+    control_requests: dict[str, tuple[str, int]]
 
     @property
     def head_frontier(self) -> FrontierManifest:
@@ -87,9 +96,15 @@ def _parse_frontier(data: bytes, *, commit_seq: int) -> FrontierManifest:
         raise VerificationError(f"invalid frontier: {exc}", commit_seq=commit_seq) from exc
 
 
-def _parse_commit(data: bytes, *, commit_seq: int) -> CommitManifest:
+def _parse_commit(data: bytes, *, commit_seq: int) -> CommittedManifest:
     try:
-        return CommitManifest.from_dict(canonical_object(data, commit_seq=commit_seq))
+        payload = canonical_object(data, commit_seq=commit_seq)
+        manifest_type = payload.get("manifest_type")
+        if manifest_type == CommitManifest.MANIFEST_TYPE:
+            return CommitManifest.from_dict(payload)
+        if manifest_type == ControlCommitManifest.MANIFEST_TYPE:
+            return ControlCommitManifest.from_dict(payload)
+        raise ValueError(f"unsupported committed manifest type: {manifest_type!r}")
     except VerificationError:
         raise
     except Exception as exc:
@@ -113,7 +128,7 @@ def _prefix_digest(
     log: TransactionalLog,
     head: HeadManifest,
     frontiers: tuple[FrontierManifest, ...],
-    commits: tuple[CommitManifest, ...],
+    commits: tuple[CommittedManifest, ...],
 ) -> str:
     return canonical_digest(
         {
@@ -149,7 +164,7 @@ def _replay_reference_log(log: TransactionalLog) -> ReplayResult:
 
     reversed_frontiers = [current]
     reversed_frontier_data = [current_data]
-    reversed_commits: list[CommitManifest] = []
+    reversed_commits: list[CommittedManifest] = []
     while current.commit_seq > 0:
         seq = current.commit_seq
         commit_key = log.layout.commit_key(seq, current.commit_id)
@@ -218,6 +233,10 @@ def _replay_reference_log(log: TransactionalLog) -> ReplayResult:
             raise VerificationError(f"invalid genesis payload: {exc}", commit_seq=0) from exc
 
     for index, commit in enumerate(commits, start=1):
+        if not isinstance(commit, CommitManifest):
+            raise VerificationError(
+                "reference-codec run cannot contain control commits", commit_seq=index
+            )
         previous = frontiers[index - 1]
         frontier = frontiers[index]
         if commit.commit_seq != index or frontier.commit_seq != index:
@@ -410,6 +429,7 @@ def _replay_reference_log(log: TransactionalLog) -> ReplayResult:
         prefix_digests=tuple(prefix_digests),
         committed_state_digest=prefix_digests[-1],
         reachable_keys=frozenset(reachable),
+        control_requests={},
     )
 
 
@@ -428,6 +448,119 @@ def _read_production_proposal(
     if not isinstance(manifest, ProposalManifest) or manifest.proposal_id != proposal_id:
         raise VerificationError("production proposal identity mismatch", commit_seq=commit_seq)
     return manifest
+
+
+def _optimizer_count(frontier: FrontierManifest) -> int:
+    coordination = frontier.coordination
+    return (
+        coordination.optimizer_transition_count
+        if coordination is not None
+        else frontier.commit_seq
+    )
+
+
+def _verify_control_transition(
+    *,
+    previous: FrontierManifest,
+    frontier: FrontierManifest,
+    commit: ControlCommitManifest,
+    control_requests: dict[str, tuple[str, int]],
+) -> None:
+    if previous.coordination is not None and previous.coordination.stop is not None:
+        raise VerificationError(
+            "control transition is forbidden after authoritative stop",
+            commit_seq=commit.commit_seq,
+        )
+    prior_request = control_requests.get(commit.request_id)
+    if prior_request is not None:
+        raise VerificationError(
+            "control request identity appears more than once in committed ancestry",
+            commit_seq=commit.commit_seq,
+        )
+    request_body: dict[str, object] = {
+        "operation": commit.control_kind,
+        "request_id": commit.request_id,
+        "owner_id": commit.owner_id,
+        "owner_session_id": commit.owner_session_id,
+        "fencing_epoch": commit.fencing_epoch,
+        "parent_commit_id": commit.parent_commit_id,
+    }
+    if commit.stop_reason is not None:
+        request_body["stop_reason"] = commit.stop_reason
+    if commit.request_digest != canonical_digest(request_body):
+        raise VerificationError(
+            "control request digest differs from canonical content",
+            commit_seq=commit.commit_seq,
+        )
+    if commit.prior_fencing_epoch != previous.fencing_epoch:
+        raise VerificationError(
+            "control commit prior fencing epoch differs from its parent",
+            commit_seq=commit.commit_seq,
+        )
+    if dict(frontier.fragments) != dict(previous.fragments):
+        raise VerificationError(
+            "control transition changed parameter or outer state",
+            commit_seq=commit.commit_seq,
+        )
+    if frontier.scheduler_state != previous.scheduler_state:
+        raise VerificationError(
+            "control transition changed scheduler state", commit_seq=commit.commit_seq
+        )
+    if frontier.consumed_proposal_ids != previous.consumed_proposal_ids:
+        raise VerificationError(
+            "control transition changed proposal consumption",
+            commit_seq=commit.commit_seq,
+        )
+    projection = frontier.coordination
+    if projection is None:
+        raise VerificationError(
+            "control transition frontier has no coordination projection",
+            commit_seq=commit.commit_seq,
+        )
+    if (
+        projection.optimizer_transition_count != commit.optimizer_transition_count
+        or projection.optimizer_transition_count != _optimizer_count(previous)
+        or projection.owner_id != commit.owner_id
+        or projection.owner_session_id != commit.owner_session_id
+        or frontier.fencing_epoch != commit.fencing_epoch
+    ):
+        raise VerificationError(
+            "control transition projection differs from committed control fact",
+            commit_seq=commit.commit_seq,
+        )
+    if commit.control_kind == "epoch_bump":
+        if commit.fencing_epoch <= previous.fencing_epoch or projection.stop is not None:
+            raise VerificationError(
+                "epoch bump is not a monotonic running-owner transition",
+                commit_seq=commit.commit_seq,
+            )
+    elif commit.control_kind == "stop":
+        prior = previous.coordination
+        if (
+            prior is None
+            or prior.owner_id != commit.owner_id
+            or prior.owner_session_id != commit.owner_session_id
+            or commit.fencing_epoch != previous.fencing_epoch
+        ):
+            raise VerificationError(
+                "stop was not issued by the current fenced owner",
+                commit_seq=commit.commit_seq,
+            )
+        expected_stop = StopProjection(
+            request_id=commit.request_id,
+            request_digest=commit.request_digest,
+            reason=commit.stop_reason or "",
+            committed_at_seq=commit.commit_seq,
+        )
+        if projection.stop != expected_stop:
+            raise VerificationError(
+                "stop projection differs from control commit",
+                commit_seq=commit.commit_seq,
+            )
+    control_requests[commit.request_id] = (
+        commit.request_digest,
+        commit.commit_seq,
+    )
 
 
 def _replay_production_log(
@@ -465,7 +598,7 @@ def _replay_production_log(
 
     reversed_frontiers = [current]
     reversed_frontier_data = [current_data]
-    reversed_commits: list[CommitManifest] = []
+    reversed_commits: list[CommittedManifest] = []
     while current.commit_seq > 0:
         seq = current.commit_seq
         commit = _parse_commit(
@@ -505,6 +638,7 @@ def _replay_production_log(
 
     proposals: dict[str, object] = {}
     consumption: dict[str, int] = {}
+    control_requests: dict[str, tuple[str, int]] = {}
     last_lineage_sequence: dict[tuple[str, str, int], int] = {}
     consumed_interval_bases: set[tuple[str, str, int, str, int]] = set()
     reachable = {
@@ -583,6 +717,86 @@ def _replay_production_log(
             raise VerificationError("commit logical parent-head token mismatch", commit_seq=index)
         if frontier.parent_frontier_sha256 != previous.frontier_sha256:
             raise VerificationError("frontier parent chain is not contiguous", commit_seq=index)
+        if isinstance(commit, ControlCommitManifest):
+            if log.spec.coordination_protocol != "head-fenced-v1":
+                raise VerificationError(
+                    "run contract does not allow control commits", commit_seq=index
+                )
+            _verify_control_transition(
+                previous=previous,
+                frontier=frontier,
+                commit=commit,
+                control_requests=control_requests,
+            )
+            reachable.add(log.layout.commit_key(commit.commit_seq, commit.commit_id))
+            frontier_by_commit[frontier.commit_id] = frontier
+            prefix_head = HeadManifest(
+                protocol_version=2,
+                run_id=log.spec.run_id,
+                run_generation=log.spec.run_generation,
+                fencing_epoch=frontier.fencing_epoch,
+                commit_seq=frontier.commit_seq,
+                commit_id=frontier.commit_id,
+                frontier_ref=content_ref(
+                    log.layout.frontier_key(
+                        frontier.commit_seq, frontier.frontier_sha256
+                    ),
+                    frontier_data[index],
+                ),
+            )
+            prefix_digests.append(
+                _prefix_digest(
+                    log, prefix_head, frontiers[: index + 1], commits[:index]
+                )
+            )
+            continue
+        if not isinstance(commit, CommitManifest):
+            raise VerificationError("unknown committed transition type", commit_seq=index)
+        if log.spec.coordination_protocol == "head-fenced-v1":
+            prior_coordination = previous.coordination
+            if prior_coordination is None or prior_coordination.stop is not None:
+                raise VerificationError(
+                    "fenced optimizer transition has no running authoritative owner",
+                    commit_seq=index,
+                )
+            request_body = {
+                "operation": "optimizer",
+                "request_id": commit.request_id,
+                "owner_id": commit.owner_id,
+                "owner_session_id": commit.owner_session_id,
+                "fencing_epoch": commit.fencing_epoch,
+                "parent_commit_id": commit.parent_commit_id,
+                "selected_proposal_ids": [
+                    item.proposal_id for item in commit.selected_proposals
+                ],
+                "aggregate_digest": commit.aggregate_digest,
+            }
+            if (
+                commit.owner_id != prior_coordination.owner_id
+                or commit.owner_session_id != prior_coordination.owner_session_id
+                or commit.fencing_epoch != previous.fencing_epoch
+                or commit.request_id is None
+                or commit.request_digest != canonical_digest(request_body)
+                or commit.optimizer_transition_count
+                != prior_coordination.optimizer_transition_count + 1
+            ):
+                raise VerificationError(
+                    "optimizer transition differs from committed fencing owner",
+                    commit_seq=index,
+                )
+            if commit.request_id in control_requests:
+                raise VerificationError(
+                    "mutation request identity appears more than once",
+                    commit_seq=index,
+                )
+            control_requests[commit.request_id] = (
+                commit.request_digest,
+                commit.commit_seq,
+            )
+        elif commit.owner_id is not None:
+            raise VerificationError(
+                "legacy run contains fenced optimizer fields", commit_seq=index
+            )
         old_fragment = previous.fragments.get(commit.fragment_id)
         if old_fragment is None:
             raise VerificationError("commit targets an unknown fragment", commit_seq=index)
@@ -622,7 +836,11 @@ def _replay_production_log(
                 or base_fragment.version != proposal.base_fragment_version
             ):
                 raise VerificationError("proposal fragment base is invalid", commit_seq=index)
-            if previous.commit_seq - proposal.base_commit_seq > log.spec.max_global_staleness:
+            base_optimizer_count = _optimizer_count(base)
+            if (
+                _optimizer_count(previous) - base_optimizer_count
+                > log.spec.max_global_staleness
+            ):
                 raise VerificationError("proposal exceeds global staleness", commit_seq=index)
             if old_fragment.version - proposal.base_fragment_version > log.spec.max_fragment_staleness:
                 raise VerificationError("proposal exceeds fragment staleness", commit_seq=index)
@@ -726,6 +944,20 @@ def _replay_production_log(
             raise VerificationError("frontier scheduler state mismatch", commit_seq=index)
         if frontier.fencing_epoch != commit.fencing_epoch:
             raise VerificationError("frontier fencing epoch mismatch", commit_seq=index)
+        if log.spec.coordination_protocol == "head-fenced-v1":
+            coordination = frontier.coordination
+            if (
+                coordination is None
+                or coordination.owner_id != commit.owner_id
+                or coordination.owner_session_id != commit.owner_session_id
+                or coordination.optimizer_transition_count
+                != commit.optimizer_transition_count
+                or coordination.stop is not None
+            ):
+                raise VerificationError(
+                    "optimizer frontier coordination projection mismatch",
+                    commit_seq=index,
+                )
 
         reachable.add(log.layout.commit_key(commit.commit_seq, commit.commit_id))
         reachable.update((commit.new_params_ref.key, commit.new_outer_state_ref.key))
@@ -758,6 +990,7 @@ def _replay_production_log(
         prefix_digests=tuple(prefix_digests),
         committed_state_digest=prefix_digests[-1],
         reachable_keys=frozenset(reachable),
+        control_requests=control_requests,
     )
     if cache is not None:
         cache.proposal_payloads = cached_proposals

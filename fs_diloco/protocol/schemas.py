@@ -977,6 +977,9 @@ class DropDecision:
         }
 
 
+CommittedManifest = CommitManifest | ControlCommitManifest
+
+
 Manifest = (
     ProposalManifest
     | CommitManifest

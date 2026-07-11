@@ -8,7 +8,7 @@ from typing import Mapping
 
 from fs_diloco.log.replay import ReplayResult, replay_log
 from fs_diloco.protocol.canonical_json import canonical_digest
-from fs_diloco.protocol.schemas import FragmentState, FrontierManifest
+from fs_diloco.protocol.schemas import CommitManifest, FragmentState, FrontierManifest, StopProjection
 
 
 Lineage = tuple[str, str, int]
@@ -20,7 +20,12 @@ class RuntimeView:
     run_id: str
     run_generation: int
     commit_seq: int
+    optimizer_transition_count: int
     commit_id: str
+    fencing_epoch: int
+    owner_id: str | None
+    owner_session_id: str | None
+    authoritative_stop: StopProjection | None
     frontier_sha256: str
     committed_state_digest: str
     fragments: Mapping[int, FragmentState]
@@ -106,11 +111,28 @@ class RuntimeView:
             total_seen_tokens += int(
                 getattr(proposal, "target_tokens_since_base", getattr(proposal, "target_tokens", 0))
             )
+        coordination = head.coordination
+        optimizer_transition_count = (
+            coordination.optimizer_transition_count
+            if coordination is not None
+            else sum(isinstance(item, CommitManifest) for item in replay.commits)
+        )
         identity = {
             "run_id": head.run_id,
             "run_generation": head.run_generation,
             "commit_seq": head.commit_seq,
+            "optimizer_transition_count": optimizer_transition_count,
             "commit_id": head.commit_id,
+            "fencing_epoch": head.fencing_epoch,
+            "owner_id": coordination.owner_id if coordination is not None else None,
+            "owner_session_id": (
+                coordination.owner_session_id if coordination is not None else None
+            ),
+            "authoritative_stop": (
+                coordination.stop.to_dict()
+                if coordination is not None and coordination.stop is not None
+                else None
+            ),
             "frontier_sha256": head.frontier_sha256,
             "committed_state_digest": replay.committed_state_digest,
             "fragments": {
@@ -128,7 +150,14 @@ class RuntimeView:
             run_id=head.run_id,
             run_generation=head.run_generation,
             commit_seq=head.commit_seq,
+            optimizer_transition_count=optimizer_transition_count,
             commit_id=head.commit_id,
+            fencing_epoch=head.fencing_epoch,
+            owner_id=coordination.owner_id if coordination is not None else None,
+            owner_session_id=(
+                coordination.owner_session_id if coordination is not None else None
+            ),
+            authoritative_stop=(coordination.stop if coordination is not None else None),
             frontier_sha256=head.frontier_sha256,
             committed_state_digest=replay.committed_state_digest,
             fragments=head.fragments,

@@ -12,6 +12,7 @@ from fs_diloco.protocol.canonical_json import canonical_bytes, canonical_digest
 from fs_diloco.protocol.identities import commit_id_for, frontier_digest_for
 from fs_diloco.protocol.schemas import (
     CommitManifest,
+    CommittedManifest,
     FragmentState,
     FrontierManifest,
     HeadManifest,
@@ -129,7 +130,7 @@ class LoadedHead:
 @dataclass(frozen=True)
 class PreparedLogTransition:
     parent_head: LoadedHead
-    commit: CommitManifest
+    commit: CommittedManifest
     commit_ref: ObjectRef
     frontier: FrontierManifest
     frontier_ref: ObjectRef

@@ -7,11 +7,15 @@ from typing import Iterable, Mapping
 
 from fs_diloco.protocol.canonical_json import canonical_bytes, canonical_digest
 from fs_diloco.protocol.schemas import (
+    CommitManifest,
+    ControlCommitManifest,
+    CoordinationProjection,
     FragmentState,
     HeadManifest,
     ObjectRef,
     ProposalManifest,
     ProposalSelection,
+    StopProjection,
 )
 from fs_diloco.storage import ImmutableConflict, NotFound
 from fs_diloco.storage.base import StorageBackend
@@ -39,6 +43,7 @@ from .production_codec import (
 )
 from .replay import ProductionReplayCache, ReplayResult, replay_log
 from .run import RunManifest, RunSpec
+from fs_diloco.coordination.state_machine import OwnerToken
 
 
 class ProductionTransactionalLog:
@@ -50,6 +55,7 @@ class ProductionTransactionalLog:
         self.transactional = transactional
         self._replay_cache = ProductionReplayCache.empty()
         self._replay_validation_device = None
+        self._owner_token: OwnerToken | None = None
 
     @property
     def backend(self) -> StorageBackend:
@@ -209,6 +215,237 @@ class ProductionTransactionalLog:
             self._replay_cache = cache
         return result
 
+    def clear_owner_state(self) -> None:
+        """Discard every process/owner-scoped optimization and tentative fact."""
+
+        self._owner_token = None
+        self._replay_cache = ProductionReplayCache.empty()
+
+    @staticmethod
+    def _optimizer_transition_count(replay: ReplayResult) -> int:
+        coordination = replay.head_frontier.coordination
+        if coordination is not None:
+            return coordination.optimizer_transition_count
+        return sum(isinstance(item, CommitManifest) for item in replay.commits)
+
+    @staticmethod
+    def _control_request_body(
+        *,
+        control_kind: str,
+        request_id: str,
+        token: OwnerToken,
+        parent_commit_id: str,
+        stop_reason: str | None = None,
+    ) -> dict[str, object]:
+        body: dict[str, object] = {
+            "operation": control_kind,
+            "request_id": request_id,
+            "owner_id": token.owner_id,
+            "owner_session_id": token.owner_session_id,
+            "fencing_epoch": token.fencing_epoch,
+            "parent_commit_id": parent_commit_id,
+        }
+        if stop_reason is not None:
+            body["stop_reason"] = stop_reason
+        return body
+
+    def prepare_control_transition(
+        self,
+        *,
+        control_kind: str,
+        token: OwnerToken,
+        request_id: str,
+        stop_reason: str | None = None,
+        crash_at: str | None = None,
+    ) -> PreparedLogTransition:
+        """Prepare an epoch-bump or stop fact without changing optimizer state."""
+
+        if self.spec.coordination_protocol != "head-fenced-v1":
+            raise CommitConflict("run generation does not enable fenced coordination")
+        if control_kind not in {"epoch_bump", "stop"}:
+            raise ValueError(f"unsupported control transition: {control_kind}")
+        if not isinstance(request_id, str) or not request_id:
+            raise ValueError("control request_id must be non-empty")
+        replay = self.replay(force_full=True)
+        previous = replay.head_frontier
+        prior_coordination = previous.coordination
+        if previous.coordination is not None and previous.coordination.stop is not None:
+            raise CommitConflict("authoritative stop is already committed")
+        if control_kind == "epoch_bump":
+            if token.fencing_epoch <= previous.fencing_epoch:
+                resolved = replay.control_requests.get(request_id)
+                if resolved is not None:
+                    raise CommitConflict("control request is already committed")
+                raise CommitConflict("takeover fencing epoch is not newer")
+        else:
+            if (
+                prior_coordination is None
+                or prior_coordination.owner_id != token.owner_id
+                or prior_coordination.owner_session_id != token.owner_session_id
+                or previous.fencing_epoch != token.fencing_epoch
+            ):
+                raise CommitConflict("stop requester is not the committed fenced owner")
+            if not isinstance(stop_reason, str) or not stop_reason:
+                raise ValueError("stop transition requires a non-empty reason")
+
+        request_body = self._control_request_body(
+            control_kind=control_kind,
+            request_id=request_id,
+            token=token,
+            parent_commit_id=previous.commit_id,
+            stop_reason=stop_reason,
+        )
+        request_digest = canonical_digest(request_body)
+        committed_request = replay.control_requests.get(request_id)
+        if committed_request is not None:
+            if committed_request[0] != request_digest:
+                raise CommitConflict("control request identity conflicts with committed content")
+            raise CommitConflict("control request is already committed")
+        commit_body: dict[str, object] = {
+            "manifest_type": "control_commit",
+            "protocol_version": 2,
+            "run_id": self.spec.run_id,
+            "run_generation": self.spec.run_generation,
+            "commit_seq": previous.commit_seq + 1,
+            "parent_commit_id": previous.commit_id,
+            "parent_head_version": _logical_head_version(replay.loaded_head.manifest),
+            "control_kind": control_kind,
+            "prior_fencing_epoch": previous.fencing_epoch,
+            "fencing_epoch": token.fencing_epoch,
+            "owner_id": token.owner_id,
+            "owner_session_id": token.owner_session_id,
+            "request_id": request_id,
+            "request_digest": request_digest,
+            "optimizer_transition_count": self._optimizer_transition_count(replay),
+        }
+        if stop_reason is not None:
+            commit_body["stop_reason"] = stop_reason
+        commit_body["commit_id"] = "c-" + canonical_digest(commit_body)
+        commit = ControlCommitManifest.from_dict(commit_body)
+
+        _fire(crash_at, "before_commit_put")
+        commit_data = canonical_bytes(commit.to_dict())
+        commit_ref = content_ref(
+            self.layout.commit_key(commit.commit_seq, commit.commit_id), commit_data
+        )
+        self.backend.put_immutable(commit_ref.key, commit_data, sha256=commit_ref.sha256)
+        _fire(crash_at, "after_commit_put")
+        coordination = CoordinationProjection(
+            optimizer_transition_count=commit.optimizer_transition_count,
+            owner_id=commit.owner_id,
+            owner_session_id=commit.owner_session_id,
+            stop=(
+                StopProjection(
+                    request_id=commit.request_id,
+                    request_digest=commit.request_digest,
+                    reason=commit.stop_reason or "",
+                    committed_at_seq=commit.commit_seq,
+                )
+                if control_kind == "stop"
+                else None
+            ),
+        )
+        frontier = _make_frontier(
+            {
+                "manifest_type": "frontier",
+                "protocol_version": 2,
+                "run_id": self.spec.run_id,
+                "run_generation": self.spec.run_generation,
+                "commit_seq": commit.commit_seq,
+                "commit_id": commit.commit_id,
+                "parent_frontier_sha256": previous.frontier_sha256,
+                "fencing_epoch": commit.fencing_epoch,
+                "fragments": {
+                    str(key): value.to_dict()
+                    for key, value in sorted(previous.fragments.items())
+                },
+                "scheduler_state": dict(previous.scheduler_state),
+                "consumed_proposal_ids": list(previous.consumed_proposal_ids),
+                "coordination": coordination.to_dict(),
+            }
+        )
+        _fire(crash_at, "before_frontier_put")
+        frontier_data = canonical_bytes(frontier.to_dict())
+        frontier_ref = content_ref(
+            self.layout.frontier_key(frontier.commit_seq, frontier.frontier_sha256),
+            frontier_data,
+        )
+        self.backend.put_immutable(
+            frontier_ref.key, frontier_data, sha256=frontier_ref.sha256
+        )
+        _fire(crash_at, "after_frontier_put")
+        new_head = HeadManifest(
+            protocol_version=2,
+            run_id=self.spec.run_id,
+            run_generation=self.spec.run_generation,
+            fencing_epoch=commit.fencing_epoch,
+            commit_seq=commit.commit_seq,
+            commit_id=commit.commit_id,
+            frontier_ref=frontier_ref,
+        )
+        return PreparedLogTransition(
+            parent_head=replay.loaded_head,
+            commit=commit,
+            commit_ref=commit_ref,
+            frontier=frontier,
+            frontier_ref=frontier_ref,
+            new_head=new_head,
+            request_id=request_id,
+        )
+
+    def activate_owner(
+        self,
+        *,
+        token: OwnerToken,
+        request_id: str,
+        crash_at: str | None = None,
+    ) -> CommitResult:
+        """Strictly replay, commit the ownership epoch, then enable writes."""
+
+        self.clear_owner_state()
+        prepared = self.prepare_control_transition(
+            control_kind="epoch_bump",
+            token=token,
+            request_id=request_id,
+            crash_at=crash_at,
+        )
+        result = self.commit_prepared(prepared, crash_at=crash_at)
+        verified = self.replay(force_full=True)
+        projection = verified.head_frontier.coordination
+        if (
+            projection is None
+            or projection.owner_id != token.owner_id
+            or projection.owner_session_id != token.owner_session_id
+            or verified.head_frontier.fencing_epoch != token.fencing_epoch
+        ):
+            raise VerificationError("committed ownership differs after strict replay")
+        self._owner_token = token
+        return result
+
+    def commit_stop(
+        self,
+        *,
+        reason: str,
+        request_id: str,
+        crash_at: str | None = None,
+    ) -> CommitResult:
+        token = self._require_owner_token()
+        prepared = self.prepare_control_transition(
+            control_kind="stop",
+            token=token,
+            request_id=request_id,
+            stop_reason=reason,
+            crash_at=crash_at,
+        )
+        return self.commit_prepared(prepared, crash_at=crash_at)
+
+    def _require_owner_token(self) -> OwnerToken:
+        if self.spec.coordination_protocol != "head-fenced-v1":
+            raise CommitConflict("run generation does not require fenced ownership")
+        if self._owner_token is None:
+            raise CommitConflict("production writer has no activated owner token")
+        return self._owner_token
+
     def publish_proposal(self, proposal: ProposalManifest, payload: bytes) -> ObjectRef:
         if proposal.run_id != self.spec.run_id or proposal.run_generation != self.spec.run_generation:
             raise CommitConflict("proposal belongs to another run generation")
@@ -281,9 +518,22 @@ class ProductionTransactionalLog:
         new_outer_state: bytes,
         aggregate_digest: str,
         outer_optimizer_impl_digest: str,
+        request_id: str | None = None,
         crash_at: str | None = None,
     ) -> PreparedLogTransition:
         replay = self.replay()
+        owner_token: OwnerToken | None = None
+        if self.spec.coordination_protocol == "head-fenced-v1":
+            owner_token = self._require_owner_token()
+            coordination = replay.head_frontier.coordination
+            if (
+                coordination is None
+                or coordination.stop is not None
+                or coordination.owner_id != owner_token.owner_id
+                or coordination.owner_session_id != owner_token.owner_session_id
+                or replay.head_frontier.fencing_epoch != owner_token.fencing_epoch
+            ):
+                raise CommitConflict("activated owner token differs from committed head")
         selected_ids = tuple(sorted(set(selected_proposal_ids)))
         if not selected_ids:
             raise CommitConflict("cannot commit an empty proposal selection")
@@ -364,8 +614,7 @@ class ProductionTransactionalLog:
         self.backend.put_immutable(outer_ref.key, new_outer_state, sha256=outer_ref.sha256)
         _fire(crash_at, "after_outer_state_put")
 
-        commit = _make_commit(
-            {
+        commit_body: dict[str, object] = {
                 "manifest_type": "commit",
                 "protocol_version": 2,
                 "run_id": self.spec.run_id,
@@ -396,7 +645,30 @@ class ProductionTransactionalLog:
                 "new_params_ref": params_ref.to_dict(),
                 "new_outer_state_ref": outer_ref.to_dict(),
             }
-        )
+        if owner_token is not None:
+            if not isinstance(request_id, str) or not request_id:
+                raise CommitConflict("fenced optimizer transition requires request_id")
+            optimizer_request_body = {
+                "operation": "optimizer",
+                "request_id": request_id,
+                "owner_id": owner_token.owner_id,
+                "owner_session_id": owner_token.owner_session_id,
+                "fencing_epoch": owner_token.fencing_epoch,
+                "parent_commit_id": replay.head_frontier.commit_id,
+                "selected_proposal_ids": list(selected_ids),
+                "aggregate_digest": aggregate_digest,
+            }
+            commit_body.update(
+                {
+                    "owner_id": owner_token.owner_id,
+                    "owner_session_id": owner_token.owner_session_id,
+                    "request_id": request_id,
+                    "request_digest": canonical_digest(optimizer_request_body),
+                    "optimizer_transition_count": self._optimizer_transition_count(replay)
+                    + 1,
+                }
+            )
+        commit = _make_commit(commit_body)
         _fire(crash_at, "before_commit_put")
         commit_data = canonical_bytes(commit.to_dict())
         commit_ref = content_ref(self.layout.commit_key(commit.commit_seq, commit.commit_id), commit_data)
@@ -410,8 +682,7 @@ class ProductionTransactionalLog:
             outer_state_ref=outer_ref,
             producing_commit_id=commit.commit_id,
         )
-        frontier = _make_frontier(
-            {
+        frontier_body: dict[str, object] = {
                 "manifest_type": "frontier",
                 "protocol_version": 2,
                 "run_id": self.spec.run_id,
@@ -433,7 +704,13 @@ class ProductionTransactionalLog:
                     set(replay.head_frontier.consumed_proposal_ids) | set(selected_ids)
                 ),
             }
-        )
+        if owner_token is not None:
+            frontier_body["coordination"] = CoordinationProjection(
+                optimizer_transition_count=commit.optimizer_transition_count or 0,
+                owner_id=owner_token.owner_id,
+                owner_session_id=owner_token.owner_session_id,
+            ).to_dict()
+        frontier = _make_frontier(frontier_body)
         _fire(crash_at, "before_frontier_put")
         frontier_data = canonical_bytes(frontier.to_dict())
         frontier_ref = content_ref(
@@ -458,7 +735,11 @@ class ProductionTransactionalLog:
             frontier=frontier,
             frontier_ref=frontier_ref,
             new_head=new_head,
-            request_id="m00-" + commit.commit_id.removeprefix("c-")[:64],
+            request_id=(
+                request_id
+                if request_id is not None
+                else "m00-" + commit.commit_id.removeprefix("c-")[:64]
+            ),
         )
 
     def commit_prepared(
@@ -467,10 +748,41 @@ class ProductionTransactionalLog:
         *,
         crash_at: str | None = None,
     ) -> CommitResult:
-        return self.transactional.commit_prepared(prepared, crash_at=crash_at)
+        if self.spec.coordination_protocol == "head-fenced-v1":
+            current = self.transactional.load_head()
+            if current.manifest != prepared.parent_head.manifest:
+                resolved = self.resolve_prepared(prepared)
+                if resolved is not None:
+                    return resolved
+                self.clear_owner_state()
+                raise CommitConflict("prepared fenced transition lost its parent head")
+        result = self.transactional.commit_prepared(prepared, crash_at=crash_at)
+        if isinstance(prepared.commit, ControlCommitManifest):
+            self._owner_token = OwnerToken(
+                owner_id=prepared.commit.owner_id,
+                owner_session_id=prepared.commit.owner_session_id,
+                fencing_epoch=prepared.commit.fencing_epoch,
+            )
+        return result
 
     def resolve_prepared(self, prepared: PreparedLogTransition) -> CommitResult | None:
         return self.transactional.resolve_prepared(prepared)
+
+    def resolve_mutation(self, *, request_id: str, request_digest: str) -> CommitResult | None:
+        replay = self.replay(force_full=True)
+        observed = replay.control_requests.get(request_id)
+        if observed is None:
+            return None
+        if observed[0] != request_digest:
+            raise CommitConflict("mutation request identity conflicts with committed ancestry")
+        commit_seq = observed[1]
+        commit = replay.commits[commit_seq - 1]
+        return CommitResult(
+            status="already_committed",
+            commit_id=commit.commit_id,
+            commit_seq=commit.commit_seq,
+            head_version=replay.loaded_head.metadata.version,
+        )
 
     def commit_transition(self, **kwargs) -> CommitResult:
         crash_at = kwargs.get("crash_at")

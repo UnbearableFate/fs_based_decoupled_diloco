@@ -36,6 +36,7 @@ class RunSpec:
     payload_codec: str = "canonical-float-hex-v1"
     generation_kind: str = "fresh"
     source_checkpoint_digests: tuple[str, ...] = ()
+    coordination_protocol: str = "none"
 
     def __post_init__(self) -> None:
         for value, name in ((self.run_id, "run_id"), (self.model_revision, "model_revision")):
@@ -62,6 +63,8 @@ class RunSpec:
             raise ValueError(f"unsupported run payload codec: {self.payload_codec}")
         if self.generation_kind not in {"fresh", "warm_start"}:
             raise ValueError("generation_kind must be fresh or warm_start")
+        if self.coordination_protocol not in {"none", "head-fenced-v1"}:
+            raise ValueError("unsupported coordination protocol")
         object.__setattr__(self, "source_checkpoint_digests", tuple(self.source_checkpoint_digests))
         for digest in self.source_checkpoint_digests:
             validate_sha256(digest, field="source_checkpoint_digest")
@@ -75,7 +78,7 @@ class RunSpec:
         return canonical_digest(self.to_dict())
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload = {
             "protocol_version": 2,
             "run_id": self.run_id,
             "run_generation": self.run_generation,
@@ -96,6 +99,9 @@ class RunSpec:
                 "exact_continuation": False,
             },
         }
+        if self.coordination_protocol != "none":
+            payload["coordination_protocol"] = self.coordination_protocol
+        return payload
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, Any]) -> "RunSpec":
@@ -113,7 +119,11 @@ class RunSpec:
             "payload_codec",
             "generation_origin",
         }
-        if set(payload) != required or payload.get("protocol_version") != 2:
+        if (
+            frozenset(payload)
+            not in {frozenset(required), frozenset({*required, "coordination_protocol"})}
+            or payload.get("protocol_version") != 2
+        ):
             raise ValueError("invalid run specification fields or protocol version")
         if payload.get("payload_codec") not in {
             "canonical-float-hex-v1",
@@ -192,6 +202,7 @@ class RunSpec:
             payload_codec=payload["payload_codec"],
             generation_kind=origin["kind"],
             source_checkpoint_digests=tuple(source_digests),
+            coordination_protocol=payload.get("coordination_protocol", "none"),
         )
 
 
