@@ -1,0 +1,83 @@
+{"actor": "syncer", "authority_root": "/work/xg24i002/x10041/duraloco_worktrees/p05-full-a29adab/runs/duraloco/P05/20260711_p05_full_a29adab_1node/full/authority", "cuda_visible_devices": "", "device": "cpu", "event_type": "process_start", "hostname": "mg0003", "owner_id": "syncer-active", "owner_session_id": "20260711_p05_full_a29adab_1node-full-active", "run_generation": 0, "run_id": "20260711_p05_full_a29adab_1node-full", "shared_root": "/work/xg24i002/x10041/duraloco_worktrees/p05-full-a29adab/runs/duraloco/P05/20260711_p05_full_a29adab_1node/full", "standby": false, "timestamp": 1783745645.1955564}
+{"actor": "syncer", "commit_seq": 0, "event_type": "generation_initialized", "hostname": "mg0003", "timestamp": 1783745646.6048124, "view_digest": "213f518f5e705a3008c1349ad66167807289b3098ec3fd31c4d5554913c37498"}
+{"actor": "syncer", "event_type": "coordination_stage_completed", "hostname": "mg0003", "lease_sequence": 1, "owner_id": "syncer-active", "owner_session_id": "20260711_p05_full_a29adab_1node-full-active", "proposed_fencing_epoch": 1, "seconds": 0.005116365966387093, "stage": "lease_acquire", "timestamp": 1783745646.6132317}
+{"actor": "syncer", "commit_seq": 1, "event_type": "coordination_stage_completed", "fencing_epoch": 1, "hostname": "mg0003", "optimizer_transition_count": 0, "owner_id": "syncer-active", "owner_session_id": "20260711_p05_full_a29adab_1node-full-active", "seconds": 0.03660269401734695, "stage": "fence_commit_and_strict_replay", "timestamp": 1783745646.650975}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745646.875059}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745647.2773845}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745647.6796951}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745648.0820243}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745648.4845905}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745648.8868892}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745649.289199}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745649.7020655}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745650.1204784}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745650.5412338}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745650.9537532}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745651.3649447}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745651.776787}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745652.188635}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745652.6019952}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745653.0193918}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745653.430539}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745653.8414526}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745654.2549438}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745654.6659846}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745655.0770357}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745655.4884362}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745655.9001224}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745656.314496}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745656.7253156}
+{"actor": "syncer", "event_type": "coordination_stage_completed", "fencing_epoch": 1, "hostname": "mg0003", "lease_sequence": 2, "renew_margin_seconds": 45.0, "seconds": 0.006010513985529542, "stage": "lease_renew", "timestamp": 1783745656.932583}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745657.1430776}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745657.5859234}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745657.9974108}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745658.4090455}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745658.824277}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745659.2352073}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745659.6468601}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745660.061866}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745660.4749496}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745660.8863735}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745661.297902}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745661.7100122}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745662.1217396}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745662.5439522}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745662.9547923}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745663.366081}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745663.7777443}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745664.190701}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745664.611609}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745665.0225453}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745665.4337547}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745665.8499417}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745666.2617278}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745666.67274}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745667.0846553}
+{"actor": "syncer", "event_type": "coordination_stage_completed", "fencing_epoch": 1, "hostname": "mg0003", "lease_sequence": 3, "renew_margin_seconds": 45.0, "seconds": 0.006508434016723186, "stage": "lease_renew", "timestamp": 1783745667.2923868}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745667.5030196}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745667.9145617}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745668.3257484}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745668.7379403}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745669.1488721}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745669.5594592}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745669.9709039}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745670.3833137}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745670.7948377}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745671.2068875}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745671.61833}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745672.0297534}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745672.465238}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745672.876489}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745673.2882988}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745673.701323}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745674.1122892}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745674.5239427}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745674.9465797}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745675.3580852}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745675.7711675}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745676.2458248}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745676.6597116}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0003", "quorum_min": 1, "timestamp": 1783745677.0716057}
+{"actor": "syncer", "commit_seq": 2, "event_type": "coordination_stage_completed", "hostname": "mg0003", "optimizer_transition_count": 0, "seconds": 0.03470812999876216, "stage": "authoritative_stop", "timestamp": 1783745677.1074338}
+{"actor": "syncer", "commit_id": "c-d084479bbaec562d3b913d1812f8e2e6aebe36baa6b80184c27dd058e8f26c96", "commit_seq": 2, "event_type": "stop_published", "hostname": "mg0003", "reason": "no_progress_timeout", "timestamp": 1783745677.1553974}
+{"actor": "syncer", "commit_seq": 2, "event_type": "process_exit", "hostname": "mg0003", "reason": "no_progress_timeout", "timestamp": 1783745677.1563692}

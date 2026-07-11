@@ -1,0 +1,26 @@
+{
+  "finding_count": 0,
+  "findings": [],
+  "scanned_files": 213,
+  "status": "PASS"
+}
+{
+  "action_counts": {
+    "commit": 2666,
+    "decide": 1047,
+    "invalid_unknown_selection": 899,
+    "publish": 7388,
+    "restart": 1424
+  },
+  "count": 1000,
+  "start_seed": 0,
+  "suite_digest": "bf7c6538396f59b02c9240b03c13354dd6d3a84e18ff67848b689b448560dfb1",
+  "unique_state_digests": 1000
+}
+........................................................................ [ 21%]
+........................................................................ [ 43%]
+..............................................................s......... [ 64%]
+........................................................................ [ 86%]
+.............................................                            [100%]
+332 passed, 1 skipped in 18.99s
+{"commit_seq": 10, "committed_state_digest": "5f3badc4a74606c927217bc412174fe3dd8f43d22d977e2d88c043f83d43739c", "crash_points": {"after_commit_put": 0, "after_frontier_put": 0, "after_head_cas": 1, "after_outer_state_put": 0, "after_params_put": 0, "before_commit_put": 0, "before_frontier_put": 0, "before_head_cas": 0, "before_outer_state_put": 0, "before_params_put": 0}, "empty_local_state_recovery_exact": true, "hostname": "mg0003", "memory_posix_equal": true, "operation_count": 1744, "prefix_digests": ["1b80753793893d87e276880aa9d55cc1e3b0bea173805c86e08b19906f22ce00", "6b05aca4f55f777741d17a44058d6400dc9e385998427806a52640566b1b4cf3", "94e841d55d44169ede4a55399b8b8860c7b1bf3bc40c174b474dcc24014bcd5a", "22f98b2e1a8aa667f4f77bce7b283e2c30e8b9787feddd55da0b38d9ea3ba474", "aae7b2c920d50af97fb407ae8c055ef24c26ec74e63fa653678c6997addd0602", "d39c1051a87bff430a9e1cef93290e47b3be1d68640229bd70f05bd4fb47832a", "09675a4a964df89c2200db70ae8fc2d874747c7ddff06a1cd61592ade92c6f66", "fa0f1efcc6aa9b4b04ff47f00ab8d70173824990e96c8956091ab3c598711536", "601c5d864c151f0812dd20c7d1e7db2811eb4ca3621fd316d5e28b6a97c04eae", "cf33d0214be75ae7b0366f01da20e5278732d10bdd3a262aa720f9ce4e658737", "5f3badc4a74606c927217bc412174fe3dd8f43d22d977e2d88c043f83d43739c"], "prepared_orphan_count": 4, "run_id": "20260711_p05_full_a29adab_1node-contract", "status": "PASS"}

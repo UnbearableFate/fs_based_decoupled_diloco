@@ -1,0 +1,36 @@
+{
+  "commit_seq": 10,
+  "committed_state_digest": "9b9cce45d674a7bd91070b732aa0788497ec46b15d7bb16b013045a7acc9bb20",
+  "crash_points": {
+    "after_commit_put": 0,
+    "after_frontier_put": 0,
+    "after_head_cas": 1,
+    "after_outer_state_put": 0,
+    "after_params_put": 0,
+    "before_commit_put": 0,
+    "before_frontier_put": 0,
+    "before_head_cas": 0,
+    "before_outer_state_put": 0,
+    "before_params_put": 0
+  },
+  "empty_local_state_recovery_exact": true,
+  "hostname": "mg0003",
+  "memory_posix_equal": true,
+  "operation_count": 1744,
+  "prefix_digests": [
+    "a1daa9354c7175eb525f46d5c217c13689d9d3b626797f8e6d215ba8af9b67ef",
+    "c1c741f724ed4f04fe3cb13d8871c60c9d21ecf14d8f5645d104b3003a92a219",
+    "da5c15cb9c560c86de3769bcf21b5fa4daae07969ce38776f0aabc9ca3b52be7",
+    "71d8dc00dab98118fb2df0633de74439f8d845fd4cf458b2db91a77fc1e250ea",
+    "bbfb7ee4826421846a126cd4ed350e66904be754fc2f4cfef1c5e13d402b2606",
+    "20c83dc4c789a71c5ebd539447bb5cff445925f4c63fa767506074fde5946935",
+    "09d88057cc6357aa05e781326882d2943760aaa7e368b11d6c5ee5ca6de9c051",
+    "ac6f6c114693da778d7f39a465699fad00deac9e92416264ccf5e04a8b758b85",
+    "0ee1c601dfc5fa3fb608e71ffdec6e66aaab4d5fc909eb39f965dcb70819d405",
+    "1f5a509187ae804f93c83f893776515532055cf03909f3f1d3ac338db45c2563",
+    "9b9cce45d674a7bd91070b732aa0788497ec46b15d7bb16b013045a7acc9bb20"
+  ],
+  "prepared_orphan_count": 4,
+  "run_id": "20260711_p05_full_585cfd0_1node-contract",
+  "status": "PASS"
+}

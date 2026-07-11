@@ -1,0 +1,2 @@
+qsub -v CHECKOUT_ROOT=/work/xg24i002/x10041/duraloco_worktrees/p05-production-5898b7c,EXPECTED_COMMIT=5898b7c59f03b7e73d8f2975f9d923fb9a9db27f scripts/miyabi/run_duraloco_p05_unit_1node.pbs
+

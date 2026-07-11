@@ -1,0 +1,159 @@
+{
+  "authority": "committed-transition-log",
+  "commit_id": "c-9fd748b95308d227768f6e1ac2ddd7851524e74083a1f701e9901b58a546c0ed",
+  "commit_seq": 6,
+  "committed_selected_counts_by_event": {
+    "1": 2,
+    "2": 2,
+    "3": 2,
+    "4": 2
+  },
+  "committed_state_digest": "9b5115fc2b7c02f1705f191e1c6d68386afc936ad0f67c542262f888d3775435",
+  "consumed_proposal_count": 8,
+  "fragment_versions": {
+    "0": 2,
+    "1": 2
+  },
+  "frontier_sha256": "50ba92845197a49bd8825f205358c76006b127f2f3706d4a9d059286c5d52308",
+  "global_merge_event": 4,
+  "heartbeats": {
+    "learner_000": {
+      "format_version": 1,
+      "hostname": "mg0009",
+      "last_adopted_fragments": [
+        1
+      ],
+      "last_loaded_fragment_versions": {
+        "0": 2,
+        "1": 2
+      },
+      "last_loaded_global_merge_event": 4,
+      "last_loaded_global_version": 4,
+      "last_local_step": 8,
+      "last_update_id": "learner_000_00000008_f001_79bea59b0f92",
+      "learner_id": "learner_000",
+      "phase": "process_exit",
+      "pid": 683450,
+      "run_id": "20260711_p05_full_2a8ab75_1node-fragment",
+      "status": "stopped",
+      "timestamp": 1783745912.9501202,
+      "tokens_per_sec": null
+    },
+    "learner_001": {
+      "format_version": 1,
+      "hostname": "mg0009",
+      "last_adopted_fragments": [
+        1
+      ],
+      "last_loaded_fragment_versions": {
+        "0": 2,
+        "1": 2
+      },
+      "last_loaded_global_merge_event": 4,
+      "last_loaded_global_version": 4,
+      "last_local_step": 8,
+      "last_update_id": "learner_001_00000008_f001_85abd027f17d",
+      "learner_id": "learner_001",
+      "phase": "process_exit",
+      "pid": 683451,
+      "run_id": "20260711_p05_full_2a8ab75_1node-fragment",
+      "status": "stopped",
+      "timestamp": 1783745912.9581947,
+      "tokens_per_sec": null
+    }
+  },
+  "latest": {
+    "authority": "committed-transition-log-and-head-fence",
+    "commit_id": "c-9fd748b95308d227768f6e1ac2ddd7851524e74083a1f701e9901b58a546c0ed",
+    "commit_seq": 6,
+    "committed_state_digest": "9b5115fc2b7c02f1705f191e1c6d68386afc936ad0f67c542262f888d3775435",
+    "created_at": 1783745912.8793833,
+    "fencing_epoch": 1,
+    "format_version": 1,
+    "fragment_index_path": "/work/xg24i002/x10041/duraloco_worktrees/p05-full-2a8ab75/runs/duraloco/P05/20260711_p05_full_2a8ab75_1node/fragment/fragments/fragment_index.json",
+    "fragment_versions": {
+      "0": 2,
+      "1": 2
+    },
+    "fragments": {
+      "0": {
+        "optim_path": "/work/xg24i002/x10041/duraloco_worktrees/p05-full-2a8ab75/runs/duraloco/P05/20260711_p05_full_2a8ab75_1node/fragment/fragments/optim/fragment_000/v000002.safetensors",
+        "producing_commit_id": "c-aee6de0cfc88acafae00ed3c594afec7a1f00df4476b8bcf52ecb5959eaea63d",
+        "version": 2,
+        "weight_path": "/work/xg24i002/x10041/duraloco_worktrees/p05-full-2a8ab75/runs/duraloco/P05/20260711_p05_full_2a8ab75_1node/fragment/fragments/weights/fragment_000/v000002.safetensors"
+      },
+      "1": {
+        "optim_path": "/work/xg24i002/x10041/duraloco_worktrees/p05-full-2a8ab75/runs/duraloco/P05/20260711_p05_full_2a8ab75_1node/fragment/fragments/optim/fragment_001/v000002.safetensors",
+        "producing_commit_id": "c-f7da4c4e989ba9edfa8bef2d671d2ce762b7877995fb56ada4b3bc0bad5138f0",
+        "version": 2,
+        "weight_path": "/work/xg24i002/x10041/duraloco_worktrees/p05-full-2a8ab75/runs/duraloco/P05/20260711_p05_full_2a8ab75_1node/fragment/fragments/weights/fragment_001/v000002.safetensors"
+      }
+    },
+    "frontier_sha256": "50ba92845197a49bd8825f205358c76006b127f2f3706d4a9d059286c5d52308",
+    "global_merge_event": 4,
+    "latest_kind": "fragment",
+    "latest_layout_version": 3,
+    "materialized_weight_path": "/work/xg24i002/x10041/duraloco_worktrees/p05-full-2a8ab75/runs/duraloco/P05/20260711_p05_full_2a8ab75_1node/fragment/weights/global_v000006.safetensors",
+    "optimizer_transition_count": 4,
+    "owner_id": "syncer-active",
+    "owner_session_id": "20260711_p05_full_2a8ab75_1node-fragment-active",
+    "param_index_path": "/work/xg24i002/x10041/duraloco_worktrees/p05-full-2a8ab75/runs/duraloco/P05/20260711_p05_full_2a8ab75_1node/fragment/control/param_index.json",
+    "run_generation": 0,
+    "run_id": "20260711_p05_full_2a8ab75_1node-fragment",
+    "runtime_view_digest": "61c0e89251927c21031df72722edaac206a8853d39c3d04194e95f8642115257",
+    "total_seen_tokens": 512,
+    "version": 6
+  },
+  "latest_export_valid": true,
+  "latest_kind": "fragment",
+  "learner_fragment_adoption": {
+    "learner_000": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    },
+    "learner_001": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    }
+  },
+  "learner_local_steps": {
+    "learner_000": 8,
+    "learner_001": 8
+  },
+  "learner_metrics": {
+    "exists": true,
+    "path": "/work/xg24i002/x10041/duraloco_worktrees/p05-full-2a8ab75/runs/duraloco/P05/20260711_p05_full_2a8ab75_1node/fragment/metrics/learner_metrics.csv",
+    "rows": 9
+  },
+  "loss_summary": {
+    "count": 8,
+    "invalid_or_nonfinite": 1,
+    "max": 4.371109962463379,
+    "min": 4.278213739395142,
+    "obvious_divergence": true
+  },
+  "materialized_weight_exists": true,
+  "optimizer_transition_count": 4,
+  "payload_codec": "safetensors-flat-v1",
+  "run_generation": 0,
+  "run_id": "20260711_p05_full_2a8ab75_1node-fragment",
+  "runtime_view_digest": "61c0e89251927c21031df72722edaac206a8853d39c3d04194e95f8642115257",
+  "shared_root": "/work/xg24i002/x10041/duraloco_worktrees/p05-full-2a8ab75/runs/duraloco/P05/20260711_p05_full_2a8ab75_1node/fragment",
+  "stop_reason": "stop_after_outer_steps",
+  "syncer_log_flags": {
+    "error": false,
+    "no_progress_timeout": false,
+    "uncaught_exception": false
+  },
+  "syncer_metrics": {
+    "exists": true,
+    "path": "/work/xg24i002/x10041/duraloco_worktrees/p05-full-2a8ab75/runs/duraloco/P05/20260711_p05_full_2a8ab75_1node/fragment/metrics/syncer_metrics.csv",
+    "rows": 4
+  },
+  "total_seen_tokens": 512,
+  "update_manifest": {
+    "exists": true,
+    "path": "/work/xg24i002/x10041/duraloco_worktrees/p05-full-2a8ab75/runs/duraloco/P05/20260711_p05_full_2a8ab75_1node/fragment/metrics/update_manifest.csv",
+    "rows": 9
+  }
+}

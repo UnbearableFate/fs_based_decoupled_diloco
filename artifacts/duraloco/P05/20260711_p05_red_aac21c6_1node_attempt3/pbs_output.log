@@ -1,0 +1,32 @@
+Currently Loaded Modulefiles:
+ 1) nvidia/25.9(default)   2) nv-hpcx/25.9  
+
+Key:
+(symbolic-version)  
+mg0019
+PBS_JOBID=2360088.opbs
+PBS_NODEFILE=/var/spool/pbs/aux/2360088.opbs
+## codex/duraloco-p05-red-evidence
+aac21c6213f2a0a1c1a8a4702b80f7fe963420b2
+Python 3.13.13
+
+==================================== ERRORS ====================================
+_____ ERROR collecting tests/coordination/test_reference_state_machine.py ______
+ImportError while importing test module '/work/xg24i002/x10041/duraloco_worktrees/p05-red-aac21c6/tests/coordination/test_reference_state_machine.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/home/x10041/.local/share/uv/python/cpython-3.13.13-linux-aarch64-gnu/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/coordination/test_reference_state_machine.py:5: in <module>
+    from fs_diloco.coordination.state_machine import (
+E   ModuleNotFoundError: No module named 'fs_diloco.coordination'
+=========================== short test summary info ============================
+ERROR tests/coordination/test_reference_state_machine.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.11s
+[ERROR] P05 unit job failed at line 50
+Miyabi scheduled stop time: 0000/00/00(week) 00:00:00 (Remain: 00:00:00)
+
+JOB_ID            JOB_NAME   STATUS    PROJECT    QUEUE           START_DATE       ELAPSE        TOKEN NODE MIG
+2360088           duraloco_p RUNNING   xg24i002   debug-g         07/11 13:22:42   00:00:00        0.0    1   -

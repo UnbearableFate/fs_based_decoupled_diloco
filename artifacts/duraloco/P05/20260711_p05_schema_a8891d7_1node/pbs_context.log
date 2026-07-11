@@ -1,0 +1,2 @@
+PBS_JOBID=2360103.opbs
+PBS_NODEFILE=/var/spool/pbs/aux/2360103.opbs

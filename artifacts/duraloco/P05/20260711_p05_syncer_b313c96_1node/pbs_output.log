@@ -1,0 +1,47 @@
+Currently Loaded Modulefiles:
+ 1) nvidia/25.9(default)   2) nv-hpcx/25.9  
+
+Key:
+(symbolic-version)  
+mg0017
+PBS_JOBID=2360182.opbs
+PBS_NODEFILE=/var/spool/pbs/aux/2360182.opbs
+## codex/duraloco-p05-syncer-evidence
+b313c96d8b509deb8572fa4c13d906aa9684f820
+Python 3.13.13
+........................F....                                            [100%]
+=================================== FAILURES ===================================
+______________ test_p05_run_spec_freezes_head_fenced_coordination ______________
+
+    def test_p05_run_spec_freezes_head_fenced_coordination():
+>       spec = syncer._run_spec(
+            Config(),
+            parameter_digest="a" * 64,
+            layout_digest="b" * 64,
+        )
+
+tests/coordination/test_syncer_integration_contract.py:12: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+fs_diloco/syncer.py:93: in _run_spec
+    return RunSpec(
+<string>:17: in __init__
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = RunSpec(run_id='', run_generation=0, model_revision='gpt2', parameter_index_digest='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa...c='safetensors-flat-v1', generation_kind='fresh', source_checkpoint_digests=(), coordination_protocol='head-fenced-v1')
+
+    def __post_init__(self) -> None:
+        for value, name in ((self.run_id, "run_id"), (self.model_revision, "model_revision")):
+            if not isinstance(value, str) or not value:
+>               raise ValueError(f"{name} must be a non-empty string")
+E               ValueError: run_id must be a non-empty string
+
+fs_diloco/log/run.py:44: ValueError
+=========================== short test summary info ============================
+FAILED tests/coordination/test_syncer_integration_contract.py::test_p05_run_spec_freezes_head_fenced_coordination
+1 failed, 28 passed in 4.86s
+[ERROR] P05 unit job failed at line 50
+Miyabi scheduled stop time: 0000/00/00(week) 00:00:00 (Remain: 00:00:00)
+
+JOB_ID            JOB_NAME   STATUS    PROJECT    QUEUE           START_DATE       ELAPSE        TOKEN NODE MIG
+2360182           duraloco_p RUNNING   xg24i002   debug-g         07/11 13:40:35   00:00:00        0.0    1   -

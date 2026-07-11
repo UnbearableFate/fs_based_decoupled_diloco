@@ -1,0 +1,18 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/work/xg24i002/x10041/duraloco_worktrees/p05-full-585cfd0/fs_diloco/syncer.py", line 1095, in <module>
+    main()
+    ~~~~^^
+  File "/work/xg24i002/x10041/duraloco_worktrees/p05-full-585cfd0/fs_diloco/syncer.py", line 1080, in main
+    config = resolve_config(
+        args.config,
+    ...<2 lines>...
+        num_learners=args.num_learners,
+    )
+  File "/work/xg24i002/x10041/duraloco_worktrees/p05-full-585cfd0/fs_diloco/config.py", line 274, in resolve_config
+    config.run.shared_root = str(_project_path(config.run.shared_root, root, "run.shared_root"))
+                                 ~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/xg24i002/x10041/duraloco_worktrees/p05-full-585cfd0/fs_diloco/config.py", line 333, in _project_path
+    raise ValueError(f"{field_name} must stay inside project root {project_root}: {resolved}")
+ValueError: run.shared_root must stay inside project root /work/xg24i002/x10041/duraloco_worktrees/p05-full-585cfd0: /work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/P05/20260711_p05_full_585cfd0_1node/full

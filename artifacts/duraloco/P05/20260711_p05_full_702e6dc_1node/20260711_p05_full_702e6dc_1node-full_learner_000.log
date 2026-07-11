@@ -1,0 +1,12 @@
+{"actor": "learner_000", "device": "cpu", "event_type": "process_start", "hostname": "mg0003", "learner_id": "learner_000", "run_id": "20260711_p05_full_702e6dc_1node-full", "timestamp": 1783745345.9822338}
+{"actor": "learner_000", "event_type": "loaded_global", "hostname": "mg0003", "timestamp": 1783745348.610726, "version": 1}
+{"actor": "learner_000", "event_type": "inner_optimizer_reset", "hostname": "mg0003", "timestamp": 1783745348.6120307, "version": 1}
+{"actor": "learner_000", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0003", "local_step": 1, "timestamp": 1783745348.7189283, "train_loss": 4.3428053855896}
+{"actor": "learner_000", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0003", "local_step": 2, "timestamp": 1783745348.7269833, "train_loss": 4.469682693481445}
+{"actor": "learner_000", "event_type": "update_written", "file_path": "/work/xg24i002/x10041/duraloco_worktrees/p05-full-702e6dc/runs/duraloco/P05/20260711_p05_full_702e6dc_1node/full/updates/pending/learner_000/update_fa411ebea47b.params.safetensors", "hostname": "mg0003", "local_step": 2, "timestamp": 1783745348.7521765, "tokens": 64, "train_loss": 4.4062440395355225, "update_id": "learner_000_00000002_fa411ebea47b"}
+{"actor": "learner_000", "event_type": "heartbeat_written", "hostname": "mg0003", "local_step": 2, "timestamp": 1783745348.7572172}
+{"actor": "learner_000", "current_version": 1, "event_type": "latest_polled", "found_version": 2, "hostname": "mg0003", "timestamp": 1783745375.8080976}
+{"actor": "learner_000", "event_type": "global_adopted", "hostname": "mg0003", "timestamp": 1783745375.8132265, "version": 2}
+{"actor": "learner_000", "event_type": "inner_optimizer_reset", "hostname": "mg0003", "timestamp": 1783745375.8142338, "version": 2}
+{"actor": "learner_000", "event_type": "stop_seen", "hostname": "mg0003", "reason": "no_progress_timeout", "timestamp": 1783745375.8191786}
+{"actor": "learner_000", "event_type": "process_exit", "global_version": 2, "hostname": "mg0003", "local_step": 2, "timestamp": 1783745375.8364718}

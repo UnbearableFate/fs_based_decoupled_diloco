@@ -1,0 +1,61 @@
+...F.....                                                                [100%]
+=================================== FAILURES ===================================
+_________ test_clock_only_affects_takeover_liveness_not_fencing_safety _________
+
+    def test_clock_only_affects_takeover_liveness_not_fencing_safety():
+        state = CoordinationState.genesis()
+        lease_book, lease_a = LeaseBook.empty().acquire(_request("acquire-a"))
+        token_a = OwnerToken.from_lease(lease_a)
+        state = state.commit_epoch_bump(
+            token=token_a,
+            request_id="fence-a",
+            expected_commit_id=state.commit_id,
+        )
+    
+        lease_book, lease_b = lease_book.acquire(
+            _request(
+                "acquire-b",
+                owner="syncer-b",
+                session="session-b",
+                now_ns=10_000,
+            )
+        )
+        token_b = OwnerToken.from_lease(lease_b)
+>       state = state.commit_epoch_bump(
+            token=token_b,
+            request_id="fence-b",
+            expected_commit_id=state.commit_id,
+        )
+
+tests/coordination/test_reference_state_machine.py:110: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = CoordinationState(commit_seq=1, commit_id='coord-a5311610ac2a822fb686a121b407da9c73c78505f9ab8075ec8a4186503d89f0', op...None),), request_digests=mappingproxy({'fence-a': '484e666ae811c3be94322e3ec62cc70454e6a5563c9c30cd22e646d5f399ff3e'}))
+token = OwnerToken(owner_id='syncer-b', owner_session_id='session-b', fencing_epoch=1)
+request_id = 'fence-b'
+expected_commit_id = 'coord-a5311610ac2a822fb686a121b407da9c73c78505f9ab8075ec8a4186503d89f0'
+
+    def commit_epoch_bump(
+        self,
+        *,
+        token: OwnerToken,
+        request_id: str,
+        expected_commit_id: str,
+    ) -> "CoordinationState":
+        _nonempty(request_id, "request_id")
+        request_body = {
+            "operation": "epoch_bump",
+            "request_id": request_id,
+            **token.identity(),
+        }
+        digest = canonical_digest(request_body)
+        if self._retry_or_conflict(request_id, digest):
+            return self
+        if token.fencing_epoch <= self.fencing_epoch:
+>           raise CoordinationConflict("fencing epoch must increase on takeover")
+E           fs_diloco.coordination.state_machine.CoordinationConflict: fencing epoch must increase on takeover
+
+fs_diloco/coordination/state_machine.py:367: CoordinationConflict
+=========================== short test summary info ============================
+FAILED tests/coordination/test_reference_state_machine.py::test_clock_only_affects_takeover_liveness_not_fencing_safety
+1 failed, 8 passed in 0.42s

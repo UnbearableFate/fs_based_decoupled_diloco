@@ -1,0 +1,17 @@
+Currently Loaded Modulefiles:
+ 1) nvidia/25.9(default)   2) nv-hpcx/25.9  
+
+Key:
+(symbolic-version)  
+mg0018
+PBS_JOBID=2360121.opbs
+PBS_NODEFILE=/var/spool/pbs/aux/2360121.opbs
+## codex/duraloco-p05-lease-evidence
+c9f31037f93ff85b5b76a70a7e1a0c41495872ba
+Python 3.13.13
+...................                                                      [100%]
+19 passed in 4.84s
+Miyabi scheduled stop time: 0000/00/00(week) 00:00:00 (Remain: 00:00:00)
+
+JOB_ID            JOB_NAME   STATUS    PROJECT    QUEUE           START_DATE       ELAPSE        TOKEN NODE MIG
+2360121           duraloco_p RUNNING   xg24i002   debug-g         07/11 13:29:51   00:00:00        0.0    1   -

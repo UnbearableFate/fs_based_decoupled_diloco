@@ -1,0 +1,16 @@
+
+==================================== ERRORS ====================================
+_____ ERROR collecting tests/coordination/test_reference_state_machine.py ______
+ImportError while importing test module '/work/xg24i002/x10041/duraloco_worktrees/p05-red-aac21c6/tests/coordination/test_reference_state_machine.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/home/x10041/.local/share/uv/python/cpython-3.13.13-linux-aarch64-gnu/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/coordination/test_reference_state_machine.py:5: in <module>
+    from fs_diloco.coordination.state_machine import (
+E   ModuleNotFoundError: No module named 'fs_diloco.coordination'
+=========================== short test summary info ============================
+ERROR tests/coordination/test_reference_state_machine.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+1 error in 0.11s
