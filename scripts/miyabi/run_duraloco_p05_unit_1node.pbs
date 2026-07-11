@@ -41,12 +41,12 @@ git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"
 "$PYTHON_BIN" --version 2>&1 | tee "$ARTIFACT_ROOT/python_version.log"
 module list 2>&1 | cat > "$ARTIFACT_ROOT/modules.log"
 
-printf '%q ' "$PYTHON_BIN" -m pytest -q tests/coordination/test_reference_state_machine.py \
+printf '%q ' "$PYTHON_BIN" -m pytest -q tests/coordination \
   > "$ARTIFACT_ROOT/commands.log"
 printf '\n' >> "$ARTIFACT_ROOT/commands.log"
 
 set +e
-"$PYTHON_BIN" -m pytest -q tests/coordination/test_reference_state_machine.py \
+"$PYTHON_BIN" -m pytest -q tests/coordination \
   2>&1 | tee "$ARTIFACT_ROOT/pytest.log"
 test_status=${PIPESTATUS[0]}
 set -e
