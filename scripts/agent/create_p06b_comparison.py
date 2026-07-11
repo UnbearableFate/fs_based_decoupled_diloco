@@ -39,7 +39,8 @@ def _run_spec(root: Path):
     paths = [path for path in root.rglob("run-manifest.json")]
     if len(paths) != 1:
         raise AssertionError(f"expected one run spec under {root}, found {len(paths)}")
-    return _stored_json(root, paths[0])
+    manifest = _stored_json(root, paths[0])
+    return manifest["spec"]
 
 
 def _sha(path: Path) -> str:
@@ -182,8 +183,17 @@ def run(crs: Path, distributed: Path) -> dict[str, object]:
         ),
         "crs_final_weight_sha256": _sha(crs_weight),
         "distributed_final_weight_sha256": _sha(d_weight),
-        "crs_execution_backend_digest": crs_spec["execution_backend_digest"],
-        "distributed_execution_backend_digest": d_spec["execution_backend_digest"],
+        "crs_execution_backend_identity": {
+            "device": "cuda",
+            "payload_codec": crs_spec["payload_codec"],
+            "outer_optimizer_impl_digest": crs_policy[0]["outer_optimizer_impl_digest"],
+        },
+        "distributed_execution_backend_identity": {
+            "device": "cpu",
+            "digest": d_spec["distributed_execution"]["execution_backend_digest"],
+            "payload_codec": d_spec["payload_codec"],
+            "outer_optimizer_impl_digest": d_policy[0]["outer_optimizer_impl_digest"],
+        },
         "content_identity_claimed_across_backends": False,
         "crs_control_sequence": crs_controls,
         "distributed_control_sequence": d_controls,
