@@ -481,3 +481,35 @@ records:
       rationale: "Checker-only documentation assertion after all runtime and test gates passed"
       parent_run_id: 20260711_p06c_checker_88c06a6
     artifacts: [artifacts/duraloco/P06C/20260711_p06c_checker_88c06a6, plans/duraloco/reviews/P06C_D8_R2_LEASE_EXPIRY_REVIEW.md]
+  - error_id: E-P06C-20260711-16
+    phase_and_gate: P06C/PERSIST-completion
+    observed_at_utc: "2026-07-11T14:27:03Z"
+    pbs_job_id: null
+    hosts: [miyabi-g1]
+    git_commit: 3d80388f77be8680e10380ee99f11fd1c49d2a74
+    classification: unexpected_failure
+    phenomenon:
+      exit_code: 1
+      exception: "apply_patch context verification failed for the P06C phase-report Checker paragraph"
+      terminal_state: "the combined completion patch was rejected atomically; no file was changed"
+      log_excerpt: null
+    expected: "completion report, state, Checker report, and checksums persist after exact-context verification"
+    impact:
+      acceptance_ids: [P06C-A23, P06C-A24]
+      invariants: ["completion persistence must not partially apply when report context differs"]
+      committed_prefix_safe: true
+    cause:
+      confirmed: ["patch expected an English paragraph split that did not match the actual line wrapping"]
+      unknown: []
+    repair:
+      change: "split completion changes into smaller exact-context patches and append Checker outcomes at section ends"
+      rationale: "reduces context coupling while preserving atomic file-level edits"
+    verification:
+      minimal_reproduction: "git diff --check plus phase-state validation after all smaller patches"
+      targeted_gate: "completed state has structured PASS Checker report and valid artifact checksums"
+      qualification_ladder: ["login static"]
+    retry_decision:
+      authorized: true
+      rationale: "persistence-only patch mismatch; initial patch made no changes"
+      parent_run_id: null
+    artifacts: [plans/duraloco/phases/P06C_PHASE_REPORT.md]
