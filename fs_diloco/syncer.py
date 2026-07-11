@@ -118,6 +118,9 @@ def _latest_common(config: Config, view: RuntimeView) -> dict[str, Any]:
             str(fragment_id): state.version
             for fragment_id, state in sorted(view.fragments.items())
         },
+        "committed_interval_identities": [
+            list(item) for item in sorted(view.committed_interval_identities)
+        ],
         "commit_id": view.commit_id,
         "commit_seq": view.commit_seq,
         "frontier_sha256": view.frontier_sha256,

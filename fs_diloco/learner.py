@@ -74,6 +74,18 @@ def authority_frontier_from_latest(latest: dict[str, Any]) -> AuthorityFrontier:
     )
 
 
+def committed_interval_identities_from_latest(
+    latest: dict[str, Any],
+) -> frozenset[tuple[str, str, int, int]]:
+    result: set[tuple[str, str, int, int]] = set()
+    for item in latest.get("committed_interval_identities") or []:
+        if not isinstance(item, list) or len(item) != 4:
+            raise ValueError("committed interval identity export differs from contract")
+        learner_id, session_id, fragment_id, sequence = item
+        result.add((str(learner_id), str(session_id), int(fragment_id), int(sequence)))
+    return frozenset(result)
+
+
 def _parameter_fragment_map(fragment_index: dict[str, Any]) -> dict[str, int]:
     result: dict[str, int] = {}
     for fragment in fragment_index["fragments"]:
@@ -643,12 +655,52 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
         LogLayout(config.run.run_id or "", config.init.run_generation),
         learner_id=learner_id,
         committed_proposal_ids=frozenset(),
+        committed_interval_identities=committed_interval_identities_from_latest(latest),
         new_session_id=learner_session.session_id,
     )
     logger.event("warm_recovery", **recovery.to_dict())
+    if recovery.uncommitted_intervals:
+        recovery_latest = wait_for_fragment_latest_if_newer(
+            paths, last_loaded_global_merge_event, config
+        )
+        if recovery_latest is None:
+            no_progress = not paths.stop_json.exists()
+            logger.event(
+                "recovery_backpressure_terminal",
+                outcome="authoritative_stop" if paths.stop_json.exists() else "no_progress",
+                uncommitted_intervals=recovery.uncommitted_intervals,
+            )
+        else:
+            (
+                last_loaded_global_merge_event,
+                last_loaded_fragment_versions,
+                recovery_changed,
+            ) = adopt_fragment_updates(
+                model=model,
+                latest=recovery_latest,
+                param_index=param_index,
+                fragment_index=fragment_index,
+                last_loaded_fragment_versions=last_loaded_fragment_versions,
+                device=device,
+            )
+            last_authority = recovery_latest
+            if recovery_changed:
+                optimizer, scheduler, _ = apply_inner_optimizer_adoption_policy(
+                    model=model,
+                    optimizer=optimizer,
+                    scheduler=scheduler,
+                    config=config,
+                    changed_fragments=set(recovery_changed),
+                    parameter_fragments=parameter_fragments,
+                )
+            logger.event(
+                "recovery_backpressure_resolved",
+                adopted_commit_seq=int(recovery_latest["commit_seq"]),
+                uncommitted_intervals=recovery.uncommitted_intervals,
+            )
 
     try:
-        while not fragment_stop_requested(paths, local_step, config):
+        while not no_progress and not fragment_stop_requested(paths, local_step, config):
             interval_start_time = time.monotonic()
             interval_start_step = local_step
             base_global_merge_event = last_loaded_global_merge_event
@@ -1092,12 +1144,44 @@ def run_learner(config: Config, learner_id: str) -> None:
         LogLayout(config.run.run_id or "", config.init.run_generation),
         learner_id=learner_id,
         committed_proposal_ids=frozenset(),
+        committed_interval_identities=committed_interval_identities_from_latest(latest),
         new_session_id=learner_session.session_id,
     )
     logger.event("warm_recovery", **recovery.to_dict())
+    if recovery.uncommitted_intervals:
+        recovery_latest = wait_for_latest_if_newer(paths, last_loaded_global_version, config)
+        if recovery_latest is None:
+            no_progress = not paths.stop_json.exists()
+            logger.event(
+                "recovery_backpressure_terminal",
+                outcome="authoritative_stop" if paths.stop_json.exists() else "no_progress",
+                uncommitted_intervals=recovery.uncommitted_intervals,
+            )
+        else:
+            last_loaded_global_version = adopt_global(
+                model=model,
+                latest=recovery_latest,
+                param_index=param_index,
+                device=device,
+            )
+            last_authority = recovery_latest
+            optimizer, scheduler, _ = apply_inner_optimizer_adoption_policy(
+                model=model,
+                optimizer=optimizer,
+                scheduler=scheduler,
+                config=config,
+                changed_fragments={0},
+                parameter_fragments={str(item["name"]): 0 for item in param_index["params"]},
+            )
+            tokens_since_global_load = 0
+            logger.event(
+                "recovery_backpressure_resolved",
+                adopted_commit_seq=int(recovery_latest["commit_seq"]),
+                uncommitted_intervals=recovery.uncommitted_intervals,
+            )
 
     try:
-        while not stop_requested(paths, local_step, config):
+        while not no_progress and not stop_requested(paths, local_step, config):
             interval_start_time = time.monotonic()
             interval_start_step = local_step
             base_global_version = last_loaded_global_version

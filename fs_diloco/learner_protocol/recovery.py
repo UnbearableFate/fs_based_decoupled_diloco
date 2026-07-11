@@ -21,6 +21,8 @@ class WarmRecoveryReport:
     lost_tokens: int
     repeated_tokens_estimate: int
     next_sequence: int
+    uncommitted_intervals: int
+    max_uncommitted_base_commit_seq: int | None
     warm_not_exact: bool = True
 
     def to_dict(self) -> dict[str, object]:
@@ -31,6 +33,8 @@ class WarmRecoveryReport:
             "lost_tokens": self.lost_tokens,
             "repeated_tokens_estimate": self.repeated_tokens_estimate,
             "next_sequence": self.next_sequence,
+            "uncommitted_intervals": self.uncommitted_intervals,
+            "max_uncommitted_base_commit_seq": self.max_uncommitted_base_commit_seq,
             "warm_not_exact": self.warm_not_exact,
         }
 
@@ -41,6 +45,7 @@ def recover_learner(
     *,
     learner_id: str,
     committed_proposal_ids: frozenset[str],
+    committed_interval_identities: frozenset[tuple[str, str, int, int]] = frozenset(),
     new_session_id: str | None = None,
 ) -> WarmRecoveryReport:
     prefix = f"{layout.learner_publication_prefix}{learner_id}/"
@@ -49,6 +54,8 @@ def recover_learner(
     committed = 0
     lost_tokens = 0
     identities: set[tuple[str, int, int]] = set()
+    uncommitted = 0
+    uncommitted_bases: list[int] = []
     for key in sorted(markers):
         try:
             body = json.loads(backend.get(key))
@@ -128,10 +135,16 @@ def recover_learner(
         if session_bytes != session_record.canonical_bytes():
             raise ValueError("learner session record differs from publication marker")
         published += 1
-        if proposal_id in committed_proposal_ids:
+        committed_identity = (learner_id, identity[0], identity[2], identity[1])
+        if proposal_id in committed_proposal_ids or committed_identity in committed_interval_identities:
             committed += 1
         else:
             lost_tokens += tokens
+            uncommitted += 1
+            interval_base = interval.get("base")
+            if not isinstance(interval_base, dict):
+                raise ValueError("publication marker interval base differs")
+            uncommitted_bases.append(int(interval_base.get("commit_seq", -1)))
     new_session = LearnerSession.new(
         layout.run_id,
         layout.run_generation,
@@ -145,4 +158,6 @@ def recover_learner(
         lost_tokens=lost_tokens,
         repeated_tokens_estimate=0,
         next_sequence=1,
+        uncommitted_intervals=uncommitted,
+        max_uncommitted_base_commit_seq=max(uncommitted_bases, default=None),
     )

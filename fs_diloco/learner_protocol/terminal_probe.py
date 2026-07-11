@@ -32,6 +32,7 @@ def run_terminal_probe(
     sessions_by_learner: dict[str, set[str]] = {}
     recovery_by_learner: dict[str, int] = {}
     adoption_by_learner: dict[str, int] = {}
+    recovery_backpressure_by_learner: dict[str, int] = {}
     for index in range(8):
         learner_id = f"learner_{index:03d}"
         events = _events(training_root / "logs" / f"{learner_id}.jsonl")
@@ -47,12 +48,17 @@ def run_terminal_probe(
             row.get("event_type") in {"global_adopted", "fragments_adopted"}
             for row in events
         )
+        recovery_backpressure_by_learner[learner_id] = sum(
+            row.get("event_type") == "recovery_backpressure_resolved" for row in events
+        )
         if not recoveries or not all(bool(row.get("warm_not_exact")) for row in recoveries):
             raise AssertionError(f"{learner_id} lacks explicit warm-recovery semantics")
         if adoption_by_learner[learner_id] < 1:
             raise AssertionError(f"{learner_id} did not record boundary adoption")
     if len(sessions_by_learner["learner_000"]) < 2:
         raise AssertionError("restarted learner did not create a distinct session")
+    if recovery_backpressure_by_learner["learner_000"] < 1:
+        raise AssertionError("restarted learner bypassed committed-successor backpressure")
 
     backend = PosixStorageBackend(training_root / "authority")
     layout = LogLayout(run_id, 0)
@@ -108,12 +114,14 @@ def run_terminal_probe(
         "learner_sessions": {key: sorted(value) for key, value in sessions_by_learner.items()},
         "warm_recovery_events": recovery_by_learner,
         "boundary_adoption_events": adoption_by_learner,
+        "recovery_backpressure_events": recovery_backpressure_by_learner,
         "optimizer_adoption_policy": "reset_all",
         "numeric_contract": "bfloat16-proposal-to-float32-aggregate-commit-v1",
         "assertions": {
             **dict(base["assertions"]),
             "learner_sigkill_after_publication": True,
             "warm_restart_uses_distinct_session": True,
+            "warm_restart_waits_for_committed_successor": True,
             "interval_bases_are_frozen_and_nonoverlapping": True,
             "adoption_occurs_at_boundaries": True,
             "marker_last_publication_is_immutable": True,

@@ -149,6 +149,7 @@ def test_recovery_from_empty_local_state_never_reuses_session_sequence():
     assert report.lost_tokens == 0
     assert report.repeated_tokens_estimate == 0
     assert report.next_sequence == 1
+    assert report.uncommitted_intervals == 0
 
 
 def test_uncommitted_interval_is_reported_as_lost_not_exactly_resumed():
@@ -168,3 +169,27 @@ def test_uncommitted_interval_is_reported_as_lost_not_exactly_resumed():
     assert report.warm_not_exact is True
     assert report.lost_tokens == 16
     assert report.repeated_tokens_estimate == 0
+    assert report.uncommitted_intervals == 1
+    assert report.max_uncommitted_base_commit_seq == 1
+
+
+def test_committed_interval_identity_prevents_false_lost_work_report():
+    backend = InMemoryStorageBackend()
+    layout = LogLayout("run-a", 0)
+    session = LearnerSession.new("run-a", 0, "learner_000", session_id="session-a")
+    LearnerPublisher(backend, layout).publish(
+        _interval(session), b"payload", tensor_key="fragment_params", shape=(1,)
+    )
+    report = recover_learner(
+        backend,
+        layout,
+        learner_id="learner_000",
+        committed_proposal_ids=frozenset(),
+        committed_interval_identities=frozenset(
+            {("learner_000", "session-a", 0, 1)}
+        ),
+        new_session_id="session-b",
+    )
+    assert report.committed_intervals == 1
+    assert report.lost_tokens == 0
+    assert report.uncommitted_intervals == 0
