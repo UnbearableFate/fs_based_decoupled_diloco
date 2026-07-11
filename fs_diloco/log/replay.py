@@ -718,7 +718,7 @@ def _replay_production_log(
         if frontier.parent_frontier_sha256 != previous.frontier_sha256:
             raise VerificationError("frontier parent chain is not contiguous", commit_seq=index)
         if isinstance(commit, ControlCommitManifest):
-            if log.spec.coordination_protocol != "head-fenced-v1":
+            if log.spec.coordination_protocol not in {"head-fenced-v1", "distributed-head-fenced-v1"}:
                 raise VerificationError(
                     "run contract does not allow control commits", commit_seq=index
                 )
@@ -752,7 +752,7 @@ def _replay_production_log(
             continue
         if not isinstance(commit, CommitManifest):
             raise VerificationError("unknown committed transition type", commit_seq=index)
-        if log.spec.coordination_protocol == "head-fenced-v1":
+        if log.spec.coordination_protocol in {"head-fenced-v1", "distributed-head-fenced-v1"}:
             prior_coordination = previous.coordination
             if prior_coordination is None or prior_coordination.stop is not None:
                 raise VerificationError(
@@ -944,7 +944,7 @@ def _replay_production_log(
             raise VerificationError("frontier scheduler state mismatch", commit_seq=index)
         if frontier.fencing_epoch != commit.fencing_epoch:
             raise VerificationError("frontier fencing epoch mismatch", commit_seq=index)
-        if log.spec.coordination_protocol == "head-fenced-v1":
+        if log.spec.coordination_protocol in {"head-fenced-v1", "distributed-head-fenced-v1"}:
             coordination = frontier.coordination
             if (
                 coordination is None

@@ -8,6 +8,7 @@ from typing import Any, Mapping
 from fs_diloco.protocol.canonical_json import canonical_bytes, canonical_digest
 from fs_diloco.protocol.identities import validate_sha256
 from fs_diloco.protocol.schemas import ObjectRef
+from fs_diloco.distributed_syncer.membership import MembershipRevisionV1
 from fs_diloco.testing.deterministic_reference import (
     ReferenceOptimizerConfig,
     ReferenceWeightingConfig,
@@ -37,6 +38,10 @@ class RunSpec:
     generation_kind: str = "fresh"
     source_checkpoint_digests: tuple[str, ...] = ()
     coordination_protocol: str = "none"
+    distributed_membership: MembershipRevisionV1 | None = None
+    ownership_replication_factor: int | None = None
+    execution_backend_digest: str | None = None
+    prepare_capability_digest: str | None = None
 
     def __post_init__(self) -> None:
         for value, name in ((self.run_id, "run_id"), (self.model_revision, "model_revision")):
@@ -63,8 +68,27 @@ class RunSpec:
             raise ValueError(f"unsupported run payload codec: {self.payload_codec}")
         if self.generation_kind not in {"fresh", "warm_start"}:
             raise ValueError("generation_kind must be fresh or warm_start")
-        if self.coordination_protocol not in {"none", "head-fenced-v1"}:
+        if self.coordination_protocol not in {
+            "none", "head-fenced-v1", "distributed-head-fenced-v1"
+        }:
             raise ValueError("unsupported coordination protocol")
+        distributed_values = (
+            self.distributed_membership,
+            self.ownership_replication_factor,
+            self.execution_backend_digest,
+            self.prepare_capability_digest,
+        )
+        if self.coordination_protocol == "distributed-head-fenced-v1":
+            if any(value is None for value in distributed_values):
+                raise ValueError("distributed protocol requires complete bootstrap facts")
+            if self.distributed_membership is None or self.distributed_membership.revision != 0:
+                raise ValueError("distributed bootstrap membership must be revision zero")
+            if self.ownership_replication_factor != 1:
+                raise ValueError("P06B distributed bootstrap requires factor one")
+            validate_sha256(self.execution_backend_digest or "", field="execution_backend_digest")
+            validate_sha256(self.prepare_capability_digest or "", field="prepare_capability_digest")
+        elif any(value is not None for value in distributed_values):
+            raise ValueError("central run cannot carry distributed bootstrap facts")
         object.__setattr__(self, "source_checkpoint_digests", tuple(self.source_checkpoint_digests))
         for digest in self.source_checkpoint_digests:
             validate_sha256(digest, field="source_checkpoint_digest")
@@ -101,6 +125,13 @@ class RunSpec:
         }
         if self.coordination_protocol != "none":
             payload["coordination_protocol"] = self.coordination_protocol
+        if self.distributed_membership is not None:
+            payload["distributed_execution"] = {
+                "bootstrap_membership": self.distributed_membership.to_dict(),
+                "ownership_replication_factor": self.ownership_replication_factor,
+                "execution_backend_digest": self.execution_backend_digest,
+                "prepare_capability_digest": self.prepare_capability_digest,
+            }
         return payload
 
     @classmethod
@@ -119,9 +150,13 @@ class RunSpec:
             "payload_codec",
             "generation_origin",
         }
+        allowed_sets = {
+            frozenset(required),
+            frozenset({*required, "coordination_protocol"}),
+            frozenset({*required, "coordination_protocol", "distributed_execution"}),
+        }
         if (
-            frozenset(payload)
-            not in {frozenset(required), frozenset({*required, "coordination_protocol"})}
+            frozenset(payload) not in allowed_sets
             or payload.get("protocol_version") != 2
         ):
             raise ValueError("invalid run specification fields or protocol version")
@@ -188,6 +223,23 @@ class RunSpec:
             "max_fragment_staleness",
         }:
             raise ValueError("invalid protocol configuration")
+        raw_distributed = payload.get("distributed_execution")
+        distributed_membership = None
+        ownership_replication_factor = None
+        execution_backend_digest = None
+        prepare_capability_digest = None
+        if raw_distributed is not None:
+            if not isinstance(raw_distributed, dict) or set(raw_distributed) != {
+                "bootstrap_membership", "ownership_replication_factor",
+                "execution_backend_digest", "prepare_capability_digest",
+            }:
+                raise ValueError("invalid distributed execution bootstrap")
+            distributed_membership = MembershipRevisionV1.from_dict(
+                raw_distributed["bootstrap_membership"]
+            )
+            ownership_replication_factor = raw_distributed["ownership_replication_factor"]
+            execution_backend_digest = raw_distributed["execution_backend_digest"]
+            prepare_capability_digest = raw_distributed["prepare_capability_digest"]
         return cls(
             run_id=payload["run_id"],
             run_generation=payload["run_generation"],
@@ -203,6 +255,10 @@ class RunSpec:
             generation_kind=origin["kind"],
             source_checkpoint_digests=tuple(source_digests),
             coordination_protocol=payload.get("coordination_protocol", "none"),
+            distributed_membership=distributed_membership,
+            ownership_replication_factor=ownership_replication_factor,
+            execution_backend_digest=execution_backend_digest,
+            prepare_capability_digest=prepare_capability_digest,
         )
 
 

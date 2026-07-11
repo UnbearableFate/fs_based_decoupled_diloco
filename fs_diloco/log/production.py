@@ -260,7 +260,7 @@ class ProductionTransactionalLog:
     ) -> PreparedLogTransition:
         """Prepare an epoch-bump or stop fact without changing optimizer state."""
 
-        if self.spec.coordination_protocol != "head-fenced-v1":
+        if self.spec.coordination_protocol not in {"head-fenced-v1", "distributed-head-fenced-v1"}:
             raise CommitConflict("run generation does not enable fenced coordination")
         if control_kind not in {"epoch_bump", "stop"}:
             raise ValueError(f"unsupported control transition: {control_kind}")
@@ -440,7 +440,7 @@ class ProductionTransactionalLog:
         return self.commit_prepared(prepared, crash_at=crash_at)
 
     def _require_owner_token(self) -> OwnerToken:
-        if self.spec.coordination_protocol != "head-fenced-v1":
+        if self.spec.coordination_protocol not in {"head-fenced-v1", "distributed-head-fenced-v1"}:
             raise CommitConflict("run generation does not require fenced ownership")
         if self._owner_token is None:
             raise CommitConflict("production writer has no activated owner token")
@@ -523,7 +523,7 @@ class ProductionTransactionalLog:
     ) -> PreparedLogTransition:
         replay = self.replay()
         owner_token: OwnerToken | None = None
-        if self.spec.coordination_protocol == "head-fenced-v1":
+        if self.spec.coordination_protocol in {"head-fenced-v1", "distributed-head-fenced-v1"}:
             owner_token = self._require_owner_token()
             coordination = replay.head_frontier.coordination
             if (
@@ -758,7 +758,7 @@ class ProductionTransactionalLog:
         *,
         crash_at: str | None = None,
     ) -> CommitResult:
-        if self.spec.coordination_protocol == "head-fenced-v1":
+        if self.spec.coordination_protocol in {"head-fenced-v1", "distributed-head-fenced-v1"}:
             current = self.transactional.load_head()
             if current.manifest != prepared.parent_head.manifest:
                 resolved = self.resolve_prepared(prepared)
