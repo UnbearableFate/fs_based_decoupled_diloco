@@ -660,6 +660,30 @@ def run_syncer(
             config, paths, backend, device=device
         )
         logger.event("generation_initialized", commit_seq=0, view_digest=view.view_digest)
+    if view.authoritative_stop is not None:
+        publish_materialized_view(
+            config=config,
+            paths=paths,
+            view=view,
+            param_index=param_index,
+            fragment_index=fragment_index,
+            fragment_thetas=fragments,
+            outer_states=states,
+        )
+        _publish_stop(
+            paths,
+            config=config,
+            view=view,
+            reason=view.authoritative_stop.reason,
+        )
+        logger.event(
+            "process_exit",
+            reason=view.authoritative_stop.reason,
+            commit_seq=view.commit_seq,
+        )
+        if wandb_run is not None:
+            wandb_run.finish(exit_code=0)
+        return
     lease_manager, loaded_lease, view = _acquire_and_activate_owner(
         log=log,
         config=config,
@@ -1010,6 +1034,15 @@ def run_syncer(
                     view = build_runtime_view(log, force_full=True)
             if view.authoritative_stop is not None:
                 stop_reason = view.authoritative_stop.reason
+                publish_materialized_view(
+                    config=config,
+                    paths=paths,
+                    view=view,
+                    param_index=param_index,
+                    fragment_index=fragment_index,
+                    fragment_thetas=fragments,
+                    outer_states=states,
+                )
                 _publish_stop(paths, config=config, view=view, reason=stop_reason)
                 logger.event(
                     "stop_published",
