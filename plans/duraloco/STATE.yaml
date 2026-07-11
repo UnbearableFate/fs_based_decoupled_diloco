@@ -1,12 +1,12 @@
-phase: P05
-status: completed
-planning_basis_branch: codex/duraloco-m00-sqlite-free-rebase
-planning_basis_commit: 89ae48aae5956b09fc6685074d3ea0eaea36b816
-actual_base_branch: codex/duraloco-m00-sqlite-free-rebase
-actual_base_commit: 92acc3af0c2e80951dfcbf20c738841428a8b906
-feature_branch: codex/duraloco-p05-syncer-failover
-current_loop: 4
-current_goal: "P05 completed; start P06 only from the archived P05 tip"
+phase: P06
+status: in_progress
+planning_basis_branch: codex/duraloco-p05-syncer-failover
+planning_basis_commit: 82dbec10e1a738cfaa88212698e7e8cf5a0f7ae1
+actual_base_branch: codex/duraloco-p05-syncer-failover
+actual_base_commit: 419577899a64a12cc602870d059a092f9319bed1
+feature_branch: codex/duraloco-p06-learner-protocol
+current_loop: 1
+current_goal: "establish RED contracts for session, interval, publication, adoption, and recovery"
 attempts_for_current_failure: 0
 last_terminal_failure_review: null
 terminal_retry_authorized: false
@@ -14,49 +14,41 @@ terminal_retry_qualification:
   targeted_1node_benchmark: null
   miyabi_1node: null
   miyabi_2node: null
-last_verified_commit: 82dbec10e1a738cfaa88212698e7e8cf5a0f7ae1
+last_verified_commit: null
 checks:
   local_static: static_pass
-  local_runtime: contract_pass
+  local_runtime: not_run
   miyabi_login_static: static_pass
-  miyabi_1node: miyabi_1node_pass
-  miyabi_2node: miyabi_2node_pass
-  miyabi_9node: miyabi_9node_pass
+  miyabi_1node: not_run
+  miyabi_2node: not_run
+  miyabi_9node: not_run
 acceptance:
-  P05-A01: {result: pass, evidence: [fs_diloco/log/production.py, tests/coordination/test_production_fencing.py]}
-  P05-A02: {result: pass, evidence: [artifacts/duraloco/P05/20260711_p05_full_2a8ab75_1node/manifest.json]}
-  P05-A03: {result: pass, evidence: [artifacts/duraloco/P05/20260711_p05_failover_2a8ab75_2node/ranks/rank_0.json]}
-  P05-A04: {result: pass, evidence: [tests/coordination/test_production_fencing.py, artifacts/duraloco/P05/20260711_p05_failover_2a8ab75_2node/ranks/rank_0.json]}
-  P05-A05: {result: pass, evidence: [tests/coordination/test_production_fencing.py, artifacts/duraloco/P05/20260711_p05_full_2a8ab75_1node/junit.xml]}
-  P05-A06: {result: pass, evidence: [tests/coordination/test_production_fencing.py, artifacts/duraloco/P05/20260711_p05_full_2a8ab75_1node/20260711_p05_full_2a8ab75_1node-full_after_recovery.json]}
-  P05-A07: {result: pass, evidence: [fs_diloco/syncer.py, scripts/agent/check_no_embedded_database.py]}
-  P05-A08: {result: pass, evidence: [artifacts/duraloco/P05/20260711_p05_failover_2a8ab75_2node/manifest.json]}
-  P05-A09: {result: pass, evidence: [plans/duraloco/reviews/P05_COORDINATION_TIMING_AND_SAFETY_REVIEW.md, artifacts/duraloco/P05/20260711_p05_checker_fe41f80_1node/checker_report.md]}
-  P05-A10: {result: pass, evidence: [tests/coordination/test_syncer_integration_contract.py, pyproject.toml]}
-  P05-A11: {result: pass, evidence: [tests/coordination/test_lease_manager.py, tests/coordination/test_production_fencing.py]}
-  P05-A12: {result: pass, evidence: [tests/coordination/test_production_fencing.py]}
-  P05-A13: {result: pass, evidence: [artifacts/duraloco/P05/20260711_p05_checker_fe41f80_1node/manifest.json, artifacts/duraloco/P05/20260711_p05_checker_fe41f80_1node/checker_results.json]}
-  P05-A14: {result: pass, evidence: [artifacts/duraloco/P05/20260711_p05_full_2a8ab75_1node/forbidden_surface.json]}
-  P05-A15: {result: pass, evidence: [artifacts/duraloco/P05/20260711_p05_impl_82dbec1_gpt2_9n_50x10/manifest.json, artifacts/duraloco/P05/20260711_p05_impl_82dbec1_gpt2_9n_50x10/terminal_gate_report.json]}
-  P05-A16: {result: pass, evidence: [tests/coordination/test_reference_state_machine.py, artifacts/duraloco/P05/20260711_p05_full_2a8ab75_1node/manifest.json]}
-  P05-A17: {result: pass, evidence: [tests/log/test_production_runtime.py, tests/coordination/test_production_fencing.py]}
-  P05-A18: {result: pass, evidence: [plans/duraloco/reviews/P05_COORDINATION_TIMING_AND_SAFETY_REVIEW.md, artifacts/duraloco/P05/20260711_p05_failover_2a8ab75_2node/ranks/rank_1.json]}
-  P05-A19: {result: pass, evidence: [fs_diloco/analysis.py, fs_diloco/log/training_probe.py, artifacts/duraloco/P05/20260711_p05_impl_82dbec1_gpt2_9n_50x10/terminal_gate_report.json]}
-  P05-A20: {result: pass, evidence: [artifacts/duraloco/P05/20260711_p05_impl_82dbec1_gpt2_9n_50x10/active_kill.json, artifacts/duraloco/P05/20260711_p05_impl_82dbec1_gpt2_9n_50x10/terminal_gate_report.json]}
+  P06-A01: {result: not_run, evidence: []}
+  P06-A02: {result: not_run, evidence: []}
+  P06-A03: {result: not_run, evidence: []}
+  P06-A04: {result: not_run, evidence: []}
+  P06-A05: {result: not_run, evidence: []}
+  P06-A06: {result: not_run, evidence: []}
+  P06-A07: {result: not_run, evidence: []}
+  P06-A08: {result: not_run, evidence: []}
+  P06-A09: {result: not_run, evidence: []}
+  P06-A10: {result: not_run, evidence: []}
+  P06-A11: {result: not_run, evidence: []}
+  P06-A12: {result: not_run, evidence: []}
+  P06-A13: {result: not_run, evidence: []}
+  P06-A14: {result: not_run, evidence: []}
+  P06-A15: {result: not_run, evidence: []}
+  P06-A16: {result: not_run, evidence: []}
+  P06-A17: {result: not_run, evidence: []}
+  P06-A18: {result: not_run, evidence: []}
+  P06-A19: {result: not_run, evidence: []}
+  P06-A20: {result: not_run, evidence: []}
 open_decisions: []
 open_blockers: []
 artifacts:
-  - plans/duraloco/phases/P05_DRIFT_REPORT.md
-  - plans/duraloco/reviews/P05_COORDINATION_TIMING_AND_SAFETY_REVIEW.md
-  - artifacts/duraloco/P05/20260711_p05_full_2a8ab75_1node
-  - artifacts/duraloco/P05/20260711_p05_failover_2a8ab75_2node
-  - artifacts/duraloco/P05/20260711_p05_impl_82dbec1_1node
-  - artifacts/duraloco/P05/20260711_p05_impl_82dbec1_2node
-  - artifacts/duraloco/P05/20260711_p05_impl_82dbec1_gpt2_9n_50x10
-  - artifacts/duraloco/P05/20260711_p05_checker_f6b6b1c_1node
-  - artifacts/duraloco/P05/20260711_p05_checker_fe41f80_1node
-next_action: "archive the completed P05 milestone, then initialize P06 from that exact archival tip"
+  - plans/duraloco/phases/P06_DRIFT_REPORT.md
+next_action: "commit executable RED tests, then run them on a Miyabi compute node"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
-checker_report: artifacts/duraloco/P05/20260711_p05_checker_fe41f80_1node/checker_report.md
+checker_report: null

@@ -467,3 +467,102 @@ P05+ 的规范性路线决策生效。
 - Rejected: a sub-replay TTL guarantees churn; an unbounded lease defeats failover; treating M00 timings as a pass ignores current storage conditions.
 - Compatibility: values are new P05 configuration and do not change M00 evidence.
 - Reversibility: timing defaults are configuration and may be tuned with new measurements and Checker review.
+
+## D-0601 — Proposal payload remains local end weight
+
+- Context: P06 must bind one proposal to one frozen contribution interval without changing the verified M00 numeric path.
+- Candidates: pseudo-gradient; local end weight; configurable per proposal.
+- Choice: retain `local_end_weight`; the base frontier and interval cursor make the implied delta unambiguous.
+- Rejected: pseudo-gradients change transport/numeric identity; per-proposal choice fragments aggregation semantics.
+- Compatibility: preserves M00 bfloat16 proposal transport and float32 aggregation/committed state.
+- Reversibility: another payload kind requires a new run generation and numeric equivalence evidence.
+
+## D-0602 — No same-base superseding proposal
+
+- Context: two proposals from one learner/session/base can claim overlapping local work.
+- Candidates: newest wins; explicit supersession; reject every second interval on the same base.
+- Choice: one canonical proposal per learner/session/fragment/base; publication retry reuses its request identity, while new local work waits for a committed successor.
+- Rejected: newest-wins and supersession can silently double-count or discard token intervals.
+- Compatibility: tightens D-0203 and the M00 same-base flood gate.
+- Reversibility: relaxing this requires an explicit non-overlap lineage proof and protocol change.
+
+## D-0603 — Committed round-robin fragment schedule
+
+- Context: fragment choice must replay identically after restart and across learners.
+- Candidates: learner-local cursor; acceptable set; committed scheduler cursor.
+- Choice: use the committed frontier scheduler cursor/round-robin policy kernel; learner-local observation never becomes authority.
+- Rejected: a local cursor can diverge after crash; an acceptable set leaves selection under-specified.
+- Compatibility: preserves the P04/P05 scheduler projection.
+- Reversibility: a new schedule must be committed and replay-digest equivalent.
+
+## D-0604 — Reset-all is the default inner optimizer adoption policy
+
+- Context: adopted weights can invalidate momentum/state tied to the pre-adoption model.
+- Candidates: preserve; reset updated fragment only; reset all.
+- Choice: default to `reset_all`; expose and label `reset_updated_fragment` and `preserve` for controlled ablations, with all three in tests and manifests.
+- Rejected: preserve is the least conservative recovery default; fragment-only reset depends on exact parameter/fragment mapping.
+- Compatibility: matches the existing effective default behavior.
+- Reversibility: changing the default requires numeric/recovery evidence and Checker review.
+
+## D-0605 — Target tokens are actual non-padding training tokens
+
+- Context: proposal weight must represent performed work rather than configured capacity.
+- Candidates: examples; nominal batch capacity; actual `Batch.num_tokens` summed across the interval.
+- Choice: sum actual `Batch.num_tokens` for successful inner steps and bind the total to the immutable interval/publication identity.
+- Rejected: examples ignore sequence length; nominal capacity overclaims partial intervals.
+- Compatibility: preserves existing learner counters while making the definition explicit.
+- Reversibility: another accounting unit requires a new weighting identity.
+
+## D-0606 — Immutable session start plus per-session monotonic sequence
+
+- Context: process-local counters disappear on restart and no database counter is allowed.
+- Candidates: mutable local counter; learner-wide global counter; immutable unique session plus monotonic sequence recovered from immutable markers.
+- Choice: publish an immutable UUID session-start record and derive the next sequence by listing and validating that session's immutable publication markers. A restart may safely open a new session at sequence one; it never reuses an existing identity.
+- Rejected: local counters can rewind; a learner-wide allocator would add mutable authority.
+- Compatibility: existing proposal identity already includes learner session and sequence.
+- Reversibility: a future head-reachable session index may accelerate recovery without changing identity.
+
+## D-0607 — Publication request identity and ancestry reconciliation
+
+- Context: payload/marker response loss must not create a second logical proposal.
+- Candidates: payload equality; random retry IDs; deterministic session/sequence/fragment request ID with immutable evidence.
+- Choice: bind request ID and digest to learner/session/sequence/fragment/base, publish payload then immutable request then immutable marker, and classify retry only by the same request ID/digest. Commit outcome is determined from verified ancestry, never listing alone.
+- Rejected: payload equality repeats the P03 CAS bug; random retry IDs duplicate logical publication.
+- Compatibility: extends D-0506/D-0507 without granting learners head-CAS.
+- Reversibility: key layout may change if canonical identity and marker-last ordering remain.
+
+## D-0608 — One pure interval/adoption policy kernel
+
+- Context: runtime, recovery, tests, and replay must agree under adversarial ordering and restart.
+- Candidates: duplicate runtime/reference logic; source-code assertions; one dependency-free immutable kernel.
+- Choice: `fs_diloco.learner_protocol` owns interval, wait, recovery, and adoption transitions; runtime calls the same kernel used by model/replay tests.
+- Rejected: duplicated policies previously caused selection drift.
+- Compatibility: the public learner entrypoint remains `fs_diloco.learner`.
+- Reversibility: module boundaries may change while one executable semantic path remains.
+
+## D-0609 — Freeze bfloat16 transport and float32 committed identity
+
+- Context: P06 adds metadata but must not regress the M00 production codec.
+- Candidates: inherit configuration implicitly; record the verified pair; change transport.
+- Choice: interval/publication records freeze `bfloat16-proposal/float32-aggregate-commit-v1` (or the configured proposal dtype with the same float32 committed contract) and include its implementation digest in evidence.
+- Rejected: implicit dtype permits silent drift; changing transport lacks P06 numeric evidence.
+- Compatibility: identical to the verified M00/P05 terminal path.
+- Reversibility: new dtype pairs require a new implementation identity and 1/2/9-node evidence.
+
+## D-0610 — Successor/stop/no-progress wait state machine
+
+- Context: a single empty listing or timeout previously allowed overlapping work from one base.
+- Candidates: continue immediately; wait forever; wait for committed successor or authoritative stop and terminate this process on declared no-progress.
+- Choice: after marker publication the learner starts no new interval until a newer committed frontier is adopted, authoritative stop is observed, or the configured no-progress deadline produces a terminal `no_progress` outcome. Epoch/owner changes are adopted only through the committed frontier at this boundary.
+- Rejected: immediate continuation floods one base; unbounded wait cannot surface liveness failure.
+- Compatibility: preserves current liveness timeout while changing timeout from retry-work to terminal outcome.
+- Reversibility: retry/backoff may change but may not permit overlapping same-base intervals.
+
+## D-0611 — Canonical omission across session boundaries
+
+- Context: optional predecessor identity participates in proposal identity.
+- Candidates: absent and `null` equivalent; always write `null`; omit when absent and reject explicit `null`/unknown/conflicting fields.
+- Choice: omit an absent predecessor, include only a validated non-empty ID, and fail closed on explicit `null`, unknown identity fields, or a predecessor crossing an invalid session boundary.
+- Rejected: `null` creates an alternate canonical spelling; loose cross-session links obscure recovery.
+- Compatibility: preserves Protocol-v2 canonical omission.
+- Reversibility: none within the current protocol generation.
