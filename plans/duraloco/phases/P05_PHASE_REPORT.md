@@ -7,11 +7,11 @@
 - Phase: P05 — production syncer lease, fencing, and failover
 - Branch: `codex/duraloco-p05-syncer-failover`
 - Drift-preserving base: `92acc3af0c2e80951dfcbf20c738841428a8b906`
-- Current status: `checking`
+- Current status: `completed`
 - Current verified Maker implementation: `82dbec10e1a738cfaa88212698e7e8cf5a0f7ae1`
-- Completed acceptance targets: P05-A01–A08, A10–A12, A14–A20
-- Pending acceptance targets: P05-A09, A13
-- Checker verdict: pending
+- Completed acceptance targets: P05-A01–A20
+- Pending acceptance targets: none
+- Checker verdict: `PASS`, with no required-gate follow-up
 
 P05 adds one dependency-free coordination reference model, a conditional
 observational lease, head-committed owner/session/epoch fencing, ancestry-aware
@@ -73,11 +73,11 @@ fragment version independently from control commit sequence.
   The learner metadata was separated and the harness gained explicit count and
   stop-reason assertions; PBS `2360246` is the valid successor.
 
-### Pending Checker gate
+### Independent Checker gate
 
-The Maker ladder is complete. A clean-worktree Checker must still add an
-unlisted counterexample and review clock assumptions plus D-M0010–D-M0012
-attribution. P05 must remain checking until that artifact passes.
+The Maker ladder is complete. The clean-worktree Checker added an unlisted
+counterexample and reviewed clock assumptions plus D-M0010–D-M0012 attribution.
+It authorized P05-A09 and P05-A13 and the `checking -> completed` transition.
 
 #### Checker attempt 1 — `20260711_p05_checker_f6b6b1c_1node`
 
@@ -90,12 +90,24 @@ file was extended by the M00 implementation-lessons planning update, while
 runtime or authority assertion ran or failed. The checker contract now expects
 P0-C001–P0-C012, and the retry is parent-linked to this failed manifest.
 
-### Known limitations and next action
+#### Checker attempt 2 — `20260711_p05_checker_fe41f80_1node`
+
+PBS `2360301.opbs` on `mg0029` passed the static contract, 10,000 reference
+traces, all 352 tests with one explicit skip, every 1/2/9-node Maker evidence
+audit, the timing/decision attribution review, and the single-head-CAS audit.
+Its Checker-only counterexample corrupted the observational lease after epoch 1:
+parsing failed closed without changing committed authority; after restoring the
+lease, epoch-2 takeover succeeded and the stale epoch-1 stop was rejected. The
+verdict is `PASS`, required-gate follow-ups are `none`, persistence commit is
+`fe41f80067d2ee30b271524e110dcbd50f98f102`, and the verified implementation is
+`82dbec10e1a738cfaa88212698e7e8cf5a0f7ae1`.
+
+### Known limitations and archival outcome
 
 Learner interval/session boundary and warm-recovery semantics remain P06 scope.
-No historical database run is migrated or resumed. Next: persist the passing
-Maker ladder, run the independent Checker, and archive P05 if it authorizes the
-remaining P05-A09/P05-A13 gates.
+No historical database run is migrated or resumed. P05-A01 through P05-A20 are
+complete, and P05 is ready for its archival commit. This does not authorize an
+automatic merge to `main`.
 
 ## 中文
 
@@ -104,11 +116,11 @@ remaining P05-A09/P05-A13 gates.
 - 阶段：P05 — production syncer lease、fencing 与 failover
 - 分支：`codex/duraloco-p05-syncer-failover`
 - 保留漂移后的基线：`92acc3af0c2e80951dfcbf20c738841428a8b906`
-- 当前状态：`checking`
+- 当前状态：`completed`
 - 当前 Maker implementation：`82dbec10e1a738cfaa88212698e7e8cf5a0f7ae1`
-- 已完成验收：P05-A01–A08、A10–A12、A14–A20
-- 待完成验收：P05-A09、A13
-- Checker 结论：待运行
+- 已完成验收：P05-A01–A20
+- 待完成验收：无
+- Checker 结论：`PASS`，且没有 required-gate follow-up
 
 P05 增加了唯一的 dependency-free coordination 参考模型、conditional 观测性 lease、
 写入 head 的 owner/session/epoch fencing、基于 ancestry 的 mutation reconciliation、
@@ -162,11 +174,11 @@ owner 边界 strict replay、权威 stop control transition，以及与 control 
   harness 也没有断言目标 optimizer count。该 run 保留但排除出验收。修正 learner
   metadata 并加入 count/stop-reason 强断言后，PBS `2360246` 成为有效后继。
 
-### 待完成 Checker gate
+### 独立 Checker gate
 
-Maker ladder 已完成。仍需从干净 worktree 运行 Checker；Checker 必须增加 Maker 未
-列出的反例，并审查时钟假设与 D-M0010–D-M0012 证据归属。该 artifact 通过前，
-P05 必须保持 checking。
+Maker ladder 已完成。干净 worktree 中的 Checker 已增加 Maker 未列出的反例，并审查
+时钟假设与 D-M0010–D-M0012 证据归属；它已授权 P05-A09、P05-A13 以及
+`checking -> completed` 状态转换。
 
 #### Checker 尝试 1 — `20260711_p05_checker_f6b6b1c_1node`
 
@@ -177,8 +189,18 @@ lessons 规划更新扩展了 traceability，但 `check_research_contract.py` �
 cardinality。没有 Maker runtime 或 authority assertion 运行或失败。现在 Checker
 contract 明确要求 P0-C001–P0-C012，重试将通过 parent ID 连接此失败 manifest。
 
-### 已知限制与下一步
+#### Checker 尝试 2 — `20260711_p05_checker_fe41f80_1node`
+
+PBS `2360301.opbs` 在 `mg0029` 上通过静态 contract、10,000 条 reference trace、
+352 项测试（另有 1 项显式跳过）、全部单/双/九节点 Maker 证据审计、timing/decision
+归属审查，以及唯一 head-CAS 审计。Checker 专属反例在 epoch 1 后损坏观测性 lease：
+解析 fail closed 且 committed authority 不变；恢复 lease 后 epoch-2 takeover 成功，
+过期 epoch-1 stop 被拒。最终 verdict 为 `PASS`，required-gate follow-up 为 `none`，
+persistence commit 为 `fe41f80067d2ee30b271524e110dcbd50f98f102`，验证的 implementation
+为 `82dbec10e1a738cfaa88212698e7e8cf5a0f7ae1`。
+
+### 已知限制与归档结论
 
 learner interval/session boundary 与 warm recovery 语义属于 P06。不会迁移或续跑任何
-历史数据库 run。下一步：持久化通过的 Maker ladder，运行独立 Checker；若其授权
-剩余的 P05-A09/P05-A13，再归档 P05。
+历史数据库 run。P05-A01 至 P05-A20 全部完成，P05 可进入归档提交；这不授权自动
+合并到 `main`。

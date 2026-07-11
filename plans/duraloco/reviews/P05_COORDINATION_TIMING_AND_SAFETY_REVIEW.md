@@ -69,6 +69,15 @@ owner records stop, but not split-brain safety. The observed terminal result was
 epoch 2 standby ownership, one stop control transition, 10 optimizer transitions,
 zero split brain, and zero double inclusion.
 
+### Independent Checker conclusion
+
+PBS `2360301.opbs` independently confirmed this safety boundary and its timing
+attribution. Its novel corrupt-observational-lease counterexample failed closed,
+preserved committed epoch-1 authority, then allowed a valid epoch-2 takeover and
+rejected the stale epoch-1 stop. The Checker verdict is `PASS` with no required
+follow-up; this closes P05-A09 without turning any clock comparison into commit
+authority.
+
 ## 中文
 
 ### 安全边界
@@ -124,3 +133,10 @@ acquire，两个 epoch/control CAS 会在同一 head 上竞争，只有一个成
 replay。因此该 tail 会影响活性以及由哪个 owner 记录 stop，但不会破坏 split-brain
 安全。terminal 实测最终为 epoch 2 standby owner、一个 stop control transition、
 10 个 optimizer transition、零 split brain、零 double inclusion。
+
+### 独立 Checker 结论
+
+PBS `2360301.opbs` 独立确认了上述安全边界及 timing 归属。其新构造的观测性 lease
+损坏反例 fail closed，保持 committed epoch-1 authority 不变；随后有效 epoch-2
+takeover 成功，过期 epoch-1 stop 被拒。Checker verdict 为 `PASS`，没有 required
+follow-up；因此 P05-A09 已关闭，且任何时钟比较都没有被提升为 commit authority。

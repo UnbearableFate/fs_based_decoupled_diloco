@@ -1,20 +1,20 @@
 phase: P05
-status: checking
+status: completed
 planning_basis_branch: codex/duraloco-m00-sqlite-free-rebase
 planning_basis_commit: 89ae48aae5956b09fc6685074d3ea0eaea36b816
 actual_base_branch: codex/duraloco-m00-sqlite-free-rebase
 actual_base_commit: 92acc3af0c2e80951dfcbf20c738841428a8b906
 feature_branch: codex/duraloco-p05-syncer-failover
 current_loop: 4
-current_goal: "run the independent Checker over the passing final Maker ladder"
-attempts_for_current_failure: 1
+current_goal: "P05 completed; start P06 only from the archived P05 tip"
+attempts_for_current_failure: 0
 last_terminal_failure_review: null
 terminal_retry_authorized: false
 terminal_retry_qualification:
   targeted_1node_benchmark: null
   miyabi_1node: null
   miyabi_2node: null
-last_verified_commit: null
+last_verified_commit: 82dbec10e1a738cfaa88212698e7e8cf5a0f7ae1
 checks:
   local_static: static_pass
   local_runtime: contract_pass
@@ -31,11 +31,11 @@ acceptance:
   P05-A06: {result: pass, evidence: [tests/coordination/test_production_fencing.py, artifacts/duraloco/P05/20260711_p05_full_2a8ab75_1node/20260711_p05_full_2a8ab75_1node-full_after_recovery.json]}
   P05-A07: {result: pass, evidence: [fs_diloco/syncer.py, scripts/agent/check_no_embedded_database.py]}
   P05-A08: {result: pass, evidence: [artifacts/duraloco/P05/20260711_p05_failover_2a8ab75_2node/manifest.json]}
-  P05-A09: {result: not_run, evidence: []}
+  P05-A09: {result: pass, evidence: [plans/duraloco/reviews/P05_COORDINATION_TIMING_AND_SAFETY_REVIEW.md, artifacts/duraloco/P05/20260711_p05_checker_fe41f80_1node/checker_report.md]}
   P05-A10: {result: pass, evidence: [tests/coordination/test_syncer_integration_contract.py, pyproject.toml]}
   P05-A11: {result: pass, evidence: [tests/coordination/test_lease_manager.py, tests/coordination/test_production_fencing.py]}
   P05-A12: {result: pass, evidence: [tests/coordination/test_production_fencing.py]}
-  P05-A13: {result: not_run, evidence: []}
+  P05-A13: {result: pass, evidence: [artifacts/duraloco/P05/20260711_p05_checker_fe41f80_1node/manifest.json, artifacts/duraloco/P05/20260711_p05_checker_fe41f80_1node/checker_results.json]}
   P05-A14: {result: pass, evidence: [artifacts/duraloco/P05/20260711_p05_full_2a8ab75_1node/forbidden_surface.json]}
   P05-A15: {result: pass, evidence: [artifacts/duraloco/P05/20260711_p05_impl_82dbec1_gpt2_9n_50x10/manifest.json, artifacts/duraloco/P05/20260711_p05_impl_82dbec1_gpt2_9n_50x10/terminal_gate_report.json]}
   P05-A16: {result: pass, evidence: [tests/coordination/test_reference_state_machine.py, artifacts/duraloco/P05/20260711_p05_full_2a8ab75_1node/manifest.json]}
@@ -54,8 +54,9 @@ artifacts:
   - artifacts/duraloco/P05/20260711_p05_impl_82dbec1_2node
   - artifacts/duraloco/P05/20260711_p05_impl_82dbec1_gpt2_9n_50x10
   - artifacts/duraloco/P05/20260711_p05_checker_f6b6b1c_1node
-next_action: "rerun the independent Checker after synchronizing its P0 claim cardinality with the 12-row traceability contract"
+  - artifacts/duraloco/P05/20260711_p05_checker_fe41f80_1node
+next_action: "archive the completed P05 milestone, then initialize P06 from that exact archival tip"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
-checker_report: null
+checker_report: artifacts/duraloco/P05/20260711_p05_checker_fe41f80_1node/checker_report.md

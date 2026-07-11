@@ -1,0 +1,26 @@
+{
+  "finding_count": 0,
+  "findings": [],
+  "scanned_files": 215,
+  "status": "PASS"
+}
+{
+  "action_counts": {
+    "commit": 26276,
+    "decide": 11019,
+    "invalid_unknown_selection": 8827,
+    "publish": 73878,
+    "restart": 14347
+  },
+  "count": 10000,
+  "start_seed": 0,
+  "suite_digest": "7840b0ebcad828184ae5bdbb5d8b5f39427d66cf37343c7c8966f1549655ee7e",
+  "unique_state_digests": 10000
+}
+........................................................................ [ 20%]
+........................................................................ [ 40%]
+........................................................................ [ 61%]
+..........s............................................................. [ 81%]
+.................................................................        [100%]
+352 passed, 1 skipped in 19.60s
+{"checker_hostname": "mg0029", "checker_pbs_job_id": "2360301.opbs", "checking_to_completed": "AUTHORIZED", "checks": {"acceptance_id_count": 20, "clock_safety_review": "PASS", "explicit_reference_traces": 10000, "m00_decision_attribution": {"D-M0010": "M00 strict/memoized replay and corrupt-successor evidence", "D-M0011": "M00 marker-last publication and committed-successor backpressure evidence", "D-M0012": "M00 stage timing and terminal retry evidence"}, "maker_lineage": ["20260711_p05_impl_82dbec1_1node", "20260711_p05_impl_82dbec1_2node", "20260711_p05_impl_82dbec1_gpt2_9n_50x10"], "novel_counterexample": {"authority_unchanged_after_rejection": true, "corruption_rejected": true, "final_fencing_epoch": 2, "final_owner_id": "checker-b", "name": "corrupt_observational_lease_then_recover_and_take_over", "pass": true, "stale_owner_stop_rejected": true}, "one_node_recovery": "PASS", "single_head_cas_static_audit": "PASS", "terminal_50x10_active_standby": "PASS", "two_node_failover": "PASS"}, "persistence_commit": "fe41f80067d2ee30b271524e110dcbd50f98f102", "required_failures": [], "required_gate_followups": "none", "schema_version": 2, "verdict": "PASS", "verified_implementation": "82dbec10e1a738cfaa88212698e7e8cf5a0f7ae1"}
