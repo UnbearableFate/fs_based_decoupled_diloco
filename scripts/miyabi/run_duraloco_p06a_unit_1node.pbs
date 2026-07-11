@@ -22,6 +22,11 @@ cd "$PROJECT_ROOT"
 mkdir -p "$ARTIFACT_ROOT"
 touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log" "$ARTIFACT_ROOT/commands.log"
 export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+ARCHIVE_CHECKOUT="${TMPDIR:?TMPDIR is required}/duraloco-p06-archive"
+cleanup() {
+  git worktree remove --force "$ARCHIVE_CHECKOUT" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
 
 [[ "$(hostname)" == mg* ]]
 [[ -n "${PBS_JOBID:-}" && -n "${PBS_NODEFILE:-}" ]]
@@ -33,6 +38,9 @@ git status --short --branch | tee "$ARTIFACT_ROOT/git_status.log"
 git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"
 "$PYTHON_BIN" --version 2>&1 | tee "$ARTIFACT_ROOT/python_version.log"
 module list 2>&1 | cat > "$ARTIFACT_ROOT/modules.log"
+git worktree add --detach "$ARCHIVE_CHECKOUT" \
+  06e3ca2299d5eb1a720c1d8f9107af5223095525 \
+  > "$ARTIFACT_ROOT/archive_checkout.log" 2>&1
 
 run_command() {
   printf '%q ' "$@" | tee -a "$ARTIFACT_ROOT/commands.log"
@@ -42,7 +50,7 @@ run_command() {
 
 set +e
 run_command "$PYTHON_BIN" scripts/agent/create_p06a_characterization.py \
-  --output "$ARTIFACT_ROOT/oracle_trace.json"
+  --archive-root "$ARCHIVE_CHECKOUT" --output "$ARTIFACT_ROOT/oracle_trace.json"
 characterization_status=$?
 if (( characterization_status == 0 )); then
   run_command "$PYTHON_BIN" -m pytest -q \

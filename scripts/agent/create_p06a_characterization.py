@@ -8,15 +8,13 @@ from datetime import datetime, timezone
 import json
 from pathlib import Path
 import platform
+import subprocess
+import sys
 
 import torch
 
-from fs_diloco.log.production_codec import (
-    encode_production_outer_state,
-    encode_production_params,
-    production_optimizer_digest,
-)
-from fs_diloco.outer_optim import OuterOptimizerConfig, outer_optimizer_step
+from fs_diloco.log.production_codec import production_optimizer_digest
+from fs_diloco.outer_optim import OuterOptimizerConfig
 from fs_diloco.syncer_core import (
     PlanningCandidate,
     apply_outer_transition,
@@ -24,7 +22,7 @@ from fs_diloco.syncer_core import (
     build_transition_attempt,
     reduce_fragment,
 )
-from fs_diloco.testing.deterministic_reference import ReferenceWeightingConfig, normalized_weights
+from fs_diloco.testing.deterministic_reference import ReferenceWeightingConfig
 
 
 ARCHIVE_COMMIT = "06e3ca2299d5eb1a720c1d8f9107af5223095525"
@@ -35,11 +33,25 @@ CHECKER_COMMIT = "030129e045c4e5a2abb80eb100a0e28fb78d384d"
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--archive-root", type=Path, required=True)
     return parser.parse_args()
 
 
 def main() -> None:
     args = _parse_args()
+    archive_trace_path = args.output.with_name("archive_oracle_trace.json")
+    subprocess.run(
+        [
+            sys.executable,
+            str(Path(__file__).with_name("p06a_archive_oracle_worker.py")),
+            "--archive-root",
+            str(args.archive_root),
+            "--output",
+            str(archive_trace_path),
+        ],
+        check=True,
+    )
+    archive_trace = json.loads(archive_trace_path.read_text(encoding="utf-8"))
     torch.manual_seed(0)
     current = torch.tensor([1.0, -2.0, 0.5, 3.0], dtype=torch.float32)
     proposals = {
@@ -49,15 +61,6 @@ def main() -> None:
     tokens = {"proposal-a": 10, "proposal-b": 30}
     config = OuterOptimizerConfig(name="nesterov", lr=0.2, momentum=0.7)
     state = {"step": torch.tensor(2, dtype=torch.int64), "momentum": torch.zeros_like(current)}
-
-    archive_weights = normalized_weights(tokens, config=ReferenceWeightingConfig())
-    archive_aggregate = proposals["proposal-a"].mul(archive_weights["proposal-a"])
-    archive_aggregate = archive_aggregate.add(
-        proposals["proposal-b"], alpha=archive_weights["proposal-b"]
-    )
-    archive_params, archive_state = outer_optimizer_step(
-        current, current - archive_aggregate, state, config
-    )
 
     candidates = tuple(
         PlanningCandidate(
@@ -106,12 +109,20 @@ def main() -> None:
         fencing_epoch=1,
         outer_optimizer_impl_digest=implementation_digest,
     )
-    archive_params_bytes = encode_production_params(archive_params)
-    archive_state_bytes = encode_production_outer_state(archive_state)
-    if not torch.equal(archive_aggregate, aggregate):
-        raise RuntimeError("archive and decomposed aggregate differ")
-    if archive_params_bytes != attempt.new_params or archive_state_bytes != attempt.new_outer_state:
-        raise RuntimeError("archive and decomposed parameter/state bytes differ")
+    exact_fields = {
+        "selected_proposal_ids": list(plan.selected_proposal_ids),
+        "weights_hex": list(plan.weights_hex),
+        "aggregate_content_sha256": computation.aggregate_content_sha256,
+        "params_content_sha256": computation.params_content_sha256,
+        "outer_state_content_sha256": computation.outer_state_content_sha256,
+    }
+    mismatches = {
+        field: {"archive": archive_trace.get(field), "decomposed": value}
+        for field, value in exact_fields.items()
+        if archive_trace.get(field) != value
+    }
+    if mismatches:
+        raise RuntimeError(f"archive and decomposed CRS differ: {mismatches}")
 
     trace = {
         "schema": "duraloco-p06a-crs-characterization-v1",
@@ -119,7 +130,8 @@ def main() -> None:
         "verified_dependency_implementation": VERIFIED_IMPLEMENTATION,
         "verified_dependency_checker_commit": CHECKER_COMMIT,
         "created_at": datetime.now(timezone.utc).isoformat(),
-        "environment": {
+        "archive_environment": archive_trace["environment"],
+        "decomposed_environment": {
             "python": platform.python_version(),
             "torch": torch.__version__,
             "device": "cpu",
@@ -136,9 +148,10 @@ def main() -> None:
             "optimizer_identity": optimizer_identity,
         },
         "archive_output": {
-            "aggregate_content_sha256": computation.aggregate_content_sha256,
-            "params_content_sha256": computation.params_content_sha256,
-            "outer_state_content_sha256": computation.outer_state_content_sha256,
+            "source_module": archive_trace["module_path"],
+            "aggregate_content_sha256": archive_trace["aggregate_content_sha256"],
+            "params_content_sha256": archive_trace["params_content_sha256"],
+            "outer_state_content_sha256": archive_trace["outer_state_content_sha256"],
         },
         "decomposed_output": {
             "selection_digest": plan.selection_digest,

@@ -9,8 +9,8 @@ actual_base_commit: 06e3ca2299d5eb1a720c1d8f9107af5223095525
 feature_branch: codex/duraloco-p06a-syncer-kernel
 plan_handoff_commit: c4b34d961b7d3a82ece4f16324cf6a69c7b2f5b7
 current_loop: 1
-current_goal: "generate the archive characterization trace and prove the decomposed CRS kernels are exact"
-attempts_for_current_failure: 2
+current_goal: "harden the characterization gate so the baseline executes from a detached read-only archive checkout"
+attempts_for_current_failure: 0
 last_terminal_failure_review: null
 terminal_retry_authorized: false
 terminal_retry_qualification:
@@ -54,7 +54,8 @@ artifacts:
   - artifacts/duraloco/P06/20260711_p06_checker_030129e_1node
   - artifacts/duraloco/P06A/20260711_p06a_kernel_21535f4_1node
   - artifacts/duraloco/P06A/20260711_p06a_kernel_93ea451_1node
-next_action: "repair the manifest verifier phase grammar and rerun the focused one-node gate on the repaired clean commit"
+  - artifacts/duraloco/P06A/20260711_p06a_kernel_6ac394d_1node
+next_action: "run the strengthened detached-archive characterization gate on one compute node"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
