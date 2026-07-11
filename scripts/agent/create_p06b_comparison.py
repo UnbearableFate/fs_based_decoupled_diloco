@@ -36,7 +36,7 @@ def _commits(root: Path):
 
 
 def _run_spec(root: Path):
-    paths = [path for path in root.rglob("run_spec.json")]
+    paths = [path for path in root.rglob("run-manifest.json")]
     if len(paths) != 1:
         raise AssertionError(f"expected one run spec under {root}, found {len(paths)}")
     return _stored_json(root, paths[0])
