@@ -1,3 +1,35 @@
 schema: duraloco-error-ledger-v1
 phase: P06C
-records: []
+records:
+  - error_id: E-P06C-20260711-01
+    phase_and_gate: P06C/RED-1node
+    observed_at_utc: "2026-07-11T12:51:27Z"
+    pbs_job_id: 2362945.opbs
+    hosts: [mg0004]
+    git_commit: 7caaaa382f89fe73c5fbf579b298cf411259b48e
+    classification: unexpected_failure
+    phenomenon:
+      exit_code: 0
+      exception: "false ERR trap: P06C RED harness failed at line 20"
+      terminal_state: "RED assertions and manifest PASS, but stderr was non-empty"
+      log_excerpt: artifacts/duraloco/P06C/20260711_p06c_red_7caaaa3_1node/stderr.log
+    expected: "six explicit RED failures are classified without firing the harness ERR trap"
+    impact:
+      acceptance_ids: [P06C-A01, P06C-A04, P06C-A07]
+      invariants: ["expected failures must not be mislabeled as unexpected harness errors"]
+      committed_prefix_safe: true
+    cause:
+      confirmed: ["Bash ERR trap fires for a failed simple command even after set +e when it is not in a conditional context"]
+      unknown: []
+    repair:
+      change: "run expected-failing pytest inside an if/else conditional and capture its status there"
+      rationale: "commands used as if conditions do not trigger ERR and remain explicitly classified"
+    verification:
+      minimal_reproduction: "rerun the same seven-test RED cell"
+      targeted_gate: "6 failed, 1 passed; six explicit P06C RED messages; empty stderr"
+      qualification_ladder: ["Miyabi 1-node RED rerun"]
+    retry_decision:
+      authorized: true
+      rationale: "small targeted harness-only rerun; no D8 terminal failure"
+      parent_run_id: 20260711_p06c_red_7caaaa3_1node
+    artifacts: [artifacts/duraloco/P06C/20260711_p06c_red_7caaaa3_1node]
