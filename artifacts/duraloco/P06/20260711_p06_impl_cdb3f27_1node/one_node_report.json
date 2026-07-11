@@ -1,0 +1,14 @@
+{
+  "boundary_adoptions": 2,
+  "finite_losses": [
+    4.437056303024292,
+    4.3936262130737305
+  ],
+  "local_steps": 4,
+  "publication_request_ids": [
+    "learner-publish-27af79c1c1b65134772e035da215b83e3b811a190879ee83d2769cedcbd7a633",
+    "learner-publish-2fb3a80ea802f88df05376b02abc617cf49db0a114c96b3900fd051772dd4978"
+  ],
+  "published_intervals": 2,
+  "status": "PASS"
+}

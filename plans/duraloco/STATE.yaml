@@ -6,7 +6,7 @@ actual_base_branch: codex/duraloco-p05-syncer-failover
 actual_base_commit: 419577899a64a12cc602870d059a092f9319bed1
 feature_branch: codex/duraloco-p06-learner-protocol
 current_loop: 3
-current_goal: "integrate interval publication, boundary adoption, and warm recovery into the single learner runtime"
+current_goal: "complete a clean same-commit P06 one/two/nine-node Maker ladder"
 attempts_for_current_failure: 1
 last_terminal_failure_review: null
 terminal_retry_authorized: false
@@ -19,7 +19,7 @@ checks:
   local_static: static_pass
   local_runtime: unit_pass
   miyabi_login_static: static_pass
-  miyabi_1node: not_run
+  miyabi_1node: miyabi_1node_pass
   miyabi_2node: not_run
   miyabi_9node: not_run
 acceptance:
@@ -31,7 +31,7 @@ acceptance:
   P06-A06: {result: not_run, evidence: []}
   P06-A07: {result: not_run, evidence: []}
   P06-A08: {result: not_run, evidence: []}
-  P06-A09: {result: not_run, evidence: []}
+  P06-A09: {result: pass, evidence: [artifacts/duraloco/P06/20260711_p06_impl_cdb3f27_1node/manifest.json, artifacts/duraloco/P06/20260711_p06_impl_cdb3f27_1node/one_node_report.json]}
   P06-A10: {result: not_run, evidence: []}
   P06-A11: {result: not_run, evidence: []}
   P06-A12: {result: not_run, evidence: []}
@@ -52,7 +52,9 @@ artifacts:
   - artifacts/duraloco/P06/20260711_p06_runtime_5d5b946_1node
   - artifacts/duraloco/P06/20260711_p06_impl_d3a2b9d_1node
   - artifacts/duraloco/P06/20260711_p06_impl_911ed8b_1node
-next_action: "rerun from a clean worktree with the runtime root contained inside that checkout"
+  - artifacts/duraloco/P06/20260711_p06_impl_cdb3f27_1node
+  - artifacts/duraloco/P06/20260711_p06_impl_cdb3f27_2node
+next_action: "rerun 1-node then 2-node after correcting the tiny model identifier used only by the two-node harness"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

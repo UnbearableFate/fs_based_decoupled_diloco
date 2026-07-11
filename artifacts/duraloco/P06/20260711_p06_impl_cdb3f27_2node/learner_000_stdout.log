@@ -1,0 +1,191 @@
+{"actor": "learner_000", "device": "cuda", "event_type": "process_start", "hostname": "mg0016", "learner_id": "learner_000", "run_id": "20260711_p06_impl_cdb3f27_2node-training", "timestamp": 1783749097.191947}
+{"actor": "learner_000", "event_type": "error", "exc_type": "OSError", "hostname": "mg0016", "message": "synthetic is not a local folder and is not a valid model identifier listed on 'https://huggingface.co/models'\nIf this is a private repository, make sure to pass a token having permission to this repo either by logging in with `hf auth login` or by passing `token=<your_token>`", "timestamp": 1783749111.3243296, "traceback": "Traceback (most recent call last):\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/utils/_http.py\", line 795, in hf_raise_for_status\n    response.raise_for_status()\n    ~~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/httpx/_models.py\", line 829, in raise_for_status\n    raise HTTPStatusError(message, request=request, response=self)\nhttpx.HTTPStatusError: Client error '404 Not Found' for url 'https://huggingface.co/synthetic/resolve/main/config.json'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/utils/hub.py\", line 437, in cached_files\n    hf_hub_download(\n    ~~~~~~~~~~~~~~~^\n        path_or_repo_id,\n        ^^^^^^^^^^^^^^^^\n    ...<10 lines>...\n        tqdm_class=tqdm_class,\n        ^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py\", line 88, in _inner_fn\n    return fn(*args, **kwargs)\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/file_download.py\", line 1018, in hf_hub_download\n    return _hf_hub_download_to_cache_dir(\n        # Destination\n    ...<15 lines>...\n        dry_run=dry_run,\n    )\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/file_download.py\", line 1170, in _hf_hub_download_to_cache_dir\n    _raise_on_head_call_error(head_call_error, force_download, local_files_only)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/file_download.py\", line 1869, in _raise_on_head_call_error\n    raise head_call_error\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/file_download.py\", line 1712, in _get_metadata_or_catch_error\n    metadata = get_hf_file_metadata(\n        url=url,\n    ...<4 lines>...\n        retry_on_errors=retry_on_errors,\n    )\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py\", line 88, in _inner_fn\n    return fn(*args, **kwargs)\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/file_download.py\", line 1620, in get_hf_file_metadata\n    response = _httpx_follow_relative_redirects_with_backoff(\n        method=\"HEAD\", url=url, headers=hf_headers, timeout=timeout, retry_on_errors=retry_on_errors\n    )\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/utils/_http.py\", line 726, in _httpx_follow_relative_redirects_with_backoff\n    hf_raise_for_status(response)\n    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/utils/_http.py\", line 882, in hf_raise_for_status\n    raise _format(RepositoryNotFoundError, message, response, repo_type=repo_type, repo_id=repo_id) from e\nhuggingface_hub.errors.RepositoryNotFoundError: 404 Client Error. (Request ID: Root=1-6a51d9f7-767eb1dd77e87769504f1dc8;ad8a5870-c906-4c7d-9fd5-d91815c6dbb4)\n\nRepository Not Found for url: https://huggingface.co/synthetic/resolve/main/config.json.\nPlease make sure you specified the correct `repo_id` and `repo_type`.\nIf you are trying to access a private or gated repo, make sure you are authenticated and your token has the required permissions.\nFor more details, see https://huggingface.co/docs/huggingface_hub/authentication\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/models/auto/tokenization_auto.py\", line 746, in from_pretrained\n    config = AutoConfig.from_pretrained(\n        pretrained_model_name_or_path, trust_remote_code=trust_remote_code, **kwargs\n    )\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/models/auto/configuration_auto.py\", line 376, in from_pretrained\n    config_dict, unused_kwargs = PreTrainedConfig.get_config_dict(pretrained_model_name_or_path, **kwargs)\n                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/configuration_utils.py\", line 705, in get_config_dict\n    config_dict, kwargs = cls._get_config_dict(pretrained_model_name_or_path, **kwargs)\n                          ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/configuration_utils.py\", line 760, in _get_config_dict\n    resolved_config_file = cached_file(\n        pretrained_model_name_or_path,\n    ...<9 lines>...\n        _commit_hash=commit_hash,\n    )\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/utils/hub.py\", line 293, in cached_file\n    file = cached_files(path_or_repo_id=path_or_repo_id, filenames=[filename], **kwargs)\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/utils/hub.py\", line 469, in cached_files\n    raise OSError(\n    ...<4 lines>...\n    ) from e\nOSError: synthetic is not a local folder and is not a valid model identifier listed on 'https://huggingface.co/models'\nIf this is a private repository, make sure to pass a token having permission to this repo either by logging in with `hf auth login` or by passing `token=<your_token>`\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/utils/_http.py\", line 795, in hf_raise_for_status\n    response.raise_for_status()\n    ~~~~~~~~~~~~~~~~~~~~~~~~~^^\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/httpx/_models.py\", line 829, in raise_for_status\n    raise HTTPStatusError(message, request=request, response=self)\nhttpx.HTTPStatusError: Client error '404 Not Found' for url 'https://huggingface.co/synthetic/resolve/main/config.json'\nFor more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/utils/hub.py\", line 437, in cached_files\n    hf_hub_download(\n    ~~~~~~~~~~~~~~~^\n        path_or_repo_id,\n        ^^^^^^^^^^^^^^^^\n    ...<10 lines>...\n        tqdm_class=tqdm_class,\n        ^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py\", line 88, in _inner_fn\n    return fn(*args, **kwargs)\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/file_download.py\", line 1018, in hf_hub_download\n    return _hf_hub_download_to_cache_dir(\n        # Destination\n    ...<15 lines>...\n        dry_run=dry_run,\n    )\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/file_download.py\", line 1170, in _hf_hub_download_to_cache_dir\n    _raise_on_head_call_error(head_call_error, force_download, local_files_only)\n    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/file_download.py\", line 1869, in _raise_on_head_call_error\n    raise head_call_error\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/file_download.py\", line 1712, in _get_metadata_or_catch_error\n    metadata = get_hf_file_metadata(\n        url=url,\n    ...<4 lines>...\n        retry_on_errors=retry_on_errors,\n    )\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py\", line 88, in _inner_fn\n    return fn(*args, **kwargs)\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/file_download.py\", line 1620, in get_hf_file_metadata\n    response = _httpx_follow_relative_redirects_with_backoff(\n        method=\"HEAD\", url=url, headers=hf_headers, timeout=timeout, retry_on_errors=retry_on_errors\n    )\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/utils/_http.py\", line 726, in _httpx_follow_relative_redirects_with_backoff\n    hf_raise_for_status(response)\n    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/utils/_http.py\", line 882, in hf_raise_for_status\n    raise _format(RepositoryNotFoundError, message, response, repo_type=repo_type, repo_id=repo_id) from e\nhuggingface_hub.errors.RepositoryNotFoundError: 404 Client Error. (Request ID: Root=1-6a51d9f7-6c6047932b33c9dc542d0789;74dec9b6-2908-45c3-95f0-b8d11472c2be)\n\nRepository Not Found for url: https://huggingface.co/synthetic/resolve/main/config.json.\nPlease make sure you specified the correct `repo_id` and `repo_type`.\nIf you are trying to access a private or gated repo, make sure you are authenticated and your token has the required permissions.\nFor more details, see https://huggingface.co/docs/huggingface_hub/authentication\n\nThe above exception was the direct cause of the following exception:\n\nTraceback (most recent call last):\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"/work/xg24i002/x10041/duraloco_worktrees/p06-final-cdb3f27/fs_diloco/learner.py\", line 1375, in <module>\n    main()\n    ~~~~^^\n  File \"/work/xg24i002/x10041/duraloco_worktrees/p06-final-cdb3f27/fs_diloco/learner.py\", line 1371, in main\n    run_learner(config, args.learner_id)\n    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/xg24i002/x10041/duraloco_worktrees/p06-final-cdb3f27/fs_diloco/learner.py\", line 1048, in run_learner\n    model, tokenizer = load_causal_lm_and_tokenizer(config.model)\n                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^\n  File \"/work/xg24i002/x10041/duraloco_worktrees/p06-final-cdb3f27/fs_diloco/hf_model.py\", line 69, in load_causal_lm_and_tokenizer\n    tokenizer = AutoTokenizer.from_pretrained(\n        name,\n        trust_remote_code=bool(getattr(config, \"trust_remote_code\", False)),\n    )\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/models/auto/tokenization_auto.py\", line 750, in from_pretrained\n    config = PreTrainedConfig.from_pretrained(pretrained_model_name_or_path, **kwargs)\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/configuration_utils.py\", line 664, in from_pretrained\n    config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)\n                          ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/configuration_utils.py\", line 705, in get_config_dict\n    config_dict, kwargs = cls._get_config_dict(pretrained_model_name_or_path, **kwargs)\n                          ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/configuration_utils.py\", line 760, in _get_config_dict\n    resolved_config_file = cached_file(\n        pretrained_model_name_or_path,\n    ...<9 lines>...\n        _commit_hash=commit_hash,\n    )\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/utils/hub.py\", line 293, in cached_file\n    file = cached_files(path_or_repo_id=path_or_repo_id, filenames=[filename], **kwargs)\n  File \"/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/utils/hub.py\", line 469, in cached_files\n    raise OSError(\n    ...<4 lines>...\n    ) from e\nOSError: synthetic is not a local folder and is not a valid model identifier listed on 'https://huggingface.co/models'\nIf this is a private repository, make sure to pass a token having permission to this repo either by logging in with `hf auth login` or by passing `token=<your_token>`\n"}
+Traceback (most recent call last):
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/utils/_http.py", line 795, in hf_raise_for_status
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '404 Not Found' for url 'https://huggingface.co/synthetic/resolve/main/config.json'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/utils/hub.py", line 437, in cached_files
+    hf_hub_download(
+    ~~~~~~~~~~~~~~~^
+        path_or_repo_id,
+        ^^^^^^^^^^^^^^^^
+    ...<10 lines>...
+        tqdm_class=tqdm_class,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/file_download.py", line 1018, in hf_hub_download
+    return _hf_hub_download_to_cache_dir(
+        # Destination
+    ...<15 lines>...
+        dry_run=dry_run,
+    )
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/file_download.py", line 1170, in _hf_hub_download_to_cache_dir
+    _raise_on_head_call_error(head_call_error, force_download, local_files_only)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/file_download.py", line 1869, in _raise_on_head_call_error
+    raise head_call_error
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/file_download.py", line 1712, in _get_metadata_or_catch_error
+    metadata = get_hf_file_metadata(
+        url=url,
+    ...<4 lines>...
+        retry_on_errors=retry_on_errors,
+    )
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/file_download.py", line 1620, in get_hf_file_metadata
+    response = _httpx_follow_relative_redirects_with_backoff(
+        method="HEAD", url=url, headers=hf_headers, timeout=timeout, retry_on_errors=retry_on_errors
+    )
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/utils/_http.py", line 726, in _httpx_follow_relative_redirects_with_backoff
+    hf_raise_for_status(response)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/utils/_http.py", line 882, in hf_raise_for_status
+    raise _format(RepositoryNotFoundError, message, response, repo_type=repo_type, repo_id=repo_id) from e
+huggingface_hub.errors.RepositoryNotFoundError: 404 Client Error. (Request ID: Root=1-6a51d9f7-767eb1dd77e87769504f1dc8;ad8a5870-c906-4c7d-9fd5-d91815c6dbb4)
+
+Repository Not Found for url: https://huggingface.co/synthetic/resolve/main/config.json.
+Please make sure you specified the correct `repo_id` and `repo_type`.
+If you are trying to access a private or gated repo, make sure you are authenticated and your token has the required permissions.
+For more details, see https://huggingface.co/docs/huggingface_hub/authentication
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/models/auto/tokenization_auto.py", line 746, in from_pretrained
+    config = AutoConfig.from_pretrained(
+        pretrained_model_name_or_path, trust_remote_code=trust_remote_code, **kwargs
+    )
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/models/auto/configuration_auto.py", line 376, in from_pretrained
+    config_dict, unused_kwargs = PreTrainedConfig.get_config_dict(pretrained_model_name_or_path, **kwargs)
+                                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/configuration_utils.py", line 705, in get_config_dict
+    config_dict, kwargs = cls._get_config_dict(pretrained_model_name_or_path, **kwargs)
+                          ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/configuration_utils.py", line 760, in _get_config_dict
+    resolved_config_file = cached_file(
+        pretrained_model_name_or_path,
+    ...<9 lines>...
+        _commit_hash=commit_hash,
+    )
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/utils/hub.py", line 293, in cached_file
+    file = cached_files(path_or_repo_id=path_or_repo_id, filenames=[filename], **kwargs)
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/utils/hub.py", line 469, in cached_files
+    raise OSError(
+    ...<4 lines>...
+    ) from e
+OSError: synthetic is not a local folder and is not a valid model identifier listed on 'https://huggingface.co/models'
+If this is a private repository, make sure to pass a token having permission to this repo either by logging in with `hf auth login` or by passing `token=<your_token>`
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/utils/_http.py", line 795, in hf_raise_for_status
+    response.raise_for_status()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '404 Not Found' for url 'https://huggingface.co/synthetic/resolve/main/config.json'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/404
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/utils/hub.py", line 437, in cached_files
+    hf_hub_download(
+    ~~~~~~~~~~~~~~~^
+        path_or_repo_id,
+        ^^^^^^^^^^^^^^^^
+    ...<10 lines>...
+        tqdm_class=tqdm_class,
+        ^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/file_download.py", line 1018, in hf_hub_download
+    return _hf_hub_download_to_cache_dir(
+        # Destination
+    ...<15 lines>...
+        dry_run=dry_run,
+    )
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/file_download.py", line 1170, in _hf_hub_download_to_cache_dir
+    _raise_on_head_call_error(head_call_error, force_download, local_files_only)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/file_download.py", line 1869, in _raise_on_head_call_error
+    raise head_call_error
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/file_download.py", line 1712, in _get_metadata_or_catch_error
+    metadata = get_hf_file_metadata(
+        url=url,
+    ...<4 lines>...
+        retry_on_errors=retry_on_errors,
+    )
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/utils/_validators.py", line 88, in _inner_fn
+    return fn(*args, **kwargs)
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/file_download.py", line 1620, in get_hf_file_metadata
+    response = _httpx_follow_relative_redirects_with_backoff(
+        method="HEAD", url=url, headers=hf_headers, timeout=timeout, retry_on_errors=retry_on_errors
+    )
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/utils/_http.py", line 726, in _httpx_follow_relative_redirects_with_backoff
+    hf_raise_for_status(response)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/huggingface_hub/utils/_http.py", line 882, in hf_raise_for_status
+    raise _format(RepositoryNotFoundError, message, response, repo_type=repo_type, repo_id=repo_id) from e
+huggingface_hub.errors.RepositoryNotFoundError: 404 Client Error. (Request ID: Root=1-6a51d9f7-6c6047932b33c9dc542d0789;74dec9b6-2908-45c3-95f0-b8d11472c2be)
+
+Repository Not Found for url: https://huggingface.co/synthetic/resolve/main/config.json.
+Please make sure you specified the correct `repo_id` and `repo_type`.
+If you are trying to access a private or gated repo, make sure you are authenticated and your token has the required permissions.
+For more details, see https://huggingface.co/docs/huggingface_hub/authentication
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/work/xg24i002/x10041/duraloco_worktrees/p06-final-cdb3f27/fs_diloco/learner.py", line 1375, in <module>
+    main()
+    ~~~~^^
+  File "/work/xg24i002/x10041/duraloco_worktrees/p06-final-cdb3f27/fs_diloco/learner.py", line 1371, in main
+    run_learner(config, args.learner_id)
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/xg24i002/x10041/duraloco_worktrees/p06-final-cdb3f27/fs_diloco/learner.py", line 1048, in run_learner
+    model, tokenizer = load_causal_lm_and_tokenizer(config.model)
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "/work/xg24i002/x10041/duraloco_worktrees/p06-final-cdb3f27/fs_diloco/hf_model.py", line 69, in load_causal_lm_and_tokenizer
+    tokenizer = AutoTokenizer.from_pretrained(
+        name,
+        trust_remote_code=bool(getattr(config, "trust_remote_code", False)),
+    )
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/models/auto/tokenization_auto.py", line 750, in from_pretrained
+    config = PreTrainedConfig.from_pretrained(pretrained_model_name_or_path, **kwargs)
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/configuration_utils.py", line 664, in from_pretrained
+    config_dict, kwargs = cls.get_config_dict(pretrained_model_name_or_path, **kwargs)
+                          ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/configuration_utils.py", line 705, in get_config_dict
+    config_dict, kwargs = cls._get_config_dict(pretrained_model_name_or_path, **kwargs)
+                          ~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/configuration_utils.py", line 760, in _get_config_dict
+    resolved_config_file = cached_file(
+        pretrained_model_name_or_path,
+    ...<9 lines>...
+        _commit_hash=commit_hash,
+    )
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/utils/hub.py", line 293, in cached_file
+    file = cached_files(path_or_repo_id=path_or_repo_id, filenames=[filename], **kwargs)
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/lib/python3.13/site-packages/transformers/utils/hub.py", line 469, in cached_files
+    raise OSError(
+    ...<4 lines>...
+    ) from e
+OSError: synthetic is not a local folder and is not a valid model identifier listed on 'https://huggingface.co/models'
+If this is a private repository, make sure to pass a token having permission to this repo either by logging in with `hf auth login` or by passing `token=<your_token>`

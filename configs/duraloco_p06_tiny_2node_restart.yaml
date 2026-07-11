@@ -9,7 +9,7 @@ init:
   allow_overwrite_existing_run: false
   run_generation: 0
 model:
-  name_or_path: synthetic
+  name_or_path: synthetic-tiny
   trust_remote_code: false
   dtype: float32
   compile: false
