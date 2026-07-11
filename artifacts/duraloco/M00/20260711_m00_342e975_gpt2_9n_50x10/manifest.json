@@ -1,0 +1,33 @@
+{
+  "assertions": [
+    "committed-successor backpressure held the run to eight initial proposals",
+    "operator terminated after dependency-free scalar finiteness validation prevented a first transition within the terminal budget"
+  ],
+  "backend": "lustre",
+  "commands_log": "commands.log",
+  "config_digest": "962fc3a9a52d6485982ebb0a61bf947153e1e5902f825c75ee8381d70f6f4744",
+  "config_path": "configs/duraloco_milestone_gpt2_9node_50x10.yaml",
+  "dataset_revision": "wikitext-2-raw-v1",
+  "dirty_paths": [],
+  "dirty_tree": false,
+  "ended_at_utc": "2026-07-10T23:59:46Z",
+  "exit_code": 271,
+  "git_branch": "codex/duraloco-m00-sqlite-free-rebase",
+  "git_commit": "342e97514ef43643e5f447da79afd3e067c91522",
+  "hostname": "mg1078",
+  "manifest_sha256": "ff3ffc662a060f720294aa1d413a085c0b843f4250fd4efcfe5ca355a127a14f",
+  "model_revision": "gpt2",
+  "parent_run_id": "20260711_m00_dec182e_gpt2_9n_50x10",
+  "pbs_job_id": "2359122.opbs",
+  "pbs_nodefile_digest": "49bf069399719ea7235e3a8ed56121e781721fb93e229859580ffed7acd763bc",
+  "phase": "M00",
+  "purpose": "experiment",
+  "python_version": "3.13.13",
+  "result": "fail",
+  "run_id": "20260711_m00_342e975_gpt2_9n_50x10",
+  "schema_version": 1,
+  "seed": null,
+  "started_at_utc": "2026-07-10T23:56:11Z",
+  "stderr": "stderr.log",
+  "stdout": "stdout.log"
+}

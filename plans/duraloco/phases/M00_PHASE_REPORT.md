@@ -133,6 +133,27 @@ two-node and nine-node compute qualification remain in progress.
   `training.log`, and `qstat_final.log`.
 - Repair: make post-upload adoption wait through the no-progress budget or a
   stop marker, and reject known consumed interval bases before payload reads.
+
+#### Nine-node attempt 2 — `20260711_m00_342e975_gpt2_9n_50x10`
+
+- Time/identity: PBS `2359122.opbs`, nine compute hosts led by `mg1078`,
+  implementation `342e97514ef43643e5f447da79afd3e067c91522`.
+- Phenomenon: committed-successor backpressure worked: exactly eight initial
+  proposals remained and no same-base flood occurred. However, the first
+  transition still did not complete before deliberate operator termination.
+- Expected/actual: strict finite-value validation must scale to a GPT-2 flat
+  tensor. The dependency-free validator iterated roughly 124 million scalar
+  float values in Python for each proposal, so eight payloads could not clear
+  the first scan within the terminal budget.
+- Reason: confirmed by the stable eight-proposal count, zero successor, and the
+  validator's scalar `struct.iter_unpack` loop. This path is appropriate for
+  dependency-free protocol fixtures, not large production tensors.
+- Impact: M00-A11 only; no head CAS occurred and the operator terminated the
+  job deliberately (`Exit_status=271`).
+- Evidence: `artifacts/duraloco/M00/20260711_m00_342e975_gpt2_9n_50x10/manifest.json`,
+  `training.log`, and `qstat_final.log`.
+- Repair: keep the strict structural parser and SHA checks, but perform the
+  production finite-value pass with safetensors/Torch vectorized validation.
 - Impact: M00-A03, M00-A04, M00-A09, P02-A04, and P04 replay requalification.
 - Evidence: `artifacts/duraloco/M00/20260711_m00_04da7ee_1node/manifest.json`,
   `one_node_contract.json`, full syncer/learner logs, and `stdout.log`.
@@ -266,6 +287,24 @@ generation metadata 与 M00 静态/运行 harness。源码、配置、脚本与�
   `training.log` 与 `qstat_final.log`。
 - 修复：post-upload adoption 等待延长至 no-progress budget 或 stop marker；并在读取
   payload 前拒绝已知 consumed interval base。
+
+#### 九节点第 2 次尝试 — `20260711_m00_342e975_gpt2_9n_50x10`
+
+- 时间/身份：PBS `2359122.opbs`，以 `mg1078` 为首的九个 compute nodes，实现提交
+  `342e97514ef43643e5f447da79afd3e067c91522`。
+- 现象：committed-successor backpressure 生效，始终只有最初 8 个 proposals，没有
+  same-base flood；但在人工终止前首个 transition 仍未完成。
+- 预期/实际：严格 finite-value validation 必须可扩展到 GPT-2 flat tensor。实际
+  dependency-free validator 对每个 proposal 以 Python 循环遍历约 1.24 亿个 float，
+  8 个 payload 无法在 terminal budget 内完成首次 scan。
+- 原因：由稳定的 8-proposal 数、零 successor 与 validator 中标量
+  `struct.iter_unpack` 循环共同证实。该路径适用于无依赖 protocol fixture，不适合大型
+  production tensor。
+- 影响：仅 M00-A11；未发生 head CAS，operator 主动终止 job（`Exit_status=271`）。
+- 证据：`artifacts/duraloco/M00/20260711_m00_342e975_gpt2_9n_50x10/manifest.json`、
+  `training.log` 与 `qstat_final.log`。
+- 修复：保留严格结构 parser 与 SHA 校验，但 production finite-value pass 改用
+  safetensors/Torch 向量化验证。
 
 ### 限制与下一动作
 

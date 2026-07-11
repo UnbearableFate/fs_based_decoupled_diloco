@@ -45,6 +45,8 @@ acceptance:
       - artifacts/duraloco/M00/20260711_m00_dec182e_gpt2_9n_50x10/manifest.json
       - artifacts/duraloco/M00/20260711_m00_dec182e_gpt2_9n_50x10/training.log
       - artifacts/duraloco/M00/20260711_m00_dec182e_gpt2_9n_50x10/qstat_final.log
+      - artifacts/duraloco/M00/20260711_m00_342e975_gpt2_9n_50x10/manifest.json
+      - artifacts/duraloco/M00/20260711_m00_342e975_gpt2_9n_50x10/training.log
   M00-A12: {result: not_run, evidence: []}
 open_decisions: []
 open_blockers: []
@@ -55,7 +57,8 @@ artifacts:
   - artifacts/duraloco/M00/20260711_m00_97a6876_1node
   - artifacts/duraloco/M00/20260711_m00_81b442c_2node
   - artifacts/duraloco/M00/20260711_m00_dec182e_gpt2_9n_50x10
-next_action: "retry nine nodes with committed-successor learner backpressure and consumed-interval scan pruning"
+  - artifacts/duraloco/M00/20260711_m00_342e975_gpt2_9n_50x10
+next_action: "retry nine nodes with vectorized production payload finiteness validation"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
