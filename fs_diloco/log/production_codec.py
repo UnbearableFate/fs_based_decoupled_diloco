@@ -11,6 +11,7 @@ from safetensors.torch import load as load_bytes
 from safetensors.torch import save as save_bytes
 
 from fs_diloco.protocol.canonical_json import canonical_digest
+from fs_diloco.protocol.errors import ProtocolError
 from fs_diloco.protocol.safetensors_validation import parse_safetensors
 
 from .errors import VerificationError
@@ -27,6 +28,13 @@ PRODUCTION_CODEC_DIGEST = canonical_digest(
     }
 )
 
+_PROTOCOL_TORCH_DTYPES = {
+    "float16": torch.float16,
+    "bfloat16": torch.bfloat16,
+    "float32": torch.float32,
+    "float64": torch.float64,
+}
+
 
 def _cpu_contiguous(tensor: torch.Tensor, *, dtype: torch.dtype | None = None) -> torch.Tensor:
     result = tensor.detach().to(device="cpu")
@@ -38,6 +46,49 @@ def _cpu_contiguous(tensor: torch.Tensor, *, dtype: torch.dtype | None = None) -
 def _require_finite(tensor: torch.Tensor, field: str) -> None:
     if tensor.is_floating_point() and not bool(torch.isfinite(tensor).all().item()):
         raise ValueError(f"{field} contains non-finite values")
+
+
+def validate_production_tensor_payload(
+    payload: bytes,
+    *,
+    tensor_key: str,
+    shape: tuple[int, ...],
+    dtype: str,
+    require_finite: bool = True,
+) -> dict[str, object]:
+    """Strictly validate a large production tensor with vectorized finiteness."""
+
+    try:
+        headers, _ = parse_safetensors(payload)
+        if set(headers) != {tensor_key}:
+            raise ProtocolError(
+                "PAYLOAD_TENSOR_KEY",
+                f"payload keys {sorted(headers)} do not equal expected [{tensor_key!r}]",
+            )
+        header = headers[tensor_key]
+        if header.shape != shape:
+            raise ProtocolError("PAYLOAD_SHAPE", f"shape {header.shape} != expected {shape}")
+        expected_dtype = _PROTOCOL_TORCH_DTYPES.get(dtype)
+        if expected_dtype is None:
+            raise ProtocolError("PAYLOAD_DTYPE", f"unsupported protocol dtype: {dtype}")
+        tensor = load_bytes(payload)[tensor_key]
+        if tensor.dtype != expected_dtype:
+            raise ProtocolError(
+                "PAYLOAD_DTYPE", f"dtype {tensor.dtype} != expected {expected_dtype}"
+            )
+        if require_finite and not bool(torch.isfinite(tensor).all().item()):
+            raise ProtocolError("PAYLOAD_NONFINITE", "payload contains non-finite values")
+        return {
+            "tensor_key": tensor_key,
+            "shape": list(shape),
+            "dtype": dtype,
+            "numel": tensor.numel(),
+            "finite_checked": require_finite,
+        }
+    except ProtocolError:
+        raise
+    except Exception as exc:
+        raise ProtocolError("PAYLOAD_INVALID", f"invalid production tensor: {exc}") from exc
 
 
 def encode_production_params(values: torch.Tensor) -> bytes:

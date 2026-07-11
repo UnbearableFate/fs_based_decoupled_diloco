@@ -11,11 +11,12 @@ from fs_diloco.atomic_io import atomic_write_json, safe_read_json
 from fs_diloco.protocol.canonical_json import canonical_digest
 from fs_diloco.protocol.errors import ErrorCategory, ProtocolError
 from fs_diloco.protocol.quarantine import QuarantineRegistry
-from fs_diloco.protocol.safetensors_validation import parse_safetensors, validate_tensor_payload
+from fs_diloco.protocol.safetensors_validation import parse_safetensors
 from fs_diloco.protocol.schemas import ProposalManifest
 from fs_diloco.protocol.validation import ValidationContext, validate_causal, validate_metadata
 
 from .runtime_view import RuntimeView
+from .log.production_codec import validate_production_tensor_payload
 
 
 _SAFE_TO_PROTOCOL = {"F16": "float16", "BF16": "bfloat16", "F32": "float32", "F64": "float64"}
@@ -133,7 +134,7 @@ class ProposalCatalog:
         if tensor_key != expected_key:
             raise ProtocolError("PAYLOAD_TENSOR_KEY", f"expected {expected_key}, found {tensor_key}")
         dtype = _SAFE_TO_PROTOCOL[header.dtype]
-        validate_tensor_payload(
+        validate_production_tensor_payload(
             payload,
             tensor_key=tensor_key,
             shape=header.shape,
@@ -298,7 +299,7 @@ class ProposalCatalog:
             or hashlib.sha256(payload).hexdigest() != entry.manifest.payload_sha256
         ):
             raise ProtocolError("PAYLOAD_CHANGED", "proposal payload changed after validation")
-        validate_tensor_payload(
+        validate_production_tensor_payload(
             payload,
             tensor_key=entry.manifest.tensor_key,
             shape=entry.manifest.shape,

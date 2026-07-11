@@ -13,7 +13,6 @@ from fs_diloco.protocol.schemas import (
     ProposalManifest,
     ProposalSelection,
 )
-from fs_diloco.protocol.safetensors_validation import validate_tensor_payload
 from fs_diloco.storage import ImmutableConflict, NotFound
 from fs_diloco.storage.base import StorageBackend
 from fs_diloco.testing.deterministic_reference import normalized_weights
@@ -35,6 +34,7 @@ from .production_codec import (
     PRODUCTION_CODEC,
     decode_production_outer_state,
     decode_production_params,
+    validate_production_tensor_payload,
 )
 from .replay import replay_log
 from .run import RunManifest, RunSpec
@@ -191,7 +191,7 @@ class ProductionTransactionalLog:
             raise CommitConflict("proposal payload key is not canonical for its content")
         if len(payload) != proposal.payload_size or hashlib.sha256(payload).hexdigest() != proposal.payload_sha256:
             raise CommitConflict("proposal payload bytes differ from its manifest")
-        validate_tensor_payload(
+        validate_production_tensor_payload(
             payload,
             tensor_key=proposal.tensor_key,
             shape=proposal.shape,
