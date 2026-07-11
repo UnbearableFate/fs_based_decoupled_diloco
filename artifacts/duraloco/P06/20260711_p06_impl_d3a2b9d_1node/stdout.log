@@ -1,0 +1,42 @@
+{
+  "finding_count": 0,
+  "findings": [],
+  "scanned_files": 229,
+  "status": "PASS"
+}
+{
+  "action_counts": {
+    "commit": 2666,
+    "decide": 1047,
+    "invalid_unknown_selection": 899,
+    "publish": 7388,
+    "restart": 1424
+  },
+  "count": 1000,
+  "start_seed": 0,
+  "suite_digest": "bf7c6538396f59b02c9240b03c13354dd6d3a84e18ff67848b689b448560dfb1",
+  "unique_state_digests": 1000
+}
+........................................................................ [ 19%]
+........................................................................ [ 39%]
+........................................................................ [ 58%]
+..........................s...................................F......... [ 78%]
+........................................................................ [ 97%]
+.........                                                                [100%]
+=================================== FAILURES ===================================
+________ test_m00_runtime_uses_the_verified_posix_backend_for_authority ________
+
+    def test_m00_runtime_uses_the_verified_posix_backend_for_authority():
+        from pathlib import Path
+    
+        root = Path(__file__).resolve().parents[2]
+        syncer = (root / "fs_diloco/syncer.py").read_text(encoding="utf-8")
+        learner = (root / "fs_diloco/learner.py").read_text(encoding="utf-8")
+        assert "PosixStorageBackend(paths.authority)" in syncer
+>       assert "publish_proposal_payload" in learner
+E       assert 'publish_proposal_payload' in '"""Filesystem-backed Decoupled DiLoCo learner."""\n\nfrom __future__ import annotations\n\nimport argparse\nimport js...ners=args.num_learners,\n    )\n    run_learner(config, args.learner_id)\n\n\nif __name__ == "__main__":\n    main()\n'
+
+tests/storage/test_capability_probe.py:38: AssertionError
+=========================== short test summary info ============================
+FAILED tests/storage/test_capability_probe.py::test_m00_runtime_uses_the_verified_posix_backend_for_authority
+1 failed, 367 passed, 1 skipped in 19.16s
