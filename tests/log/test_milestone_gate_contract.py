@@ -18,6 +18,7 @@ def test_terminal_milestone_config_is_real_gpt2_50x10():
     assert config["training"]["inner_steps"] == 50
     assert config["sync"]["stop_after_outer_steps"] == 10
     assert config["io"]["keep_last_global_versions"] == 11
+    assert config["io"]["tensor_dtype"] == "bfloat16"
     assert config["sync"]["staleness_lambda"] == 0.2
     assert config["sync"]["selection_policy"] == "oldest_pending"
 
