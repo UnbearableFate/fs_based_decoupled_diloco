@@ -1,0 +1,97 @@
+#!/bin/bash
+#PBS -N m00_payload_bench
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:05:00
+#PBS -j oe
+
+set -eEuo pipefail
+
+PROJECT_ROOT="${PROJECT_ROOT:-${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}}"
+PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
+: "${INPUT_ROOT:?INPUT_ROOT is required}"
+: "${OUTPUT:?OUTPUT is required}"
+cd "$PROJECT_ROOT"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+export CUDA_VISIBLE_DEVICES=0
+
+"$PYTHON_BIN" - "$INPUT_ROOT" "$OUTPUT" <<'PY'
+from concurrent.futures import ThreadPoolExecutor
+import hashlib
+import json
+from pathlib import Path
+import sys
+import time
+
+import torch
+from safetensors.torch import load
+
+from fs_diloco.log.production_codec import validate_production_tensor_payload
+
+root = Path(sys.argv[1])
+output = Path(sys.argv[2])
+paths = sorted(root.glob("learner_*/update_*.params.safetensors"))
+if len(paths) != 8:
+    raise AssertionError(f"expected 8 payloads, found {len(paths)}")
+
+def elapsed(call):
+    start = time.monotonic()
+    result = call()
+    return result, time.monotonic() - start
+
+data, read_seconds = elapsed(paths[0].read_bytes)
+_, sha_seconds = elapsed(lambda: hashlib.sha256(data).hexdigest())
+tensors, load_seconds = elapsed(lambda: load(data))
+tensor = next(iter(tensors.values()))
+_, cpu_finite_seconds = elapsed(lambda: bool(torch.isfinite(tensor).all().item()))
+_, gpu_finite_seconds = elapsed(
+    lambda: bool(torch.isfinite(tensor.to("cuda")).all().item())
+)
+
+def read_hash(path):
+    payload = path.read_bytes()
+    return hashlib.sha256(payload).hexdigest()
+
+_, parallel_read_hash_seconds = elapsed(
+    lambda: list(ThreadPoolExecutor(max_workers=8).map(read_hash, paths))
+)
+
+def full_validate(path):
+    payload = path.read_bytes()
+    loaded = load(payload)
+    key, value = next(iter(loaded.items()))
+    dtype = {
+        torch.float16: "float16",
+        torch.bfloat16: "bfloat16",
+        torch.float32: "float32",
+        torch.float64: "float64",
+    }[value.dtype]
+    return validate_production_tensor_payload(
+        payload,
+        tensor_key=key,
+        shape=tuple(value.shape),
+        dtype=dtype,
+        validation_device="cuda",
+    ).sha256
+
+_, parallel_full_validate_seconds = elapsed(
+    lambda: list(ThreadPoolExecutor(max_workers=8).map(full_validate, paths))
+)
+report = {
+    "status": "PASS",
+    "hostname": __import__("socket").gethostname(),
+    "payload_bytes": len(data),
+    "dtype": str(tensor.dtype),
+    "read_seconds": read_seconds,
+    "sha_seconds": sha_seconds,
+    "load_seconds": load_seconds,
+    "cpu_finite_seconds": cpu_finite_seconds,
+    "gpu_finite_seconds": gpu_finite_seconds,
+    "parallel_read_hash_seconds": parallel_read_hash_seconds,
+    "parallel_full_validate_seconds": parallel_full_validate_seconds,
+}
+output.parent.mkdir(parents=True, exist_ok=True)
+output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
+print(json.dumps(report, sort_keys=True))
+PY
