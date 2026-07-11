@@ -49,17 +49,7 @@ acceptance:
   P06C-A22: {result: not_run, evidence: []}
   P06C-A23: {result: not_run, evidence: []}
   P06C-A24: {result: not_run, evidence: []}
-open_decisions:
-  - D-06C01
-  - D-06C02
-  - D-06C03
-  - D-06C04
-  - D-06C05
-  - D-06C06
-  - D-06C07
-  - D-06C08
-  - D-06C09
-  - D-06C10
+open_decisions: []
 open_blockers: []
 artifacts:
   - plans/duraloco/phases/P06B_PHASE_REPORT.md
@@ -67,7 +57,7 @@ artifacts:
   - plans/duraloco/errors/P06B_ERROR_LEDGER.yaml
   - plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/P06A_P06B_IMPLEMENTATION_LESSONS.md
   - artifacts/duraloco/P06B/20260711_p06b_checker_b260467_1node
-next_action: "freeze D-06C01 through D-06C10 and implement factor-two/duplicate property gate before any runtime launch"
+next_action: "run the P06C RED gate, then implement the factor-two policy and duplicate decision kernels"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

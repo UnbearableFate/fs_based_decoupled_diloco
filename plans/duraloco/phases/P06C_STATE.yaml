@@ -10,4 +10,4 @@ checks:
   d2_r2: not_run
   d8_r2: not_run
 checker_verdict: not_run
-next_action: "freeze D-06C01 through D-06C10 and implement the schema/property gate"
+next_action: "run the P06C RED gate, then implement the schema/property gate"

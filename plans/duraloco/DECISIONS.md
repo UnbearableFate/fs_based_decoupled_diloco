@@ -690,3 +690,53 @@ P05+ 的规范性路线决策生效。
 ## D-06B12 — Semantic result excludes attempt evidence
 
 - Choice: canonical result and final transition identities exclude executor, attempt, timing, telemetry, and arrival order. Those facts live only in attempt envelopes.
+
+## D-06C01 — Factor two is a fresh-generation committed invariant
+
+- Choice: P06C starts a fresh distributed generation whose RunSpec freezes replication factor 2. Rendezvous top-2 order is canonical: index 0 is primary and index 1 backup. Factor change is not a local runtime knob and requires another generation.
+- Rejected: silently degrading to factor one or changing factor from heartbeat evidence would make ownership unreplayable.
+
+## D-06C02 — Warm standby has no private optimizer state
+
+- Choice: warm backup is a ready LFE with the same immutable FWO/input capability. It starts prepare only after an explicit derived backup-activation signal caused by primary liveness timeout; it rereads committed parent/input objects and never receives primary-local state.
+- Rejected: copying primary memory/checkpoints violates storage-only recovery.
+
+## D-06C03 — Replayable execution mode lives in FWO v2
+
+- Choice: FWO v2 binds ordered owner IDs and one mode: `warm_standby`, `active_active`, or `hedged`. Only `hedged` carries a positive canonical integer `hedge_delay_ms`; the other modes canonically omit it. Derived dispatch timing may trigger work but cannot alter FWO identity.
+- Rejected: process-local mode/delay would make retries and comparisons ambiguous.
+
+## D-06C04 — Same-backend duplicate equivalence is exact
+
+- Choice: same-FWO attempts freeze backend/thread/reduction identity and must produce the same `prepared_result_id`, parameter/state refs, aggregate digest and semantic digest. Any difference is a fatal divergent-result classification with preserved evidence.
+- Rejected: tolerance or majority voting can conceal nondeterminism and change the committed trajectory.
+
+## D-06C05 — Winner is semantic result, not fastest attempt
+
+- Choice: the committer validates every discovered attempt in the decision window. Equivalent attempts collapse to one canonical result; attempt envelopes are sorted only for audit attribution. Final transition binds `work_order_id` and `prepared_result_id`, never first-finish/executor identity.
+- Rejected: committing an unvalidated first marker lets listing/arrival order enter authority.
+
+## D-06C06 — Failure evidence proposes, head commit disposes
+
+- Choice: heartbeat/timeout/fault tape produces an evidence digest and a derived reconfiguration request. Only the fenced committer may commit the next strict MembershipControlTransition. False suspicion may increase work or commit a conservative member removal, but cannot directly change ownership.
+- Rejected: heartbeat-driven local remap is a second authority.
+
+## D-06C07 — Old-epoch PFT is never reused in P06C
+
+- Choice: any parent, fencing epoch, membership revision or ownership digest mismatch rejects the PFT. P06C recomputes from committed storage after reconfiguration rather than rebasing old output.
+- Rejected: rebase would require a new numeric/selection proof and can apply output to a different parent.
+
+## D-06C08 — Explicit factor-two liveness boundary
+
+- Choice: factor two requires at least two eligible members. Loss of one owner is recoverable; loss of all owners permits safe no-progress until committed membership supplies an eligible pair. Simultaneous committer failure is recoverable only when another committed candidate and storage remain available.
+- Rejected: silent factor-one fallback overstates liveness and changes the RunSpec invariant.
+
+## D-06C09 — Retain winner and loser objects through P07
+
+- Choice: P06C performs no destructive PFT cleanup. Winner/loser attempts, markers, failure evidence and epoch objects remain auditable; P07 freezes reachability, grace and deletion rules.
+- Rejected: eager loser deletion repeats the P06A marker-last cleanup race.
+
+## D-06C10 — D8-R2 defaults to fixed six-second hedge
+
+- Choice: the terminal D8-R2 mode is `hedged` with `hedge_delay_ms=6000`, compared with the frozen P06B factor-one D8. D1/D2 also cover warm-standby and active-active modes. The six-second value is an observed-baseline experiment setting, not a universal optimum.
+- Rejected: adaptive delay before P10 would add an uncommitted controller decision and confound P06C correctness.
