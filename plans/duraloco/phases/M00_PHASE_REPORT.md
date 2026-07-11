@@ -154,6 +154,28 @@ two-node and nine-node compute qualification remain in progress.
   `training.log`, and `qstat_final.log`.
 - Repair: keep the strict structural parser and SHA checks, but perform the
   production finite-value pass with safetensors/Torch vectorized validation.
+
+#### Nine-node attempt 3 — `20260711_m00_2d572d4_gpt2_9n_50x10`
+
+- Time/identity: PBS `2359156.opbs`, nine compute hosts led by `mg1078`,
+  implementation `2d572d47319627353850b0ce044fc77152098b92`. The same clean commit
+  first passed requalification jobs `2359153.opbs` (one node) and
+  `2359155.opbs` (two nodes).
+- Phenomenon: vectorized validation allowed the first eight-proposal production
+  transition to commit exactly once, and all learners adopted sequence 1. The
+  first transition nevertheless took about 105 seconds after proposal publish,
+  making ten transitions incompatible with the 15-minute hard gate.
+- Expected/actual: each payload should be validated once per scan. Instead the
+  scanner validated it, `load_payload` reread/revalidated it, and
+  `publish_proposal` performed a third validation before immutable publication.
+- Reason: confirmed from the three call sites and the first-transition timing.
+- Impact: M00-A11 only; the committed sequence-1 prefix is valid. The operator
+  terminated the job deliberately (`Exit_status=271`).
+- Evidence: `artifacts/duraloco/M00/20260711_m00_2d572d4_gpt2_9n_50x10/manifest.json`,
+  `training.log`, plus the same-commit one/two-node requalification manifests.
+- Repair: retain the immutable validated bytes in `CatalogEntry` and pass a
+  typed validation result into production publication, eliminating rereads and
+  redundant finite-value scans without weakening structural/SHA validation.
 - Impact: M00-A03, M00-A04, M00-A09, P02-A04, and P04 replay requalification.
 - Evidence: `artifacts/duraloco/M00/20260711_m00_04da7ee_1node/manifest.json`,
   `one_node_contract.json`, full syncer/learner logs, and `stdout.log`.
@@ -305,6 +327,25 @@ generation metadata 与 M00 静态/运行 harness。源码、配置、脚本与�
   `training.log` 与 `qstat_final.log`。
 - 修复：保留严格结构 parser 与 SHA 校验，但 production finite-value pass 改用
   safetensors/Torch 向量化验证。
+
+#### 九节点第 3 次尝试 — `20260711_m00_2d572d4_gpt2_9n_50x10`
+
+- 时间/身份：PBS `2359156.opbs`，以 `mg1078` 为首的九个 compute nodes，实现提交
+  `2d572d47319627353850b0ce044fc77152098b92`。同一干净提交先通过了
+  `2359153.opbs`（单节点）与 `2359155.opbs`（双节点）再验收。
+- 现象：向量化验证使首个含 8 proposals 的 production transition 恰好提交一次，
+  全部 learner 也采用了 sequence 1；但从 proposal publish 到首个 transition 仍约需
+  105 秒，无法在 15 分钟 hard gate 内完成 10 个 transitions。
+- 预期/实际：每个 payload 每轮只应验证一次。实际 scanner 验证一次，`load_payload`
+  再次读取/验证，`publish_proposal` 在 immutable publication 前第三次验证。
+- 原因：由三个调用点与首个 transition timing 共同证实。
+- 影响：仅 M00-A11；已提交 sequence-1 prefix 合法。operator 主动终止 job
+  （`Exit_status=271`）。
+- 证据：`artifacts/duraloco/M00/20260711_m00_2d572d4_gpt2_9n_50x10/manifest.json`、
+  `training.log`，以及同 commit 单/双节点再验收 manifests。
+- 修复：在 `CatalogEntry` 保留 immutable validated bytes，并将 typed validation result
+  直接交给 production publication；在不削弱结构/SHA 验证的前提下消除重复读取与
+  finite-value scan。
 
 ### 限制与下一动作
 

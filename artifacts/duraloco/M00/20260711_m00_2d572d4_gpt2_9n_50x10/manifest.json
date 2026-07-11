@@ -1,0 +1,33 @@
+{
+  "assertions": [
+    "vectorized validation allowed the first eight-proposal transition to commit exactly once",
+    "operator terminated after repeated scan/load/publish validation showed the 10-transition terminal budget would be exceeded"
+  ],
+  "backend": "lustre",
+  "commands_log": "commands.log",
+  "config_digest": "962fc3a9a52d6485982ebb0a61bf947153e1e5902f825c75ee8381d70f6f4744",
+  "config_path": "configs/duraloco_milestone_gpt2_9node_50x10.yaml",
+  "dataset_revision": "wikitext-2-raw-v1",
+  "dirty_paths": [],
+  "dirty_tree": false,
+  "ended_at_utc": "2026-07-11T00:08:28Z",
+  "exit_code": 271,
+  "git_branch": "codex/duraloco-m00-sqlite-free-rebase",
+  "git_commit": "2d572d47319627353850b0ce044fc77152098b92",
+  "hostname": "mg1078",
+  "manifest_sha256": "adaacfdb7a0876a2d1c0818b0f7a3aaa9f341c23537f93f4bd4879a49c553f86",
+  "model_revision": "gpt2",
+  "parent_run_id": "20260711_m00_2d572d4_2node_requal",
+  "pbs_job_id": "2359156.opbs",
+  "pbs_nodefile_digest": "49bf069399719ea7235e3a8ed56121e781721fb93e229859580ffed7acd763bc",
+  "phase": "M00",
+  "purpose": "experiment",
+  "python_version": "3.13.13",
+  "result": "fail",
+  "run_id": "20260711_m00_2d572d4_gpt2_9n_50x10",
+  "schema_version": 1,
+  "seed": null,
+  "started_at_utc": "2026-07-11T00:04:19Z",
+  "stderr": "stderr.log",
+  "stdout": "stdout.log"
+}

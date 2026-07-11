@@ -1,0 +1,211 @@
+[mg1078:2686693] MCW rank 0 is not bound (or bound to all available processors)
+[mg0200:917969] MCW rank 8 is not bound (or bound to all available processors)
+[mg0176:913981] MCW rank 4 is not bound (or bound to all available processors)
+[mg0175:2323102] MCW rank 3 is not bound (or bound to all available processors)
+[mg0178:1962983] MCW rank 5 is not bound (or bound to all available processors)
+[mg0150:1794210] MCW rank 2 is not bound (or bound to all available processors)
+[mg0198:2553891] MCW rank 7 is not bound (or bound to all available processors)
+[mg0195:4004667] MCW rank 6 is not bound (or bound to all available processors)
+[mg0135:890924] MCW rank 1 is not bound (or bound to all available processors)
+{"actor": "syncer", "authority_root": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_2d572d4_gpt2_9n_50x10/authority", "cuda_visible_devices": "0", "device": "cuda", "event_type": "process_start", "hostname": "mg1078", "run_generation": 0, "run_id": "20260711_m00_2d572d4_gpt2_9n_50x10", "shared_root": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_2d572d4_gpt2_9n_50x10", "timestamp": 1783728268.9753935}
+{"actor": "syncer", "event_type": "wandb_disabled", "hostname": "mg1078", "timestamp": 1783728268.9785008}
+{"actor": "learner_001", "device": "cuda", "event_type": "process_start", "hostname": "mg0150", "learner_id": "learner_001", "run_id": "20260711_m00_2d572d4_gpt2_9n_50x10", "timestamp": 1783728269.382374}
+{"actor": "learner_004", "device": "cuda", "event_type": "process_start", "hostname": "mg0178", "learner_id": "learner_004", "run_id": "20260711_m00_2d572d4_gpt2_9n_50x10", "timestamp": 1783728269.396471}
+{"actor": "learner_003", "device": "cuda", "event_type": "process_start", "hostname": "mg0176", "learner_id": "learner_003", "run_id": "20260711_m00_2d572d4_gpt2_9n_50x10", "timestamp": 1783728269.412951}
+{"actor": "learner_007", "device": "cuda", "event_type": "process_start", "hostname": "mg0200", "learner_id": "learner_007", "run_id": "20260711_m00_2d572d4_gpt2_9n_50x10", "timestamp": 1783728269.4154017}
+{"actor": "learner_006", "device": "cuda", "event_type": "process_start", "hostname": "mg0198", "learner_id": "learner_006", "run_id": "20260711_m00_2d572d4_gpt2_9n_50x10", "timestamp": 1783728269.4340286}
+{"actor": "learner_002", "device": "cuda", "event_type": "process_start", "hostname": "mg0175", "learner_id": "learner_002", "run_id": "20260711_m00_2d572d4_gpt2_9n_50x10", "timestamp": 1783728269.4442742}
+{"actor": "learner_005", "device": "cuda", "event_type": "process_start", "hostname": "mg0195", "learner_id": "learner_005", "run_id": "20260711_m00_2d572d4_gpt2_9n_50x10", "timestamp": 1783728269.4727468}
+{"actor": "learner_000", "device": "cuda", "event_type": "process_start", "hostname": "mg0135", "learner_id": "learner_000", "run_id": "20260711_m00_2d572d4_gpt2_9n_50x10", "timestamp": 1783728269.477822}
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights:  64%|██████▎   | 94/148 [00:00<00:00, 932.65it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 874.39it/s]
+Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights:  64%|██████▎   | 94/148 [00:00<00:00, 909.41it/s]Loading weights:  64%|██████▎   | 94/148 [00:00<00:00, 865.60it/s]Loading weights:  64%|██████▎   | 94/148 [00:00<00:00, 850.15it/s]Loading weights:  72%|███████▏  | 106/148 [00:00<00:00, 1006.54it/s]Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights:  58%|█████▊    | 86/148 [00:00<00:00, 802.55it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 669.97it/s]
+Loading weights: 100%|██████████| 148/148 [00:00<00:00, 660.07it/s]
+Loading weights: 100%|██████████| 148/148 [00:00<00:00, 682.14it/s]
+Loading weights: 100%|██████████| 148/148 [00:00<00:00, 684.04it/s] 
+Loading weights:  35%|███▌      | 52/148 [00:00<00:00, 510.66it/s]Loading weights:  47%|████▋     | 69/148 [00:00<00:00, 689.79it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 604.19it/s]
+Loading weights:   0%|          | 0/148 [00:00<?, ?it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 746.60it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 737.32it/s]
+Loading weights: 100%|██████████| 148/148 [00:00<00:00, 748.37it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 712.66it/s]
+Loading weights:  64%|██████▎   | 94/148 [00:00<00:00, 908.74it/s]Loading weights: 100%|██████████| 148/148 [00:00<00:00, 778.84it/s]
+{"actor": "syncer", "commit_seq": 0, "event_type": "generation_initialized", "hostname": "mg1078", "timestamp": 1783728287.1315627, "view_digest": "2ec121e2ce32fa1e4525dc2f979f15c17129da2b141d09e4a1cd38b4123b1a47"}
+{"actor": "learner_000", "event_type": "loaded_global", "hostname": "mg0135", "timestamp": 1783728289.1971233, "version": 0}
+{"actor": "learner_000", "event_type": "inner_optimizer_reset", "hostname": "mg0135", "timestamp": 1783728289.199465, "version": 0}
+{"actor": "learner_003", "event_type": "loaded_global", "hostname": "mg0176", "timestamp": 1783728289.8877258, "version": 0}
+{"actor": "learner_003", "event_type": "inner_optimizer_reset", "hostname": "mg0176", "timestamp": 1783728289.8892105, "version": 0}
+{"actor": "learner_001", "event_type": "loaded_global", "hostname": "mg0150", "timestamp": 1783728289.9012709, "version": 0}
+{"actor": "learner_001", "event_type": "inner_optimizer_reset", "hostname": "mg0150", "timestamp": 1783728289.90365, "version": 0}
+{"actor": "learner_002", "event_type": "loaded_global", "hostname": "mg0175", "timestamp": 1783728289.9045444, "version": 0}
+{"actor": "learner_002", "event_type": "inner_optimizer_reset", "hostname": "mg0175", "timestamp": 1783728289.9063742, "version": 0}
+{"actor": "learner_005", "event_type": "loaded_global", "hostname": "mg0195", "timestamp": 1783728289.9078078, "version": 0}
+{"actor": "learner_005", "event_type": "inner_optimizer_reset", "hostname": "mg0195", "timestamp": 1783728289.909604, "version": 0}
+{"actor": "learner_004", "event_type": "loaded_global", "hostname": "mg0178", "timestamp": 1783728289.941326, "version": 0}
+{"actor": "learner_004", "event_type": "inner_optimizer_reset", "hostname": "mg0178", "timestamp": 1783728289.9431264, "version": 0}
+{"actor": "learner_007", "event_type": "loaded_global", "hostname": "mg0200", "timestamp": 1783728289.992968, "version": 0}
+{"actor": "learner_007", "event_type": "inner_optimizer_reset", "hostname": "mg0200", "timestamp": 1783728289.9944396, "version": 0}
+{"actor": "learner_006", "event_type": "loaded_global", "hostname": "mg0198", "timestamp": 1783728290.0678804, "version": 0}
+{"actor": "learner_006", "event_type": "inner_optimizer_reset", "hostname": "mg0198", "timestamp": 1783728290.0697474, "version": 0}
+Generating test split:   0%|          | 0/4358 [00:00<?, ? examples/s]Generating test split: 100%|██████████| 4358/4358 [00:00<00:00, 133473.36 examples/s]
+Generating train split:   0%|          | 0/36718 [00:00<?, ? examples/s]Generating train split: 100%|██████████| 36718/36718 [00:00<00:00, 1666393.86 examples/s]
+Generating validation split:   0%|          | 0/3760 [00:00<?, ? examples/s]Generating validation split: 100%|██████████| 3760/3760 [00:00<00:00, 679327.29 examples/s]
+{"actor": "syncer", "commit_seq": 0, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg1078", "quorum_min": 4, "timestamp": 1783728293.793395}
+[transformers] `loss_type=None` was set in the config but it is unrecognized. Using the default loss: `ForCausalLMLoss`.
+[transformers] `loss_type=None` was set in the config but it is unrecognized. Using the default loss: `ForCausalLMLoss`.
+[transformers] `loss_type=None` was set in the config but it is unrecognized. Using the default loss: `ForCausalLMLoss`.
+[transformers] `loss_type=None` was set in the config but it is unrecognized. Using the default loss: `ForCausalLMLoss`.
+[transformers] `loss_type=None` was set in the config but it is unrecognized. Using the default loss: `ForCausalLMLoss`.
+[transformers] `loss_type=None` was set in the config but it is unrecognized. Using the default loss: `ForCausalLMLoss`.
+{"actor": "learner_000", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0135", "local_step": 10, "timestamp": 1783728294.7022958, "train_loss": 4.372042655944824}
+[transformers] `loss_type=None` was set in the config but it is unrecognized. Using the default loss: `ForCausalLMLoss`.
+[transformers] `loss_type=None` was set in the config but it is unrecognized. Using the default loss: `ForCausalLMLoss`.
+{"actor": "learner_000", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0135", "local_step": 20, "timestamp": 1783728294.9884076, "train_loss": 4.462565898895264}
+{"actor": "learner_002", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0175", "local_step": 10, "timestamp": 1783728295.112398, "train_loss": 4.36397123336792}
+{"actor": "learner_003", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0176", "local_step": 10, "timestamp": 1783728295.1424482, "train_loss": 3.695762872695923}
+{"actor": "learner_004", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0178", "local_step": 10, "timestamp": 1783728295.1484857, "train_loss": 4.607664108276367}
+{"actor": "learner_005", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0195", "local_step": 10, "timestamp": 1783728295.155523, "train_loss": 4.186495304107666}
+{"actor": "learner_001", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0150", "local_step": 10, "timestamp": 1783728295.1914165, "train_loss": 4.5960612297058105}
+{"actor": "learner_007", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0200", "local_step": 10, "timestamp": 1783728295.2103152, "train_loss": 4.605291843414307}
+{"actor": "learner_000", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0135", "local_step": 30, "timestamp": 1783728295.2678454, "train_loss": 4.418074607849121}
+{"actor": "learner_006", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0198", "local_step": 10, "timestamp": 1783728295.3174326, "train_loss": 4.915979862213135}
+{"actor": "learner_002", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0175", "local_step": 20, "timestamp": 1783728295.4001079, "train_loss": 4.184290409088135}
+{"actor": "learner_004", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0178", "local_step": 20, "timestamp": 1783728295.4057298, "train_loss": 4.6790452003479}
+{"actor": "learner_003", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0176", "local_step": 20, "timestamp": 1783728295.4204292, "train_loss": 4.286275386810303}
+{"actor": "learner_005", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0195", "local_step": 20, "timestamp": 1783728295.433198, "train_loss": 4.151762962341309}
+{"actor": "learner_001", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0150", "local_step": 20, "timestamp": 1783728295.4787738, "train_loss": 3.6231658458709717}
+{"actor": "learner_007", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0200", "local_step": 20, "timestamp": 1783728295.4804504, "train_loss": 3.8874592781066895}
+{"actor": "learner_000", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0135", "local_step": 40, "timestamp": 1783728295.543639, "train_loss": 3.5511598587036133}
+{"actor": "learner_006", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0198", "local_step": 20, "timestamp": 1783728295.5757835, "train_loss": 4.561633110046387}
+{"actor": "learner_004", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0178", "local_step": 30, "timestamp": 1783728295.6625988, "train_loss": 3.603583335876465}
+{"actor": "learner_002", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0175", "local_step": 30, "timestamp": 1783728295.6833925, "train_loss": 4.407059192657471}
+{"actor": "learner_003", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0176", "local_step": 30, "timestamp": 1783728295.6993191, "train_loss": 3.719120502471924}
+{"actor": "learner_005", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0195", "local_step": 30, "timestamp": 1783728295.704065, "train_loss": 4.667545795440674}
+{"actor": "learner_007", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0200", "local_step": 30, "timestamp": 1783728295.7526503, "train_loss": 4.35351037979126}
+{"actor": "learner_001", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0150", "local_step": 30, "timestamp": 1783728295.765885, "train_loss": 4.24212121963501}
+{"actor": "learner_000", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0135", "local_step": 50, "timestamp": 1783728295.8182688, "train_loss": 3.824361562728882}
+{"actor": "learner_006", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0198", "local_step": 30, "timestamp": 1783728295.833154, "train_loss": 4.196341514587402}
+{"actor": "learner_004", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0178", "local_step": 40, "timestamp": 1783728295.9201732, "train_loss": 3.9317214488983154}
+{"actor": "learner_002", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0175", "local_step": 40, "timestamp": 1783728295.9673243, "train_loss": 4.04349946975708}
+{"actor": "learner_003", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0176", "local_step": 40, "timestamp": 1783728295.9789228, "train_loss": 4.565461158752441}
+{"actor": "learner_005", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0195", "local_step": 40, "timestamp": 1783728296.0030334, "train_loss": 3.9518392086029053}
+{"actor": "learner_007", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0200", "local_step": 40, "timestamp": 1783728296.025618, "train_loss": 4.661355972290039}
+{"actor": "learner_001", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0150", "local_step": 40, "timestamp": 1783728296.0580432, "train_loss": 3.972079277038574}
+{"actor": "learner_006", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0198", "local_step": 40, "timestamp": 1783728296.0902128, "train_loss": 4.299639701843262}
+{"actor": "learner_004", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0178", "local_step": 50, "timestamp": 1783728296.1760213, "train_loss": 4.068309307098389}
+{"actor": "learner_002", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0175", "local_step": 50, "timestamp": 1783728296.2490695, "train_loss": 4.868642807006836}
+{"actor": "learner_003", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0176", "local_step": 50, "timestamp": 1783728296.2551942, "train_loss": 4.617752552032471}
+{"actor": "learner_005", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0195", "local_step": 50, "timestamp": 1783728296.273178, "train_loss": 3.983083724975586}
+{"actor": "learner_007", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0200", "local_step": 50, "timestamp": 1783728296.2949996, "train_loss": 4.9382171630859375}
+{"actor": "learner_006", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0198", "local_step": 50, "timestamp": 1783728296.3456988, "train_loss": 4.3744001388549805}
+{"actor": "learner_001", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0150", "local_step": 50, "timestamp": 1783728296.3441818, "train_loss": 4.102843761444092}
+{"actor": "learner_000", "event_type": "update_written", "file_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_2d572d4_gpt2_9n_50x10/updates/pending/learner_000/update_93ffdb3592bf.params.safetensors", "hostname": "mg0135", "local_step": 50, "timestamp": 1783728296.5649467, "tokens": 6400, "train_loss": 4.302767019271851, "update_id": "learner_000_00000050_93ffdb3592bf"}
+{"actor": "learner_000", "event_type": "heartbeat_written", "hostname": "mg0135", "local_step": 50, "timestamp": 1783728296.5723403}
+{"actor": "learner_004", "event_type": "update_written", "file_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_2d572d4_gpt2_9n_50x10/updates/pending/learner_004/update_8d1f204126c7.params.safetensors", "hostname": "mg0178", "local_step": 50, "timestamp": 1783728296.752123, "tokens": 6400, "train_loss": 4.385044903755188, "update_id": "learner_004_00000050_8d1f204126c7"}
+{"actor": "learner_004", "event_type": "heartbeat_written", "hostname": "mg0178", "local_step": 50, "timestamp": 1783728296.7628407}
+{"actor": "learner_002", "event_type": "update_written", "file_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_2d572d4_gpt2_9n_50x10/updates/pending/learner_002/update_9bd2a25e5573.params.safetensors", "hostname": "mg0175", "local_step": 50, "timestamp": 1783728296.8764405, "tokens": 6400, "train_loss": 4.223491368293762, "update_id": "learner_002_00000050_9bd2a25e5573"}
+{"actor": "learner_002", "event_type": "heartbeat_written", "hostname": "mg0175", "local_step": 50, "timestamp": 1783728296.8859358}
+{"actor": "learner_005", "event_type": "update_written", "file_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_2d572d4_gpt2_9n_50x10/updates/pending/learner_005/update_86f400dd2029.params.safetensors", "hostname": "mg0195", "local_step": 50, "timestamp": 1783728296.9365964, "tokens": 6400, "train_loss": 4.110892753601075, "update_id": "learner_005_00000050_86f400dd2029"}
+{"actor": "learner_007", "event_type": "update_written", "file_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_2d572d4_gpt2_9n_50x10/updates/pending/learner_007/update_1daab05293c2.params.safetensors", "hostname": "mg0200", "local_step": 50, "timestamp": 1783728296.944161, "tokens": 6400, "train_loss": 4.55599953174591, "update_id": "learner_007_00000050_1daab05293c2"}
+{"actor": "learner_005", "event_type": "heartbeat_written", "hostname": "mg0195", "local_step": 50, "timestamp": 1783728296.9527042}
+{"actor": "learner_007", "event_type": "heartbeat_written", "hostname": "mg0200", "local_step": 50, "timestamp": 1783728296.9553967}
+{"actor": "learner_003", "event_type": "update_written", "file_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_2d572d4_gpt2_9n_50x10/updates/pending/learner_003/update_5ceaa32e7dda.params.safetensors", "hostname": "mg0176", "local_step": 50, "timestamp": 1783728296.9563203, "tokens": 6400, "train_loss": 4.3965653133392335, "update_id": "learner_003_00000050_5ceaa32e7dda"}
+{"actor": "learner_003", "event_type": "heartbeat_written", "hostname": "mg0176", "local_step": 50, "timestamp": 1783728296.9648116}
+{"actor": "learner_006", "event_type": "update_written", "file_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_2d572d4_gpt2_9n_50x10/updates/pending/learner_006/update_bb805169aa0e.params.safetensors", "hostname": "mg0198", "local_step": 50, "timestamp": 1783728297.0582004, "tokens": 6400, "train_loss": 4.442446389198303, "update_id": "learner_006_00000050_bb805169aa0e"}
+{"actor": "learner_006", "event_type": "heartbeat_written", "hostname": "mg0198", "local_step": 50, "timestamp": 1783728297.0668957}
+{"actor": "learner_001", "event_type": "update_written", "file_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_2d572d4_gpt2_9n_50x10/updates/pending/learner_001/update_321ff2be9c75.params.safetensors", "hostname": "mg0150", "local_step": 50, "timestamp": 1783728297.1432276, "tokens": 6400, "train_loss": 4.219730610847473, "update_id": "learner_001_00000050_321ff2be9c75"}
+{"actor": "learner_001", "event_type": "heartbeat_written", "hostname": "mg0150", "local_step": 50, "timestamp": 1783728297.1537054}
+{"actor": "syncer", "commit_id": "c-b71d0959d48306efdb5898f56af75cbcec1d911f15ec86c5fe8dfaf1eb2a8b20", "commit_seq": 1, "event_type": "transition_committed", "fragment_id": 0, "hostname": "mg1078", "selected_proposal_ids": ["p-05459c4255c8d59ea8eba2c79b425d705ad811d95a400139c4ad4d3c7de6b6d7", "p-6d37172a804142f908fa716af2d821347d4c2066b615215ff4adbf0b4070140b", "p-87ac6f2f840c40a9fc14a13716b70fed12e2d8340b7d7a1eced5c1d9a8d39c1a", "p-92b844cbf1d0d245be856bd479c0d051c1729a6727aee4acc1418cf37669e11c", "p-d602728fd94a781134dc22e4b433a8f96e0eb04bcec87381571942d50654252c", "p-e4da5ded43bbb6e5864804389f4c364ac0527580cbc210db48b5e6b08717f59d", "p-f0e721cf0dd6e6287ca5b4fe7ee84619bd09417ff9e187fb4b1f9dcd46db5b40", "p-faa5a4df2665b4e3cc547afcac3bd69a8688170aeadd834b64194f2f35cd481e"], "timestamp": 1783728402.0744588, "view_digest": "cb7ddbdbefd7376d8627a2a75b731db807609457f692dd463155019b22a0f5b4"}
+{"actor": "learner_006", "current_version": 0, "event_type": "latest_polled", "found_version": 1, "hostname": "mg0198", "timestamp": 1783728402.1231327}
+{"actor": "learner_001", "current_version": 0, "event_type": "latest_polled", "found_version": 1, "hostname": "mg0150", "timestamp": 1783728402.2124267}
+{"actor": "learner_006", "event_type": "global_adopted", "hostname": "mg0198", "timestamp": 1783728402.4591668, "version": 1}
+{"actor": "learner_006", "event_type": "inner_optimizer_reset", "hostname": "mg0198", "timestamp": 1783728402.4605258, "version": 1}
+{"actor": "learner_006", "event_type": "heartbeat_written", "hostname": "mg0198", "local_step": 51, "timestamp": 1783728402.496779}
+{"actor": "learner_001", "event_type": "global_adopted", "hostname": "mg0150", "timestamp": 1783728402.5601265, "version": 1}
+{"actor": "learner_001", "event_type": "inner_optimizer_reset", "hostname": "mg0150", "timestamp": 1783728402.561598, "version": 1}
+{"actor": "learner_001", "event_type": "heartbeat_written", "hostname": "mg0150", "local_step": 51, "timestamp": 1783728402.6015756}
+{"actor": "learner_000", "current_version": 0, "event_type": "latest_polled", "found_version": 1, "hostname": "mg0135", "timestamp": 1783728402.6295316}
+{"actor": "learner_006", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0198", "local_step": 60, "timestamp": 1783728402.7298744, "train_loss": 3.951204538345337}
+{"actor": "learner_004", "current_version": 0, "event_type": "latest_polled", "found_version": 1, "hostname": "mg0178", "timestamp": 1783728402.827064}
+{"actor": "learner_001", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0150", "local_step": 60, "timestamp": 1783728402.86699, "train_loss": 3.3252079486846924}
+{"actor": "learner_002", "current_version": 0, "event_type": "latest_polled", "found_version": 1, "hostname": "mg0175", "timestamp": 1783728402.9505756}
+{"actor": "learner_006", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0198", "local_step": 70, "timestamp": 1783728402.9850855, "train_loss": 3.9601573944091797}
+{"actor": "learner_005", "current_version": 0, "event_type": "latest_polled", "found_version": 1, "hostname": "mg0195", "timestamp": 1783728403.0107284}
+{"actor": "learner_000", "event_type": "global_adopted", "hostname": "mg0135", "timestamp": 1783728403.0122514, "version": 1}
+{"actor": "learner_000", "event_type": "inner_optimizer_reset", "hostname": "mg0135", "timestamp": 1783728403.0137262, "version": 1}
+{"actor": "learner_007", "current_version": 0, "event_type": "latest_polled", "found_version": 1, "hostname": "mg0200", "timestamp": 1783728403.018014}
+{"actor": "learner_003", "current_version": 0, "event_type": "latest_polled", "found_version": 1, "hostname": "mg0176", "timestamp": 1783728403.0293553}
+{"actor": "learner_000", "event_type": "heartbeat_written", "hostname": "mg0135", "local_step": 51, "timestamp": 1783728403.0544283}
+{"actor": "learner_004", "event_type": "global_adopted", "hostname": "mg0178", "timestamp": 1783728403.1611712, "version": 1}
+{"actor": "learner_004", "event_type": "inner_optimizer_reset", "hostname": "mg0178", "timestamp": 1783728403.1625986, "version": 1}
+{"actor": "learner_001", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0150", "local_step": 70, "timestamp": 1783728403.1625752, "train_loss": 4.528475284576416}
+{"actor": "learner_004", "event_type": "heartbeat_written", "hostname": "mg0178", "local_step": 51, "timestamp": 1783728403.2050216}
+{"actor": "learner_006", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0198", "local_step": 80, "timestamp": 1783728403.2415123, "train_loss": 3.975595712661743}
+{"actor": "learner_002", "event_type": "global_adopted", "hostname": "mg0175", "timestamp": 1783728403.3020127, "version": 1}
+{"actor": "learner_002", "event_type": "inner_optimizer_reset", "hostname": "mg0175", "timestamp": 1783728403.3034928, "version": 1}
+{"actor": "learner_000", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0135", "local_step": 60, "timestamp": 1783728403.3147516, "train_loss": 5.420085906982422}
+{"actor": "learner_002", "event_type": "heartbeat_written", "hostname": "mg0175", "local_step": 51, "timestamp": 1783728403.3432338}
+{"actor": "learner_005", "event_type": "global_adopted", "hostname": "mg0195", "timestamp": 1783728403.3679445, "version": 1}
+{"actor": "learner_005", "event_type": "inner_optimizer_reset", "hostname": "mg0195", "timestamp": 1783728403.3696077, "version": 1}
+{"actor": "learner_007", "event_type": "global_adopted", "hostname": "mg0200", "timestamp": 1783728403.3721094, "version": 1}
+{"actor": "learner_007", "event_type": "inner_optimizer_reset", "hostname": "mg0200", "timestamp": 1783728403.3775518, "version": 1}
+{"actor": "learner_003", "event_type": "global_adopted", "hostname": "mg0176", "timestamp": 1783728403.384966, "version": 1}
+{"actor": "learner_003", "event_type": "inner_optimizer_reset", "hostname": "mg0176", "timestamp": 1783728403.3863695, "version": 1}
+{"actor": "learner_005", "event_type": "heartbeat_written", "hostname": "mg0195", "local_step": 51, "timestamp": 1783728403.4080834}
+{"actor": "learner_007", "event_type": "heartbeat_written", "hostname": "mg0200", "local_step": 51, "timestamp": 1783728403.4165273}
+{"actor": "learner_003", "event_type": "heartbeat_written", "hostname": "mg0176", "local_step": 51, "timestamp": 1783728403.424854}
+{"actor": "learner_004", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0178", "local_step": 60, "timestamp": 1783728403.4538653, "train_loss": 4.274065971374512}
+{"actor": "learner_001", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0150", "local_step": 80, "timestamp": 1783728403.455452, "train_loss": 3.951157569885254}
+{"actor": "learner_006", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0198", "local_step": 90, "timestamp": 1783728403.4963398, "train_loss": 4.210165500640869}
+{"actor": "learner_000", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0135", "local_step": 70, "timestamp": 1783728403.5969086, "train_loss": 3.9782772064208984}
+{"actor": "learner_002", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0175", "local_step": 60, "timestamp": 1783728403.6039877, "train_loss": 3.4261832237243652}
+{"actor": "learner_005", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0195", "local_step": 60, "timestamp": 1783728403.6571815, "train_loss": 4.337303161621094}
+{"actor": "learner_007", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0200", "local_step": 60, "timestamp": 1783728403.6706996, "train_loss": 4.437693119049072}
+{"actor": "learner_003", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0176", "local_step": 60, "timestamp": 1783728403.6754088, "train_loss": 4.131847381591797}
+{"actor": "learner_004", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0178", "local_step": 70, "timestamp": 1783728403.717741, "train_loss": 4.201735019683838}
+{"actor": "learner_001", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0150", "local_step": 90, "timestamp": 1783728403.7503803, "train_loss": 3.935530185699463}
+{"actor": "learner_006", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0198", "local_step": 100, "timestamp": 1783728403.752157, "train_loss": 4.374998092651367}
+{"actor": "learner_000", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0135", "local_step": 80, "timestamp": 1783728403.8802056, "train_loss": 4.3395795822143555}
+{"actor": "learner_002", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0175", "local_step": 70, "timestamp": 1783728403.8877969, "train_loss": 4.565668106079102}
+{"actor": "learner_005", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0195", "local_step": 70, "timestamp": 1783728403.928806, "train_loss": 3.9585678577423096}
+{"actor": "learner_007", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0200", "local_step": 70, "timestamp": 1783728403.9471762, "train_loss": 3.999814748764038}
+{"actor": "learner_003", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0176", "local_step": 70, "timestamp": 1783728403.9494586, "train_loss": 4.077579021453857}
+{"actor": "learner_004", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0178", "local_step": 80, "timestamp": 1783728403.9796927, "train_loss": 3.859316825866699}
+{"actor": "learner_001", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0150", "local_step": 100, "timestamp": 1783728404.044899, "train_loss": 3.4545249938964844}
+{"actor": "learner_000", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0135", "local_step": 90, "timestamp": 1783728404.1629744, "train_loss": 4.810914993286133}
+{"actor": "learner_002", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0175", "local_step": 80, "timestamp": 1783728404.1691396, "train_loss": 4.160092830657959}
+{"actor": "learner_006", "event_type": "update_written", "file_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_2d572d4_gpt2_9n_50x10/updates/pending/learner_006/update_dd5a3fffacae.params.safetensors", "hostname": "mg0198", "local_step": 100, "timestamp": 1783728404.1962965, "tokens": 6400, "train_loss": 4.138223171234131, "update_id": "learner_006_00000100_dd5a3fffacae"}
+{"actor": "learner_005", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0195", "local_step": 80, "timestamp": 1783728404.200359, "train_loss": 4.483718395233154}
+{"actor": "learner_006", "event_type": "heartbeat_written", "hostname": "mg0198", "local_step": 100, "timestamp": 1783728404.2032359}
+{"actor": "learner_003", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0176", "local_step": 80, "timestamp": 1783728404.2228549, "train_loss": 4.115782260894775}
+{"actor": "learner_007", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0200", "local_step": 80, "timestamp": 1783728404.2230031, "train_loss": 4.318427085876465}
+{"actor": "learner_004", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0178", "local_step": 90, "timestamp": 1783728404.2419457, "train_loss": 3.995344400405884}
+{"actor": "learner_000", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0135", "local_step": 100, "timestamp": 1783728404.4456768, "train_loss": 4.492053508758545}
+{"actor": "learner_002", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0175", "local_step": 90, "timestamp": 1783728404.4503489, "train_loss": 4.246638774871826}
+{"actor": "learner_001", "event_type": "update_written", "file_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_2d572d4_gpt2_9n_50x10/updates/pending/learner_001/update_ef9f813040fc.params.safetensors", "hostname": "mg0150", "local_step": 100, "timestamp": 1783728404.4648268, "tokens": 6400, "train_loss": 4.117763032913208, "update_id": "learner_001_00000100_ef9f813040fc"}
+{"actor": "learner_005", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0195", "local_step": 90, "timestamp": 1783728404.4717386, "train_loss": 4.501414775848389}
+{"actor": "learner_001", "event_type": "heartbeat_written", "hostname": "mg0150", "local_step": 100, "timestamp": 1783728404.473859}
+{"actor": "learner_003", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0176", "local_step": 90, "timestamp": 1783728404.49598, "train_loss": 4.370696544647217}
+{"actor": "learner_007", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0200", "local_step": 90, "timestamp": 1783728404.4986439, "train_loss": 4.064533710479736}
+{"actor": "learner_004", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0178", "local_step": 100, "timestamp": 1783728404.5025773, "train_loss": 4.63169002532959}
+{"actor": "learner_002", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0175", "local_step": 100, "timestamp": 1783728404.7304027, "train_loss": 4.7206196784973145}
+{"actor": "learner_005", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0195", "local_step": 100, "timestamp": 1783728404.742436, "train_loss": 4.219945907592773}
+{"actor": "learner_003", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0176", "local_step": 100, "timestamp": 1783728404.7680469, "train_loss": 3.8115761280059814}
+{"actor": "learner_007", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0200", "local_step": 100, "timestamp": 1783728404.774947, "train_loss": 3.773124933242798}
+{"actor": "learner_000", "event_type": "update_written", "file_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_2d572d4_gpt2_9n_50x10/updates/pending/learner_000/update_5e6e5a4b1143.params.safetensors", "hostname": "mg0135", "local_step": 100, "timestamp": 1783728404.8737273, "tokens": 6400, "train_loss": 4.308176765441894, "update_id": "learner_000_00000100_5e6e5a4b1143"}
+{"actor": "learner_000", "event_type": "heartbeat_written", "hostname": "mg0135", "local_step": 100, "timestamp": 1783728404.9113908}
+{"actor": "learner_004", "event_type": "update_written", "file_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_2d572d4_gpt2_9n_50x10/updates/pending/learner_004/update_56d61313474a.params.safetensors", "hostname": "mg0178", "local_step": 100, "timestamp": 1783728404.9474285, "tokens": 6400, "train_loss": 4.1170352268218995, "update_id": "learner_004_00000100_56d61313474a"}
+{"actor": "learner_004", "event_type": "heartbeat_written", "hostname": "mg0178", "local_step": 100, "timestamp": 1783728404.956075}
+{"actor": "learner_005", "event_type": "update_written", "file_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_2d572d4_gpt2_9n_50x10/updates/pending/learner_005/update_609b40debb20.params.safetensors", "hostname": "mg0195", "local_step": 100, "timestamp": 1783728405.1894221, "tokens": 6400, "train_loss": 4.2392571878433225, "update_id": "learner_005_00000100_609b40debb20"}
+{"actor": "learner_005", "event_type": "heartbeat_written", "hostname": "mg0195", "local_step": 100, "timestamp": 1783728405.2242596}
+{"actor": "learner_002", "event_type": "update_written", "file_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_2d572d4_gpt2_9n_50x10/updates/pending/learner_002/update_ac201258f0e1.params.safetensors", "hostname": "mg0175", "local_step": 100, "timestamp": 1783728405.2257035, "tokens": 6400, "train_loss": 4.370878643989563, "update_id": "learner_002_00000100_ac201258f0e1"}
+{"actor": "learner_003", "event_type": "update_written", "file_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_2d572d4_gpt2_9n_50x10/updates/pending/learner_003/update_06ac2a2a150a.params.safetensors", "hostname": "mg0176", "local_step": 100, "timestamp": 1783728405.2473602, "tokens": 6400, "train_loss": 4.179707002639771, "update_id": "learner_003_00000100_06ac2a2a150a"}
+{"actor": "learner_002", "event_type": "heartbeat_written", "hostname": "mg0175", "local_step": 100, "timestamp": 1783728405.2713194}
+{"actor": "learner_003", "event_type": "heartbeat_written", "hostname": "mg0176", "local_step": 100, "timestamp": 1783728405.2730515}
+{"actor": "learner_007", "event_type": "update_written", "file_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_m00_2d572d4_gpt2_9n_50x10/updates/pending/learner_007/update_a613e6662cad.params.safetensors", "hostname": "mg0200", "local_step": 100, "timestamp": 1783728405.2728217, "tokens": 6400, "train_loss": 4.156906161308289, "update_id": "learner_007_00000100_a613e6662cad"}
+{"actor": "learner_007", "event_type": "heartbeat_written", "hostname": "mg0200", "local_step": 100, "timestamp": 1783728405.2821395}

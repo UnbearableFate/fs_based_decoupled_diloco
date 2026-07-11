@@ -47,6 +47,8 @@ acceptance:
       - artifacts/duraloco/M00/20260711_m00_dec182e_gpt2_9n_50x10/qstat_final.log
       - artifacts/duraloco/M00/20260711_m00_342e975_gpt2_9n_50x10/manifest.json
       - artifacts/duraloco/M00/20260711_m00_342e975_gpt2_9n_50x10/training.log
+      - artifacts/duraloco/M00/20260711_m00_2d572d4_gpt2_9n_50x10/manifest.json
+      - artifacts/duraloco/M00/20260711_m00_2d572d4_gpt2_9n_50x10/training.log
   M00-A12: {result: not_run, evidence: []}
 open_decisions: []
 open_blockers: []
@@ -58,7 +60,10 @@ artifacts:
   - artifacts/duraloco/M00/20260711_m00_81b442c_2node
   - artifacts/duraloco/M00/20260711_m00_dec182e_gpt2_9n_50x10
   - artifacts/duraloco/M00/20260711_m00_342e975_gpt2_9n_50x10
-next_action: "retry nine nodes with vectorized production payload finiteness validation"
+  - artifacts/duraloco/M00/20260711_m00_2d572d4_1node_requal
+  - artifacts/duraloco/M00/20260711_m00_2d572d4_2node_requal
+  - artifacts/duraloco/M00/20260711_m00_2d572d4_gpt2_9n_50x10
+next_action: "rerun the 1/2/9-node ladder with validated payload reuse across scan, load, and publish"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
