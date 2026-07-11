@@ -153,6 +153,12 @@ Only after these conditions have evidence may one new nine-node terminal job be
 submitted. If that job fails, submissions stop again and its complete stage
 timing is reviewed before any new runtime change.
 
+The runtime ladder now includes a read-only one-node replay benchmark against
+the preserved sequence-1 authority from attempt 8 before the ordinary one-node
+and two-node requalification jobs. It must prove that strict CPU and GPU replay
+produce the same digest, record their wall times, and show that a second
+memoized replay performs zero reads of proposal/params/outer tensor objects.
+
 ## Non-claims
 
 - This does not introduce P05 lease/fencing.
