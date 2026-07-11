@@ -1,0 +1,108 @@
+{
+  "assertions": {
+    "all_learners_at_least_50_local_steps": true,
+    "checkpoints_complete": true,
+    "exactly_10_optimizer_transitions": true,
+    "losses_finite": true,
+    "nine_process_layout": true,
+    "no_forbidden_runtime_artifacts": true,
+    "params_outer_state_paired": true,
+    "production_log_is_authority": true,
+    "proposal_inclusion_exactly_once": true,
+    "real_gpt2_wikitext": true
+  },
+  "checkpoint_count": 11,
+  "checkpoints": [
+    {
+      "path": "/work/xg24i002/x10041/duraloco_worktrees/p06-repair-2581a4d/runs/fs_diloco/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1/weights/global_v000003.safetensors",
+      "sha256": "82e0e40583ddceab6a9068ff8a9f1482b561a00e71cb697118a831686fd1a7c0"
+    },
+    {
+      "path": "/work/xg24i002/x10041/duraloco_worktrees/p06-repair-2581a4d/runs/fs_diloco/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1/weights/global_v000004.safetensors",
+      "sha256": "6f9a8d24d1b67e48287e07445b44b4d75a151951eea01e55a90c9c7dc608d8f2"
+    },
+    {
+      "path": "/work/xg24i002/x10041/duraloco_worktrees/p06-repair-2581a4d/runs/fs_diloco/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1/weights/global_v000005.safetensors",
+      "sha256": "1499b3f5d0646d90f84c341245c61622c73037b416d5c74c3e8aadfca7f7d5b0"
+    },
+    {
+      "path": "/work/xg24i002/x10041/duraloco_worktrees/p06-repair-2581a4d/runs/fs_diloco/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1/weights/global_v000006.safetensors",
+      "sha256": "7eca1efdece6750e9a51ded456c7c4d1ee33ba37db50137337a7226a63c64b9d"
+    },
+    {
+      "path": "/work/xg24i002/x10041/duraloco_worktrees/p06-repair-2581a4d/runs/fs_diloco/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1/weights/global_v000007.safetensors",
+      "sha256": "087b3db4961c80412e190677beaea387ae7c7a05a88353b6052b4d9c1895f6a4"
+    },
+    {
+      "path": "/work/xg24i002/x10041/duraloco_worktrees/p06-repair-2581a4d/runs/fs_diloco/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1/weights/global_v000008.safetensors",
+      "sha256": "64bb3648a492c92899e2630d2cf7290211c58d5542a44d0d60b39b521535f58f"
+    },
+    {
+      "path": "/work/xg24i002/x10041/duraloco_worktrees/p06-repair-2581a4d/runs/fs_diloco/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1/weights/global_v000009.safetensors",
+      "sha256": "87e1582fee3b932c0b3dfa748b3ff1dfb9dba1d2574f5b96aeaf900cc4425722"
+    },
+    {
+      "path": "/work/xg24i002/x10041/duraloco_worktrees/p06-repair-2581a4d/runs/fs_diloco/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1/weights/global_v000010.safetensors",
+      "sha256": "55213f2eb230c3e271b565b4f21f49e0cad8bdb09d099bab04ac51650e236777"
+    },
+    {
+      "path": "/work/xg24i002/x10041/duraloco_worktrees/p06-repair-2581a4d/runs/fs_diloco/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1/weights/global_v000011.safetensors",
+      "sha256": "d3ae0bfbe1c756253e8405931f2ffb1ebd1ef2b4df9f49a7ec80ab79473ed706"
+    },
+    {
+      "path": "/work/xg24i002/x10041/duraloco_worktrees/p06-repair-2581a4d/runs/fs_diloco/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1/weights/global_v000012.safetensors",
+      "sha256": "f442f495a2807915c93f8d6e43648ba3ce087a1deacb2d80a16863055220406d"
+    },
+    {
+      "path": "/work/xg24i002/x10041/duraloco_worktrees/p06-repair-2581a4d/runs/fs_diloco/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1/weights/global_v000013.safetensors",
+      "sha256": "f442f495a2807915c93f8d6e43648ba3ce087a1deacb2d80a16863055220406d"
+    }
+  ],
+  "committed_selection_counts": [
+    8,
+    8,
+    8,
+    8,
+    8,
+    8,
+    8,
+    8,
+    8,
+    8
+  ],
+  "committed_state_digest": "651430937506e927c7d692e3980271cff0dd48ef77e491bf60f10e7fce854d66",
+  "config": "/work/xg24i002/x10041/duraloco_worktrees/p06-repair-2581a4d/configs/duraloco_milestone_gpt2_9node_50x10.yaml",
+  "config_sha256": "bea7c7b32680370e3cc46864d90476d5d542aa4cde80081c80acf4ce3c87179d",
+  "consumed_proposal_count": 80,
+  "dataset": "wikitext-2-raw-v1",
+  "finite_loss_count": 96,
+  "forbidden_runtime_artifacts": [],
+  "global_outer_transitions": 10,
+  "head_commit_seq": 13,
+  "inner_steps": 50,
+  "kind": "m00-terminal-real-gpt2-9node-50x10",
+  "learner_local_steps": {
+    "learner_000": 550,
+    "learner_001": 600,
+    "learner_002": 600,
+    "learner_003": 600,
+    "learner_004": 600,
+    "learner_005": 600,
+    "learner_006": 600,
+    "learner_007": 600
+  },
+  "learners": 8,
+  "limitations": [
+    "learner recovery is warm until later capsule work"
+  ],
+  "loss_max": 4.55599953174591,
+  "loss_min": 3.4305977630615234,
+  "model": "gpt2",
+  "nonfinite_or_invalid_loss_count": 0,
+  "prepared_orphan_count": 201,
+  "runtime_view_digest": "f79f957d596a1f8446f745ed34bc9ff1adb305a82b120a6098d1e730eb15676e",
+  "schema_version": 2,
+  "status": "PASS",
+  "stop_reason": "stop_after_outer_steps",
+  "training_root": "/work/xg24i002/x10041/duraloco_worktrees/p06-repair-2581a4d/runs/fs_diloco/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1"
+}

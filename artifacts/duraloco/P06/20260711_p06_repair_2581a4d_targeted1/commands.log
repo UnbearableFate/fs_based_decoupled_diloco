@@ -1,0 +1,1 @@
+cd /home/x10041 && PROJECT_ROOT=/work/xg24i002/x10041/duraloco_worktrees/p06-repair-2581a4d TARGETED_DRY_RUN=1 bash /work/xg24i002/x10041/duraloco_worktrees/p06-repair-2581a4d/scripts/miyabi/run_duraloco_p06_9node_gpt2_50x10.pbs

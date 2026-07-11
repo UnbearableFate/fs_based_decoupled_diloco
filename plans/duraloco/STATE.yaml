@@ -1,48 +1,48 @@
 phase: P06
-status: in_progress
+status: checking
 planning_basis_branch: codex/duraloco-p05-syncer-failover
 planning_basis_commit: 82dbec10e1a738cfaa88212698e7e8cf5a0f7ae1
 actual_base_branch: codex/duraloco-p05-syncer-failover
 actual_base_commit: 419577899a64a12cc602870d059a092f9319bed1
 feature_branch: codex/duraloco-p06-learner-protocol
-current_loop: 3
-current_goal: "complete a clean same-commit P06 one/two/nine-node Maker ladder"
-attempts_for_current_failure: 1
+current_loop: 4
+current_goal: "run the independent Checker over the passing P06 Maker ladder"
+attempts_for_current_failure: 0
 last_terminal_failure_review: plans/duraloco/reviews/P06_TERMINAL_WRAPPER_FAILURE_REVIEW.md
-terminal_retry_authorized: false
+terminal_retry_authorized: true
 terminal_retry_qualification:
-  targeted_1node_benchmark: null
-  miyabi_1node: null
-  miyabi_2node: null
-last_verified_commit: null
+  targeted_1node_benchmark: artifacts/duraloco/P06/20260711_p06_repair_2581a4d_targeted1/manifest.json
+  miyabi_1node: artifacts/duraloco/P06/20260711_p06_repair_2581a4d_1node/manifest.json
+  miyabi_2node: artifacts/duraloco/P06/20260711_p06_repair_2581a4d_2node/manifest.json
+last_verified_commit: 2581a4d6286c7d0666f76aa3cc9d8122e66f6d25
 checks:
   local_static: static_pass
   local_runtime: unit_pass
   miyabi_login_static: static_pass
   miyabi_1node: miyabi_1node_pass
-  miyabi_2node: not_run
-  miyabi_9node: failed
+  miyabi_2node: miyabi_2node_pass
+  miyabi_9node: miyabi_9node_pass
 acceptance:
-  P06-A01: {result: not_run, evidence: []}
-  P06-A02: {result: not_run, evidence: []}
-  P06-A03: {result: not_run, evidence: []}
-  P06-A04: {result: not_run, evidence: []}
-  P06-A05: {result: not_run, evidence: []}
-  P06-A06: {result: not_run, evidence: []}
-  P06-A07: {result: not_run, evidence: []}
-  P06-A08: {result: not_run, evidence: []}
-  P06-A09: {result: pass, evidence: [artifacts/duraloco/P06/20260711_p06_impl_cdb3f27_1node/manifest.json, artifacts/duraloco/P06/20260711_p06_impl_cdb3f27_1node/one_node_report.json]}
-  P06-A10: {result: not_run, evidence: []}
-  P06-A11: {result: not_run, evidence: []}
-  P06-A12: {result: not_run, evidence: []}
-  P06-A13: {result: not_run, evidence: []}
-  P06-A14: {result: not_run, evidence: []}
-  P06-A15: {result: not_run, evidence: []}
-  P06-A16: {result: not_run, evidence: []}
-  P06-A17: {result: not_run, evidence: []}
-  P06-A18: {result: not_run, evidence: []}
-  P06-A19: {result: not_run, evidence: []}
-  P06-A20: {result: not_run, evidence: []}
+  P06-A01: {result: pass, evidence: [tests/learner_protocol/test_interval_session_adoption.py]}
+  P06-A02: {result: pass, evidence: [tests/learner_protocol/test_interval_session_adoption.py, fs_diloco/learner_protocol/session.py]}
+  P06-A03: {result: pass, evidence: [tests/learner_protocol/test_publication_recovery.py]}
+  P06-A04: {result: pass, evidence: [fs_diloco/learner_protocol/adoption.py, tests/learner_protocol/test_runtime_integration_contract.py]}
+  P06-A05: {result: pass, evidence: [fs_diloco/learner_protocol/adoption.py, configs/duraloco_milestone_gpt2_9node_50x10.yaml]}
+  P06-A06: {result: pass, evidence: [artifacts/duraloco/P06/20260711_p06_repair_2581a4d_2node/two_node_report.json]}
+  P06-A07: {result: pass, evidence: [fs_diloco/learner_protocol/recovery.py, artifacts/duraloco/P06/20260711_p06_repair_2581a4d_2node/two_node_report.json]}
+  P06-A08: {result: pass, evidence: [tests/reference/test_reference_outer_optim.py, tests/test_fragment_merge.py]}
+  P06-A09: {result: pass, evidence: [artifacts/duraloco/P06/20260711_p06_repair_2581a4d_1node/one_node_report.json]}
+  P06-A10: {result: pass, evidence: [artifacts/duraloco/P06/20260711_p06_repair_2581a4d_2node/manifest.json]}
+  P06-A11: {result: pass, evidence: [tests/learner_protocol/test_runtime_integration_contract.py, tests/test_removed_config_keys.py]}
+  P06-A12: {result: pass, evidence: [tests/learner_protocol/test_publication_recovery.py]}
+  P06-A13: {result: pass, evidence: [tests/learner_protocol/test_interval_session_adoption.py]}
+  P06-A14: {result: pass, evidence: [artifacts/duraloco/P06/20260711_p06_repair_2581a4d_1node/manifest.json, artifacts/duraloco/P06/20260711_p06_repair_2581a4d_2node/manifest.json]}
+  P06-A15: {result: pass, evidence: [artifacts/duraloco/P06/20260711_p06_repair_2581a4d_1node/forbidden_surface.json, fs_diloco/learner_protocol/recovery.py]}
+  P06-A16: {result: pass, evidence: [artifacts/duraloco/P06/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1/terminal_gate_report.json]}
+  P06-A17: {result: pass, evidence: [tests/learner_protocol/test_runtime_integration_contract.py, tests/log/test_milestone_gate_contract.py]}
+  P06-A18: {result: pass, evidence: [tests/learner_protocol/test_publication_recovery.py, tests/learner_protocol/test_runtime_integration_contract.py]}
+  P06-A19: {result: pass, evidence: [tests/learner_protocol/test_publication_recovery.py, tests/protocol/test_validation_matrix.py]}
+  P06-A20: {result: pass, evidence: [artifacts/duraloco/P06/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1/terminal_gate_report.json, tests/learner_protocol/test_runtime_integration_contract.py]}
 open_decisions: []
 open_blockers: []
 artifacts:
@@ -61,7 +61,12 @@ artifacts:
   - artifacts/duraloco/P06/20260711_p06_impl_696babe_2node
   - artifacts/duraloco/P06/20260711_p06_impl_696babe_gpt2_9n_50x10
   - plans/duraloco/reviews/P06_TERMINAL_WRAPPER_FAILURE_REVIEW.md
-next_action: "prove the wrapper repair with a targeted compute benchmark, then rerun 1-node and 2-node on the same clean repair commit"
+  - artifacts/duraloco/P06/20260711_p06_repair_2581a4d_targeted1
+  - artifacts/duraloco/P06/20260711_p06_repair_2581a4d_1node
+  - artifacts/duraloco/P06/20260711_p06_repair_2581a4d_2node
+  - artifacts/duraloco/P06/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1
+  - plans/duraloco/phases/P06_PHASE_REPORT.md
+next_action: "persist the passing Maker ladder and run the independent Checker"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

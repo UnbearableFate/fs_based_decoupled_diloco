@@ -1,0 +1,4 @@
+PBS_JOBID=2360574.opbs
+PBS_NODEFILE=/var/spool/pbs/aux/2360574.opbs
+RUN_ID=20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1
+SHARED_ROOT=/work/xg24i002/x10041/duraloco_worktrees/p06-repair-2581a4d/runs/fs_diloco/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1

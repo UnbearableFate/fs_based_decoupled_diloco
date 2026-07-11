@@ -1,0 +1,727 @@
+{
+  "authority": "committed-transition-log",
+  "commit_id": "c-40a5e47d83550b1c28a3428803a8a27ee7182616b4c2362cbee414c6c3ae0ec8",
+  "commit_seq": 13,
+  "committed_selected_counts_by_event": {
+    "1": 8,
+    "10": 8,
+    "2": 8,
+    "3": 8,
+    "4": 8,
+    "5": 8,
+    "6": 8,
+    "7": 8,
+    "8": 8,
+    "9": 8
+  },
+  "committed_state_digest": "651430937506e927c7d692e3980271cff0dd48ef77e491bf60f10e7fce854d66",
+  "consumed_proposal_count": 80,
+  "fragment_versions": {
+    "0": 10
+  },
+  "frontier_sha256": "b9e8b9d3387399e794f4c5dfe74564974c62410af7777b5cc004ea6bad2ab82a",
+  "global_merge_event": 10,
+  "heartbeats": {
+    "learner_000": {
+      "format_version": 1,
+      "hostname": "mg0851",
+      "last_loaded_global_version": 13,
+      "last_local_step": 550,
+      "last_update_id": "learner_000_00000550_ecc0423d66b9",
+      "learner_id": "learner_000",
+      "phase": "process_exit",
+      "pid": 941802,
+      "run_id": "20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1",
+      "status": "stopped",
+      "timestamp": 1783750624.4359143,
+      "tokens_per_sec": null
+    },
+    "learner_001": {
+      "format_version": 1,
+      "hostname": "mg0852",
+      "last_loaded_global_version": 13,
+      "last_local_step": 600,
+      "last_update_id": "learner_001_00000600_62c5be0bc0c1",
+      "learner_id": "learner_001",
+      "phase": "process_exit",
+      "pid": 1063700,
+      "run_id": "20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1",
+      "status": "stopped",
+      "timestamp": 1783750624.2795339,
+      "tokens_per_sec": null
+    },
+    "learner_002": {
+      "format_version": 1,
+      "hostname": "mg0853",
+      "last_loaded_global_version": 13,
+      "last_local_step": 600,
+      "last_update_id": "learner_002_00000600_4713ca580a22",
+      "learner_id": "learner_002",
+      "phase": "process_exit",
+      "pid": 165920,
+      "run_id": "20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1",
+      "status": "stopped",
+      "timestamp": 1783750624.5032773,
+      "tokens_per_sec": null
+    },
+    "learner_003": {
+      "format_version": 1,
+      "hostname": "mg0857",
+      "last_loaded_global_version": 13,
+      "last_local_step": 600,
+      "last_update_id": "learner_003_00000600_710fd4758bdb",
+      "learner_id": "learner_003",
+      "phase": "process_exit",
+      "pid": 3482626,
+      "run_id": "20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1",
+      "status": "stopped",
+      "timestamp": 1783750625.145557,
+      "tokens_per_sec": null
+    },
+    "learner_004": {
+      "format_version": 1,
+      "hostname": "mg0932",
+      "last_loaded_global_version": 13,
+      "last_local_step": 600,
+      "last_update_id": "learner_004_00000600_ec9d6f245c73",
+      "learner_id": "learner_004",
+      "phase": "process_exit",
+      "pid": 414404,
+      "run_id": "20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1",
+      "status": "stopped",
+      "timestamp": 1783750625.0444558,
+      "tokens_per_sec": null
+    },
+    "learner_005": {
+      "format_version": 1,
+      "hostname": "mg0941",
+      "last_loaded_global_version": 13,
+      "last_local_step": 600,
+      "last_update_id": "learner_005_00000600_b032e0537d26",
+      "learner_id": "learner_005",
+      "phase": "process_exit",
+      "pid": 3181749,
+      "run_id": "20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1",
+      "status": "stopped",
+      "timestamp": 1783750624.3959417,
+      "tokens_per_sec": null
+    },
+    "learner_006": {
+      "format_version": 1,
+      "hostname": "mg0943",
+      "last_loaded_global_version": 13,
+      "last_local_step": 600,
+      "last_update_id": "learner_006_00000600_657d1f1b8ce7",
+      "learner_id": "learner_006",
+      "phase": "process_exit",
+      "pid": 2097300,
+      "run_id": "20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1",
+      "status": "stopped",
+      "timestamp": 1783750624.7948947,
+      "tokens_per_sec": null
+    },
+    "learner_007": {
+      "format_version": 1,
+      "hostname": "mg0944",
+      "last_loaded_global_version": 13,
+      "last_local_step": 600,
+      "last_update_id": "learner_007_00000600_32fd9123e993",
+      "learner_id": "learner_007",
+      "phase": "process_exit",
+      "pid": 1032689,
+      "run_id": "20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1",
+      "status": "stopped",
+      "timestamp": 1783750624.2860842,
+      "tokens_per_sec": null
+    }
+  },
+  "latest": {
+    "authority": "committed-transition-log-and-head-fence",
+    "commit_id": "c-40a5e47d83550b1c28a3428803a8a27ee7182616b4c2362cbee414c6c3ae0ec8",
+    "commit_seq": 13,
+    "committed_interval_identities": [
+      [
+        "learner_000",
+        "learner_000-6935201c0c86433988aa43919b2e3ae2",
+        0,
+        1
+      ],
+      [
+        "learner_000",
+        "learner_000-6935201c0c86433988aa43919b2e3ae2",
+        0,
+        2
+      ],
+      [
+        "learner_000",
+        "learner_000-6935201c0c86433988aa43919b2e3ae2",
+        0,
+        3
+      ],
+      [
+        "learner_000",
+        "learner_000-6935201c0c86433988aa43919b2e3ae2",
+        0,
+        4
+      ],
+      [
+        "learner_000",
+        "learner_000-6935201c0c86433988aa43919b2e3ae2",
+        0,
+        5
+      ],
+      [
+        "learner_000",
+        "learner_000-6935201c0c86433988aa43919b2e3ae2",
+        0,
+        6
+      ],
+      [
+        "learner_000",
+        "learner_000-6935201c0c86433988aa43919b2e3ae2",
+        0,
+        7
+      ],
+      [
+        "learner_000",
+        "learner_000-6935201c0c86433988aa43919b2e3ae2",
+        0,
+        8
+      ],
+      [
+        "learner_000",
+        "learner_000-6935201c0c86433988aa43919b2e3ae2",
+        0,
+        9
+      ],
+      [
+        "learner_000",
+        "learner_000-f42b319f94c24da1b0ca0c4118427a34",
+        0,
+        1
+      ],
+      [
+        "learner_001",
+        "learner_001-8a8dc7439b3947f18286691c1cc0a94b",
+        0,
+        1
+      ],
+      [
+        "learner_001",
+        "learner_001-8a8dc7439b3947f18286691c1cc0a94b",
+        0,
+        2
+      ],
+      [
+        "learner_001",
+        "learner_001-8a8dc7439b3947f18286691c1cc0a94b",
+        0,
+        3
+      ],
+      [
+        "learner_001",
+        "learner_001-8a8dc7439b3947f18286691c1cc0a94b",
+        0,
+        4
+      ],
+      [
+        "learner_001",
+        "learner_001-8a8dc7439b3947f18286691c1cc0a94b",
+        0,
+        5
+      ],
+      [
+        "learner_001",
+        "learner_001-8a8dc7439b3947f18286691c1cc0a94b",
+        0,
+        6
+      ],
+      [
+        "learner_001",
+        "learner_001-8a8dc7439b3947f18286691c1cc0a94b",
+        0,
+        7
+      ],
+      [
+        "learner_001",
+        "learner_001-8a8dc7439b3947f18286691c1cc0a94b",
+        0,
+        8
+      ],
+      [
+        "learner_001",
+        "learner_001-8a8dc7439b3947f18286691c1cc0a94b",
+        0,
+        9
+      ],
+      [
+        "learner_001",
+        "learner_001-8a8dc7439b3947f18286691c1cc0a94b",
+        0,
+        10
+      ],
+      [
+        "learner_002",
+        "learner_002-993c40d00d844055addccb3e45e87d9b",
+        0,
+        1
+      ],
+      [
+        "learner_002",
+        "learner_002-993c40d00d844055addccb3e45e87d9b",
+        0,
+        2
+      ],
+      [
+        "learner_002",
+        "learner_002-993c40d00d844055addccb3e45e87d9b",
+        0,
+        3
+      ],
+      [
+        "learner_002",
+        "learner_002-993c40d00d844055addccb3e45e87d9b",
+        0,
+        4
+      ],
+      [
+        "learner_002",
+        "learner_002-993c40d00d844055addccb3e45e87d9b",
+        0,
+        5
+      ],
+      [
+        "learner_002",
+        "learner_002-993c40d00d844055addccb3e45e87d9b",
+        0,
+        6
+      ],
+      [
+        "learner_002",
+        "learner_002-993c40d00d844055addccb3e45e87d9b",
+        0,
+        7
+      ],
+      [
+        "learner_002",
+        "learner_002-993c40d00d844055addccb3e45e87d9b",
+        0,
+        8
+      ],
+      [
+        "learner_002",
+        "learner_002-993c40d00d844055addccb3e45e87d9b",
+        0,
+        9
+      ],
+      [
+        "learner_002",
+        "learner_002-993c40d00d844055addccb3e45e87d9b",
+        0,
+        10
+      ],
+      [
+        "learner_003",
+        "learner_003-26f990f52f5340e78da0eb4c57f0d9d9",
+        0,
+        1
+      ],
+      [
+        "learner_003",
+        "learner_003-26f990f52f5340e78da0eb4c57f0d9d9",
+        0,
+        2
+      ],
+      [
+        "learner_003",
+        "learner_003-26f990f52f5340e78da0eb4c57f0d9d9",
+        0,
+        3
+      ],
+      [
+        "learner_003",
+        "learner_003-26f990f52f5340e78da0eb4c57f0d9d9",
+        0,
+        4
+      ],
+      [
+        "learner_003",
+        "learner_003-26f990f52f5340e78da0eb4c57f0d9d9",
+        0,
+        5
+      ],
+      [
+        "learner_003",
+        "learner_003-26f990f52f5340e78da0eb4c57f0d9d9",
+        0,
+        6
+      ],
+      [
+        "learner_003",
+        "learner_003-26f990f52f5340e78da0eb4c57f0d9d9",
+        0,
+        7
+      ],
+      [
+        "learner_003",
+        "learner_003-26f990f52f5340e78da0eb4c57f0d9d9",
+        0,
+        8
+      ],
+      [
+        "learner_003",
+        "learner_003-26f990f52f5340e78da0eb4c57f0d9d9",
+        0,
+        9
+      ],
+      [
+        "learner_003",
+        "learner_003-26f990f52f5340e78da0eb4c57f0d9d9",
+        0,
+        10
+      ],
+      [
+        "learner_004",
+        "learner_004-6a56e49d48904b4bb0b5412d4f03f35a",
+        0,
+        1
+      ],
+      [
+        "learner_004",
+        "learner_004-6a56e49d48904b4bb0b5412d4f03f35a",
+        0,
+        2
+      ],
+      [
+        "learner_004",
+        "learner_004-6a56e49d48904b4bb0b5412d4f03f35a",
+        0,
+        3
+      ],
+      [
+        "learner_004",
+        "learner_004-6a56e49d48904b4bb0b5412d4f03f35a",
+        0,
+        4
+      ],
+      [
+        "learner_004",
+        "learner_004-6a56e49d48904b4bb0b5412d4f03f35a",
+        0,
+        5
+      ],
+      [
+        "learner_004",
+        "learner_004-6a56e49d48904b4bb0b5412d4f03f35a",
+        0,
+        6
+      ],
+      [
+        "learner_004",
+        "learner_004-6a56e49d48904b4bb0b5412d4f03f35a",
+        0,
+        7
+      ],
+      [
+        "learner_004",
+        "learner_004-6a56e49d48904b4bb0b5412d4f03f35a",
+        0,
+        8
+      ],
+      [
+        "learner_004",
+        "learner_004-6a56e49d48904b4bb0b5412d4f03f35a",
+        0,
+        9
+      ],
+      [
+        "learner_004",
+        "learner_004-6a56e49d48904b4bb0b5412d4f03f35a",
+        0,
+        10
+      ],
+      [
+        "learner_005",
+        "learner_005-49bba03919c14b49ba9f46fde811a55b",
+        0,
+        1
+      ],
+      [
+        "learner_005",
+        "learner_005-49bba03919c14b49ba9f46fde811a55b",
+        0,
+        2
+      ],
+      [
+        "learner_005",
+        "learner_005-49bba03919c14b49ba9f46fde811a55b",
+        0,
+        3
+      ],
+      [
+        "learner_005",
+        "learner_005-49bba03919c14b49ba9f46fde811a55b",
+        0,
+        4
+      ],
+      [
+        "learner_005",
+        "learner_005-49bba03919c14b49ba9f46fde811a55b",
+        0,
+        5
+      ],
+      [
+        "learner_005",
+        "learner_005-49bba03919c14b49ba9f46fde811a55b",
+        0,
+        6
+      ],
+      [
+        "learner_005",
+        "learner_005-49bba03919c14b49ba9f46fde811a55b",
+        0,
+        7
+      ],
+      [
+        "learner_005",
+        "learner_005-49bba03919c14b49ba9f46fde811a55b",
+        0,
+        8
+      ],
+      [
+        "learner_005",
+        "learner_005-49bba03919c14b49ba9f46fde811a55b",
+        0,
+        9
+      ],
+      [
+        "learner_005",
+        "learner_005-49bba03919c14b49ba9f46fde811a55b",
+        0,
+        10
+      ],
+      [
+        "learner_006",
+        "learner_006-6b952f6b3b634f0db1863dbc87a954e8",
+        0,
+        1
+      ],
+      [
+        "learner_006",
+        "learner_006-6b952f6b3b634f0db1863dbc87a954e8",
+        0,
+        2
+      ],
+      [
+        "learner_006",
+        "learner_006-6b952f6b3b634f0db1863dbc87a954e8",
+        0,
+        3
+      ],
+      [
+        "learner_006",
+        "learner_006-6b952f6b3b634f0db1863dbc87a954e8",
+        0,
+        4
+      ],
+      [
+        "learner_006",
+        "learner_006-6b952f6b3b634f0db1863dbc87a954e8",
+        0,
+        5
+      ],
+      [
+        "learner_006",
+        "learner_006-6b952f6b3b634f0db1863dbc87a954e8",
+        0,
+        6
+      ],
+      [
+        "learner_006",
+        "learner_006-6b952f6b3b634f0db1863dbc87a954e8",
+        0,
+        7
+      ],
+      [
+        "learner_006",
+        "learner_006-6b952f6b3b634f0db1863dbc87a954e8",
+        0,
+        8
+      ],
+      [
+        "learner_006",
+        "learner_006-6b952f6b3b634f0db1863dbc87a954e8",
+        0,
+        9
+      ],
+      [
+        "learner_006",
+        "learner_006-6b952f6b3b634f0db1863dbc87a954e8",
+        0,
+        10
+      ],
+      [
+        "learner_007",
+        "learner_007-f5423dd42fe641f385206d9eb18fc912",
+        0,
+        1
+      ],
+      [
+        "learner_007",
+        "learner_007-f5423dd42fe641f385206d9eb18fc912",
+        0,
+        2
+      ],
+      [
+        "learner_007",
+        "learner_007-f5423dd42fe641f385206d9eb18fc912",
+        0,
+        3
+      ],
+      [
+        "learner_007",
+        "learner_007-f5423dd42fe641f385206d9eb18fc912",
+        0,
+        4
+      ],
+      [
+        "learner_007",
+        "learner_007-f5423dd42fe641f385206d9eb18fc912",
+        0,
+        5
+      ],
+      [
+        "learner_007",
+        "learner_007-f5423dd42fe641f385206d9eb18fc912",
+        0,
+        6
+      ],
+      [
+        "learner_007",
+        "learner_007-f5423dd42fe641f385206d9eb18fc912",
+        0,
+        7
+      ],
+      [
+        "learner_007",
+        "learner_007-f5423dd42fe641f385206d9eb18fc912",
+        0,
+        8
+      ],
+      [
+        "learner_007",
+        "learner_007-f5423dd42fe641f385206d9eb18fc912",
+        0,
+        9
+      ],
+      [
+        "learner_007",
+        "learner_007-f5423dd42fe641f385206d9eb18fc912",
+        0,
+        10
+      ]
+    ],
+    "committed_state_digest": "651430937506e927c7d692e3980271cff0dd48ef77e491bf60f10e7fce854d66",
+    "created_at": 1783750623.8196275,
+    "fencing_epoch": 2,
+    "format_version": 1,
+    "fragment_versions": {
+      "0": 10
+    },
+    "frontier_sha256": "b9e8b9d3387399e794f4c5dfe74564974c62410af7777b5cc004ea6bad2ab82a",
+    "global_merge_event": 10,
+    "optim_path": "/work/xg24i002/x10041/duraloco_worktrees/p06-repair-2581a4d/runs/fs_diloco/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1/optim/outer_v000013.safetensors",
+    "optimizer_transition_count": 10,
+    "owner_id": "terminal-standby",
+    "owner_session_id": "terminal-standby-session",
+    "param_index_path": "/work/xg24i002/x10041/duraloco_worktrees/p06-repair-2581a4d/runs/fs_diloco/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1/control/param_index.json",
+    "run_generation": 0,
+    "run_id": "20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1",
+    "runtime_view_digest": "f79f957d596a1f8446f745ed34bc9ff1adb305a82b120a6098d1e730eb15676e",
+    "total_seen_tokens": 512000,
+    "version": 13,
+    "weight_path": "/work/xg24i002/x10041/duraloco_worktrees/p06-repair-2581a4d/runs/fs_diloco/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1/weights/global_v000013.safetensors"
+  },
+  "latest_export_valid": true,
+  "latest_kind": "full",
+  "learner_fragment_adoption": {
+    "learner_000": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    },
+    "learner_001": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    },
+    "learner_002": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    },
+    "learner_003": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    },
+    "learner_004": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    },
+    "learner_005": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    },
+    "learner_006": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    },
+    "learner_007": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    }
+  },
+  "learner_local_steps": {
+    "learner_000": 550,
+    "learner_001": 600,
+    "learner_002": 600,
+    "learner_003": 600,
+    "learner_004": 600,
+    "learner_005": 600,
+    "learner_006": 600,
+    "learner_007": 600
+  },
+  "learner_metrics": {
+    "exists": true,
+    "path": "/work/xg24i002/x10041/duraloco_worktrees/p06-repair-2581a4d/runs/fs_diloco/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1/metrics/learner_metrics.csv",
+    "rows": 96
+  },
+  "loss_summary": {
+    "count": 96,
+    "invalid_or_nonfinite": 0,
+    "max": 4.55599953174591,
+    "min": 3.4305977630615234,
+    "obvious_divergence": false
+  },
+  "materialized_weight_exists": true,
+  "optimizer_transition_count": 10,
+  "payload_codec": "safetensors-flat-v1",
+  "run_generation": 0,
+  "run_id": "20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1",
+  "runtime_view_digest": "f79f957d596a1f8446f745ed34bc9ff1adb305a82b120a6098d1e730eb15676e",
+  "shared_root": "/work/xg24i002/x10041/duraloco_worktrees/p06-repair-2581a4d/runs/fs_diloco/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1",
+  "stop_reason": "stop_after_outer_steps",
+  "syncer_log_flags": {
+    "error": false,
+    "no_progress_timeout": false,
+    "uncaught_exception": false
+  },
+  "syncer_metrics": {
+    "exists": true,
+    "path": "/work/xg24i002/x10041/duraloco_worktrees/p06-repair-2581a4d/runs/fs_diloco/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1/metrics/syncer_metrics.csv",
+    "rows": 10
+  },
+  "total_seen_tokens": 512000,
+  "update_manifest": {
+    "exists": true,
+    "path": "/work/xg24i002/x10041/duraloco_worktrees/p06-repair-2581a4d/runs/fs_diloco/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1/metrics/update_manifest.csv",
+    "rows": 96
+  }
+}
