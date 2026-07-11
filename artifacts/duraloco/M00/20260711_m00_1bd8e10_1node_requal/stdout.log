@@ -1,0 +1,36 @@
+{
+  "finding_count": 0,
+  "findings": [],
+  "scanned_files": 192,
+  "status": "PASS"
+}
+........................................................................ [ 26%]
+........................................................................ [ 53%]
+........s...................................F........................... [ 79%]
+.......................................................                  [100%]
+=================================== FAILURES ===================================
+________ test_m00_runtime_uses_the_verified_posix_backend_for_authority ________
+
+    def test_m00_runtime_uses_the_verified_posix_backend_for_authority():
+        from pathlib import Path
+    
+        root = Path(__file__).resolve().parents[2]
+        syncer = (root / "fs_diloco/syncer.py").read_text(encoding="utf-8")
+        learner = (root / "fs_diloco/learner.py").read_text(encoding="utf-8")
+        assert "PosixStorageBackend(paths.authority)" in syncer
+>       assert "PosixStorageBackend" not in learner
+E       assert 'PosixStorageBackend' not in '"""Filesyst...    main()\n'
+E         
+E         'PosixStorageBackend' is contained here:
+E           ge import PosixStorageBackend
+E           from .tensor_codec import dtype_from_name, load_global_weights_flat, save_update_vector
+E           
+E           _SUCCESSFUL_STOP_REASONS = {"completed", "stop_after_outer_steps", "stop_after_global_tokens"}
+E           ...
+E         
+E         ...Full output truncated (1149 lines hidden), use '-vv' to show
+
+tests/storage/test_capability_probe.py:38: AssertionError
+=========================== short test summary info ============================
+FAILED tests/storage/test_capability_probe.py::test_m00_runtime_uses_the_verified_posix_backend_for_authority
+1 failed, 269 passed, 1 skipped in 18.88s

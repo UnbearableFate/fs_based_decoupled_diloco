@@ -263,6 +263,24 @@ two-node and nine-node compute qualification remain in progress.
 - Repair: each learner publishes its content-addressed immutable proposal object
   before its discovery marker. Those eight fsyncs run on eight nodes in parallel;
   the syncer's idempotent publication observes existing verified objects.
+
+#### Ladder precheck — `20260711_m00_1bd8e10_1node_requal`
+
+- Time/identity: PBS `2359210.opbs`, host `mg0004`, implementation
+  `1bd8e105e2d02caabc6a06fb74848c4301bd8ae9`.
+- Phenomenon: forbidden scanning passed and the suite reported one failure
+  (`269 passed, 1 skipped`) before runtime smokes. A static authority test
+  categorically prohibited `PosixStorageBackend` in the learner.
+- Expected/actual: learners may publish immutable proposal objects; only the
+  syncer may mutate the committed head with CAS. The test encoded the stronger
+  pre-optimization assumption that learners never touch the authority backend.
+- Reason: confirmed. Learner publication is immutable and precedes its discovery
+  marker; learner source contains neither `conditional_replace` nor `head_key`.
+- Impact: M00-A09 precheck only; no nine-node retry was submitted.
+- Evidence: `artifacts/duraloco/M00/20260711_m00_1bd8e10_1node_requal/manifest.json`
+  and `junit.xml`.
+- Repair: assert immutable proposal publication is present while explicitly
+  forbidding learner head-CAS surfaces.
 - Impact: M00-A03, M00-A04, M00-A09, P02-A04, and P04 replay requalification.
 - Evidence: `artifacts/duraloco/M00/20260711_m00_04da7ee_1node/manifest.json`,
   `one_node_contract.json`, full syncer/learner logs, and `stdout.log`.
@@ -508,6 +526,24 @@ generation metadata 与 M00 静态/运行 harness。源码、配置、脚本与�
 - 修复：每个 learner 在 discovery marker 前发布 content-addressed immutable proposal
   object；8 次 fsync 分散到 8 个节点并行执行，syncer 的幂等 publication 只观察已存在
   且已验证的 objects。
+
+#### 阶梯预检 — `20260711_m00_1bd8e10_1node_requal`
+
+- 时间/身份：PBS `2359210.opbs`，节点 `mg0004`，实现提交
+  `1bd8e105e2d02caabc6a06fb74848c4301bd8ae9`。
+- 现象：forbidden scan 通过，suite 在 runtime smoke 前出现 1 个失败
+  （`269 passed, 1 skipped`）；静态 authority test 完全禁止 learner 中出现
+  `PosixStorageBackend`。
+- 预期/实际：learner 可发布 immutable proposal object；只有 syncer 可通过 CAS 修改
+  committed head。该测试实际编码了优化前“learner 完全不接触 authority backend”的
+  更强假设。
+- 原因：已证实。learner publication 为 immutable 且早于 discovery marker；learner
+  source 不含 `conditional_replace` 或 `head_key`。
+- 影响：仅 M00-A09 预检；没有提交九节点重试。
+- 证据：`artifacts/duraloco/M00/20260711_m00_1bd8e10_1node_requal/manifest.json`
+  与 `junit.xml`。
+- 修复：断言存在 immutable proposal publication，同时显式禁止 learner head-CAS
+  surface。
 
 ### 限制与下一动作
 

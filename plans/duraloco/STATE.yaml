@@ -13,8 +13,8 @@ checks:
   local_static: static_pass
   local_runtime: contract_pass
   miyabi_login_static: static_pass
-  miyabi_1node: miyabi_1node_pass
-  miyabi_2node: miyabi_2node_pass
+  miyabi_1node: failed
+  miyabi_2node: not_run
   miyabi_9node: failed
 acceptance:
   M00-A01: {result: not_run, evidence: []}
@@ -26,12 +26,14 @@ acceptance:
   M00-A07: {result: not_run, evidence: []}
   M00-A08: {result: not_run, evidence: []}
   M00-A09:
-    result: pass
+    result: fail
     evidence:
       - artifacts/duraloco/M00/20260711_m00_97a6876_1node/manifest.json
       - artifacts/duraloco/M00/20260711_m00_97a6876_1node/one_node_contract.json
       - artifacts/duraloco/M00/20260711_m00_97a6876_1node/20260711_m00_97a6876_1node-full_after_recovery.json
       - artifacts/duraloco/M00/20260711_m00_97a6876_1node/20260711_m00_97a6876_1node-fragment_after_recovery.json
+      - artifacts/duraloco/M00/20260711_m00_1bd8e10_1node_requal/manifest.json
+      - artifacts/duraloco/M00/20260711_m00_1bd8e10_1node_requal/junit.xml
   M00-A10:
     result: pass
     evidence:
@@ -85,7 +87,8 @@ artifacts:
   - artifacts/duraloco/M00/20260711_m00_1056f0d_2node_requal
   - artifacts/duraloco/M00/20260711_m00_1056f0d_gpt2_9n_50x10
   - artifacts/duraloco/M00/20260711_m00_1056f0d_payload_benchmark
-next_action: "rerun the 1/2/9-node ladder with learner-parallel immutable proposal publication"
+  - artifacts/duraloco/M00/20260711_m00_1bd8e10_1node_requal
+next_action: "rerun the ladder after remapping the authority test to permit learner immutable proposal objects but forbid learner head CAS"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
