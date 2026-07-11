@@ -97,3 +97,35 @@ records:
       rationale: "read-only path correction; no test result was inferred"
       parent_run_id: null
     artifacts: []
+  - error_id: E-P06C-20260711-04
+    phase_and_gate: P06C/UNIT-1node
+    observed_at_utc: "2026-07-11T13:04:16Z"
+    pbs_job_id: 2362984.opbs
+    hosts: []
+    git_commit: d9afb109e17bae80a288bdd53cb8bd6c23899881
+    classification: unexpected_failure
+    phenomenon:
+      exit_code: 1
+      exception: "clean-commit preflight rejected an incorrect EXPECTED_COMMIT value"
+      terminal_state: "job ended before pytest; scheduler stdout is empty and no manifest was created"
+      log_excerpt: duraloco_p06c_unit.o2362984
+    expected: "EXPECTED_COMMIT exactly equals git rev-parse HEAD and the unit gate reaches pytest"
+    impact:
+      acceptance_ids: [P06C-A01, P06C-A04, P06C-A07, P06C-A23]
+      invariants: ["validation evidence must bind the exact clean source commit"]
+      committed_prefix_safe: true
+    cause:
+      confirmed: ["the qsub command manually expanded short SHA d9afb10 into a nonexistent full SHA instead of reading HEAD"]
+      unknown: ["allocated compute hostname was not captured before the preflight assertion"]
+    repair:
+      change: "derive EXPECTED_COMMIT with git rev-parse HEAD immediately before qsub; install artifact/trap handling before preflight assertions"
+      rationale: "removes manual SHA transcription and preserves a manifest for any future preflight failure"
+    verification:
+      minimal_reproduction: "compare submitted EXPECTED_COMMIT with git rev-parse HEAD"
+      targeted_gate: "same P06C unit PBS reaches pytest on the exact clean repair commit"
+      qualification_ladder: ["Miyabi 1-node unit rerun"]
+    retry_decision:
+      authorized: true
+      rationale: "preflight-only failure with no runtime execution; same smallest validation shape"
+      parent_run_id: 20260711_p06c_unit_d9afb10_1node
+    artifacts: [duraloco_p06c_unit.o2362984]
