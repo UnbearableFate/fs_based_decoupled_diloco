@@ -1,0 +1,179 @@
+#!/bin/bash
+#PBS -N duraloco_p05_9n
+#PBS -q regular-g
+#PBS -W group_list=xg24i002
+#PBS -l select=9:mpiprocs=1
+#PBS -l walltime=00:15:00
+#PBS -j oe
+#PBS -m ae
+
+set -eEuo pipefail
+
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat
+REQUIRED_MODULES=()
+for module_name in "${REQUIRED_MODULES[@]}"; do
+  module load "$module_name"
+done
+module list 2>&1 | cat
+
+: "${PBS_NODEFILE:?PBS_NODEFILE is required}"
+PROJECT_ROOT="${PROJECT_ROOT:-${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}}"
+PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
+CONFIG="${CONFIG:-$PROJECT_ROOT/configs/duraloco_milestone_gpt2_9node_50x10.yaml}"
+: "${EXPECTED_COMMIT:?EXPECTED_COMMIT is required}"
+: "${RUN_ID:?RUN_ID is required}"
+: "${ARTIFACT_ROOT:?ARTIFACT_ROOT is required}"
+PARENT_RUN_ID="${PARENT_RUN_ID:-}"
+QUALIFICATION_1NODE="${QUALIFICATION_1NODE:-}"
+QUALIFICATION_2NODE="${QUALIFICATION_2NODE:-}"
+SHARED_ROOT="${SHARED_ROOT:-$PROJECT_ROOT/runs/fs_diloco/$RUN_ID}"
+CACHE_ROOT="${CACHE_ROOT:-$PROJECT_ROOT/.cache/fs_diloco}"
+HF_HOME="${HF_HOME:-$CACHE_ROOT/huggingface}"
+HF_DATASETS_CACHE="${HF_DATASETS_CACHE:-$HF_HOME/datasets}"
+HF_HUB_CACHE="${HF_HUB_CACHE:-$HF_HOME/hub}"
+NUM_LEARNERS=8
+OMP_NUM_THREADS="${OMP_NUM_THREADS:-8}"
+TOKENIZERS_PARALLELISM=false
+WANDB_MODE=disabled
+source "$PROJECT_ROOT/scripts/lib/project_paths.sh"
+require_project_paths "$PROJECT_ROOT" "$SHARED_ROOT" "$CACHE_ROOT"
+
+cd "$PROJECT_ROOT"
+mapfile -t HOSTS < <(sort -u "$PBS_NODEFILE")
+[[ "${#HOSTS[@]}" -eq 9 ]]
+[[ "$(hostname)" == mg* ]]
+[[ "$(git rev-parse HEAD)" == "$EXPECTED_COMMIT" ]]
+[[ -z "$(git status --porcelain=v1)" ]]
+mkdir -p "$SHARED_ROOT" "$ARTIFACT_ROOT" "$HF_DATASETS_CACHE" "$HF_HUB_CACHE"
+touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log" \
+  "$ARTIFACT_ROOT/commands.log"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+
+result=fail
+exit_code=1
+termination_kind=test_failure
+finish() {
+  observed=$?
+  if [[ "$result" == pass ]]; then
+    exit_code=0
+    termination_kind=success
+  elif [[ "$observed" -ne 0 ]]; then
+    exit_code=$observed
+  fi
+  qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
+  if [[ -f "$ARTIFACT_ROOT/training.log" ]]; then
+    cp "$ARTIFACT_ROOT/training.log" "$ARTIFACT_ROOT/stdout.log"
+  fi
+  args=(
+    --root "$PROJECT_ROOT"
+    --output "$ARTIFACT_ROOT/manifest.json"
+    --phase P05
+    --purpose experiment
+    --run-id "$RUN_ID"
+    --schema-version 2
+    --validation-shape p05-maker-9node-gpt2-wikitext2-50x10-active-standby-takeover
+    --backend lustre
+    --model-revision gpt2
+    --dataset-revision wikitext-2-raw-v1
+    --config configs/duraloco_milestone_gpt2_9node_50x10.yaml
+    --commands-log commands.log
+    --stdout stdout.log
+    --stderr stderr.log
+    --exit-code "$exit_code"
+    --result "$result"
+    --termination-kind "$termination_kind"
+    --pbs-queue regular-g
+    --requested-resources select=9:mpiprocs=1,walltime=00:15:00
+    --last-qstat-state R
+    --termination-detail "P05 terminal 8-learner plus active/standby syncer topology with active SIGKILL and epoch-2 takeover"
+    --assertion "real GPT-2 WikiText-2 ran 50 inner steps by eight learners and committed exactly 10 optimizer transitions"
+    --assertion "active and standby ran on the ninth node; active was SIGKILLed after progress and standby took over"
+    --assertion "final strict replay reports epoch 2, standby ownership, authoritative stop, zero split brain, and zero double inclusion"
+    --assertion "control transitions do not inflate the 10 optimizer-transition terminal count"
+  )
+  if [[ -n "$PARENT_RUN_ID" ]]; then
+    args+=(--parent-run-id "$PARENT_RUN_ID")
+  fi
+  if [[ -n "$QUALIFICATION_1NODE" ]]; then
+    args+=(--qualification-miyabi-1node "$QUALIFICATION_1NODE")
+  fi
+  if [[ -n "$QUALIFICATION_2NODE" ]]; then
+    args+=(--qualification-miyabi-2node "$QUALIFICATION_2NODE")
+  fi
+  if [[ -f "$ARTIFACT_ROOT/terminal_gate_report.json" ]]; then
+    args+=(--stage-metrics-path terminal_gate_report.json)
+  fi
+  "$PYTHON_BIN" scripts/agent/create_run_manifest.py "${args[@]}" || true
+}
+trap finish EXIT
+trap 'echo "[ERROR] P05 terminal 9-node gate failed at line $LINENO" | tee -a "$ARTIFACT_ROOT/stderr.log"' ERR
+
+sort -u "$PBS_NODEFILE" | tee "$ARTIFACT_ROOT/hosts.log"
+printf 'PBS_JOBID=%s\nPBS_NODEFILE=%s\nRUN_ID=%s\nSHARED_ROOT=%s\n' \
+  "$PBS_JOBID" "$PBS_NODEFILE" "$RUN_ID" "$SHARED_ROOT" \
+  | tee "$ARTIFACT_ROOT/pbs_environment.log"
+"$PYTHON_BIN" --version 2>&1 | tee "$ARTIFACT_ROOT/python_version.log"
+module list 2>&1 | cat > "$ARTIFACT_ROOT/modules.log"
+git status --short --branch | tee "$ARTIFACT_ROOT/git_status.log"
+git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"
+sha256sum "$CONFIG" | tee "$ARTIFACT_ROOT/config_sha256.log"
+findmnt -T "$SHARED_ROOT" 2>&1 | tee "$ARTIFACT_ROOT/mount.log" || true
+if command -v lfs >/dev/null 2>&1; then
+  lfs getstripe "$SHARED_ROOT" 2>&1 | tee "$ARTIFACT_ROOT/stripe.log" || true
+fi
+"$PYTHON_BIN" scripts/agent/check_no_embedded_database.py --root "$PROJECT_ROOT" \
+  --output "$ARTIFACT_ROOT/forbidden_surface.json"
+
+MPI_ENV_ARGS=(
+  "PROJECT_ROOT=$PROJECT_ROOT"
+  "PYTHON_BIN=$PYTHON_BIN"
+  "CONFIG=$CONFIG"
+  "RUN_ID=$RUN_ID"
+  "SHARED_ROOT=$SHARED_ROOT"
+  "ARTIFACT_ROOT=$ARTIFACT_ROOT"
+  "HF_HOME=$HF_HOME"
+  "HF_DATASETS_CACHE=$HF_DATASETS_CACHE"
+  "HF_HUB_CACHE=$HF_HUB_CACHE"
+  "WANDB_MODE=$WANDB_MODE"
+  "NUM_LEARNERS=$NUM_LEARNERS"
+  "OMP_NUM_THREADS=$OMP_NUM_THREADS"
+  "TOKENIZERS_PARALLELISM=$TOKENIZERS_PARALLELISM"
+)
+TRAIN_COMMAND=(
+  mpirun
+  --mca mpi_abort_print_stack 1
+  --report-bindings
+  --bind-to core
+  -np 9
+  /usr/bin/env "${MPI_ENV_ARGS[@]}"
+  bash -lc
+  'set -eEuo pipefail; cd "$PROJECT_ROOT"; export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"; rank="${OMPI_COMM_WORLD_RANK:?missing rank}"; if [[ "$rank" -eq 0 ]]; then exec bash scripts/chaos/run_p05_syncer_pair.sh; else learner_id=$(printf "learner_%03d" $((rank - 1))); export CUDA_VISIBLE_DEVICES=0; exec "$PYTHON_BIN" -m fs_diloco.learner --config "$CONFIG" --run-id "$RUN_ID" --shared-root "$SHARED_ROOT" --learner-id "$learner_id" --num-learners "$NUM_LEARNERS"; fi'
+)
+printf -v TRAIN_TEXT '%q ' "${TRAIN_COMMAND[@]}"
+printf '%s\n' "${TRAIN_TEXT% }" | tee "$ARTIFACT_ROOT/commands.log"
+"${TRAIN_COMMAND[@]}" 2>&1 | tee "$ARTIFACT_ROOT/training.log"
+
+SUMMARY=("$PYTHON_BIN" -m fs_diloco.analysis summary "$SHARED_ROOT" --json)
+printf -v SUMMARY_TEXT '%q ' "${SUMMARY[@]}"
+printf '%s\n' "${SUMMARY_TEXT% }" | tee -a "$ARTIFACT_ROOT/commands.log"
+"${SUMMARY[@]}" | tee "$ARTIFACT_ROOT/training_summary.json"
+
+PROBE=(
+  "$PYTHON_BIN" -m fs_diloco.coordination.terminal_probe
+  --training-root "$SHARED_ROOT"
+  --config "$CONFIG"
+  --run-id "$RUN_ID"
+  --artifact-root "$ARTIFACT_ROOT"
+  --output "$ARTIFACT_ROOT/terminal_gate_report.json"
+)
+printf -v PROBE_TEXT '%q ' "${PROBE[@]}"
+printf '%s\n' "${PROBE_TEXT% }" | tee -a "$ARTIFACT_ROOT/commands.log"
+"${PROBE[@]}" 2>&1 | tee "$ARTIFACT_ROOT/p05_probe.log"
+
+TESTS=("$PYTHON_BIN" -m pytest -q tests/log tests/coordination --junitxml "$ARTIFACT_ROOT/p05_junit.xml")
+printf -v TEST_TEXT '%q ' "${TESTS[@]}"
+printf '%s\n' "${TEST_TEXT% }" | tee -a "$ARTIFACT_ROOT/commands.log"
+"${TESTS[@]}" 2>&1 | tee "$ARTIFACT_ROOT/p05_pytest.log"
+
+result=pass
+exit_code=0

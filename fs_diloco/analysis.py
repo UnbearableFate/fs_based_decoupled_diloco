@@ -83,7 +83,7 @@ def _loss_summary(rows: list[dict[str, str]]) -> dict[str, Any]:
 
 def _syncer_log_flags(root: Path) -> dict[str, bool]:
     rows = _read_jsonl(root / "logs" / "syncer.jsonl")
-    events = {str(row.get("event")) for row in rows}
+    events = {str(row.get("event_type")) for row in rows}
     text = json.dumps(rows, sort_keys=True)
     return {
         "error": "error" in events,
