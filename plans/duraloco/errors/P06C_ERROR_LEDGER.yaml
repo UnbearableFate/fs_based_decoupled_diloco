@@ -257,3 +257,35 @@ records:
       rationale: "configuration-only preflight failure before model loading or authority creation"
       parent_run_id: 20260711_p06c_d1_r2_5825211
     artifacts: [artifacts/duraloco/P06C/20260711_p06c_d1_r2_5825211]
+  - error_id: E-P06C-20260711-09
+    phase_and_gate: P06C/D1-R2
+    observed_at_utc: "2026-07-11T13:13:42Z"
+    pbs_job_id: 2363043.opbs
+    hosts: [mg0004]
+    git_commit: 9d1c0935a1ef23138973d5a8c7922d11f966c1a3
+    classification: unexpected_failure
+    phenomenon:
+      exit_code: 1
+      exception: "RunInitializationError: generation 00000001 run manifest not found"
+      terminal_state: "real D1-R2 runtime completed one exact two-attempt transition and terminal stop; only the strict report invocation failed"
+      log_excerpt: duraloco_p06c_d1.o2363043
+    expected: "the report opens committed run generation 0 selected by the D1 config"
+    impact:
+      acceptance_ids: [P06C-A04, P06C-A09, P06C-A23]
+      invariants: ["analysis must open the exact committed generation rather than infer a default"]
+      committed_prefix_safe: true
+    cause:
+      confirmed: ["create_p06c_runtime_report defaulted to generation 1 while fs_diloco_gpt2_wikitext2_1l_debug.yaml uses generation 0", "runtime telemetry confirms two distinct executors produced the same PFR and one transition committed"]
+      unknown: []
+    repair:
+      change: "pass --run-generation 0 explicitly from the D1 PBS script"
+      rationale: "binds analysis to the immutable generation chosen by the runtime config"
+    verification:
+      minimal_reproduction: "open the preserved D1 authority at generation 0 on a compute node"
+      targeted_gate: "fresh D1-R2 run produces PASS report and manifest on the same clean repair commit"
+      qualification_ladder: ["Miyabi 1-node D1-R2 rerun"]
+    retry_decision:
+      authorized: true
+      rationale: "runtime succeeded but required manifest did not; one clean 1-node qualification rerun is required"
+      parent_run_id: 20260711_p06c_d1_r2_9d1c093
+    artifacts: [artifacts/duraloco/P06C/20260711_p06c_d1_r2_9d1c093, runs/P06C/20260711_p06c_d1_r2_9d1c093]
