@@ -1,0 +1,38 @@
+{
+  "checker_hostname": "mg0008",
+  "checker_pbs_job_id": "2359306.opbs",
+  "checking_to_completed": "AUTHORIZED",
+  "checks": {
+    "attempt_lineage_reviewed": true,
+    "explicit_remaps_approved": [
+      "P00-A06",
+      "P04-A06"
+    ],
+    "maker_lineage": [
+      "20260711_m00_c052438_1node_requal",
+      "20260711_m00_c052438_2node_requal",
+      "20260711_m00_c052438_gpt2_9n_50x10"
+    ],
+    "mapping_complete": true,
+    "mapping_gate_count": 41,
+    "novel_counterexample": {
+      "cache_unchanged_after_failure": true,
+      "corruption_rejected": true,
+      "final_commit_seq": 1,
+      "name": "stale_process_head_jump_with_corrupt_new_payload",
+      "pass": true,
+      "restored_memoized_equals_strict": true
+    },
+    "one_node_junit": "PASS",
+    "single_head_cas_static_audit": "PASS",
+    "terminal_50x10": "PASS",
+    "two_node_contract": "PASS",
+    "vectorized_and_memoized_replay": "PASS"
+  },
+  "persistence_commit": "358ecc0cb65abe5ebfe2fdfad2b4f53d4a09618f",
+  "required_failures": [],
+  "required_gate_followups": "none",
+  "schema_version": 1,
+  "verdict": "PASS",
+  "verified_implementation": "c052438a3cfe5e16c3b154fc842f32dcd61ec6ff"
+}

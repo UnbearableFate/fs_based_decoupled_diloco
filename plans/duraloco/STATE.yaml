@@ -1,12 +1,12 @@
 phase: M00
-status: checking
+status: completed
 planning_basis_branch: codex/duraloco-p04-transaction-log
 planning_basis_commit: a655413cea6ebe9bc368b5827318efd766683b5a
 actual_base_branch: no_sql
 actual_base_commit: f32b9ddf3fd6443947c178aee667029df1c7f86d
 feature_branch: codex/duraloco-m00-sqlite-free-rebase
 current_loop: 4
-current_goal: "independently check the SQLite-free runtime and P00-P04 requalification"
+current_goal: "M00 SQLite-free runtime and P00-P04 requalification completed"
 attempts_for_current_failure: 0
 last_verified_commit: c052438a3cfe5e16c3b154fc842f32dcd61ec6ff
 checks:
@@ -28,7 +28,7 @@ acceptance:
   M00-A09: {result: pass, evidence: [artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/manifest.json, artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/junit.xml]}
   M00-A10: {result: pass, evidence: [artifacts/duraloco/M00/20260711_m00_c052438_2node_requal/manifest.json, artifacts/duraloco/M00/20260711_m00_c052438_2node_requal/two_node_summary.json]}
   M00-A11: {result: pass, evidence: [artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/manifest.json, artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/terminal_gate_report.json]}
-  M00-A12: {result: not_run, evidence: []}
+  M00-A12: {result: pass, evidence: [artifacts/duraloco/M00/20260711_m00_checker_358ecc0_1node/checker_report.md, artifacts/duraloco/M00/20260711_m00_checker_358ecc0_1node/checker_results.json]}
 open_decisions: []
 open_blockers: []
 artifacts:
@@ -50,9 +50,10 @@ artifacts:
   - artifacts/duraloco/M00/20260711_m00_c052438_1node_requal
   - artifacts/duraloco/M00/20260711_m00_c052438_2node_requal
   - artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10
+  - artifacts/duraloco/M00/20260711_m00_checker_358ecc0_1node
   - plans/duraloco/reviews/M00_PRODUCTION_REPLAY_WORKFLOW_REVIEW.md
-next_action: "run the independent final M00 Checker on the persisted clean commit"
+next_action: "start P05 syncer lease, fencing, and failover from the archived M00 branch tip"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
-checker_report: null
+checker_report: artifacts/duraloco/M00/20260711_m00_checker_358ecc0_1node/checker_report.md

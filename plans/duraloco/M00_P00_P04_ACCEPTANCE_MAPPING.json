@@ -2,14 +2,15 @@
   "schema_version": 1,
   "phase": "M00",
   "verified_implementation": "c052438a3cfe5e16c3b154fc842f32dcd61ec6ff",
-  "status": "maker_pass_pending_independent_checker",
+  "status": "pass",
   "common_evidence": {
     "one_node": "artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/manifest.json",
     "one_node_junit": "artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/junit.xml",
     "two_node": "artifacts/duraloco/M00/20260711_m00_c052438_2node_requal/two_node_summary.json",
     "terminal": "artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/terminal_gate_report.json",
     "terminal_log_junit": "artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/m00_log_junit.xml",
-    "real_prefix_replay": "artifacts/duraloco/M00/20260711_m00_6e85182_replay_benchmark/report.json"
+    "real_prefix_replay": "artifacts/duraloco/M00/20260711_m00_6e85182_replay_benchmark/report.json",
+    "independent_checker": "artifacts/duraloco/M00/20260711_m00_checker_358ecc0_1node/checker_report.md"
   },
   "explicit_remaps": {
     "P00-A06": {

@@ -7,11 +7,11 @@
 - Phase: M00 — SQLite-free runtime rebase and P00–P04 requalification
 - Branch: `codex/duraloco-m00-sqlite-free-rebase`
 - Base: user design commit `f32b9ddf3fd6443947c178aee667029df1c7f86d`
-- State: `checking`
-- Completed Maker acceptance targets: M00-A01 through M00-A11
-- Pending acceptance target: M00-A12 independent Checker
+- State: `completed`
+- Completed acceptance targets: M00-A01 through M00-A12
+- Pending acceptance target: none
 - Verified implementation: `c052438a3cfe5e16c3b154fc842f32dcd61ec6ff`
-- Checker verdict: pending
+- Checker verdict: `PASS`; `required_gate_followups: none`
 
 The implementation removes the legacy persistence surface, adds
 the production safetensors transaction path, replay-derived `RuntimeView`,
@@ -361,12 +361,28 @@ authority probe and the 39-test log slice both passed. The complete 41-ID
 P00–P04 mapping is persisted in
 `plans/duraloco/M00_P00_P04_ACCEPTANCE_MAPPING.{json,md}`.
 
+### Final independent Checker
+
+PBS `2359306.opbs` ran from a detached clean worktree at persistence commit
+`358ecc0cb65abe5ebfe2fdfad2b4f53d4a09618f` on `mg0008`. The forbidden scan
+passed, the current suite passed 281 tests with one explicit skip, all 41
+P00–P04 mappings and both remaps were present, Maker 1/2/9-node lineage and
+terminal evidence were consistent, and the static audit found exactly one
+transactional head-CAS call and no learner head-CAS surface.
+
+The Checker added a stale-process head-jump counterexample: a process with a
+verified genesis cache observed another writer's successor whose new proposal
+payload had been corrupted. Replay rejected the corruption without changing
+the cache; after restoration, memoized and empty-cache strict replay matched.
+The final verdict is `PASS`, M00-A12 is satisfied, and
+`required_gate_followups: none` authorizes M00 completion and P05 entry.
+
 ### Limitations and next action
 
 M00 still assumes one active syncer. Lease/fencing begins in P05; learner exact
-restart and authoritative GC remain later work. Next action is the independent
-final Checker on the persisted clean commit; no additional Maker experiment is
-required.
+restart and authoritative GC remain later work. M00 is archived on its feature
+branch; the next phase is P05 lease/fencing/failover. No additional M00 Maker
+experiment or merge to `main` is required.
 
 ## 中文
 
@@ -375,11 +391,11 @@ required.
 - 阶段：M00 — 无 SQLite 运行时重构与 P00–P04 再验收
 - 分支：`codex/duraloco-m00-sqlite-free-rebase`
 - 基线：用户设计提交 `f32b9ddf3fd6443947c178aee667029df1c7f86d`
-- 状态：`checking`
-- Maker 已完成验收项：M00-A01 至 M00-A11
-- 待完成验收项：M00-A12 独立 Checker
+- 状态：`completed`
+- 已完成验收项：M00-A01 至 M00-A12
+- 待完成验收项：无
 - 已验证实现：`c052438a3cfe5e16c3b154fc842f32dcd61ec6ff`
-- Checker 结论：待运行
+- Checker 结论：`PASS`；`required_gate_followups: none`
 
 首个实现提交删除旧持久化表面，加入 production safetensors transaction、由 replay
 派生的 `RuntimeView`、可重入 proposal catalog、文件原生 analysis、显式 warm-start
@@ -680,8 +696,22 @@ proposal observation、aggregation、outer step、successor prepare、head CAS�
 与 39 项 log 测试均通过。完整 41 项 P00–P04 映射位于
 `plans/duraloco/M00_P00_P04_ACCEPTANCE_MAPPING.{json,md}`。
 
+### 最终独立 Checker
+
+PBS `2359306.opbs` 在 `mg0008` 上从持久化提交
+`358ecc0cb65abe5ebfe2fdfad2b4f53d4a09618f` 的 detached 干净 worktree 运行。
+禁止项扫描通过；当前套件 281 项通过、1 项显式跳过；41 项 P00–P04 映射和两个
+语义重映射完整；Maker 单/双/九节点 lineage 与终端证据一致；静态审计确认只有
+一个 transaction head-CAS 调用，learner 没有 head-CAS surface。
+
+Checker 新增了旧进程 head-jump 反例：持有已验证 genesis cache 的进程遇到另一个
+writer 产生的 successor，且该 successor 的新 proposal payload 被损坏。Replay 在
+不修改 cache 的情况下拒绝损坏；恢复 object 后，memoized replay 与空 cache 严格
+replay 完全一致。最终结论为 `PASS`，M00-A12 已满足，且
+`required_gate_followups: none` 授权 M00 完成并进入 P05。
+
 ### 限制与下一动作
 
 M00 仍假设只有一个 active syncer；lease/fencing 属于 P05，learner exact restart 与
-权威 GC 属于后续阶段。下一动作是在已持久化干净提交上运行最终独立 Checker；
-无需再提交 Maker 实验。
+权威 GC 属于后续阶段。M00 已在其 feature branch 归档；下一阶段是 P05
+lease/fencing/failover。无需额外 M00 Maker 实验，也不自动合并 `main`。
