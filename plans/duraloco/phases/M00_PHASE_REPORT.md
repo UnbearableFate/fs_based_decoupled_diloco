@@ -176,6 +176,27 @@ two-node and nine-node compute qualification remain in progress.
 - Repair: retain the immutable validated bytes in `CatalogEntry` and pass a
   typed validation result into production publication, eliminating rereads and
   redundant finite-value scans without weakening structural/SHA validation.
+
+#### Nine-node attempt 4 — `20260711_m00_c1c2404_gpt2_9n_50x10`
+
+- Time/identity: PBS `2359165.opbs`, nine compute hosts led by `mg1078`,
+  implementation `c1c2404afdd6a228a47a09c83b703c9ba53f2f6d`. The same clean commit
+  passed jobs `2359162.opbs` (one node) and `2359164.opbs` (two nodes).
+- Phenomenon: cached validated bytes removed the scan/load/publish rereads, but
+  the first transition still took roughly 100 seconds. It committed exactly
+  once and all learners adopted it before deliberate termination.
+- Expected/actual: a vectorized finite check was expected to remove the scalar
+  bottleneck. It ran on the Grace CPU, where checking eight 124-million-element
+  tensors remained dominant even without redundant calls.
+- Reason: confirmed by unchanged first-transition timing after eliminating the
+  duplicate call sites and by the validation tensor remaining on CPU.
+- Impact: M00-A11 only; the committed sequence-1 prefix is valid. The operator
+  terminated the job deliberately (`Exit_status=271`).
+- Evidence: `artifacts/duraloco/M00/20260711_m00_c1c2404_gpt2_9n_50x10/manifest.json`,
+  `training.log`, and same-commit one/two-node manifests.
+- Repair: pass the syncer's selected compute device into the production catalog
+  and execute large vectorized finite checks on GPU; CPU remains the default for
+  small fixtures and non-accelerated paths.
 - Impact: M00-A03, M00-A04, M00-A09, P02-A04, and P04 replay requalification.
 - Evidence: `artifacts/duraloco/M00/20260711_m00_04da7ee_1node/manifest.json`,
   `one_node_contract.json`, full syncer/learner logs, and `stdout.log`.
@@ -346,6 +367,24 @@ generation metadata 与 M00 静态/运行 harness。源码、配置、脚本与�
 - 修复：在 `CatalogEntry` 保留 immutable validated bytes，并将 typed validation result
   直接交给 production publication；在不削弱结构/SHA 验证的前提下消除重复读取与
   finite-value scan。
+
+#### 九节点第 4 次尝试 — `20260711_m00_c1c2404_gpt2_9n_50x10`
+
+- 时间/身份：PBS `2359165.opbs`，以 `mg1078` 为首的九个 compute nodes，实现提交
+  `c1c2404afdd6a228a47a09c83b703c9ba53f2f6d`。同一干净提交通过了
+  `2359162.opbs`（单节点）与 `2359164.opbs`（双节点）。
+- 现象：缓存 validated bytes 已消除 scan/load/publish 重读，但首个 transition 仍约需
+  100 秒；该 transition 恰好提交一次，全部 learner 采用后才被人工终止。
+- 预期/实际：向量化 finite check 原应消除标量瓶颈；实际它运行于 Grace CPU，对 8 个
+  各约 1.24 亿元素 tensor 的检查即使不重复仍是主要耗时。
+- 原因：消除重复调用后首个 transition timing 基本不变，且 validation tensor 保持在
+  CPU，共同证实该原因。
+- 影响：仅 M00-A11；已提交 sequence-1 prefix 合法。operator 主动终止 job
+  （`Exit_status=271`）。
+- 证据：`artifacts/duraloco/M00/20260711_m00_c1c2404_gpt2_9n_50x10/manifest.json`、
+  `training.log` 与同 commit 单/双节点 manifests。
+- 修复：将 syncer 选定 compute device 传入 production catalog，大 tensor 的向量化
+  finite check 在 GPU 执行；小 fixture 与无 accelerator 路径仍默认 CPU。
 
 ### 限制与下一动作
 

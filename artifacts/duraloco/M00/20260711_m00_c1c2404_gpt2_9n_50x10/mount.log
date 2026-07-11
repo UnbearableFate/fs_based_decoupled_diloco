@@ -1,0 +1,2 @@
+TARGET SOURCE                                                                                               FSTYPE OPTIONS
+/work  172.16.20.201@o2ib200:172.16.20.202@o2ib200:172.16.20.211@o2ib200:172.16.20.212@o2ib200:/lustre/work lustre rw,flock,lazystatfs,encrypt

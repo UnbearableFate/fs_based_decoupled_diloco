@@ -1,0 +1,33 @@
+{
+  "assertions": [
+    "validated payload reuse preserved the exactly-once first transition",
+    "operator terminated after CPU vectorized finiteness remained the dominant large-tensor cost"
+  ],
+  "backend": "lustre",
+  "commands_log": "commands.log",
+  "config_digest": "962fc3a9a52d6485982ebb0a61bf947153e1e5902f825c75ee8381d70f6f4744",
+  "config_path": "configs/duraloco_milestone_gpt2_9node_50x10.yaml",
+  "dataset_revision": "wikitext-2-raw-v1",
+  "dirty_paths": [],
+  "dirty_tree": false,
+  "ended_at_utc": "2026-07-11T00:15:57Z",
+  "exit_code": 271,
+  "git_branch": "codex/duraloco-m00-sqlite-free-rebase",
+  "git_commit": "c1c2404afdd6a228a47a09c83b703c9ba53f2f6d",
+  "hostname": "mg1078",
+  "manifest_sha256": "adcf7d6b5514c296f441338de5a6b40dee0e1cee47f9fc01148e7363f5a30f09",
+  "model_revision": "gpt2",
+  "parent_run_id": "20260711_m00_c1c2404_2node_requal",
+  "pbs_job_id": "2359165.opbs",
+  "pbs_nodefile_digest": "49bf069399719ea7235e3a8ed56121e781721fb93e229859580ffed7acd763bc",
+  "phase": "M00",
+  "purpose": "experiment",
+  "python_version": "3.13.13",
+  "result": "fail",
+  "run_id": "20260711_m00_c1c2404_gpt2_9n_50x10",
+  "schema_version": 1,
+  "seed": null,
+  "started_at_utc": "2026-07-11T00:12:37Z",
+  "stderr": "stderr.log",
+  "stdout": "stdout.log"
+}

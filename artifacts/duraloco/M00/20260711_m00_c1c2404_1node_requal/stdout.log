@@ -1,0 +1,12 @@
+{
+  "finding_count": 0,
+  "findings": [],
+  "scanned_files": 191,
+  "status": "PASS"
+}
+........................................................................ [ 26%]
+........................................................................ [ 53%]
+........s............................................................... [ 79%]
+.......................................................                  [100%]
+270 passed, 1 skipped in 18.82s
+{"commit_seq": 10, "committed_state_digest": "31a994e21f7460bb9e1bc6be00cda9508ce6cc40a3c2972e914bda50c3c61a71", "crash_points": {"after_commit_put": 0, "after_frontier_put": 0, "after_head_cas": 1, "after_outer_state_put": 0, "after_params_put": 0, "before_commit_put": 0, "before_frontier_put": 0, "before_head_cas": 0, "before_outer_state_put": 0, "before_params_put": 0}, "empty_local_state_recovery_exact": true, "hostname": "mg0003", "memory_posix_equal": true, "operation_count": 1744, "prefix_digests": ["69f43213d5e3459842dd93320b19e11dbaed1595d29e6ddb328dd0e2610ae08f", "2f5ef013ed8fa7d88f0024349d3d64d9499e3235a1c69d78b94d4049db42d4c4", "28a6f02940646f4855685fd77249cb86baced73215a510120c07fed1094f995c", "7d91cf771412e73c9bcff29e3e6003ae707dd1d67c8d8d558e9f9f6306b226a4", "31d7e0526a310827901c034a3ee3d814841d63b4dbe6109f7fbd48d83931645d", "977805e71b31e8e1e789df5383e13024e3629144a618c29f1fc459c4f1fa9e77", "2ee91be47755193b8c3a0aa785c32013fc00078fd0f8c0424580011f708f8b95", "9e468f1de2c3b7f481fe934a661676c38fbfefc922bfb0be8ca4253c8cad3f47", "df6f39134dadc41dee3321da202220862af1fe7bd8ea1ee56430362e533e783b", "ee8059b2427056009e50a24c3ab1f83a0247f85b73a4cabb7613d95b3a59f18d", "31a994e21f7460bb9e1bc6be00cda9508ce6cc40a3c2972e914bda50c3c61a71"], "prepared_orphan_count": 4, "run_id": "20260711_m00_c1c2404_1node_requal-contract", "status": "PASS"}

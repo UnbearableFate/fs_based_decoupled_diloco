@@ -1,0 +1,150 @@
+{
+  "authority": "committed-transition-log",
+  "commit_id": "c-99361405bee0a48ac9b9bb4ca4ad6c9956d502a11dad1110f9750b95277699ab",
+  "commit_seq": 4,
+  "committed_selected_counts_by_event": {
+    "1": 2,
+    "2": 2,
+    "3": 1,
+    "4": 2
+  },
+  "committed_state_digest": "b8f39a3ef2a1fcde2b7d521908837701fc52e467d4937bc2253d27f83ea14d1c",
+  "consumed_proposal_count": 7,
+  "fragment_versions": {
+    "0": 2,
+    "1": 2
+  },
+  "frontier_sha256": "538cb7f8905aa94fd3a8ed5ca02cd538c0423972a622ac1f65a7f71885b4a79d",
+  "global_merge_event": 4,
+  "heartbeats": {
+    "learner_000": {
+      "format_version": 1,
+      "hostname": "mg0003",
+      "last_adopted_fragments": [
+        1
+      ],
+      "last_loaded_fragment_versions": {
+        "0": 2,
+        "1": 2
+      },
+      "last_loaded_global_merge_event": 4,
+      "last_loaded_global_version": 4,
+      "last_local_step": 8,
+      "last_update_id": "learner_000_00000008_f001_258aefd6f379",
+      "learner_id": "learner_000",
+      "phase": "process_exit",
+      "pid": 2580753,
+      "run_id": "20260711_m00_c1c2404_1node_requal-fragment",
+      "status": "stopped",
+      "timestamp": 1783728671.151755,
+      "tokens_per_sec": null
+    },
+    "learner_001": {
+      "format_version": 1,
+      "hostname": "mg0003",
+      "last_adopted_fragments": [
+        1
+      ],
+      "last_loaded_fragment_versions": {
+        "0": 2,
+        "1": 2
+      },
+      "last_loaded_global_merge_event": 4,
+      "last_loaded_global_version": 4,
+      "last_local_step": 8,
+      "last_update_id": "learner_001_00000008_f001_f5362bab26b8",
+      "learner_id": "learner_001",
+      "phase": "process_exit",
+      "pid": 2580754,
+      "run_id": "20260711_m00_c1c2404_1node_requal-fragment",
+      "status": "stopped",
+      "timestamp": 1783728671.139261,
+      "tokens_per_sec": null
+    }
+  },
+  "latest": {
+    "authority": "committed-transition-log",
+    "commit_id": "c-99361405bee0a48ac9b9bb4ca4ad6c9956d502a11dad1110f9750b95277699ab",
+    "commit_seq": 4,
+    "committed_state_digest": "b8f39a3ef2a1fcde2b7d521908837701fc52e467d4937bc2253d27f83ea14d1c",
+    "created_at": 1783728670.9934192,
+    "format_version": 1,
+    "fragment_index_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/M00/20260711_m00_c1c2404_1node_requal/fragment/fragments/fragment_index.json",
+    "fragments": {
+      "0": {
+        "optim_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/M00/20260711_m00_c1c2404_1node_requal/fragment/fragments/optim/fragment_000/v000002.safetensors",
+        "producing_commit_id": "c-91a5c9b0b976f1c559f5c339e93b1710ec95d200a5a68db4bca62f9db047d3f7",
+        "version": 2,
+        "weight_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/M00/20260711_m00_c1c2404_1node_requal/fragment/fragments/weights/fragment_000/v000002.safetensors"
+      },
+      "1": {
+        "optim_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/M00/20260711_m00_c1c2404_1node_requal/fragment/fragments/optim/fragment_001/v000002.safetensors",
+        "producing_commit_id": "c-99361405bee0a48ac9b9bb4ca4ad6c9956d502a11dad1110f9750b95277699ab",
+        "version": 2,
+        "weight_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/M00/20260711_m00_c1c2404_1node_requal/fragment/fragments/weights/fragment_001/v000002.safetensors"
+      }
+    },
+    "frontier_sha256": "538cb7f8905aa94fd3a8ed5ca02cd538c0423972a622ac1f65a7f71885b4a79d",
+    "global_merge_event": 4,
+    "latest_kind": "fragment",
+    "latest_layout_version": 3,
+    "materialized_weight_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/M00/20260711_m00_c1c2404_1node_requal/fragment/weights/global_v000004.safetensors",
+    "param_index_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/M00/20260711_m00_c1c2404_1node_requal/fragment/control/param_index.json",
+    "run_generation": 0,
+    "run_id": "20260711_m00_c1c2404_1node_requal-fragment",
+    "runtime_view_digest": "83b5a34eb1778228e055280100f91719de965984c8b615b8cfe09ec60a974fb5",
+    "total_seen_tokens": 448,
+    "version": 4
+  },
+  "latest_export_valid": true,
+  "latest_kind": "fragment",
+  "learner_fragment_adoption": {
+    "learner_000": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    },
+    "learner_001": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    }
+  },
+  "learner_local_steps": {
+    "learner_000": 8,
+    "learner_001": 8
+  },
+  "learner_metrics": {
+    "exists": true,
+    "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/M00/20260711_m00_c1c2404_1node_requal/fragment/metrics/learner_metrics.csv",
+    "rows": 8
+  },
+  "loss_summary": {
+    "count": 8,
+    "invalid_or_nonfinite": 0,
+    "max": 4.46445107460022,
+    "min": 4.23577618598938,
+    "obvious_divergence": false
+  },
+  "materialized_weight_exists": true,
+  "payload_codec": "safetensors-flat-v1",
+  "run_generation": 0,
+  "run_id": "20260711_m00_c1c2404_1node_requal-fragment",
+  "runtime_view_digest": "83b5a34eb1778228e055280100f91719de965984c8b615b8cfe09ec60a974fb5",
+  "shared_root": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/M00/20260711_m00_c1c2404_1node_requal/fragment",
+  "stop_reason": "stop_after_outer_steps",
+  "syncer_log_flags": {
+    "error": false,
+    "no_progress_timeout": false,
+    "uncaught_exception": false
+  },
+  "syncer_metrics": {
+    "exists": true,
+    "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/M00/20260711_m00_c1c2404_1node_requal/fragment/metrics/syncer_metrics.csv",
+    "rows": 4
+  },
+  "total_seen_tokens": 448,
+  "update_manifest": {
+    "exists": true,
+    "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/M00/20260711_m00_c1c2404_1node_requal/fragment/metrics/update_manifest.csv",
+    "rows": 8
+  }
+}
