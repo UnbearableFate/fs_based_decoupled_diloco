@@ -109,9 +109,11 @@ def _proposal(
     return manifest
 
 
-def _prepare(log, manifest, values):
+def _prepare(log, manifest, values, *, outer_step: int = 0):
     params = torch.tensor(values, dtype=torch.float32)
     outer = init_outer_state(params, log.spec.optimizer_config)
+    if outer_step:
+        outer["step"] = outer["step"].new_tensor(outer_step)
     return log.prepare_transition(
         fragment_id=manifest.fragment_id,
         selected_proposal_ids=[manifest.proposal_id],
@@ -251,7 +253,7 @@ def test_verified_immutable_tensor_cache_is_process_local_and_discardable():
 def test_corrupt_new_object_fails_before_replay_cache_replacement(object_kind):
     backend, log = _initialize(f"production-corrupt-new-{object_kind}")
     manifest = _proposal(log, learner="learner-0", sequence=1, values=[1.0, 2.0])
-    prepared = _prepare(log, manifest, [0.5, 1.0])
+    prepared = _prepare(log, manifest, [0.5, 1.0], outer_step=1)
     log.commit_prepared(prepared)
     key = {
         "proposal": manifest.payload_key,
