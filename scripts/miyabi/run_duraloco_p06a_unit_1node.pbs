@@ -59,6 +59,7 @@ if (( characterization_status == 0 )); then
     tests/test_outer_optim.py \
     tests/coordination \
     tests/log/test_production_runtime.py \
+    tests/test_retention.py \
     tests/test_removed_config_keys.py \
     --junitxml "$ARTIFACT_ROOT/junit.xml"
   test_status=$?

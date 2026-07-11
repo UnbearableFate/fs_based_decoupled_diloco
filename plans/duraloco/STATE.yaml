@@ -59,7 +59,7 @@ artifacts:
   - artifacts/duraloco/P06A/20260711_p06a_c1_c834e57
   - artifacts/duraloco/P06A/20260711_p06a_final_fce378f_c1
   - artifacts/duraloco/P06A/20260711_p06a_final_fce378f_c2
-next_action: "prove fresh unmarked update payloads survive retention, then rerun C1 and C2 on the repaired clean commit before C9"
+next_action: "run the focused retention/characterization suite, then rerun C1 and C2 on the repaired clean commit before C9"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
