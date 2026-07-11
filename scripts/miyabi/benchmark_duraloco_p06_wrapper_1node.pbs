@@ -1,0 +1,48 @@
+#!/bin/bash
+#PBS -N p06_wrap_check
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:05:00
+#PBS -j oe
+#PBS -m ae
+
+set -eEuo pipefail
+CHECKOUT_ROOT="${CHECKOUT_ROOT:-${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}}"
+PYTHON_BIN="${PYTHON_BIN:-$CHECKOUT_ROOT/.venv/bin/python}"
+: "${EXPECTED_COMMIT:?EXPECTED_COMMIT is required}"
+: "${ARTIFACT_ROOT:?ARTIFACT_ROOT is required}"
+: "${RUN_ID:?RUN_ID is required}"
+: "${PARENT_RUN_ID:?PARENT_RUN_ID is required}"
+cd "$CHECKOUT_ROOT"
+mkdir -p "$ARTIFACT_ROOT"
+touch "$ARTIFACT_ROOT/stderr.log"
+[[ "$(hostname)" == mg* ]]
+[[ "$(git rev-parse HEAD)" == "$EXPECTED_COMMIT" ]]
+[[ -z "$(git status --porcelain=v1)" ]]
+git status --short --branch | tee "$ARTIFACT_ROOT/git_status.log"
+git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"
+hostname | tee "$ARTIFACT_ROOT/hostname.log"
+"$PYTHON_BIN" --version 2>&1 | tee "$ARTIFACT_ROOT/python_version.log"
+module list 2>&1 | cat > "$ARTIFACT_ROOT/modules.log"
+printf 'cd /home/x10041 && PROJECT_ROOT=%q TARGETED_DRY_RUN=1 bash %q\n' \
+  "$CHECKOUT_ROOT" "$CHECKOUT_ROOT/scripts/miyabi/run_duraloco_p06_9node_gpt2_50x10.pbs" \
+  | tee "$ARTIFACT_ROOT/commands.log"
+(
+  cd /home/x10041
+  PROJECT_ROOT="$CHECKOUT_ROOT" TARGETED_DRY_RUN=1 \
+    bash "$CHECKOUT_ROOT/scripts/miyabi/run_duraloco_p06_9node_gpt2_50x10.pbs"
+) | tee "$ARTIFACT_ROOT/stdout.log"
+grep -qx P06_WRAPPER_PATH_RESOLUTION_PASS "$ARTIFACT_ROOT/stdout.log"
+qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
+"$PYTHON_BIN" scripts/agent/create_run_manifest.py \
+  --root "$CHECKOUT_ROOT" --output "$ARTIFACT_ROOT/manifest.json" \
+  --phase P06 --purpose benchmark --run-id "$RUN_ID" --parent-run-id "$PARENT_RUN_ID" \
+  --schema-version 2 --validation-shape p06-targeted-wrapper-path-resolution-1node \
+  --backend lustre --config scripts/miyabi/benchmark_duraloco_p06_wrapper_1node.pbs \
+  --commands-log commands.log --stdout stdout.log --stderr stderr.log \
+  --exit-code 0 --result pass --termination-kind success --pbs-queue debug-g \
+  --requested-resources select=1:mpiprocs=1,walltime=00:05:00 --last-qstat-state R \
+  --termination-detail "P06 terminal wrapper resolves its delegated script from an arbitrary PBS jobdir" \
+  --workflow-review-path plans/duraloco/reviews/P06_TERMINAL_WRAPPER_FAILURE_REVIEW.md \
+  --assertion "wrapper changes to PROJECT_ROOT before resolving the delegated terminal script"

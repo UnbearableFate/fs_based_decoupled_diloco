@@ -1,0 +1,134 @@
+Miyabi scheduled stop time: 2026/07/29(Wed) 09:00:00 (Remain: 17days 17:53:17)
+
+Job Id: 2360503.opbs
+    Job_Name = duraloco_p06_9n
+    Job_Owner = x10041@miyabi-g1
+    resources_used.abnormal_nodes = none
+    resources_used.cpupercent = 2
+    resources_used.cput = 00:00:00
+    resources_used.gpu_avg_power_per_nodes = '{"mg0842": "0.0",
+	 "mg0844": "0.0", "mg0851": "0.0", "mg0852": "0.0", "mg0853": "0.0",
+	 "mg0857": "0.0", "mg0873": "0.0", "mg0887": "0.0", "mg0835": "0.0"}'
+    resources_used.gpu_avg_util_per_nodes = '{"mg0842": "0.0", "mg0844": "0.0",
+	 "mg0851": "0.0", "mg0852": "0.0", "mg0853": "0.0", "mg0857": "0.0",
+	 "mg0873": "0.0", "mg0887": "0.0", "mg0835": "0.0"}'
+    resources_used.gpu_max_memory_per_nodes = '{"mg0842": "0", "mg0844": "0",
+	 "mg0851": "0", "mg0852": "0", "mg0853": "0", "mg0857": "0",
+	 "mg0873": "0", "mg0887": "0", "mg0835": "0"}'
+    resources_used.gpu_max_power_per_nodes = '{"mg0842": "0.0",
+	 "mg0844": "0.0", "mg0851": "0.0", "mg0852": "0.0", "mg0853": "0.0",
+	 "mg0857": "0.0", "mg0873": "0.0", "mg0887": "0.0", "mg0835": "0.0"}'
+    resources_used.gpu_max_util_per_nodes = '{"mg0842": "0.0", "mg0844": "0.0",
+	 "mg0851": "0.0", "mg0852": "0.0", "mg0853": "0.0", "mg0857": "0.0",
+	 "mg0873": "0.0", "mg0887": "0.0", "mg0835": "0.0"}'
+    resources_used.mem = 140736kb
+    resources_used.mem_per_nodes = '{"mg0842": "0b", "mg0844": "0b",
+	 "mg0851": "0b", "mg0852": "0b", "mg0853": "0b", "mg0857": "0b",
+	 "mg0873": "0b", "mg0887": "0b", "mg0835": "0b"}'
+    resources_used.ncpus = 648
+    resources_used.vmem = 140736kb
+    resources_used.walltime = 00:00:01
+    job_state = F
+    queue = small-g
+    server = opbs
+    Checkpoint = u
+    ctime = Sat Jul 11 15:02:15 2026
+    Error_Path = miyabi-g1:/work/xg24i002/x10041/duraloco_worktrees/p06-final-6
+	96babe/duraloco_p06_9n.e2360503
+    exec_host = mg0835/0*72+mg0842/0*72+mg0844/0*72+mg0851/0*72+mg0852/0*72+mg0
+	853/0*72+mg0857/0*72+mg0873/0*72+mg0887/0*72
+    exec_vnode = (mg0835:mem=104857600kb:ncpus=72:ngpus=1:nvnodes-g=1)+(mg0842:
+	mem=104857600kb:ncpus=72:ngpus=1:nvnodes-g=1)+(mg0844:mem=104857600kb:n
+	cpus=72:ngpus=1:nvnodes-g=1)+(mg0851:mem=104857600kb:ncpus=72:ngpus=1:n
+	vnodes-g=1)+(mg0852:mem=104857600kb:ncpus=72:ngpus=1:nvnodes-g=1)+(mg08
+	53:mem=104857600kb:ncpus=72:ngpus=1:nvnodes-g=1)+(mg0857:mem=104857600k
+	b:ncpus=72:ngpus=1:nvnodes-g=1)+(mg0873:mem=104857600kb:ncpus=72:ngpus=
+	1:nvnodes-g=1)+(mg0887:mem=104857600kb:ncpus=72:ngpus=1:nvnodes-g=1)
+    group_list = xg24i002
+    Hold_Types = n
+    Join_Path = oe
+    Keep_Files = oed
+    Mail_Points = ae
+    mtime = Sat Jul 11 15:04:50 2026
+    Output_Path = miyabi-g1:/work/xg24i002/x10041/duraloco_worktrees/p06-final-
+	696babe/duraloco_p06_9n.o2360503
+    Priority = 0
+    qtime = Sat Jul 11 15:02:15 2026
+    Rerunable = False
+    Resource_List.mem = 900gb
+    Resource_List.mpiprocs = 9
+    Resource_List.ncpus = 648
+    Resource_List.ngpus = 9
+    Resource_List.nodect = 9
+    Resource_List.place = free
+    Resource_List.select = 9:mpiprocs=1
+    Resource_List.walltime = 00:15:00
+    stime = Sat Jul 11 15:04:41 2026
+    obittime = Sat Jul 11 15:04:49 2026
+    session_id = 1727286
+    jobdir = /home/x10041
+    substate = 93
+    Variable_List = PBS_O_HOME=/home/x10041,PBS_O_LANG=en_US.UTF-8,
+	PBS_O_LOGNAME=x10041,
+	PBS_O_PATH=/work/xg24i002/x10041/.codex/packages/standalone/releases/0
+	.144.1-aarch64-unknown-linux-musl/codex-path:/work/xg24i002/x10041/.cod
+	ex/tmp/arg0/codex-arg0pS2Tm1:/work/xg24i002/x10041/.codex/packages/stan
+	dalone/releases/0.144.1-aarch64-unknown-linux-musl/codex-path:/home/x10
+	041/.local/bin:/home/x10041/.local/bin:/home/x10041/bin:/work/opt/local
+	/aarch64/cores/nvidia/25.9/Linux_aarch64/25.9/comm_libs/hpcx/bin:/work/
+	opt/local/aarch64/cores/nvidia/25.9/Linux_aarch64/25.9/compilers/extras
+	/qd/bin:/work/opt/local/aarch64/cores/nvidia/25.9/Linux_aarch64/25.9/co
+	mpilers/bin:/work/opt/local/aarch64/cores/nvidia/25.9/Linux_aarch64/25.
+	9/cuda/bin:/usr/share/Modules/bin:/usr/local/bin:/usr/bin:/usr/local/sb
+	in:/usr/sbin:/opt/pbs/bin:/opt/pbs/bin:/opt/pbs/bin,
+	PBS_O_MAIL=/var/spool/mail/x10041,PBS_O_SHELL=/bin/bash,
+	PBS_O_INTERACTIVE_AUTH_METHOD=resvport,PBS_O_HOST=miyabi-g1,
+	PBS_O_WORKDIR=/work/xg24i002/x10041/duraloco_worktrees/p06-final-696ba
+	be,PBS_O_SYSTEM=Linux,
+	PROJECT_ROOT=/work/xg24i002/x10041/duraloco_worktrees/p06-final-696bab
+	e,
+	PYTHON_BIN=/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/p
+	ython,EXPECTED_COMMIT=696babe7043f3859a6abd24a8f240603281d1c74,
+	RUN_ID=20260711_p06_impl_696babe_gpt2_9n_50x10,
+	PARENT_RUN_ID=20260711_p06_impl_696babe_2node,
+	ARTIFACT_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco/artifact
+	s/duraloco/P06/20260711_p06_impl_696babe_gpt2_9n_50x10,
+	QUALIFICATION_1NODE=20260711_p06_impl_696babe_1node,
+	QUALIFICATION_2NODE=20260711_p06_impl_696babe_2node,
+	PBS_MAIL_EVENTS=ae,PBS_O_QUEUE=small-g,PBS_JOB_CORE_LIMIT=0,
+	CALC_TMPDIR=/tmp/2360503.8453,LOCALDIR=/local/2360503.8453,
+	PBS_NODEFILE=/var/spool/pbs/aux/2360503.opbs
+    comment = Job run at Sat Jul 11 at 15:04 on (mg0835:mem=104857600kb:ncpus=7
+	2:ngpus=1:nvnodes-g=1)+(mg0842:mem=104857600kb:ncpus=72:ngpus=1:nvnodes
+	-g=1)+(mg0844:mem=104857600kb:ncpus=72:ngpus=1:nvnodes-g=1)+(mg0851:mem
+	=104857600kb:ncpus=72:ngpus=1:nvnodes-g=1)+(m... and failed
+    etime = Sat Jul 11 15:02:15 2026
+    run_count = 1
+    eligible_time = 00:02:31
+    Stageout_status = 1
+    Exit_status = 127
+    Submit_arguments = -v PROJECT_ROOT=/work/xg24i002/x10041/duraloco_worktrees
+	/p06-final-696babe,
+	PYTHON_BIN=/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/p
+	ython,EXPECTED_COMMIT=696babe7043f3859a6abd24a8f240603281d1c74,
+	RUN_ID=20260711_p06_impl_696babe_gpt2_9n_50x10,
+	PARENT_RUN_ID=20260711_p06_impl_696babe_2node,
+	ARTIFACT_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco/artifact
+	s/duraloco/P06/20260711_p06_impl_696babe_gpt2_9n_50x10,
+	QUALIFICATION_1NODE=20260711_p06_impl_696babe_1node,
+	QUALIFICATION_2NODE=20260711_p06_impl_696babe_2node scripts/miyabi/run
+	_duraloco_p06_9node_gpt2_50x10.pbs
+    estimated.exec_vnode = (mg1017:mem=104857600kb:ncpus=72:ngpus=1:nvnodes-g=1
+	)+(mg0103:mem=104857600kb:ncpus=72:ngpus=1:nvnodes-g=1)+(mg0107:mem=104
+	857600kb:ncpus=72:ngpus=1:nvnodes-g=1)+(mg0115:mem=104857600kb:ncpus=72
+	:ngpus=1:nvnodes-g=1)+(mg0121:mem=104857600kb:ncpus=72:ngpus=1:nvnodes-
+	g=1)+(mg0122:mem=104857600kb:ncpus=72:ngpus=1:nvnodes-g=1)+(mg0131:mem=
+	104857600kb:ncpus=72:ngpus=1:nvnodes-g=1)+(mg0135:mem=104857600kb:ncpus
+	=72:ngpus=1:nvnodes-g=1)+(mg0146:mem=104857600kb:ncpus=72:ngpus=1:nvnod
+	es-g=1)
+    estimated.start_time = Sat Jul 11 15:50:48 2026
+    history_timestamp = 1783749890
+    project = _pbs_project_default
+    Submit_Host = miyabi-g1
+    TOKEN = 0.0
+

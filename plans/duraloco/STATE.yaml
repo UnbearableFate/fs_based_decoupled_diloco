@@ -8,7 +8,7 @@ feature_branch: codex/duraloco-p06-learner-protocol
 current_loop: 3
 current_goal: "complete a clean same-commit P06 one/two/nine-node Maker ladder"
 attempts_for_current_failure: 1
-last_terminal_failure_review: null
+last_terminal_failure_review: plans/duraloco/reviews/P06_TERMINAL_WRAPPER_FAILURE_REVIEW.md
 terminal_retry_authorized: false
 terminal_retry_qualification:
   targeted_1node_benchmark: null
@@ -21,7 +21,7 @@ checks:
   miyabi_login_static: static_pass
   miyabi_1node: miyabi_1node_pass
   miyabi_2node: not_run
-  miyabi_9node: not_run
+  miyabi_9node: failed
 acceptance:
   P06-A01: {result: not_run, evidence: []}
   P06-A02: {result: not_run, evidence: []}
@@ -57,7 +57,11 @@ artifacts:
   - artifacts/duraloco/P06/20260711_p06_impl_ed4e604_1node
   - artifacts/duraloco/P06/20260711_p06_impl_2e2110a_1node
   - artifacts/duraloco/P06/20260711_p06_impl_2e2110a_2node
-next_action: "rerun the final 1/2-node ladder after accepting either ancestry reconciliation or successor backpressure at restart"
+  - artifacts/duraloco/P06/20260711_p06_impl_696babe_1node
+  - artifacts/duraloco/P06/20260711_p06_impl_696babe_2node
+  - artifacts/duraloco/P06/20260711_p06_impl_696babe_gpt2_9n_50x10
+  - plans/duraloco/reviews/P06_TERMINAL_WRAPPER_FAILURE_REVIEW.md
+next_action: "prove the wrapper repair with a targeted compute benchmark, then rerun 1-node and 2-node on the same clean repair commit"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
