@@ -7,9 +7,11 @@ from pathlib import Path
 import time
 
 from fs_diloco.atomic_io import atomic_write_json
+from fs_diloco.atomic_io import safe_read_json
 from fs_diloco.config import Config
 from fs_diloco.distributed_syncer.bootstrap import distributed_run_spec_factory
 from fs_diloco.log.codec import verified_get
+from fs_diloco.log.codec import canonical_object
 from fs_diloco.log.production_codec import (
     decode_production_outer_state,
     decode_production_params,
@@ -115,6 +117,7 @@ def run_committer(
     distributed_root = paths.shared_root / "distributed"
     distributed_root.mkdir(parents=True, exist_ok=True)
     active_path = distributed_root / "active_work_order.json"
+    reconfigure_path = distributed_root / "reconfigure_membership.json"
     logger = JsonlLogger(paths.logs / "distributed_committer.jsonl", "floating_committer")
     backend = PosixStorageBackend(paths.authority)
     if config.init.resume or standby:
@@ -152,6 +155,11 @@ def run_committer(
     )
     if loaded_lease is None:
         return
+    if view.membership is None:
+        raise RuntimeError("distributed head has no membership projection")
+    membership = MembershipRevisionV1.from_dict(
+        canonical_object(verified_get(backend, view.membership.membership_ref, commit_seq=view.commit_seq))
+    )
     fragments, states = _load_committed_tensors(log, view, device="cpu")
     publish_materialized_view(
         config=config,
@@ -186,6 +194,38 @@ def run_committer(
                     logger=logger,
                 )
                 next_renew = time.monotonic() + config.coordination.renew_interval_seconds
+            request = safe_read_json(reconfigure_path)
+            if isinstance(request, dict) and request.get("remove_member_id"):
+                remove_member_id = str(request["remove_member_id"])
+                remaining = tuple(
+                    item for item in membership.members if item.member_id != remove_member_id
+                )
+                if len(remaining) == len(membership.members) or not remaining:
+                    raise ValueError("invalid membership removal request")
+                successor = MembershipRevisionV1.create(
+                    membership.revision + 1, remaining
+                )
+                membership_request_id = "membership-" + canonical_digest(
+                    {
+                        "parent_commit_id": view.commit_id,
+                        "membership_digest": successor.membership_digest,
+                        "evidence_digest": str(request.get("evidence_digest") or ""),
+                    }
+                )
+                log.commit_membership(
+                    membership=successor, request_id=membership_request_id
+                )
+                view = build_runtime_view(log)
+                membership = successor
+                fragments, states = _load_committed_tensors(log, view, device="cpu")
+                reconfigure_path.unlink(missing_ok=True)
+                logger.event(
+                    "membership_reconfigured",
+                    revision=membership.revision,
+                    removed_member_id=remove_member_id,
+                    membership_digest=membership.membership_digest,
+                    commit_seq=view.commit_seq,
+                )
             fragment_id = 0 if len(view.fragments) == 1 else view.scheduler_cursor
             selected = collect_candidates(
                 catalog=catalog,
@@ -347,6 +387,7 @@ def run_committer(
             )
             active_path.unlink(missing_ok=True)
             last_progress = time.monotonic()
+            time.sleep(0.5)
     finally:
         if view.authoritative_stop is None:
             request_id = "distributed-stop-" + canonical_digest(
