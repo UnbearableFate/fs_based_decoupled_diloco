@@ -324,6 +324,7 @@ def run_committer(
             )
             publish_work_order(backend, layout, order)
             publish_input_bundle(backend, layout, bundle)
+            dispatch_started = time.monotonic()
             atomic_write_json(
                 active_path,
                 {
@@ -384,6 +385,9 @@ def run_committer(
                 prepared_result_id=result.prepared_result_id,
                 attempt_envelope_id=envelope.attempt_envelope_id,
                 executor_member_id=owner_member_id,
+                publish_to_commit_seconds=time.monotonic() - dispatch_started,
+                prepared_parameter_bytes=result.params_ref.size,
+                prepared_outer_state_bytes=result.outer_state_ref.size,
             )
             active_path.unlink(missing_ok=True)
             last_progress = time.monotonic()

@@ -1,0 +1,50 @@
+#!/bin/bash
+#PBS -N duraloco_p06b_d8
+#PBS -q regular-g
+#PBS -W group_list=xg24i002
+#PBS -l select=8:mpiprocs=1
+#PBS -l walltime=00:15:00
+#PBS -j oe
+#PBS -m ae
+
+set -eEuo pipefail
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat WANDB_MODE=disabled
+PROJECT_ROOT="${PROJECT_ROOT:-${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}}"; PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
+: "${EXPECTED_COMMIT:?}" "${RUN_ID:?}" "${ARTIFACT_ROOT:?}" "${STORAGE_ROOT:?}"
+PARENT_RUN_ID="${PARENT_RUN_ID:-}"; CONFIG="$PROJECT_ROOT/configs/duraloco_milestone_gpt2_9node_50x10.yaml"; TRAINING_ROOT="$STORAGE_ROOT/training"; TRAIN_RUN="$RUN_ID-training"
+cd "$PROJECT_ROOT"; [[ "$(git rev-parse HEAD)" == "$EXPECTED_COMMIT" ]]; [[ -z "$(git status --porcelain=v1)" ]]
+mapfile -t HOSTS < <(sort -u "$PBS_NODEFILE"); [[ "${#HOSTS[@]}" -eq 8 ]]; NODE_IDS=$(IFS=,; echo "${HOSTS[*]}")
+mkdir -p "$ARTIFACT_ROOT" "$TRAINING_ROOT"; touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log" "$ARTIFACT_ROOT/commands.log"; export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+result=fail; exit_code=1; started=$(date +%s)
+finish() {
+  observed=$?; [[ "$result" == pass ]] && exit_code=0 || { [[ "$observed" -eq 0 ]] || exit_code=$observed; }; qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
+  args=(--root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json" --phase P06B --purpose experiment --run-id "$RUN_ID" --schema-version 2 --validation-shape p06b-d8-no-dedicated-syncer-gpt2-wikitext2-50x10 --backend lustre --model-revision gpt2 --dataset-revision wikitext-2-raw-v1 --config configs/duraloco_milestone_gpt2_9node_50x10.yaml --commands-log commands.log --stdout stdout.log --stderr stderr.log --exit-code "$exit_code" --result "$result" --termination-kind "$([[ "$result" == pass ]] && echo success || echo test_failure)" --pbs-queue regular-g --requested-resources select=8:mpiprocs=1,walltime=00:15:00 --last-qstat-state R --termination-detail "P06B D8 eight learner nodes with LFEs, Floating Committer, zero dedicated syncer, GPT-2/WikiText-2 50x10" --assertion "PBS allocated exactly eight learner nodes and no ninth or dedicated syncer node" --assertion "ten marker-last distributed prepares produced ten single-head optimizer transitions" --assertion "real GPT-2/WikiText-2 losses are finite and learners adopt only committed final transitions")
+  [[ -n "$PARENT_RUN_ID" ]] && args+=(--parent-run-id "$PARENT_RUN_ID"); [[ -f "$ARTIFACT_ROOT/d8_report.json" ]] && args+=(--stage-metrics-path d8_report.json); "$PYTHON_BIN" scripts/agent/create_run_manifest.py "${args[@]}" || true
+}
+trap finish EXIT; trap 'echo "[ERROR] P06B D8 failed at line $LINENO" | tee -a "$ARTIFACT_ROOT/stderr.log"' ERR
+printf '%s\n' "${HOSTS[@]}" | tee "$ARTIFACT_ROOT/hosts.log"; git status --short --branch | tee "$ARTIFACT_ROOT/git_status.log"; git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"; "$PYTHON_BIN" --version 2>&1 | tee "$ARTIFACT_ROOT/python_version.log"; module list 2>&1 | cat > "$ARTIFACT_ROOT/modules.log"
+"$PYTHON_BIN" scripts/agent/check_no_embedded_database.py --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/forbidden_surface.json"
+command=(mpirun --bind-to none -np 8 --hostfile "$PBS_NODEFILE" /usr/bin/env PROJECT_ROOT="$PROJECT_ROOT" PYTHON_BIN="$PYTHON_BIN" CONFIG="$CONFIG" RUN_ID="$TRAIN_RUN" SHARED_ROOT="$TRAINING_ROOT" ARTIFACT_ROOT="$ARTIFACT_ROOT" NODE_IDS="$NODE_IDS" PYTHONPATH="$PROJECT_ROOT" bash scripts/miyabi/run_p06b_d8_host.sh)
+printf '%q ' "${command[@]}" | tee "$ARTIFACT_ROOT/commands.log"; printf '\n' | tee -a "$ARTIFACT_ROOT/commands.log"; "${command[@]}" 2>&1 | tee -a "$ARTIFACT_ROOT/stdout.log"
+"$PYTHON_BIN" -m fs_diloco.analysis summary "$TRAINING_ROOT" --json | tee "$ARTIFACT_ROOT/training_summary.json"
+elapsed=$(($(date +%s)-started))
+"$PYTHON_BIN" - "$TRAINING_ROOT" "$ARTIFACT_ROOT" "$TRAIN_RUN" "$elapsed" <<'PY' | tee "$ARTIFACT_ROOT/d8_report.json"
+import csv,json,math,sys
+from pathlib import Path
+from fs_diloco.log.production import ProductionTransactionalLog
+from fs_diloco.runtime_view import build_runtime_view
+from fs_diloco.storage import PosixStorageBackend
+root,artifacts,run_id,elapsed=Path(sys.argv[1]),Path(sys.argv[2]),sys.argv[3],int(sys.argv[4])
+summary=json.loads((artifacts/'training_summary.json').read_text()); log=ProductionTransactionalLog.open(PosixStorageBackend(root/'authority'),run_id,0); view=build_runtime_view(log,force_full=True)
+events=[json.loads(x) for x in (root/'logs/distributed_committer.jsonl').read_text().splitlines()]; commits=[e for e in events if e.get('event_type')=='distributed_transition_committed']
+metrics=list(csv.DictReader((root/'metrics/learner_metrics.csv').open())); losses=[float(r['train_loss']) for r in metrics if r.get('train_loss')]
+heartbeats=[json.loads(p.read_text()) for p in sorted((root/'distributed/executors').glob('*.json'))]
+markers=[p for p in (root/'authority').rglob('*.json') if '/distributed/prepared/markers/' in p.as_posix()]
+report={'status':'PASS','learner_nodes':8,'learners':8,'executors':8,'dedicated_syncer_nodes':0,'committer_candidates':8,'running_committer_processes':2,'optimizer_transitions':view.optimizer_transition_count,'membership_revision':view.membership.revision if view.membership else None,'prepared_markers':len(markers),'distributed_commits':len(commits),'finite_loss_count':len(losses),'invalid_losses':sum(not math.isfinite(v) for v in losses),'elapsed_seconds':elapsed,'prepare_seconds':[e['publish_to_commit_seconds'] for e in commits],'prepared_bytes':sum(e['prepared_parameter_bytes']+e['prepared_outer_state_bytes'] for e in commits),'executor_resource_snapshots':heartbeats,'stop_reason':summary['stop_reason'],'coordination_protocol':log.spec.coordination_protocol}
+assert report['optimizer_transitions']==report['distributed_commits']==10 and report['prepared_markers']>=10
+assert losses and report['invalid_losses']==0 and elapsed<=900
+assert report['membership_revision']==0 and report['coordination_protocol']=='distributed-head-fenced-v1'
+assert report['stop_reason']=='stop_after_outer_steps' and len(heartbeats)==8
+print(json.dumps(report,indent=2,sort_keys=True))
+PY
+result=pass; exit_code=0

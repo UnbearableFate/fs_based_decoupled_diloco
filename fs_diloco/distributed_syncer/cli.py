@@ -8,6 +8,7 @@ import json
 from pathlib import Path
 import socket
 import time
+import resource
 
 from safetensors.torch import load as load_safetensors_bytes
 
@@ -97,6 +98,7 @@ def _executor(args: argparse.Namespace) -> int:
             heartbeat_path,
             {"member_id": args.member_id, "status": "preparing", "work_order_id": order.work_order_id, "timestamp": time.time()},
         )
+        prepare_started = time.monotonic()
         result, envelope = execute_work_order(
             facade=facade,
             layout=layout,
@@ -112,6 +114,7 @@ def _executor(args: argparse.Namespace) -> int:
             budget=budget,
         )
         completed.add(order.work_order_id)
+        prepare_seconds = time.monotonic() - prepare_started
         atomic_write_json(
             heartbeat_path,
             {
@@ -120,6 +123,11 @@ def _executor(args: argparse.Namespace) -> int:
                 "work_order_id": order.work_order_id,
                 "prepared_result_id": result.prepared_result_id,
                 "attempt_envelope_id": envelope.attempt_envelope_id,
+                "prepare_seconds": prepare_seconds,
+                "rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024,
+                "threads": budget.threads,
+                "input_bytes": bundle.params_ref.size + bundle.outer_state_ref.size + sum(item.payload_ref.size for item in bundle.proposals),
+                "output_bytes": result.params_ref.size + result.outer_state_ref.size,
                 "timestamp": time.time(),
             },
         )
