@@ -8,7 +8,13 @@ from typing import Mapping
 
 from fs_diloco.log.replay import ReplayResult, replay_log
 from fs_diloco.protocol.canonical_json import canonical_digest
-from fs_diloco.protocol.schemas import CommitManifest, FragmentState, FrontierManifest, StopProjection
+from fs_diloco.protocol.schemas import (
+    CommitManifest,
+    FragmentState,
+    FrontierManifest,
+    MembershipProjection,
+    StopProjection,
+)
 
 
 Lineage = tuple[str, str, int]
@@ -27,6 +33,7 @@ class RuntimeView:
     owner_id: str | None
     owner_session_id: str | None
     authoritative_stop: StopProjection | None
+    membership: MembershipProjection | None
     frontier_sha256: str
     committed_state_digest: str
     fragments: Mapping[int, FragmentState]
@@ -142,6 +149,7 @@ class RuntimeView:
                 if coordination is not None and coordination.stop is not None
                 else None
             ),
+            "membership": head.membership.to_dict() if head.membership is not None else None,
             "frontier_sha256": head.frontier_sha256,
             "committed_state_digest": replay.committed_state_digest,
             "fragments": {
@@ -170,6 +178,7 @@ class RuntimeView:
                 coordination.owner_session_id if coordination is not None else None
             ),
             authoritative_stop=(coordination.stop if coordination is not None else None),
+            membership=head.membership,
             frontier_sha256=head.frontier_sha256,
             committed_state_digest=replay.committed_state_digest,
             fragments=head.fragments,

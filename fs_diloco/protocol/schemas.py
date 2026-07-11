@@ -415,6 +415,42 @@ class CoordinationProjection:
 
 
 @dataclass(frozen=True)
+class MembershipProjection:
+    revision: int
+    membership_ref: ObjectRef
+    membership_digest: str
+    ownership_digest: str
+    replication_factor: int
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "MembershipProjection":
+        _strict_fields(
+            payload,
+            {
+                "revision", "membership_ref", "membership_digest",
+                "ownership_digest", "replication_factor",
+            },
+        )
+        factor = _integer(payload["replication_factor"], "replication_factor", minimum=1)
+        return cls(
+            revision=_integer(payload["revision"], "revision"),
+            membership_ref=ObjectRef.from_dict(payload["membership_ref"]),
+            membership_digest=_sha(payload["membership_digest"], "membership_digest"),
+            ownership_digest=_sha(payload["ownership_digest"], "ownership_digest"),
+            replication_factor=factor,
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "revision": self.revision,
+            "membership_ref": self.membership_ref.to_dict(),
+            "membership_digest": self.membership_digest,
+            "ownership_digest": self.ownership_digest,
+            "replication_factor": self.replication_factor,
+        }
+
+
+@dataclass(frozen=True)
 class CommitManifest:
     MANIFEST_TYPE: ClassVar[str] = "commit"
     protocol_version: int
@@ -606,6 +642,7 @@ class ControlCommitManifest:
     request_digest: str
     optimizer_transition_count: int
     stop_reason: str | None = None
+    membership: MembershipProjection | None = None
     created_at: str | None = None
 
     @classmethod
@@ -628,11 +665,11 @@ class ControlCommitManifest:
             "request_digest",
             "optimizer_transition_count",
         }
-        _strict_fields(payload, required, {"stop_reason", "created_at"})
+        _strict_fields(payload, required, {"stop_reason", "membership", "created_at"})
         if payload["manifest_type"] != cls.MANIFEST_TYPE:
             raise _error("SCHEMA_ENUM", "manifest_type must be control_commit")
         kind = payload["control_kind"]
-        if kind not in {"epoch_bump", "stop"}:
+        if kind not in {"epoch_bump", "stop", "membership"}:
             raise _error("SCHEMA_ENUM", f"unsupported control_kind: {kind!r}")
         stop_reason = payload.get("stop_reason")
         if stop_reason is None and "stop_reason" in payload:
@@ -642,7 +679,14 @@ class ControlCommitManifest:
         if kind == "stop" and stop_reason is None:
             raise _error("SCHEMA_MISSING_FIELD", "stop control commit requires stop_reason")
         if kind != "stop" and stop_reason is not None:
-            raise _error("SCHEMA_UNKNOWN_FIELD", "epoch bump cannot carry stop_reason")
+            raise _error("SCHEMA_UNKNOWN_FIELD", "non-stop control cannot carry stop_reason")
+        raw_membership = payload.get("membership")
+        if raw_membership is None and "membership" in payload:
+            raise _error("SCHEMA_TYPE", "absent membership must be omitted rather than null")
+        if kind == "membership" and raw_membership is None:
+            raise _error("SCHEMA_MISSING_FIELD", "membership control requires membership")
+        if kind != "membership" and raw_membership is not None:
+            raise _error("SCHEMA_UNKNOWN_FIELD", "only membership control carries membership")
         created_at = payload.get("created_at")
         if created_at is not None:
             created_at = _string(created_at, "created_at")
@@ -673,6 +717,11 @@ class ControlCommitManifest:
             stop_reason=(
                 _string(stop_reason, "stop_reason") if stop_reason is not None else None
             ),
+            membership=(
+                MembershipProjection.from_dict(raw_membership)
+                if raw_membership is not None
+                else None
+            ),
             created_at=created_at,
         )
         if kind == "epoch_bump" and instance.fencing_epoch <= instance.prior_fencing_epoch:
@@ -682,6 +731,8 @@ class ControlCommitManifest:
             )
         if kind == "stop" and instance.fencing_epoch != instance.prior_fencing_epoch:
             raise _error("FENCING_EPOCH", "stop cannot change the fencing epoch")
+        if kind == "membership" and instance.fencing_epoch != instance.prior_fencing_epoch:
+            raise _error("FENCING_EPOCH", "membership cannot change the fencing epoch")
         if instance.commit_id != commit_id_for(instance.identity_body()):
             raise _error(
                 "COMMIT_ID_MISMATCH",
@@ -717,6 +768,8 @@ class ControlCommitManifest:
         }
         if self.stop_reason is not None:
             payload["stop_reason"] = self.stop_reason
+        if self.membership is not None:
+            payload["membership"] = self.membership.to_dict()
         if self.created_at is not None:
             payload["created_at"] = self.created_at
         return payload
@@ -764,6 +817,7 @@ class FrontierManifest:
     scheduler_state: Mapping[str, int]
     consumed_proposal_ids: tuple[str, ...]
     coordination: CoordinationProjection | None
+    membership: MembershipProjection | None
     frontier_sha256: str
 
     @classmethod
@@ -782,7 +836,7 @@ class FrontierManifest:
             "consumed_proposal_ids",
             "frontier_sha256",
         }
-        _strict_fields(payload, required, {"coordination"})
+        _strict_fields(payload, required, {"coordination", "membership"})
         if payload["manifest_type"] != cls.MANIFEST_TYPE:
             raise _error("SCHEMA_ENUM", "manifest_type must be frontier")
         raw_fragments = payload["fragments"]
@@ -827,6 +881,12 @@ class FrontierManifest:
                 "SCHEMA_TYPE",
                 "absent frontier coordination must be omitted rather than encoded as null",
             )
+        raw_membership = payload.get("membership")
+        if raw_membership is None and "membership" in payload:
+            raise _error(
+                "SCHEMA_TYPE",
+                "absent frontier membership must be omitted rather than encoded as null",
+            )
         instance = cls(
             protocol_version=_protocol(payload["protocol_version"]),
             run_id=_string(payload["run_id"], "run_id"),
@@ -843,6 +903,11 @@ class FrontierManifest:
             coordination=(
                 CoordinationProjection.from_dict(raw_coordination)
                 if raw_coordination is not None
+                else None
+            ),
+            membership=(
+                MembershipProjection.from_dict(raw_membership)
+                if raw_membership is not None
                 else None
             ),
             frontier_sha256=_sha(payload["frontier_sha256"], "frontier_sha256"),
@@ -875,6 +940,8 @@ class FrontierManifest:
         }
         if self.coordination is not None:
             payload["coordination"] = self.coordination.to_dict()
+        if self.membership is not None:
+            payload["membership"] = self.membership.to_dict()
         return payload
 
 

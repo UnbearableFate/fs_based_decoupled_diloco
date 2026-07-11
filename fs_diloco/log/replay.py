@@ -487,6 +487,8 @@ def _verify_control_transition(
     }
     if commit.stop_reason is not None:
         request_body["stop_reason"] = commit.stop_reason
+    if commit.membership is not None:
+        request_body["membership"] = commit.membership.to_dict()
     if commit.request_digest != canonical_digest(request_body):
         raise VerificationError(
             "control request digest differs from canonical content",
@@ -529,7 +531,11 @@ def _verify_control_transition(
             commit_seq=commit.commit_seq,
         )
     if commit.control_kind == "epoch_bump":
-        if commit.fencing_epoch <= previous.fencing_epoch or projection.stop is not None:
+        if (
+            commit.fencing_epoch <= previous.fencing_epoch
+            or projection.stop is not None
+            or frontier.membership != previous.membership
+        ):
             raise VerificationError(
                 "epoch bump is not a monotonic running-owner transition",
                 commit_seq=commit.commit_seq,
@@ -555,6 +561,33 @@ def _verify_control_transition(
         if projection.stop != expected_stop:
             raise VerificationError(
                 "stop projection differs from control commit",
+                commit_seq=commit.commit_seq,
+            )
+        if frontier.membership != previous.membership:
+            raise VerificationError(
+                "stop transition changed membership", commit_seq=commit.commit_seq
+            )
+    elif commit.control_kind == "membership":
+        prior = previous.coordination
+        if (
+            prior is None
+            or prior.owner_id != commit.owner_id
+            or prior.owner_session_id != commit.owner_session_id
+            or commit.fencing_epoch != previous.fencing_epoch
+            or projection.stop is not None
+        ):
+            raise VerificationError(
+                "membership was not issued by the current fenced owner",
+                commit_seq=commit.commit_seq,
+            )
+        if (
+            commit.membership is None
+            or previous.membership is None
+            or commit.membership.revision != previous.membership.revision + 1
+            or frontier.membership != commit.membership
+        ):
+            raise VerificationError(
+                "membership projection is not the next committed revision",
                 commit_seq=commit.commit_seq,
             )
     control_requests[commit.request_id] = (
@@ -646,6 +679,30 @@ def _replay_production_log(
         log.layout.head_key,
         *(log.layout.frontier_key(item.commit_seq, item.frontier_sha256) for item in frontiers),
     }
+    if log.spec.coordination_protocol == "distributed-head-fenced-v1":
+        from fs_diloco.distributed_syncer.membership import MembershipRevisionV1
+        from fs_diloco.distributed_syncer.ownership import derive_ownership
+
+        if genesis.membership is None or log.spec.distributed_membership is None:
+            raise VerificationError("distributed genesis has no membership", commit_seq=0)
+        membership_data = verified_get(
+            log.backend, genesis.membership.membership_ref, commit_seq=0
+        )
+        membership = MembershipRevisionV1.from_dict(canonical_object(membership_data))
+        ownership = derive_ownership(
+            membership,
+            fragment_ids=tuple(sorted(genesis.fragments)),
+            replication_factor=genesis.membership.replication_factor,
+        )
+        if (
+            membership != log.spec.distributed_membership
+            or membership.membership_digest != genesis.membership.membership_digest
+            or ownership.ownership_digest != genesis.membership.ownership_digest
+        ):
+            raise VerificationError("distributed genesis membership differs", commit_seq=0)
+        reachable.add(genesis.membership.membership_ref.key)
+    elif genesis.membership is not None:
+        raise VerificationError("central genesis unexpectedly carries membership", commit_seq=0)
     frontier_by_commit = {genesis.commit_id: genesis}
     prefix_digests: list[str] = []
     genesis_head = HeadManifest(
@@ -728,6 +785,29 @@ def _replay_production_log(
                 commit=commit,
                 control_requests=control_requests,
             )
+            if commit.membership is not None:
+                from fs_diloco.distributed_syncer.membership import MembershipRevisionV1
+                from fs_diloco.distributed_syncer.ownership import derive_ownership
+
+                membership_data = verified_get(
+                    log.backend, commit.membership.membership_ref, commit_seq=index
+                )
+                membership = MembershipRevisionV1.from_dict(canonical_object(membership_data))
+                ownership = derive_ownership(
+                    membership,
+                    fragment_ids=tuple(sorted(frontier.fragments)),
+                    replication_factor=commit.membership.replication_factor,
+                )
+                if (
+                    membership.revision != commit.membership.revision
+                    or membership.membership_digest != commit.membership.membership_digest
+                    or ownership.ownership_digest != commit.membership.ownership_digest
+                ):
+                    raise VerificationError(
+                        "committed membership object differs from projection",
+                        commit_seq=index,
+                    )
+                reachable.add(commit.membership.membership_ref.key)
             reachable.add(log.layout.commit_key(commit.commit_seq, commit.commit_id))
             frontier_by_commit[frontier.commit_id] = frontier
             prefix_head = HeadManifest(
@@ -759,6 +839,10 @@ def _replay_production_log(
                     "fenced optimizer transition has no running authoritative owner",
                     commit_seq=index,
                 )
+        if frontier.membership != previous.membership:
+            raise VerificationError(
+                "optimizer transition changed membership", commit_seq=index
+            )
             request_body = {
                 "operation": "optimizer",
                 "request_id": commit.request_id,

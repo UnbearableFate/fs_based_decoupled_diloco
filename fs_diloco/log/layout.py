@@ -119,6 +119,18 @@ class LogLayout:
     def production_outer_state_key(self, fragment_id: int, sha256: str) -> str:
         return self._payload_key("outer-state", fragment_id, sha256, suffix="safetensors")
 
+    def membership_key(self, revision: int, membership_digest: str) -> str:
+        if type(revision) is not int or revision < 0:
+            raise ValueError("membership revision must be non-negative")
+        if not isinstance(membership_digest, str) or not re.fullmatch(
+            r"[0-9a-f]{64}", membership_digest
+        ):
+            raise ValueError("membership digest must be 64 lowercase hex characters")
+        return normalize_key(
+            f"{self.root}/immutable/distributed/memberships/"
+            f"{revision:020d}-{membership_digest}.json"
+        )
+
     def _payload_key(
         self,
         kind: str,

@@ -12,11 +12,14 @@ from fs_diloco.protocol.schemas import (
     CoordinationProjection,
     FragmentState,
     HeadManifest,
+    MembershipProjection,
     ObjectRef,
     ProposalManifest,
     ProposalSelection,
     StopProjection,
 )
+from fs_diloco.distributed_syncer.ownership import derive_ownership
+from fs_diloco.distributed_syncer.membership import MembershipRevisionV1
 from fs_diloco.storage import ImmutableConflict, NotFound
 from fs_diloco.storage.base import StorageBackend
 from fs_diloco.testing.deterministic_reference import normalized_weights
@@ -134,8 +137,7 @@ class ProductionTransactionalLog:
             )
             for key, value in fragment_states.items()
         }
-        genesis = _make_frontier(
-            {
+        genesis_body: dict[str, object] = {
                 "manifest_type": "frontier",
                 "protocol_version": 2,
                 "run_id": spec.run_id,
@@ -150,7 +152,31 @@ class ProductionTransactionalLog:
                 "scheduler_state": {"next_fragment_cursor": 0},
                 "consumed_proposal_ids": [],
             }
-        )
+        if spec.distributed_membership is not None:
+            membership_data = canonical_bytes(spec.distributed_membership.to_dict())
+            membership_ref = content_ref(
+                layout.membership_key(
+                    spec.distributed_membership.revision,
+                    spec.distributed_membership.membership_digest,
+                ),
+                membership_data,
+            )
+            backend.put_immutable(
+                membership_ref.key, membership_data, sha256=membership_ref.sha256
+            )
+            ownership = derive_ownership(
+                spec.distributed_membership,
+                fragment_ids=tuple(sorted(fragment_states)),
+                replication_factor=spec.ownership_replication_factor or 1,
+            )
+            genesis_body["membership"] = MembershipProjection(
+                revision=spec.distributed_membership.revision,
+                membership_ref=membership_ref,
+                membership_digest=spec.distributed_membership.membership_digest,
+                ownership_digest=ownership.ownership_digest,
+                replication_factor=ownership.replication_factor,
+            ).to_dict()
+        genesis = _make_frontier(genesis_body)
         genesis_data = canonical_bytes(genesis.to_dict())
         genesis_ref = content_ref(layout.frontier_key(0, genesis.frontier_sha256), genesis_data)
         run_manifest = RunManifest(spec, genesis_commit_id, genesis_ref)
@@ -236,6 +262,7 @@ class ProductionTransactionalLog:
         token: OwnerToken,
         parent_commit_id: str,
         stop_reason: str | None = None,
+        membership: MembershipProjection | None = None,
     ) -> dict[str, object]:
         body: dict[str, object] = {
             "operation": control_kind,
@@ -247,6 +274,8 @@ class ProductionTransactionalLog:
         }
         if stop_reason is not None:
             body["stop_reason"] = stop_reason
+        if membership is not None:
+            body["membership"] = membership.to_dict()
         return body
 
     def prepare_control_transition(
@@ -256,13 +285,14 @@ class ProductionTransactionalLog:
         token: OwnerToken,
         request_id: str,
         stop_reason: str | None = None,
+        membership: MembershipRevisionV1 | None = None,
         crash_at: str | None = None,
     ) -> PreparedLogTransition:
         """Prepare an epoch-bump or stop fact without changing optimizer state."""
 
         if self.spec.coordination_protocol not in {"head-fenced-v1", "distributed-head-fenced-v1"}:
             raise CommitConflict("run generation does not enable fenced coordination")
-        if control_kind not in {"epoch_bump", "stop"}:
+        if control_kind not in {"epoch_bump", "stop", "membership"}:
             raise ValueError(f"unsupported control transition: {control_kind}")
         if not isinstance(request_id, str) or not request_id:
             raise ValueError("control request_id must be non-empty")
@@ -285,8 +315,39 @@ class ProductionTransactionalLog:
                 or previous.fencing_epoch != token.fencing_epoch
             ):
                 raise CommitConflict("stop requester is not the committed fenced owner")
-            if not isinstance(stop_reason, str) or not stop_reason:
+            if control_kind == "stop" and (not isinstance(stop_reason, str) or not stop_reason):
                 raise ValueError("stop transition requires a non-empty reason")
+
+        membership_projection = None
+        if control_kind == "membership":
+            if self.spec.coordination_protocol != "distributed-head-fenced-v1":
+                raise CommitConflict("run generation does not enable committed membership")
+            if membership is None or previous.membership is None:
+                raise ValueError("membership transition requires a membership revision")
+            if membership.revision != previous.membership.revision + 1:
+                raise CommitConflict("membership revision is not the next committed revision")
+            membership_data = canonical_bytes(membership.to_dict())
+            membership_ref = content_ref(
+                self.layout.membership_key(membership.revision, membership.membership_digest),
+                membership_data,
+            )
+            self.backend.put_immutable(
+                membership_ref.key, membership_data, sha256=membership_ref.sha256
+            )
+            ownership = derive_ownership(
+                membership,
+                fragment_ids=tuple(sorted(previous.fragments)),
+                replication_factor=previous.membership.replication_factor,
+            )
+            membership_projection = MembershipProjection(
+                revision=membership.revision,
+                membership_ref=membership_ref,
+                membership_digest=membership.membership_digest,
+                ownership_digest=ownership.ownership_digest,
+                replication_factor=ownership.replication_factor,
+            )
+        elif membership is not None:
+            raise ValueError("only membership control accepts membership content")
 
         request_body = self._control_request_body(
             control_kind=control_kind,
@@ -294,6 +355,7 @@ class ProductionTransactionalLog:
             token=token,
             parent_commit_id=previous.commit_id,
             stop_reason=stop_reason,
+            membership=membership_projection,
         )
         request_digest = canonical_digest(request_body)
         committed_request = replay.control_requests.get(request_id)
@@ -320,6 +382,8 @@ class ProductionTransactionalLog:
         }
         if stop_reason is not None:
             commit_body["stop_reason"] = stop_reason
+        if membership_projection is not None:
+            commit_body["membership"] = membership_projection.to_dict()
         commit_body["commit_id"] = "c-" + canonical_digest(commit_body)
         commit = ControlCommitManifest.from_dict(commit_body)
 
@@ -362,6 +426,15 @@ class ProductionTransactionalLog:
                 "scheduler_state": dict(previous.scheduler_state),
                 "consumed_proposal_ids": list(previous.consumed_proposal_ids),
                 "coordination": coordination.to_dict(),
+                **(
+                    {
+                        "membership": (
+                            membership_projection or previous.membership
+                        ).to_dict()
+                    }
+                    if (membership_projection or previous.membership) is not None
+                    else {}
+                ),
             }
         )
         _fire(crash_at, "before_frontier_put")
@@ -435,6 +508,23 @@ class ProductionTransactionalLog:
             token=token,
             request_id=request_id,
             stop_reason=reason,
+            crash_at=crash_at,
+        )
+        return self.commit_prepared(prepared, crash_at=crash_at)
+
+    def commit_membership(
+        self,
+        *,
+        membership: MembershipRevisionV1,
+        request_id: str,
+        crash_at: str | None = None,
+    ) -> CommitResult:
+        token = self._require_owner_token()
+        prepared = self.prepare_control_transition(
+            control_kind="membership",
+            token=token,
+            request_id=request_id,
+            membership=membership,
             crash_at=crash_at,
         )
         return self.commit_prepared(prepared, crash_at=crash_at)
@@ -720,6 +810,8 @@ class ProductionTransactionalLog:
                 owner_id=owner_token.owner_id,
                 owner_session_id=owner_token.owner_session_id,
             ).to_dict()
+        if replay.head_frontier.membership is not None:
+            frontier_body["membership"] = replay.head_frontier.membership.to_dict()
         frontier = _make_frontier(frontier_body)
         _fire(crash_at, "before_frontier_put")
         frontier_data = canonical_bytes(frontier.to_dict())
