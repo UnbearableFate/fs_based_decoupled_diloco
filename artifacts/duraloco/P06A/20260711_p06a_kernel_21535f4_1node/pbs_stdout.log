@@ -1,0 +1,45 @@
+mg0035
+## codex/duraloco-p06a-syncer-kernel
+21535f4693e83102b145f16fd67d5ab943e965dc
+Python 3.13.13
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python scripts/agent/create_p06a_characterization.py --output /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P06A/20260711_p06a_kernel_21535f4_1node/oracle_trace.json 
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python -m pytest -q tests/syncer_decomposition tests/test_proposal_catalog.py tests/test_outer_optim.py tests/coordination tests/log/test_production_runtime.py tests/test_removed_config_keys.py --junitxml /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P06A/20260711_p06a_kernel_21535f4_1node/junit.xml 
+........................................................................ [ 73%]
+..........................                                               [100%]
+98 passed in 3.75s
+usage: create_run_manifest.py [-h] [--root ROOT] --output OUTPUT
+                              --phase {M00,P00,P01,P02,P03,P04,P05,P06,P07,P08,P09,P10,P11,P12}
+                              --purpose {unit,contract,smoke,chaos,benchmark,experiment}
+                              [--run-id RUN_ID]
+                              [--parent-run-id PARENT_RUN_ID]
+                              [--schema-version {1,2}]
+                              [--validation-shape VALIDATION_SHAPE]
+                              --config CONFIG [--backend BACKEND]
+                              [--seed SEED]
+                              [--dataset-revision DATASET_REVISION]
+                              [--model-revision MODEL_REVISION]
+                              [--hostname HOSTNAME] [--pbs-job-id PBS_JOB_ID]
+                              [--pbs-nodefile-digest PBS_NODEFILE_DIGEST]
+                              [--pbs-queue PBS_QUEUE]
+                              [--requested-resources REQUESTED_RESOURCES]
+                              [--last-qstat-state LAST_QSTAT_STATE]
+                              [--termination-detail TERMINATION_DETAIL]
+                              [--commands-log COMMANDS_LOG] [--stdout STDOUT]
+                              [--stderr STDERR] [--exit-code EXIT_CODE]
+                              [--result {pass,fail,inconclusive}]
+                              [--termination-kind {success,test_failure,operator_terminated,scheduler_timeout,infrastructure,pre_allocation_cancelled,unknown}]
+                              [--authority-head-before AUTHORITY_HEAD_BEFORE]
+                              [--authority-head-after AUTHORITY_HEAD_AFTER]
+                              [--stage-metrics-path STAGE_METRICS_PATH]
+                              [--workflow-review-path WORKFLOW_REVIEW_PATH]
+                              [--qualification-targeted-1node-benchmark QUALIFICATION_TARGETED_1NODE_BENCHMARK]
+                              [--qualification-miyabi-1node QUALIFICATION_MIYABI_1NODE]
+                              [--qualification-miyabi-2node QUALIFICATION_MIYABI_2NODE]
+                              [--assertion ASSERTION]
+                              [--started-at-utc STARTED_AT_UTC]
+                              [--ended-at-utc ENDED_AT_UTC]
+                              [--git-commit-override GIT_COMMIT_OVERRIDE]
+                              [--git-branch-override GIT_BRANCH_OVERRIDE]
+                              [--clean-tree-override]
+create_run_manifest.py: error: argument --phase: invalid choice: 'P06A' (choose from M00, P00, P01, P02, P03, P04, P05, P06, P07, P08, P09, P10, P11, P12)
+[ERROR] P06A unit gate failed at line 93

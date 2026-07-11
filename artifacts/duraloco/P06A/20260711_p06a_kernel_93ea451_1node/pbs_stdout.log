@@ -1,0 +1,11 @@
+mg0037
+## codex/duraloco-p06a-syncer-kernel
+93ea4513923d13cdcecd863231e524b3302bcd98
+Python 3.13.13
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python scripts/agent/create_p06a_characterization.py --output /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P06A/20260711_p06a_kernel_93ea451_1node/oracle_trace.json 
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python -m pytest -q tests/syncer_decomposition tests/test_proposal_catalog.py tests/test_outer_optim.py tests/coordination tests/log/test_production_runtime.py tests/test_removed_config_keys.py --junitxml /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P06A/20260711_p06a_kernel_93ea451_1node/junit.xml 
+........................................................................ [ 73%]
+..........................                                               [100%]
+98 passed in 3.65s
+check_run_manifest: invalid phase
+[ERROR] P06A unit gate failed at line 94

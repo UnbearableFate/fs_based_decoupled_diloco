@@ -2,19 +2,20 @@ phase: P06A
 status: in_progress
 planning_basis_commit: 06e3ca2299d5eb1a720c1d8f9107af5223095525
 feature_branch: codex/duraloco-p06a-syncer-kernel
-current_loop: 1
-current_goal: "archive characterization and decomposed-kernel exactness"
+current_loop: 5
+current_goal: "C1 to C2 to C9 central topology qualification"
 checks:
-  login_static: in_progress
+  login_static: pass
   c1: not_run
   c2: not_run
   c9: not_run
 focused_1node_attempt:
-  run_id: 20260711_p06a_kernel_6ac394d_1node
-  parent_run_id: 20260711_p06a_kernel_93ea451_1node
-  pbs_job_id: 2362008.opbs
+  run_id: 20260711_p06a_archive_723e64a_1node
+  parent_run_id: 20260711_p06a_kernel_6ac394d_1node
+  pbs_job_id: 2362025.opbs
   tests: "98 passed"
   result: pass
-  manifest: artifacts/duraloco/P06A/20260711_p06a_kernel_6ac394d_1node/manifest.json
+  manifest: artifacts/duraloco/P06A/20260711_p06a_archive_723e64a_1node/manifest.json
+  archive_oracle: artifacts/duraloco/P06A/20260711_p06a_archive_723e64a_1node/oracle_trace.json
 checker_verdict: not_run
-next_action: "rerun with the archive worker bound to a detached 06e3ca2 checkout"
+next_action: "run the full C1 real model/data gate"

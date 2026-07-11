@@ -8,8 +8,8 @@ actual_base_branch: codex/duraloco-p06-learner-protocol
 actual_base_commit: 06e3ca2299d5eb1a720c1d8f9107af5223095525
 feature_branch: codex/duraloco-p06a-syncer-kernel
 plan_handoff_commit: c4b34d961b7d3a82ece4f16324cf6a69c7b2f5b7
-current_loop: 1
-current_goal: "harden the characterization gate so the baseline executes from a detached read-only archive checkout"
+current_loop: 5
+current_goal: "qualify the decomposed central reference syncer through C1, C2, and C9"
 attempts_for_current_failure: 0
 last_terminal_failure_review: null
 terminal_retry_authorized: false
@@ -19,31 +19,31 @@ terminal_retry_qualification:
   miyabi_2node: null
 last_verified_commit: null
 checks:
-  local_static: not_run
-  local_runtime: not_run
-  miyabi_login_static: not_run
+  local_static: static_pass
+  local_runtime: unit_pass
+  miyabi_login_static: static_pass
   miyabi_c1: not_run
   miyabi_c2: not_run
   miyabi_c9: not_run
 acceptance:
-  P06A-A01: {result: not_run, evidence: [scripts/agent/create_p06a_characterization.py]}
-  P06A-A02: {result: not_run, evidence: [fs_diloco/syncer_core/planning.py, tests/syncer_decomposition/test_kernel_purity.py]}
-  P06A-A03: {result: not_run, evidence: [fs_diloco/syncer_core/aggregation.py, tests/syncer_decomposition/test_old_new_differential.py]}
-  P06A-A04: {result: not_run, evidence: [tests/syncer_decomposition/test_old_new_differential.py]}
-  P06A-A05: {result: not_run, evidence: [plans/duraloco/DECISIONS.md, fs_diloco/syncer_core/semantic_digest.py]}
-  P06A-A06: {result: not_run, evidence: [fs_diloco/syncer.py]}
-  P06A-A07: {result: not_run, evidence: [fs_diloco/syncer_core/transaction_attempt.py, fs_diloco/log/production.py]}
-  P06A-A08: {result: not_run, evidence: [tests/syncer_decomposition/test_kernel_purity.py]}
-  P06A-A09: {result: not_run, evidence: [fs_diloco/syncer_core/capabilities.py, tests/syncer_decomposition/test_capability_surface.py]}
-  P06A-A10: {result: not_run, evidence: [fs_diloco/protocol/work_order_v1.py, fs_diloco/protocol/prepared_transition_v1.py, tests/syncer_decomposition/test_fwo_pft_schema.py]}
-  P06A-A11: {result: not_run, evidence: [tests/coordination]}
+  P06A-A01: {result: pass, evidence: [artifacts/duraloco/P06A/20260711_p06a_archive_723e64a_1node/oracle_trace.json]}
+  P06A-A02: {result: pass, evidence: [fs_diloco/syncer_core/planning.py, tests/syncer_decomposition/test_kernel_purity.py]}
+  P06A-A03: {result: pass, evidence: [fs_diloco/syncer_core/aggregation.py, artifacts/duraloco/P06A/20260711_p06a_archive_723e64a_1node/oracle_trace.json]}
+  P06A-A04: {result: pass, evidence: [tests/syncer_decomposition/test_old_new_differential.py]}
+  P06A-A05: {result: pass, evidence: [plans/duraloco/DECISIONS.md, fs_diloco/syncer_core/semantic_digest.py]}
+  P06A-A06: {result: pass, evidence: [fs_diloco/syncer.py, fs_diloco/syncer_core]}
+  P06A-A07: {result: pass, evidence: [fs_diloco/syncer_core/transaction_attempt.py, fs_diloco/log/production.py]}
+  P06A-A08: {result: pass, evidence: [tests/syncer_decomposition/test_kernel_purity.py]}
+  P06A-A09: {result: pass, evidence: [fs_diloco/syncer_core/capabilities.py, tests/syncer_decomposition/test_capability_surface.py]}
+  P06A-A10: {result: pass, evidence: [fs_diloco/protocol/work_order_v1.py, fs_diloco/protocol/prepared_transition_v1.py, tests/syncer_decomposition/test_fwo_pft_schema.py]}
+  P06A-A11: {result: pass, evidence: [artifacts/duraloco/P06A/20260711_p06a_archive_723e64a_1node/junit.xml]}
   P06A-A12: {result: not_run, evidence: []}
   P06A-A13: {result: not_run, evidence: []}
   P06A-A14: {result: not_run, evidence: []}
-  P06A-A15: {result: not_run, evidence: [tests/syncer_decomposition/test_old_new_differential.py]}
-  P06A-A16: {result: not_run, evidence: [tests/log/test_production_runtime.py]}
-  P06A-A17: {result: not_run, evidence: [tests/test_removed_config_keys.py]}
-  P06A-A18: {result: not_run, evidence: [tests/syncer_decomposition/test_capability_surface.py]}
+  P06A-A15: {result: pass, evidence: [artifacts/duraloco/P06A/20260711_p06a_archive_723e64a_1node/oracle_trace.json]}
+  P06A-A16: {result: pass, evidence: [tests/log/test_production_runtime.py, artifacts/duraloco/P06A/20260711_p06a_archive_723e64a_1node/junit.xml]}
+  P06A-A17: {result: pass, evidence: [tests/test_removed_config_keys.py, artifacts/duraloco/P06A/20260711_p06a_archive_723e64a_1node/manifest.json]}
+  P06A-A18: {result: pass, evidence: [tests/syncer_decomposition/test_capability_surface.py]}
   P06A-A19: {result: not_run, evidence: []}
   P06A-A20: {result: not_run, evidence: []}
 open_decisions: []
@@ -55,7 +55,8 @@ artifacts:
   - artifacts/duraloco/P06A/20260711_p06a_kernel_21535f4_1node
   - artifacts/duraloco/P06A/20260711_p06a_kernel_93ea451_1node
   - artifacts/duraloco/P06A/20260711_p06a_kernel_6ac394d_1node
-next_action: "run the strengthened detached-archive characterization gate on one compute node"
+  - artifacts/duraloco/P06A/20260711_p06a_archive_723e64a_1node
+next_action: "run the full suite and real GPT-2/WikiText-2 C1 path on a clean commit"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
