@@ -14,7 +14,7 @@ CREATE = ROOT / "scripts/agent/create_run_manifest.py"
 CHECK = ROOT / "scripts/agent/check_run_manifest.py"
 
 
-def _create(tmp_path: Path, *, schema_version: int = 1) -> Path:
+def _create(tmp_path: Path, *, schema_version: int = 1, phase: str = "P00") -> Path:
     for name in ("commands.log", "stdout.log", "stderr.log"):
         (tmp_path / name).write_text(name + "\n")
     output = tmp_path / "manifest.json"
@@ -28,7 +28,7 @@ def _create(tmp_path: Path, *, schema_version: int = 1) -> Path:
         "--output",
         str(output),
         "--phase",
-        "P00",
+        phase,
         "--purpose",
         "unit",
         "--config",
@@ -108,6 +108,13 @@ def test_v2_manifest_is_created_and_validated(tmp_path):
         "miyabi_1node",
         "miyabi_2node",
     }
+    assert subprocess.run([sys.executable, str(CHECK), str(output)]).returncode == 0
+
+
+def test_distributed_subphase_manifest_is_created_and_validated(tmp_path):
+    output = _create(tmp_path, schema_version=2, phase="P06A")
+    payload = json.loads(output.read_text())
+    assert payload["phase"] == "P06A"
     assert subprocess.run([sys.executable, str(CHECK), str(output)]).returncode == 0
 
 

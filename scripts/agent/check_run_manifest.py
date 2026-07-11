@@ -123,7 +123,7 @@ def validate(
             f"schema fields differ: missing={sorted(missing)} extra={sorted(unknown)}"
         )
     if str(payload["phase"]) != "M00" and not re.fullmatch(
-        r"P(0[0-9]|1[0-2])", str(payload["phase"])
+        r"P(?:(?:0[0-9]|1[0-2])|06[ABC])", str(payload["phase"])
     ):
         raise ManifestError("invalid phase")
     if payload["phase"] in V2_PHASES and schema_version != 2:
