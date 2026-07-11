@@ -40,7 +40,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--phase",
         required=True,
-        choices=["M00", *[f"P{i:02d}" for i in range(13)]],
+        choices=[
+            "M00",
+            *[f"P{i:02d}" for i in range(13)],
+            "P06A",
+            "P06B",
+            "P06C",
+        ],
     )
     parser.add_argument(
         "--purpose",

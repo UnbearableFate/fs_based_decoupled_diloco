@@ -9,5 +9,11 @@ checks:
   c1: not_run
   c2: not_run
   c9: not_run
+focused_1node_attempt:
+  run_id: 20260711_p06a_kernel_21535f4_1node
+  pbs_job_id: 2361999.opbs
+  tests: "98 passed"
+  result: wrapper_failed_after_tests
+  failure: "create_run_manifest.py rejected phase P06A"
 checker_verdict: not_run
-next_action: "run the focused P06A suite on one Miyabi compute node"
+next_action: "rerun the focused P06A suite after repairing manifest phase validation"

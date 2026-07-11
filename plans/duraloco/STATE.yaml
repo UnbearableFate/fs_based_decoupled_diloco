@@ -10,7 +10,7 @@ feature_branch: codex/duraloco-p06a-syncer-kernel
 plan_handoff_commit: c4b34d961b7d3a82ece4f16324cf6a69c7b2f5b7
 current_loop: 1
 current_goal: "generate the archive characterization trace and prove the decomposed CRS kernels are exact"
-attempts_for_current_failure: 0
+attempts_for_current_failure: 1
 last_terminal_failure_review: null
 terminal_retry_authorized: false
 terminal_retry_qualification:
@@ -52,7 +52,8 @@ artifacts:
   - plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/CURRENT_REPOSITORY_ALIGNMENT_REVIEW.md
   - plans/duraloco/phases/P06_PHASE_REPORT.md
   - artifacts/duraloco/P06/20260711_p06_checker_030129e_1node
-next_action: "commit the P06A RED/GREEN slice, run it on a one-node compute allocation, and persist the characterization bundle"
+  - artifacts/duraloco/P06A/20260711_p06a_kernel_21535f4_1node
+next_action: "repair the P06A manifest phase enum and rerun the focused one-node gate on the repaired clean commit"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

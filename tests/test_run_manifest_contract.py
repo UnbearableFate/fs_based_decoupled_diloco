@@ -6,6 +6,8 @@ from pathlib import Path
 import subprocess
 import sys
 
+import pytest
+
 
 ROOT = Path(__file__).resolve().parents[1]
 CREATE = ROOT / "scripts/agent/create_run_manifest.py"
@@ -128,7 +130,8 @@ def test_v2_manifest_result_and_termination_must_agree(tmp_path):
     assert "inconsistent" in result.stderr
 
 
-def test_p05_defaults_to_v2_and_requires_validation_shape(tmp_path):
+@pytest.mark.parametrize("phase", ["P05", "P06A", "P06B", "P06C"])
+def test_distributed_route_defaults_to_v2_and_requires_validation_shape(tmp_path, phase):
     config = tmp_path / "test-config.yaml"
     config.write_text("test: true\n")
     result = subprocess.run(
@@ -140,7 +143,7 @@ def test_p05_defaults_to_v2_and_requires_validation_shape(tmp_path):
             "--output",
             str(tmp_path / "manifest.json"),
             "--phase",
-            "P05",
+            phase,
             "--purpose",
             "unit",
             "--config",
