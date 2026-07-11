@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 import hashlib
 from pathlib import Path
+from threading import Lock
 from typing import Iterable
 
 from fs_diloco.atomic_io import atomic_write_json, safe_read_json
@@ -69,6 +71,7 @@ class ProposalCatalog:
         self.quarantine_root = quarantine_root
         self.validation_device = validation_device
         self._quarantine = QuarantineRegistry()
+        self._quarantine_lock = Lock()
 
     def _persist_error(
         self,
@@ -80,14 +83,15 @@ class ProposalCatalog:
     ) -> None:
         if error.category == ErrorCategory.RETRYABLE:
             return
-        record = self._quarantine.record(
-            observed_identity=observed_identity,
-            content_sha256=hashlib.sha256(content).hexdigest(),
-            error=error,
-        )
-        payload = record.to_dict()
-        payload["source"] = str(source)
-        atomic_write_json(self.quarantine_root / f"{record.record_id}.json", payload)
+        with self._quarantine_lock:
+            record = self._quarantine.record(
+                observed_identity=observed_identity,
+                content_sha256=hashlib.sha256(content).hexdigest(),
+                error=error,
+            )
+            payload = record.to_dict()
+            payload["source"] = str(source)
+            atomic_write_json(self.quarantine_root / f"{record.record_id}.json", payload)
 
     def _contained_payload(self, raw: object) -> Path:
         if not isinstance(raw, str) or not raw:
@@ -231,11 +235,13 @@ class ProposalCatalog:
     ) -> tuple[CatalogEntry, ...]:
         entries: dict[str, CatalogEntry] = {}
         sequence_identities: dict[tuple[str, str, int, int], str] = {}
-        for path in sorted(set(metadata_paths), key=lambda item: item.as_posix()):
+        paths = sorted(set(metadata_paths), key=lambda item: item.as_posix())
+
+        def scan_path(path: Path) -> CatalogEntry | None:
             try:
                 content = path.read_bytes()
             except OSError:
-                continue
+                return None
             metadata = safe_read_json(path)
             if not isinstance(metadata, dict):
                 self._persist_error(
@@ -244,17 +250,39 @@ class ProposalCatalog:
                     observed_identity=None,
                     error=ProtocolError("MALFORMED_METADATA", "proposal metadata is not valid JSON"),
                 )
-                continue
+                return None
             observed = metadata.get("proposal_id")
             observed_identity = observed if isinstance(observed, str) else None
             try:
-                entry = self._candidate(
+                return self._candidate(
                     metadata_path=path,
                     metadata_bytes=content,
                     metadata=metadata,
                     log=log,
                     view=view,
                 )
+            except ProtocolError as exc:
+                self._persist_error(
+                    source=path,
+                    content=content,
+                    observed_identity=observed_identity,
+                    error=exc,
+                )
+                return None
+            except (KeyError, TypeError, ValueError, OverflowError) as exc:
+                self._persist_error(
+                    source=path,
+                    content=content,
+                    observed_identity=observed_identity,
+                    error=ProtocolError("MALFORMED_METADATA", str(exc)),
+                )
+                return None
+
+        with ThreadPoolExecutor(max_workers=max(1, min(8, len(paths)))) as executor:
+            candidates = executor.map(scan_path, paths)
+            for entry in candidates:
+                if entry is None:
+                    continue
                 key = (
                     entry.manifest.learner_id,
                     entry.manifest.learner_session_id,
@@ -263,27 +291,23 @@ class ProposalCatalog:
                 )
                 prior = sequence_identities.get(key)
                 if prior is not None and prior != entry.proposal_id:
-                    raise ProtocolError(
-                        "SEQUENCE_CONTENT_CONFLICT",
-                        "one lineage sequence maps to different proposal content",
-                        category=ErrorCategory.FATAL,
+                    try:
+                        conflict_content = entry.metadata_path.read_bytes()
+                    except OSError:
+                        continue
+                    self._persist_error(
+                        source=entry.metadata_path,
+                        content=conflict_content,
+                        observed_identity=entry.proposal_id,
+                        error=ProtocolError(
+                            "SEQUENCE_CONTENT_CONFLICT",
+                            "one lineage sequence maps to different proposal content",
+                            category=ErrorCategory.FATAL,
+                        ),
                     )
+                    continue
                 sequence_identities[key] = entry.proposal_id
                 entries.setdefault(entry.proposal_id, entry)
-            except ProtocolError as exc:
-                self._persist_error(
-                    source=path,
-                    content=content,
-                    observed_identity=observed_identity,
-                    error=exc,
-                )
-            except (KeyError, TypeError, ValueError, OverflowError) as exc:
-                self._persist_error(
-                    source=path,
-                    content=content,
-                    observed_identity=observed_identity,
-                    error=ProtocolError("MALFORMED_METADATA", str(exc)),
-                )
         return tuple(entries[key] for key in sorted(entries))
 
     @staticmethod
