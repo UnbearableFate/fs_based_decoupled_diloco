@@ -5,6 +5,8 @@ import inspect
 import pytest
 
 import fs_diloco.syncer as syncer
+import fs_diloco.analysis as analysis
+import fs_diloco.log.training_probe as training_probe
 from fs_diloco.config import Config, resolve_config
 
 
@@ -68,3 +70,12 @@ def test_syncer_stop_and_takeover_use_committed_coordination_path():
     assert "NotImplementedError" not in source
     assert "derived-from-committed-stop-control-transition" in source
     assert "view.optimizer_transition_count >= config.sync.stop_after_outer_steps" in source
+
+
+def test_analysis_and_terminal_probe_count_only_optimizer_transitions():
+    analysis_source = inspect.getsource(analysis)
+    probe_source = inspect.getsource(training_probe)
+    for source in (analysis_source, probe_source):
+        assert "isinstance(commit, CommitManifest)" in source
+    assert '"global_merge_event": view.optimizer_transition_count' in analysis_source
+    assert '"global_outer_transitions": view.optimizer_transition_count' in probe_source

@@ -14,6 +14,8 @@ import yaml
 from fs_diloco.analysis import summarize_run
 from fs_diloco.log.production import ProductionTransactionalLog
 from fs_diloco.log.replay import inspect_orphans, replay_log
+from fs_diloco.protocol.schemas import CommitManifest
+from fs_diloco.runtime_view import RuntimeView
 from fs_diloco.storage import PosixStorageBackend
 
 
@@ -62,8 +64,11 @@ def run_probe(
         errors.append("training.inner_steps is not 50")
     if int(config["sync"]["stop_after_outer_steps"]) != 10:
         errors.append("sync.stop_after_outer_steps is not 10")
-    if int(summary.get("commit_seq") or -1) != 10:
-        errors.append(f"committed transitions={summary.get('commit_seq')}, expected 10")
+    if int(summary.get("optimizer_transition_count") or -1) != 10:
+        errors.append(
+            "optimizer transitions="
+            f"{summary.get('optimizer_transition_count')}, expected 10"
+        )
     if summary.get("stop_reason") != "stop_after_outer_steps":
         errors.append(f"stop reason is {summary.get('stop_reason')!r}")
     if summary.get("payload_codec") != "safetensors-flat-v1":
@@ -128,8 +133,14 @@ def run_probe(
         generation,
     )
     replay = replay_log(log.transactional)
+    view = RuntimeView.from_replay(replay)
     orphan_report = inspect_orphans(log.transactional)
-    selection_counts = [len(commit.selected_proposals) for commit in replay.commits]
+    optimizer_commits = [
+        commit for commit in replay.commits if isinstance(commit, CommitManifest)
+    ]
+    selection_counts = [len(commit.selected_proposals) for commit in optimizer_commits]
+    if view.optimizer_transition_count != 10 or len(optimizer_commits) != 10:
+        raise AssertionError("authority replay does not contain exactly 10 optimizer transitions")
     if len(replay.consumption) != sum(selection_counts):
         raise AssertionError("committed proposal inclusion is not exactly once")
 
@@ -144,7 +155,8 @@ def run_probe(
         "dataset": "wikitext-2-raw-v1",
         "learners": 8,
         "inner_steps": 50,
-        "global_outer_transitions": replay.head_frontier.commit_seq,
+        "head_commit_seq": replay.head_frontier.commit_seq,
+        "global_outer_transitions": view.optimizer_transition_count,
         "learner_local_steps": local_steps,
         "finite_loss_count": len(losses),
         "nonfinite_or_invalid_loss_count": invalid_losses,
@@ -165,7 +177,7 @@ def run_probe(
             "real_gpt2_wikitext": True,
             "nine_process_layout": True,
             "all_learners_at_least_50_local_steps": True,
-            "exactly_10_head_cas_transitions": True,
+            "exactly_10_optimizer_transitions": True,
             "losses_finite": True,
             "checkpoints_complete": True,
             "production_log_is_authority": True,
@@ -173,10 +185,7 @@ def run_probe(
             "proposal_inclusion_exactly_once": True,
             "no_forbidden_runtime_artifacts": True,
         },
-        "limitations": [
-            "M00 assumes one active syncer; lease and fencing begin in P05",
-            "learner recovery is warm until later capsule work",
-        ],
+        "limitations": ["learner recovery is warm until later capsule work"],
     }
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")

@@ -16,6 +16,7 @@ from .atomic_io import safe_read_json
 from .fragment_scheduler import expected_fragment_versions_after_events
 from .log.production import ProductionTransactionalLog
 from .log.replay import replay_log
+from .protocol.schemas import CommitManifest
 from .runtime_view import RuntimeView
 from .storage import PosixStorageBackend
 
@@ -141,8 +142,12 @@ def summarize_run(shared_root: str | Path) -> dict[str, Any]:
     stop = safe_read_json(root / "control" / "stop.json") or {}
     heartbeats = _heartbeats(root)
     learner_rows = _read_csv_rows(root / "metrics" / "learner_metrics.csv")
+    optimizer_commits = [
+        commit for commit in replay.commits if isinstance(commit, CommitManifest)
+    ]
     selection_counts = {
-        str(commit.commit_seq): len(commit.selected_proposals) for commit in replay.commits
+        str(commit.optimizer_transition_count or index): len(commit.selected_proposals)
+        for index, commit in enumerate(optimizer_commits, start=1)
     }
     fragment_versions = {
         str(fragment_id): state.version for fragment_id, state in view.fragments.items()
@@ -154,11 +159,12 @@ def summarize_run(shared_root: str | Path) -> dict[str, Any]:
         "run_generation": view.run_generation,
         "authority": "committed-transition-log",
         "commit_seq": view.commit_seq,
+        "optimizer_transition_count": view.optimizer_transition_count,
         "commit_id": view.commit_id,
         "frontier_sha256": view.frontier_sha256,
         "committed_state_digest": view.committed_state_digest,
         "runtime_view_digest": view.view_digest,
-        "global_merge_event": view.commit_seq,
+        "global_merge_event": view.optimizer_transition_count,
         "total_seen_tokens": view.total_seen_tokens,
         "consumed_proposal_count": len(view.consumed_proposal_ids),
         "fragment_versions": fragment_versions,
@@ -170,7 +176,11 @@ def summarize_run(shared_root: str | Path) -> dict[str, Any]:
             and latest.get("committed_state_digest") == view.committed_state_digest
         ),
         "materialized_weight_exists": materialized.exists(),
-        "stop_reason": stop.get("reason"),
+        "stop_reason": (
+            view.authoritative_stop.reason
+            if view.authoritative_stop is not None
+            else stop.get("reason")
+        ),
         "heartbeats": heartbeats,
         "learner_local_steps": {
             key: int(value.get("last_local_step") or 0) for key, value in heartbeats.items()
