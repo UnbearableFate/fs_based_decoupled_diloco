@@ -449,3 +449,35 @@ records:
       rationale: "persistence-only schema correction caught before commit or Checker submission"
       parent_run_id: null
     artifacts: [plans/duraloco/STATE.yaml]
+  - error_id: E-P06C-20260711-15
+    phase_and_gate: P06C/independent-Checker
+    observed_at_utc: "2026-07-11T14:21:10Z"
+    pbs_job_id: 2363318.opbs
+    hosts: [mg0018]
+    git_commit: 88c06a636c8523cbd91f0979cc117f8add830c46
+    classification: unexpected_failure
+    phenomenon:
+      exit_code: 1
+      exception: "AssertionError: D8 root-cause review is incomplete"
+      terminal_state: "426 tests passed with one skip and 10,000 traces passed; final evidence audit alone rejected the review"
+      log_excerpt: artifacts/duraloco/P06C/20260711_p06c_checker_88c06a6/stdout.log
+    expected: "root-cause review records both the pre-retry gate and the eventual successful D8 retry job"
+    impact:
+      acceptance_ids: [P06C-A23, P06C-A24]
+      invariants: ["terminal-failure review must close its retry authorization with concrete evidence"]
+      committed_prefix_safe: true
+    cause:
+      confirmed: ["review was written before the retry and retained only the planned ladder", "Checker required token 2363242 but the successful retry was documented only in the phase report and state"]
+      unknown: []
+    repair:
+      change: "append a review resolution section naming repair commit and targeted/unit/D1/D2/D8 job IDs"
+      rationale: "keeps the root-cause artifact self-contained and independently auditable"
+    verification:
+      minimal_reproduction: "rerun only the independent Checker on the new persistence commit"
+      targeted_gate: "full Checker repeats its complete suite and evidence audit, including private counterexamples"
+      qualification_ladder: ["Miyabi 1-node independent Checker rerun"]
+    retry_decision:
+      authorized: true
+      rationale: "Checker-only documentation assertion after all runtime and test gates passed"
+      parent_run_id: 20260711_p06c_checker_88c06a6
+    artifacts: [artifacts/duraloco/P06C/20260711_p06c_checker_88c06a6, plans/duraloco/reviews/P06C_D8_R2_LEASE_EXPIRY_REVIEW.md]

@@ -88,3 +88,15 @@ Before one new D8 attempt:
 6. exactly one new D8-R2 attempt.
 
 No same-shape D8 resubmission is authorized before steps 1–5 pass.
+
+## Resolution / 解决结果
+
+The repair commit `cba9f487dcc697a6df7930b22280e4f0d512377b` passed targeted job
+`2363213.opbs`, full unit job `2363218.opbs`, D1-R2 `2363228.opbs`, and D2-R2
+`2363235.opbs` in order. The single authorized D8 retry `2363242.opbs` then passed ten
+optimizer transitions, membership revision one, strict replay, and terminal stop in 528 seconds.
+Its committer telemetry contains `post_activation`, `membership_transition`, and `work_dispatch`
+lease-stage guards; no expired-renewal exception recurred.
+
+修复提交完成完整的targeted→1-node→2-node阶梯后，唯一一次D8重试`2363242.opbs`通过；
+因此本review的retry gate已解除，且没有跳过或重复同shape重试。
