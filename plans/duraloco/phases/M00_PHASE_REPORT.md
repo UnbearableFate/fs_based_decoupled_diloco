@@ -240,6 +240,29 @@ two-node and nine-node compute qualification remain in progress.
 - Repair: use bfloat16 learner proposal serialization, matching the terminal
   model/training precision and halving proposal I/O; aggregation and committed
   production parameters remain float32.
+
+#### Nine-node attempt 7 — `20260711_m00_1056f0d_gpt2_9n_50x10`
+
+- Time/identity: PBS `2359198.opbs`, nine compute hosts led by `mg0135`,
+  implementation `1056f0d1edbd2a17614ce9632342a80298159329`. The same clean commit
+  passed jobs `2359194.opbs` (one node) and `2359197.opbs` (two nodes).
+- Phenomenon: bfloat16 correctly halved each proposal to 248,879,712 bytes,
+  but the syncer's first transition remained too slow and was deliberately
+  terminated before completion.
+- Expected/actual: a follow-up one-node compute benchmark (`2359203.opbs`)
+  measured one payload read at 0.039 s, SHA at 0.118 s, CPU finite check at
+  0.046 s, GPU finite check at 0.438 s, and all eight parallel full validations
+  at 0.639 s. Validation and raw I/O were therefore not the remaining delay.
+- Reason: confirmed. The syncer subsequently called POSIX `put_immutable` for
+  each selected payload, serially writing and fsyncing fresh authority copies.
+- Impact: M00-A11 only; no invalid committed state was observed. The operator
+  terminated the job deliberately (`Exit_status=271`).
+- Evidence: `artifacts/duraloco/M00/20260711_m00_1056f0d_gpt2_9n_50x10/manifest.json`,
+  `training.log`, `artifacts/duraloco/M00/20260711_m00_1056f0d_payload_benchmark/report.json`,
+  and same-commit one/two-node manifests.
+- Repair: each learner publishes its content-addressed immutable proposal object
+  before its discovery marker. Those eight fsyncs run on eight nodes in parallel;
+  the syncer's idempotent publication observes existing verified objects.
 - Impact: M00-A03, M00-A04, M00-A09, P02-A04, and P04 replay requalification.
 - Evidence: `artifacts/duraloco/M00/20260711_m00_04da7ee_1node/manifest.json`,
   `one_node_contract.json`, full syncer/learner logs, and `stdout.log`.
@@ -464,6 +487,27 @@ generation metadata 与 M00 静态/运行 harness。源码、配置、脚本与�
   `training.log`、精确 `run_config.yaml` 与同 commit 单/双节点 manifests。
 - 修复：learner proposal serialization 改为 bfloat16，与 terminal model/training precision
   一致并将 proposal I/O 减半；aggregation 与 committed production params 仍为 float32。
+
+#### 九节点第 7 次尝试 — `20260711_m00_1056f0d_gpt2_9n_50x10`
+
+- 时间/身份：PBS `2359198.opbs`，以 `mg0135` 为首的九个 compute nodes，实现提交
+  `1056f0d1edbd2a17614ce9632342a80298159329`。同一干净提交通过了
+  `2359194.opbs`（单节点）与 `2359197.opbs`（双节点）。
+- 现象：bfloat16 将每个 proposal 正确减半至 248,879,712 bytes，但 syncer 的首个
+  transition 仍过慢，在完成前被人工终止。
+- 预期/实际：后续单节点 compute benchmark（`2359203.opbs`）测得单 payload read
+  0.039 秒、SHA 0.118 秒、CPU finite 0.046 秒、GPU finite 0.438 秒，8 个 payload
+  并行 full validation 仅 0.639 秒。因此 validation 与 raw I/O 已非剩余延迟。
+- 原因：已证实。syncer 随后对每个 selected payload 调用 POSIX `put_immutable`，串行
+  写入并 fsync 新 authority copy。
+- 影响：仅 M00-A11；未观察到非法 committed state。operator 主动终止 job
+  （`Exit_status=271`）。
+- 证据：`artifacts/duraloco/M00/20260711_m00_1056f0d_gpt2_9n_50x10/manifest.json`、
+  `training.log`、`artifacts/duraloco/M00/20260711_m00_1056f0d_payload_benchmark/report.json`
+  与同 commit 单/双节点 manifests。
+- 修复：每个 learner 在 discovery marker 前发布 content-addressed immutable proposal
+  object；8 次 fsync 分散到 8 个节点并行执行，syncer 的幂等 publication 只观察已存在
+  且已验证的 objects。
 
 ### 限制与下一动作
 

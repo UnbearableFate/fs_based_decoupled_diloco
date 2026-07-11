@@ -1,0 +1,33 @@
+{
+  "assertions": [
+    "bf16 proposals and parallel validation preserved strict exactly-once behavior",
+    "benchmark isolated syncer-side serialized immutable payload publication as the remaining bottleneck"
+  ],
+  "backend": "lustre",
+  "commands_log": "commands.log",
+  "config_digest": "5b27d81165cebedbae551e4b7b3ba003fc9bd157700e7c9d4e96975c1f91e288",
+  "config_path": "configs/duraloco_milestone_gpt2_9node_50x10.yaml",
+  "dataset_revision": "wikitext-2-raw-v1",
+  "dirty_paths": [],
+  "dirty_tree": false,
+  "ended_at_utc": "2026-07-11T00:41:02Z",
+  "exit_code": 271,
+  "git_branch": "codex/duraloco-m00-sqlite-free-rebase",
+  "git_commit": "1056f0d1edbd2a17614ce9632342a80298159329",
+  "hostname": "mg0135",
+  "manifest_sha256": "ab4af165b0d36f2286325849a6a7c78ccbbaee788f12e327c819e5df3a3433f2",
+  "model_revision": "gpt2",
+  "parent_run_id": "20260711_m00_1056f0d_2node_requal",
+  "pbs_job_id": "2359198.opbs",
+  "pbs_nodefile_digest": "de3e99f2466bac9ecd61bd945aace729d5ae98dd51a85398e95deae3831bace4",
+  "phase": "M00",
+  "purpose": "experiment",
+  "python_version": "3.13.13",
+  "result": "fail",
+  "run_id": "20260711_m00_1056f0d_gpt2_9n_50x10",
+  "schema_version": 1,
+  "seed": null,
+  "started_at_utc": "2026-07-11T00:36:42Z",
+  "stderr": "stderr.log",
+  "stdout": "stdout.log"
+}

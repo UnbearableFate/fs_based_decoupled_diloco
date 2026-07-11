@@ -1,0 +1,13 @@
+{
+  "cpu_finite_seconds": 0.04554414300946519,
+  "dtype": "torch.bfloat16",
+  "gpu_finite_seconds": 0.43765382800484076,
+  "hostname": "mg0003",
+  "load_seconds": 0.023796249006409198,
+  "parallel_full_validate_seconds": 0.6385660909872968,
+  "parallel_read_hash_seconds": 0.21972197300055996,
+  "payload_bytes": 248879712,
+  "read_seconds": 0.03885091101983562,
+  "sha_seconds": 0.11763110102037899,
+  "status": "PASS"
+}
