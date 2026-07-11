@@ -1,13 +1,13 @@
 phase: P06B
-status: in_progress
+status: checking
 planning_basis_commit: 4ce89280f99553f6d81821978367c53acaf10214
 feature_branch: codex/duraloco-p06b-learner-hosted-sync
-current_loop: 1
-current_goal: "new-generation membership, ownership, capability, and bootstrap contracts"
+current_loop: 6
+current_goal: "independent P06B Checker audit"
 checks:
-  login_static: not_run
-  d1: not_run
-  d2: not_run
-  d8: not_run
-checker_verdict: not_run
-next_action: "implement schema/bootstrap unit gate, then D1"
+  login_static: pass
+  d1: pass
+  d2: pass
+  d8: pass
+checker_verdict: pending
+next_action: "run independent P06B Checker, then advance to P06C Loop 0"

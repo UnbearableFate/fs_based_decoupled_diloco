@@ -1,0 +1,15 @@
+{
+  "committer_kills": 1,
+  "dedicated_syncer_nodes": 0,
+  "distributed_commits": 3,
+  "executor_kills": 1,
+  "final_fencing_epoch": 2,
+  "learner_nodes": 2,
+  "membership_reconfigurations": 1,
+  "membership_revision": 1,
+  "optimizer_transitions": 3,
+  "status": "PASS",
+  "stop_reason": "stop_after_outer_steps",
+  "takeovers": 2,
+  "whole_node_kills": 1
+}

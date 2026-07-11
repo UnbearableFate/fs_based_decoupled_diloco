@@ -1,0 +1,258 @@
+{
+  "committer_candidates": 8,
+  "control_sequence": [
+    "epoch_bump",
+    "stop"
+  ],
+  "coordination_protocol": "distributed-head-fenced-v1",
+  "dedicated_syncer_nodes": 0,
+  "distributed_commits": 10,
+  "elapsed_seconds": 470,
+  "executor_prepare_events": 10,
+  "executor_start_events": 8,
+  "executors": 8,
+  "finite_loss_count": 88,
+  "invalid_losses": 0,
+  "learner_nodes": 8,
+  "learners": 8,
+  "lustre_io_telemetry": {
+    "accounting_scope": "logical LFE object operations plus observed terminal authority inventory; not kernel-level Lustre RPC counters",
+    "executor_input_bytes": 29865564000,
+    "executor_logical_input_reads": 100,
+    "executor_logical_prepare_writes": 50,
+    "executor_output_bytes": 9955187040,
+    "observed_object_files": 473,
+    "observed_physical_bytes": 42808078460,
+    "prepared_object_files": 50,
+    "work_order_object_files": 20
+  },
+  "membership_revision": 0,
+  "optimizer_transitions": 10,
+  "prepared_markers": 10,
+  "resource_telemetry": {
+    "cpu_affinity_by_executor": {
+      "member-000": [
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71
+      ],
+      "member-001": [
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71
+      ],
+      "member-002": [
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71
+      ],
+      "member-003": [
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71
+      ],
+      "member-004": [
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71
+      ],
+      "member-005": [
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71
+      ],
+      "member-006": [
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71
+      ],
+      "member-007": [
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71
+      ]
+    },
+    "gpu_step_seconds": {
+      "count": 440,
+      "max": 0.04261990310624242,
+      "mean": 0.02751846144674346,
+      "min": 0.025260597933083773
+    },
+    "learner_tokens_per_second": {
+      "count": 88,
+      "max": 3208.3480527004094,
+      "mean": 2966.863642945045,
+      "min": 2281.936275355781
+    },
+    "lfe_effective_io_bytes_per_second": {
+      "count": 10,
+      "max": 1155378024.1058133,
+      "mean": 1149045509.7194042,
+      "min": 1139721335.912846
+    },
+    "numa_mems_allowed_by_executor": {
+      "member-000": "0-1",
+      "member-001": "0-1",
+      "member-002": "0-1",
+      "member-003": "0-1",
+      "member-004": "0-1",
+      "member-005": "0-1",
+      "member-006": "0-1",
+      "member-007": "0-1"
+    },
+    "rss_bytes": {
+      "count": 10,
+      "max": 11024465920.0,
+      "mean": 11021660979.2,
+      "min": 11012407296.0
+    },
+    "threads": [
+      8
+    ]
+  },
+  "running_committer_processes": 2,
+  "status": "PASS",
+  "stop_reason": "stop_after_outer_steps",
+  "transition_latency": [
+    {
+      "adoption_count": 8,
+      "commit_seq": 2,
+      "commit_to_first_adopt_seconds": 0.4259755611419678,
+      "commit_to_last_adopt_seconds": 1.2012200355529785,
+      "prepare_seconds": 3.493902393965982,
+      "prepare_to_commit_seconds": 10.592947959899902,
+      "publish_to_prepare_start_seconds": 3.9810404777526855,
+      "work_order_id": "fwo-95d96ff13dc92c4c42e33981a65edc2d8f520ebfec2a6afc70718e119b1bfb7a"
+    },
+    {
+      "adoption_count": 8,
+      "commit_seq": 3,
+      "commit_to_first_adopt_seconds": 0.3906567096710205,
+      "commit_to_last_adopt_seconds": 1.3361167907714844,
+      "prepare_seconds": 3.446556037000846,
+      "prepare_to_commit_seconds": 10.570610284805298,
+      "publish_to_prepare_start_seconds": 3.8784451484680176,
+      "work_order_id": "fwo-33690f98e1314eb4f373ddb572f628f51d477ee4b4ad9afcab18acf76ebc0a90"
+    },
+    {
+      "adoption_count": 8,
+      "commit_seq": 4,
+      "commit_to_first_adopt_seconds": 0.4734625816345215,
+      "commit_to_last_adopt_seconds": 1.397834062576294,
+      "prepare_seconds": 3.4718148189713247,
+      "prepare_to_commit_seconds": 10.680127143859863,
+      "publish_to_prepare_start_seconds": 3.823535442352295,
+      "work_order_id": "fwo-a28d10763a2f250d9b37f926a27a66b1fc0d98cec114609ce18335e658d68699"
+    },
+    {
+      "adoption_count": 8,
+      "commit_seq": 5,
+      "commit_to_first_adopt_seconds": 0.3620340824127197,
+      "commit_to_last_adopt_seconds": 1.1733806133270264,
+      "prepare_seconds": 3.4644894850207493,
+      "prepare_to_commit_seconds": 10.687528133392334,
+      "publish_to_prepare_start_seconds": 3.8874423503875732,
+      "work_order_id": "fwo-6727aa06738fe32a67dedfbccdcf6bac2842368a1cd78c3ba831b8de3616fb09"
+    },
+    {
+      "adoption_count": 8,
+      "commit_seq": 6,
+      "commit_to_first_adopt_seconds": 0.4570951461791992,
+      "commit_to_last_adopt_seconds": 1.2997660636901855,
+      "prepare_seconds": 3.461053442035336,
+      "prepare_to_commit_seconds": 10.696276426315308,
+      "publish_to_prepare_start_seconds": 3.8637173175811768,
+      "work_order_id": "fwo-0d7f13cde3271530afee32edfa2c2592e0e41c32c1a627d10c59d1bdeba6aa1c"
+    },
+    {
+      "adoption_count": 8,
+      "commit_seq": 7,
+      "commit_to_first_adopt_seconds": 0.4114081859588623,
+      "commit_to_last_adopt_seconds": 1.2793099880218506,
+      "prepare_seconds": 3.4917952729738317,
+      "prepare_to_commit_seconds": 10.670259952545166,
+      "publish_to_prepare_start_seconds": 3.8280844688415527,
+      "work_order_id": "fwo-dd6f5e22cea52ad06eb0b1767d2c5472776cd7131b68ad280f19e1bc2a6b34a6"
+    },
+    {
+      "adoption_count": 8,
+      "commit_seq": 8,
+      "commit_to_first_adopt_seconds": 0.37190794944763184,
+      "commit_to_last_adopt_seconds": 1.329197645187378,
+      "prepare_seconds": 3.450413735001348,
+      "prepare_to_commit_seconds": 10.751208782196045,
+      "publish_to_prepare_start_seconds": 3.9169769287109375,
+      "work_order_id": "fwo-64831c522ac241ef7e768ef30a2646fab61fe054c9e36741e05d96eb6b0ac5ea"
+    },
+    {
+      "adoption_count": 8,
+      "commit_seq": 9,
+      "commit_to_first_adopt_seconds": 0.04197096824645996,
+      "commit_to_last_adopt_seconds": 1.3446226119995117,
+      "prepare_seconds": 3.4577031250228174,
+      "prepare_to_commit_seconds": 10.850784540176392,
+      "publish_to_prepare_start_seconds": 3.857414484024048,
+      "work_order_id": "fwo-39ceb585c52cd2ac167cd8208ef683e6580d9717c22e520ead75b1b2b6ae048d"
+    },
+    {
+      "adoption_count": 8,
+      "commit_seq": 10,
+      "commit_to_first_adopt_seconds": 0.42565321922302246,
+      "commit_to_last_adopt_seconds": 1.3046483993530273,
+      "prepare_seconds": 3.4719308199710213,
+      "prepare_to_commit_seconds": 10.843856811523438,
+      "publish_to_prepare_start_seconds": 3.877484083175659,
+      "work_order_id": "fwo-d083572a831511bdb3c49c8ebd5ab0f182a1f0423c0451cf66655e8e6dd64849"
+    },
+    {
+      "adoption_count": 8,
+      "commit_seq": 11,
+      "commit_to_first_adopt_seconds": 0.05262398719787598,
+      "commit_to_last_adopt_seconds": 1.2993206977844238,
+      "prepare_seconds": 3.44659435498761,
+      "prepare_to_commit_seconds": 11.011133909225464,
+      "publish_to_prepare_start_seconds": 3.887070417404175,
+      "work_order_id": "fwo-f9ab902a45622c2ee094250d3d7aa5be58d6025ccabcb471417eac24b85f1969"
+    }
+  ]
+}

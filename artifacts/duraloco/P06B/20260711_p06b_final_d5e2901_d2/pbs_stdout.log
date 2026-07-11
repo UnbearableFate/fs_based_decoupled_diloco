@@ -1,0 +1,171 @@
+mg0005
+mg0007
+## codex/duraloco-p06b-learner-hosted-sync
+d5e2901b75ef504a31a365790b7b9518c329dbe7
+Python 3.13.13
+{
+  "finding_count": 0,
+  "findings": [],
+  "scanned_files": 287,
+  "status": "PASS"
+}
+mpirun --bind-to none -np 2 --hostfile /var/spool/pbs/aux/2362562.opbs /usr/bin/env PROJECT_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco PYTHON_BIN=/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python CONFIG=/work/xg24i002/x10041/fs_based_decoupled_diloco/configs/duraloco_p06b_tiny_2node.yaml RUN_ID=20260711_p06b_final_d5e2901_d2-training SHARED_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06b_final_d5e2901_d2/training ARTIFACT_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P06B/20260711_p06b_final_d5e2901_d2 NODE_IDS=mg0005\,mg0007 PYTHONPATH=/work/xg24i002/x10041/fs_based_decoupled_diloco bash scripts/chaos/run_p06b_d2_host.sh
+{
+  "authority": "committed-transition-log",
+  "commit_id": "c-b59d93e233ed2a8dc1812d85c8d5c80f16b8d0c05e24245aedaa3227a25c28fb",
+  "commit_seq": 7,
+  "committed_selected_counts_by_event": {
+    "1": 1,
+    "2": 1,
+    "3": 1
+  },
+  "committed_state_digest": "e801098dba6c33f9a5ad398d54e197121b806336d6169ff5a7ae6398c78296db",
+  "consumed_proposal_count": 3,
+  "fragment_versions": {
+    "0": 3
+  },
+  "frontier_sha256": "d9e8cfdfcb325e4281b6057bc3e6775c54a0dd37b07ab65f9b75db6034f9a01d",
+  "global_merge_event": 3,
+  "heartbeats": {
+    "learner_000": {
+      "format_version": 1,
+      "hostname": "mg0005",
+      "last_loaded_global_version": 3,
+      "last_local_step": 6,
+      "last_update_id": "learner_000_00000006_986d8de8520a",
+      "learner_id": "learner_000",
+      "phase": "update_written",
+      "pid": 1396075,
+      "run_id": "20260711_p06b_final_d5e2901_d2-training",
+      "status": "active",
+      "timestamp": 1783766768.6687489,
+      "tokens_per_sec": 864.6643094093367
+    },
+    "learner_001": {
+      "format_version": 1,
+      "hostname": "mg0007",
+      "last_loaded_global_version": 6,
+      "last_local_step": 10,
+      "last_update_id": "learner_001_00000010_e023d23b31c8",
+      "learner_id": "learner_001",
+      "phase": "update_written",
+      "pid": 3979266,
+      "run_id": "20260711_p06b_final_d5e2901_d2-training",
+      "status": "active",
+      "timestamp": 1783766769.8105748,
+      "tokens_per_sec": 1970.575480555101
+    }
+  },
+  "latest": {
+    "authority": "committed-transition-log-and-head-fence",
+    "commit_id": "c-d534f141181d50ba8102ef15510a40ed43e75ae5f0d2978de7a061d059af1974",
+    "commit_seq": 6,
+    "committed_interval_identities": [
+      [
+        "learner_000",
+        "20260711_p06b_final_d5e2901_d2-training-learner_000-session",
+        0,
+        1
+      ],
+      [
+        "learner_000",
+        "20260711_p06b_final_d5e2901_d2-training-learner_000-session",
+        0,
+        2
+      ],
+      [
+        "learner_001",
+        "20260711_p06b_final_d5e2901_d2-training-learner_001-session",
+        0,
+        1
+      ]
+    ],
+    "committed_state_digest": "2a3e78e1f40313aef67b05ac8802324bad1ed5e0fa1ce6983489f21477e9ff8b",
+    "created_at": 1783766769.6357968,
+    "fencing_epoch": 2,
+    "format_version": 1,
+    "fragment_versions": {
+      "0": 3
+    },
+    "frontier_sha256": "d68714e4464253f2510f7e2edeb3669f644cdd9570ebfa949bf40c53f98921b8",
+    "global_merge_event": 3,
+    "optim_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06b_final_d5e2901_d2/training/optim/outer_v000006.safetensors",
+    "optimizer_transition_count": 3,
+    "owner_id": "member-001",
+    "owner_session_id": "20260711_p06b_final_d5e2901_d2-training-member-001-committer-session",
+    "param_index_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06b_final_d5e2901_d2/training/control/param_index.json",
+    "run_generation": 1,
+    "run_id": "20260711_p06b_final_d5e2901_d2-training",
+    "runtime_view_digest": "87d84a58189f5a55290f1cc14daa5266f4c6a32859a55692322136f0976cc2b0",
+    "total_seen_tokens": 192,
+    "version": 6,
+    "weight_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06b_final_d5e2901_d2/training/weights/global_v000006.safetensors"
+  },
+  "latest_export_valid": false,
+  "latest_kind": "full",
+  "learner_fragment_adoption": {
+    "learner_000": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    },
+    "learner_001": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    }
+  },
+  "learner_local_steps": {
+    "learner_000": 6,
+    "learner_001": 10
+  },
+  "learner_metrics": {
+    "exists": true,
+    "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06b_final_d5e2901_d2/training/metrics/learner_metrics.csv",
+    "rows": 8
+  },
+  "loss_summary": {
+    "count": 8,
+    "invalid_or_nonfinite": 0,
+    "max": 5.109288692474365,
+    "min": 4.8483006954193115,
+    "obvious_divergence": false
+  },
+  "materialized_weight_exists": false,
+  "optimizer_transition_count": 3,
+  "payload_codec": "safetensors-flat-v1",
+  "run_generation": 1,
+  "run_id": "20260711_p06b_final_d5e2901_d2-training",
+  "runtime_view_digest": "c5590b251ec73edb2896d3471859a013b52dd04f2c7c2f67b291772c02b34257",
+  "shared_root": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06b_final_d5e2901_d2/training",
+  "stop_reason": "stop_after_outer_steps",
+  "syncer_log_flags": {
+    "error": false,
+    "no_progress_timeout": false,
+    "uncaught_exception": false
+  },
+  "syncer_metrics": {
+    "exists": false,
+    "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06b_final_d5e2901_d2/training/metrics/syncer_metrics.csv",
+    "rows": 0
+  },
+  "total_seen_tokens": 192,
+  "update_manifest": {
+    "exists": true,
+    "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06b_final_d5e2901_d2/training/metrics/update_manifest.csv",
+    "rows": 8
+  }
+}
+{
+  "committer_kills": 1,
+  "dedicated_syncer_nodes": 0,
+  "distributed_commits": 3,
+  "executor_kills": 1,
+  "final_fencing_epoch": 2,
+  "learner_nodes": 2,
+  "membership_reconfigurations": 1,
+  "membership_revision": 1,
+  "optimizer_transitions": 3,
+  "status": "PASS",
+  "stop_reason": "stop_after_outer_steps",
+  "takeovers": 2,
+  "whole_node_kills": 1
+}

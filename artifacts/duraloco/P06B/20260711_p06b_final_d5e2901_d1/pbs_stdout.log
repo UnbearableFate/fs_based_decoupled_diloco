@@ -1,0 +1,142 @@
+mg0005
+## codex/duraloco-p06b-learner-hosted-sync
+d5e2901b75ef504a31a365790b7b9518c329dbe7
+Python 3.13.13
+{
+  "finding_count": 0,
+  "findings": [],
+  "scanned_files": 287,
+  "status": "PASS"
+}
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python -m fs_diloco.distributed_syncer.cli committer --config /work/xg24i002/x10041/fs_based_decoupled_diloco/configs/fs_diloco_gpt2_wikitext2_1l_debug.yaml --run-id 20260711_p06b_final_d5e2901_d1-training --shared-root /work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06b_final_d5e2901_d1/training --num-learners 1 --node-ids mg0005 --member-id member-000 --owner-session-id 20260711_p06b_final_d5e2901_d1-training-committer-session --threads 8
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python -m fs_diloco.distributed_syncer.cli executor --config /work/xg24i002/x10041/fs_based_decoupled_diloco/configs/fs_diloco_gpt2_wikitext2_1l_debug.yaml --run-id 20260711_p06b_final_d5e2901_d1-training --shared-root /work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06b_final_d5e2901_d1/training --num-learners 1 --member-id member-000 --executor-id executor-000 --executor-session-id 20260711_p06b_final_d5e2901_d1-training-executor-000-session --threads 8
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python -m fs_diloco.learner --config /work/xg24i002/x10041/fs_based_decoupled_diloco/configs/fs_diloco_gpt2_wikitext2_1l_debug.yaml --run-id 20260711_p06b_final_d5e2901_d1-training --shared-root /work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06b_final_d5e2901_d1/training --learner-id learner_000 --num-learners 1 --session-id 20260711_p06b_final_d5e2901_d1-training-learner_000-session
+{
+  "authority": "committed-transition-log",
+  "commit_id": "c-2233123363cbeae8677131d32fcab983b1c472a3f050c456c4ae4a21b67eff5e",
+  "commit_seq": 3,
+  "committed_selected_counts_by_event": {
+    "1": 1
+  },
+  "committed_state_digest": "ae14ba7767c18992e5bfd228dd813a37c3be5a9530b8c19eb814e1c8c450791a",
+  "consumed_proposal_count": 1,
+  "fragment_versions": {
+    "0": 1
+  },
+  "frontier_sha256": "eee0dd63b58fcd67e7aad8d6b2f85381c5bbcc6016b62861a9517a867e2581a6",
+  "global_merge_event": 1,
+  "heartbeats": {
+    "learner_000": {
+      "format_version": 1,
+      "hostname": "mg0005",
+      "last_loaded_global_version": 2,
+      "last_local_step": 4,
+      "last_update_id": "learner_000_00000004_bcea65aaed08",
+      "learner_id": "learner_000",
+      "phase": "process_exit",
+      "pid": 1393845,
+      "run_id": "20260711_p06b_final_d5e2901_d1-training",
+      "status": "stopped",
+      "timestamp": 1783766710.5259368,
+      "tokens_per_sec": null
+    }
+  },
+  "latest": {
+    "authority": "committed-transition-log-and-head-fence",
+    "commit_id": "c-049e66a87b1d7a10a48542645537e17f7860c50d3d918b82d7ec69dccd485f33",
+    "commit_seq": 2,
+    "committed_interval_identities": [
+      [
+        "learner_000",
+        "20260711_p06b_final_d5e2901_d1-training-learner_000-session",
+        0,
+        1
+      ]
+    ],
+    "committed_state_digest": "54ba16fd13dc359a76bad6178d7f3bfbe61f01c7bf23816a293dd1aaf3ed419b",
+    "created_at": 1783766705.5257363,
+    "fencing_epoch": 1,
+    "format_version": 1,
+    "fragment_versions": {
+      "0": 1
+    },
+    "frontier_sha256": "26c8f76dd9985589e361acdc53c06023b5da3cefb9c78d3d46edead2b5c51cee",
+    "global_merge_event": 1,
+    "optim_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06b_final_d5e2901_d1/training/optim/outer_v000002.safetensors",
+    "optimizer_transition_count": 1,
+    "owner_id": "member-000",
+    "owner_session_id": "20260711_p06b_final_d5e2901_d1-training-committer-session",
+    "param_index_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06b_final_d5e2901_d1/training/control/param_index.json",
+    "run_generation": 0,
+    "run_id": "20260711_p06b_final_d5e2901_d1-training",
+    "runtime_view_digest": "5edf63c93264bd07aedd27fc0261f49bbc3bc5c3998896850ccc72beaf748c65",
+    "total_seen_tokens": 256,
+    "version": 2,
+    "weight_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06b_final_d5e2901_d1/training/weights/global_v000002.safetensors"
+  },
+  "latest_export_valid": false,
+  "latest_kind": "full",
+  "learner_fragment_adoption": {
+    "learner_000": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    }
+  },
+  "learner_local_steps": {
+    "learner_000": 4
+  },
+  "learner_metrics": {
+    "exists": true,
+    "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06b_final_d5e2901_d1/training/metrics/learner_metrics.csv",
+    "rows": 2
+  },
+  "loss_summary": {
+    "count": 2,
+    "invalid_or_nonfinite": 0,
+    "max": 4.437056303024292,
+    "min": 4.3936262130737305,
+    "obvious_divergence": false
+  },
+  "materialized_weight_exists": false,
+  "optimizer_transition_count": 1,
+  "payload_codec": "safetensors-flat-v1",
+  "run_generation": 0,
+  "run_id": "20260711_p06b_final_d5e2901_d1-training",
+  "runtime_view_digest": "e142460fcf173b5c81e89a6833cacd683e1d0777901ee6bb33839b22995cd1ca",
+  "shared_root": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06b_final_d5e2901_d1/training",
+  "stop_reason": "stop_after_outer_steps",
+  "syncer_log_flags": {
+    "error": false,
+    "no_progress_timeout": false,
+    "uncaught_exception": false
+  },
+  "syncer_metrics": {
+    "exists": false,
+    "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06b_final_d5e2901_d1/training/metrics/syncer_metrics.csv",
+    "rows": 0
+  },
+  "total_seen_tokens": 256,
+  "update_manifest": {
+    "exists": true,
+    "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06b_final_d5e2901_d1/training/metrics/update_manifest.csv",
+    "rows": 2
+  }
+}
+{
+  "boundary_adoptions": 1,
+  "dedicated_syncer_nodes": 0,
+  "distributed_commits": 1,
+  "executors": 1,
+  "finite_losses": [
+    4.437056303024292,
+    4.3936262130737305
+  ],
+  "floating_committers": 1,
+  "learner_nodes": 1,
+  "learners": 1,
+  "local_steps": 4,
+  "optimizer_transitions": 1,
+  "prepared_markers": 1,
+  "status": "PASS",
+  "stop_reason": "stop_after_outer_steps"
+}

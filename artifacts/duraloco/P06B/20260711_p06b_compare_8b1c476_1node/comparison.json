@@ -1,0 +1,124 @@
+{
+  "content_identity_claimed_across_backends": false,
+  "control_semantics": {
+    "crs_extra_epoch_bump_is_injected_takeover": true,
+    "distributed_no_fault_control": true,
+    "epoch_bump_and_stop_schema_exact": true
+  },
+  "crs_control_sequence": [
+    "epoch_bump",
+    "epoch_bump",
+    "stop"
+  ],
+  "crs_execution_backend_identity": {
+    "device": "cuda",
+    "outer_optimizer_impl_digest": "b2112ed4d14852711ff60b4ddfc8f2bbc32a5d89162e5b1df58c0a5674ac38e7",
+    "payload_codec": "safetensors-flat-v1"
+  },
+  "crs_final_weight_sha256": "2ccb52fa4d942f7f6da5e6145a15f951e8de7f77393a513ffb7f1287148c24e3",
+  "crs_loss": {
+    "count": 96,
+    "max": 4.55599953174591,
+    "min": 3.4305977630615234
+  },
+  "distributed_control_sequence": [
+    "epoch_bump",
+    "stop"
+  ],
+  "distributed_execution_backend_identity": {
+    "device": "cpu",
+    "digest": "e3290d7643ca1f87a629ea7fc834b0230ec85f3ac4470f8919c068e5c0186b99",
+    "outer_optimizer_impl_digest": "b2112ed4d14852711ff60b4ddfc8f2bbc32a5d89162e5b1df58c0a5674ac38e7",
+    "payload_codec": "safetensors-flat-v1"
+  },
+  "distributed_final_weight_sha256": "62793195cd83bac410b0e2c679f7adc934a708b79019ce154aca03ceadc699bd",
+  "distributed_loss": {
+    "count": 88,
+    "max": 4.55599953174591,
+    "min": 3.297504744529724
+  },
+  "exact_transition_links": [
+    {
+      "aggregate_digest_exact": true,
+      "outer_state_content_exact": true,
+      "params_content_exact": true,
+      "selected_ids_exact": true,
+      "weights_exact": true
+    },
+    {
+      "aggregate_digest_exact": true,
+      "outer_state_content_exact": true,
+      "params_content_exact": true,
+      "selected_ids_exact": true,
+      "weights_exact": true
+    },
+    {
+      "aggregate_digest_exact": true,
+      "outer_state_content_exact": true,
+      "params_content_exact": true,
+      "selected_ids_exact": true,
+      "weights_exact": true
+    },
+    {
+      "aggregate_digest_exact": true,
+      "outer_state_content_exact": true,
+      "params_content_exact": true,
+      "selected_ids_exact": true,
+      "weights_exact": true
+    },
+    {
+      "aggregate_digest_exact": true,
+      "outer_state_content_exact": true,
+      "params_content_exact": true,
+      "selected_ids_exact": true,
+      "weights_exact": true
+    },
+    {
+      "aggregate_digest_exact": true,
+      "outer_state_content_exact": true,
+      "params_content_exact": true,
+      "selected_ids_exact": true,
+      "weights_exact": true
+    },
+    {
+      "aggregate_digest_exact": true,
+      "outer_state_content_exact": true,
+      "params_content_exact": true,
+      "selected_ids_exact": true,
+      "weights_exact": true
+    },
+    {
+      "aggregate_digest_exact": true,
+      "outer_state_content_exact": true,
+      "params_content_exact": true,
+      "selected_ids_exact": true,
+      "weights_exact": true
+    },
+    {
+      "aggregate_digest_exact": true,
+      "outer_state_content_exact": true,
+      "params_content_exact": true,
+      "selected_ids_exact": true,
+      "weights_exact": true
+    },
+    {
+      "aggregate_digest_exact": true,
+      "outer_state_content_exact": true,
+      "params_content_exact": true,
+      "selected_ids_exact": true,
+      "weights_exact": true
+    }
+  ],
+  "loss_ranges_overlap": true,
+  "max_abs_parameter_difference": 0.041679657995700836,
+  "numeric_tolerance": {
+    "allclose": true,
+    "atol": 0.05,
+    "rtol": 0.1
+  },
+  "policy_identity_exact": true,
+  "relative_l2_parameter_difference": 0.01091400416540214,
+  "same_fwo_lfe_to_final_exact": true,
+  "schema": "duraloco-p06b-c9-d8-comparison-v1",
+  "status": "PASS"
+}

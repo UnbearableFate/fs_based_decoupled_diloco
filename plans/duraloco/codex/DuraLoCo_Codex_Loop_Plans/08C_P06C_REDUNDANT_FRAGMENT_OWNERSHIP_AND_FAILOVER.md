@@ -9,6 +9,9 @@ planning_basis_commit: "resolve_from_P06B_verified_report"
 target_branch: "codex/duraloco-p06c-redundant-fragment-executors"
 depends_on:
   - "P06B"
+implementation_lessons:
+  - "M00_IMPLEMENTATION_LESSONS.md"
+  - "P06A_P06B_IMPLEMENTATION_LESSONS.md"
 required_skill: "miyabi-development"
 execution_mode: "single-writer maker + independent checker"
 automatic_progression: true
@@ -45,6 +48,20 @@ human_approval_gates: []
 - [ ] same FWO CRS/LFE equivalence稳定；
 - [ ] PFT lifecycle在未做GC时可审计；
 - [ ] failure detector只提供evidence、不直接拥有authority。
+- [ ] 已逐项读取并映射`P06A_P06B_IMPLEMENTATION_LESSONS.md`；特别是storage envelope、
+  committed-prefix-only analysis、terminal stop/fence race和marker-last grace约束。
+
+### 2.1 执行顺序优化（不得跳级）
+
+1. **P0 evidence freeze**：先完成P06B Checker并冻结factor-1 D8/CRS/resource baseline；
+2. **P1 schema/property**：factor-2 owner vectors、mode/hedge identity、duplicate result kernel；
+3. **P2 simulator/D1-R2**：tiny tensor穷举arrival order、response loss、same/divergent result；
+4. **P3 real D1-R2**：真实GPT-2小步，验证CPU budget与同backend exact duplicate；
+5. **P4 D2-R2 tapes**：每类failure tape独立通过后再运行combined failure；
+6. **P5 D8-R2**：同一clean commit完成factor-1 control与R2 chaos/资源对照；
+7. **P6 independent Checker**：Checker私有false-suspicion与divergence反例后才可进入P07。
+
+任一层失败时回到最小能复现该根因的层级，不能用更大shape“顺便验证修复”。
 
 ## 3. 范围
 
@@ -113,6 +130,22 @@ tests/distributed_syncer/
 
 ## 6. Codex执行循环
 
+### Loop 0 — Evidence freeze、error protocol与RED inventory
+
+**目标。** 在改runtime前冻结P06B verified commit、D8 factor-1 raw evidence、comparison、
+resource baseline及全部P06C反例列表。
+
+**RED。** analysis直接读取physical envelope、用listing证明commit、意外异常被`|| true`
+吞掉、错误记录缺phenomenon/cause/repair/evidence时，preflight必须失败。
+
+**GREEN。** 建立phase error ledger；每个错误按
+`phenomenon → expected → impact → confirmed/unknown cause → repair → verification → retry`
+记录并立即详细报告。expected divergence/blocked与unexpected terminal failure使用不同枚举。
+
+**CHECK/PERSIST。** P06B Checker PASS、baseline checksums、P06C RED matrix与error schema。
+
+**停止条件。** 后续每个PBS gate都能把错误绑定commit/job/host/manifest和acceptance ID。
+
 ### Loop 1 — Replicated ownership与role determinism
 
 **目标。** 同一committed epoch下每个fragment得到一致的primary/backup集合。
@@ -145,6 +178,10 @@ executor ID、attempt ID或telemetry。具体attempt/loser lineage作为审计ev
 **停止条件。** duplicate count和arrival/listing order不改变transition identity、committed
 state digest或proposal consumption。
 
+**实施顺序约束。** 先实现dependency-free duplicate validation kernel和property tape；
+committer集成后必须继续只从global-head committed prefix判断winner/consumption。禁止直接读取
+physical storage envelope或把immutable commit listing当作ancestry。
+
 ### Loop 3 — Warm standby与hedged execution
 
 **目标。** 在正常情况下限制冗余成本，在慢/故障情况下压低prepare tail latency。
@@ -172,6 +209,10 @@ state digest或proposal consumption。
 **CHECK/PERSIST。** D2-R2 kill matrix；证明没有state transfer或private checkpoint。
 
 **停止条件。** false suspicion不破坏safety，真实node loss在定义RTO内恢复commit。
+
+**terminal race约束。** post-lease strict replay是必须条件但不是CAS安全证明；stop、epoch或
+head advance在check与CAS之间提交时，必须由CAS conflict后的fresh committed replay分类。
+仅authoritative-stop冲突可作为正常terminal resolution，其他冲突必须保存并fail closed。
 
 ### Loop 5 — D8-R2 chaos与research baseline
 
@@ -240,6 +281,10 @@ state digest或proposal consumption。
 ## 10. Maker–Checker交接
 
 Maker提交failure tape、每个PFT/epoch/work-order lineage、fault timing、RTO/RPO和resource data。Checker必须构造一个false suspicion和一个same-FWO divergence注入，核对系统是fail closed而不是选择“多数/最快”继续。
+
+Maker还必须提交phase error ledger。每条非预期错误必须包含现象、期望、影响、confirmed与
+unknown原因、修复、最小验证、retry依据和artifact路径；Checker抽查至少一条历史错误能否
+从保存的manifest/log独立复现。缺失详细错误记录是P06C-A23失败，而不是文档follow-up。
 
 ## 11. 自动推进
 

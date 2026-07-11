@@ -1,0 +1,18 @@
+{
+  "boundary_adoptions": 1,
+  "dedicated_syncer_nodes": 0,
+  "distributed_commits": 1,
+  "executors": 1,
+  "finite_losses": [
+    4.437056303024292,
+    4.3936262130737305
+  ],
+  "floating_committers": 1,
+  "learner_nodes": 1,
+  "learners": 1,
+  "local_steps": 4,
+  "optimizer_transitions": 1,
+  "prepared_markers": 1,
+  "status": "PASS",
+  "stop_reason": "stop_after_outer_steps"
+}

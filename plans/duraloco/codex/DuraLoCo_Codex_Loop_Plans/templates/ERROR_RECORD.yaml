@@ -1,0 +1,33 @@
+schema: duraloco-error-record-v1
+error_id: E-PHASE-YYYYMMDD-NN
+phase_and_gate: PXX/gate
+observed_at_utc: null
+pbs_job_id: null
+hosts: []
+git_commit: null
+classification: unexpected_failure  # expected_rejection|expected_blocked|unexpected_failure
+phenomenon:
+  exit_code: null
+  exception: null
+  terminal_state: null
+  log_excerpt: null
+expected: null
+impact:
+  acceptance_ids: []
+  invariants: []
+  committed_prefix_safe: null
+cause:
+  confirmed: []
+  unknown: []
+repair:
+  change: null
+  rationale: null
+verification:
+  minimal_reproduction: null
+  targeted_gate: null
+  qualification_ladder: []
+retry_decision:
+  authorized: false
+  rationale: null
+  parent_run_id: null
+artifacts: []

@@ -220,3 +220,18 @@ learner-hosted CPU 计算可能竞争 CPU cores、memory bandwidth、PCIe/NVLink
 ## 9. Research integrity
 
 计划值、目标值和实测值必须分开。相关工作中已有的单项机制——CPU syncer、parameter sharding、external storage communication、serverless aggregation、backup execution、logging/replay——不得被包装为独立首创。论文主张应聚焦经过证据支持的组合：storage-resident stateful outer optimizer authority、learner-hosted roleless executors、redundant prepare 与 single logical commit、ownership change without optimizer-state migration，以及 HPC no-dedicated-syncer resource trade-off。
+
+## 10. Error reporting contract
+
+非预期错误必须在下一次修复或重提作业前及时报告并写入phase error ledger。报告至少包含：
+
+- 错误现象：原始异常/exit code、实际terminal state、job/host/commit和日志路径；
+- 预期行为及受影响的acceptance/invariant；
+- 原因：明确区分direct evidence支持的`confirmed`与尚未证明的`unknown/hypothesis`；
+- 解决方法：代码、配置或流程的具体修改，及为什么能修复根因；
+- 验证方法：最小复现、targeted gate、后续D1/D2/D8资格验证；
+- retry决定、parent lineage、保留的manifest/checksum/artifact。
+
+预期fault injection必须标为`expected_rejection`或`expected_blocked`，不得与unexpected
+failure混为一谈。shell `|| true`只能用于best-effort artifact capture，不能把runtime或
+checker失败转换成pass。详细格式使用`templates/ERROR_RECORD.yaml`。

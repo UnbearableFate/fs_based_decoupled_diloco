@@ -1,0 +1,73 @@
+schema: duraloco-error-ledger-v1
+phase: P06B
+records:
+  - error_id: E-P06B-20260711-01
+    phase_and_gate: P06B/C9-D8-comparison
+    pbs_job_id: 2362447.opbs
+    git_commit: c63f3a1
+    classification: unexpected_failure
+    phenomenon: "UnicodeDecodeError while parsing authority *.json; bytes began FSDILOCO-STORAGE-V1"
+    expected: "decode committed manifests and compare CRS/D8 semantics"
+    impact: "P06B-A18 had no valid comparison evidence; committed runs were unaffected"
+    cause:
+      confirmed: ["analysis bypassed PosixStorageBackend and read physical envelope as UTF-8 JSON"]
+      unknown: []
+    repair: "read logical payload through PosixStorageBackend.get and canonical_object"
+    verification: "later PBS 2362603.opbs completed comparison with PASS"
+    artifacts: ["artifacts/duraloco/P06B/20260711_p06b_compare_c63f3a1_1node"]
+  - error_id: E-P06B-20260711-02
+    phase_and_gate: P06B/C9-D8-comparison
+    pbs_job_id: 2362454.opbs
+    git_commit: 9048aa0
+    classification: unexpected_failure
+    phenomenon: "UnicodeDecodeError persisted after filtering paths by parent directory name"
+    expected: "path filtering would isolate commit JSON payloads"
+    impact: "P06B-A18 remained unproven; no authority mutation occurred"
+    cause:
+      confirmed: ["all POSIX authority objects, including logical JSON, are physical binary envelopes"]
+      unknown: []
+    repair: "remove raw text decoding rather than refine filename filtering"
+    verification: "backend-decoded canonical payloads pass in final comparison"
+    artifacts: ["artifacts/duraloco/P06B/20260711_p06b_compare_9048aa0_1node"]
+  - error_id: E-P06B-20260711-03
+    phase_and_gate: P06B/D8-terminal-standby
+    pbs_job_id: 2362513.opbs
+    git_commit: 3338c43f329b15da02de79c0d995c0b3fba0b768
+    classification: unexpected_failure
+    phenomenon: "D8 workload passed, but standby traceback ended in CommitConflict: authoritative stop is already committed"
+    expected: "normal authoritative stop should terminate standby without an error traceback"
+    impact: "committed prefix stayed safe and D8 report passed, but terminal process semantics were not acceptable for final runtime"
+    cause:
+      confirmed: ["stop committed in the TOCTOU window between post-lease replay and activate_owner"]
+      unknown: []
+    repair: "on standby-only fence CommitConflict, replay current head; resolve only authoritative-stop as terminal and re-raise every other conflict"
+    verification: "unit 105 pass, D1 2362549, D2 2362562, D8 2362567; final standby emitted standby_lost_fence_to_authoritative_stop with no traceback/orphan"
+    artifacts: ["artifacts/duraloco/P06B/20260711_p06b_final_3338c43_d8", "artifacts/duraloco/P06B/20260711_p06b_final_d5e2901_d8"]
+  - error_id: E-P06B-20260711-04
+    phase_and_gate: P06B/C9-D8-comparison
+    pbs_job_id: 2362595.opbs
+    git_commit: d5e2901b75ef504a31a365790b7b9518c329dbe7
+    classification: unexpected_failure
+    phenomenon: "AssertionError: expected one run spec; run_spec.json was absent"
+    expected: "open both authoritative logs and fold committed prefixes"
+    impact: "comparison rerun failed before tensor loading; D8 authority unchanged"
+    cause:
+      confirmed: ["RunSpec is embedded in control/run-manifest.json, not stored as run_spec.json"]
+      unknown: []
+    repair: "discover the strict control/run-manifest.json object"
+    verification: "next attempt progressed to schema-root decoding"
+    artifacts: ["artifacts/duraloco/P06B/20260711_p06b_compare_d5e2901_1node"]
+  - error_id: E-P06B-20260711-05
+    phase_and_gate: P06B/C9-D8-comparison
+    pbs_job_id: 2362599.opbs
+    git_commit: 20aba2c518ee03d24bc01fe9d8da5525dcc348cd
+    classification: unexpected_failure
+    phenomenon: "KeyError: run_id while opening log from decoded RunManifest"
+    expected: "RunManifest root would expose RunSpec fields"
+    impact: "P06B-A18 still unproven; read-only job made no mutation"
+    cause:
+      confirmed: ["RunManifest root contains provenance and a nested strict spec field"]
+      unknown: []
+    repair: "decode backend envelope, validate RunManifest, then use manifest['spec']; record distinct CUDA/CPU backend identities"
+    verification: "PBS 2362603.opbs PASS: exact policy/linkage, max_abs 0.0416797, relative_L2 0.0109140"
+    artifacts: ["artifacts/duraloco/P06B/20260711_p06b_compare_20aba2c_1node", "artifacts/duraloco/P06B/20260711_p06b_compare_8b1c476_1node"]
