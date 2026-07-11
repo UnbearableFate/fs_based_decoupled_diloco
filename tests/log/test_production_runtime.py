@@ -1,12 +1,20 @@
 from __future__ import annotations
 
+from dataclasses import replace
 import hashlib
+import inspect
 
 import pytest
 import torch
 from safetensors.torch import save as save_safetensors_bytes
 
-from fs_diloco.log import InjectedLogCrash, ProductionTransactionalLog, RunSpec
+import fs_diloco.log.replay as replay_module
+from fs_diloco.log import (
+    InjectedLogCrash,
+    ProductionTransactionalLog,
+    RunSpec,
+    VerificationError,
+)
 from fs_diloco.log.production_codec import (
     PRODUCTION_CODEC,
     encode_production_outer_state,
@@ -36,7 +44,7 @@ def _spec(run_id: str) -> RunSpec:
     )
 
 
-def _initialize(run_id: str):
+def _initialize(run_id: str, *, num_fragments: int = 1):
     backend = InMemoryStorageBackend()
     spec = _spec(run_id)
     params = torch.tensor([0.0, 0.0])
@@ -44,12 +52,25 @@ def _initialize(run_id: str):
     log = ProductionTransactionalLog.initialize(
         backend,
         spec,
-        {0: (encode_production_params(params), encode_production_outer_state(outer))},
+        {
+            fragment_id: (
+                encode_production_params(params),
+                encode_production_outer_state(outer),
+            )
+            for fragment_id in range(num_fragments)
+        },
     )
     return backend, log
 
 
-def _proposal(log: ProductionTransactionalLog, *, learner: str, sequence: int, values):
+def _proposal(
+    log: ProductionTransactionalLog,
+    *,
+    learner: str,
+    sequence: int,
+    values,
+    fragment_id: int = 0,
+):
     view = build_runtime_view(log)
     payload = save_safetensors_bytes(
         {"local_params": torch.tensor(values, dtype=torch.float32)}
@@ -65,10 +86,10 @@ def _proposal(log: ProductionTransactionalLog, *, learner: str, sequence: int, v
             "learner_id": learner,
             "learner_session_id": f"session-{learner}",
             "sequence": sequence,
-            "fragment_id": 0,
+            "fragment_id": fragment_id,
             "base_commit_id": view.commit_id,
             "base_commit_seq": view.commit_seq,
-            "base_fragment_version": view.fragments[0].version,
+            "base_fragment_version": view.fragments[fragment_id].version,
             "base_frontier_digest": view.frontier_sha256,
             "local_steps_since_base": 1,
             "target_tokens_since_base": 10,
@@ -92,7 +113,7 @@ def _prepare(log, manifest, values):
     params = torch.tensor(values, dtype=torch.float32)
     outer = init_outer_state(params, log.spec.optimizer_config)
     return log.prepare_transition(
-        fragment_id=0,
+        fragment_id=manifest.fragment_id,
         selected_proposal_ids=[manifest.proposal_id],
         new_params=encode_production_params(params),
         new_outer_state=encode_production_outer_state(outer),
@@ -101,6 +122,14 @@ def _prepare(log, manifest, values):
             log.spec.optimizer_config.identity()
         ),
     )
+
+
+def _corrupt_object(backend, key: str):
+    original = backend._objects[key]
+    corrupted = bytearray(original.data)
+    corrupted[-1] ^= 1
+    backend._objects[key] = replace(original, data=bytes(corrupted))
+    return original
 
 
 def test_prepared_production_outputs_are_invisible_until_head_cas():
@@ -123,7 +152,11 @@ def test_fresh_process_recovers_identical_runtime_view_without_local_state():
     manifest = _proposal(log, learner="learner-0", sequence=1, values=[1.0, 2.0])
     log.commit_prepared(_prepare(log, manifest, [0.5, 1.0]))
     first = build_runtime_view(log)
-    reopened = ProductionTransactionalLog.open(backend, first.run_id, first.run_generation)
+    reopened = ProductionTransactionalLog.open(
+        backend,
+        log.spec.run_id,
+        log.spec.run_generation,
+    )
     second = build_runtime_view(reopened)
     assert second == first
 
@@ -143,3 +176,119 @@ def test_response_loss_is_resolved_from_ancestry_after_successor():
         first.proposal_id,
         second.proposal_id,
     }
+
+
+def test_production_replay_routes_around_scalar_protocol_validator():
+    source = inspect.getsource(replay_module._replay_production_log)
+    assert "validate_production_tensor_payload(" in source
+    assert "validate_tensor_payload(" not in source
+
+
+@pytest.mark.parametrize("num_fragments", [1, 2])
+def test_cached_and_forced_full_replay_are_equal_at_every_prefix(num_fragments):
+    _, log = _initialize(f"production-prefix-{num_fragments}", num_fragments=num_fragments)
+    assert log.replay() == log.replay(force_full=True)
+    for index in range(10):
+        fragment_id = index % num_fragments
+        values = [float(index + 1), float(index + 2)]
+        manifest = _proposal(
+            log,
+            learner=f"learner-{index}",
+            sequence=1,
+            values=values,
+            fragment_id=fragment_id,
+        )
+        log.commit_prepared(_prepare(log, manifest, values))
+        cached = log.replay()
+        strict = log.replay(force_full=True)
+        assert cached == strict
+
+
+def test_verified_immutable_tensor_cache_is_process_local_and_discardable():
+    backend, log = _initialize("production-cache")
+    manifest = _proposal(log, learner="learner-0", sequence=1, values=[1.0, 2.0])
+    log.commit_prepared(_prepare(log, manifest, [0.5, 1.0]))
+    first = log.replay(force_full=True)
+
+    history_start = len(backend.history)
+    assert log.replay() == first
+    cached_reads = backend.history[history_start:]
+    large_keys = {
+        manifest.payload_key,
+        *(
+            fragment.params_ref.key
+            for frontier in first.frontiers
+            for fragment in frontier.fragments.values()
+        ),
+        *(
+            fragment.outer_state_ref.key
+            for frontier in first.frontiers
+            for fragment in frontier.fragments.values()
+        ),
+    }
+    assert not any(
+        record.operation == "get" and record.key in large_keys for record in cached_reads
+    )
+
+    reopened = ProductionTransactionalLog.open(
+        backend,
+        log.spec.run_id,
+        log.spec.run_generation,
+    )
+    history_start = len(backend.history)
+    assert reopened.replay(force_full=True) == first
+    strict_reads = backend.history[history_start:]
+    assert any(
+        record.operation == "get" and record.key == manifest.payload_key
+        for record in strict_reads
+    )
+
+
+@pytest.mark.parametrize(
+    "object_kind",
+    ["proposal", "params", "outer_state", "commit", "frontier"],
+)
+def test_corrupt_new_object_fails_before_replay_cache_replacement(object_kind):
+    backend, log = _initialize(f"production-corrupt-new-{object_kind}")
+    manifest = _proposal(log, learner="learner-0", sequence=1, values=[1.0, 2.0])
+    prepared = _prepare(log, manifest, [0.5, 1.0])
+    log.commit_prepared(prepared)
+    key = {
+        "proposal": manifest.payload_key,
+        "params": prepared.commit.new_params_ref.key,
+        "outer_state": prepared.commit.new_outer_state_ref.key,
+        "commit": prepared.commit_ref.key,
+        "frontier": prepared.frontier_ref.key,
+    }[object_kind]
+    original = _corrupt_object(backend, key)
+    cache_before = (
+        set(log._replay_cache.proposal_payloads),
+        dict(log._replay_cache.params_numels),
+        dict(log._replay_cache.outer_numels),
+    )
+
+    with pytest.raises(VerificationError):
+        log.replay()
+    assert cache_before == (
+        log._replay_cache.proposal_payloads,
+        log._replay_cache.params_numels,
+        log._replay_cache.outer_numels,
+    )
+
+    backend._objects[key] = original
+    assert log.replay().head_frontier.commit_seq == 1
+
+
+def test_forced_full_replay_detects_historical_object_corruption():
+    backend, log = _initialize("production-corrupt-historical")
+    manifest = _proposal(log, learner="learner-0", sequence=1, values=[1.0, 2.0])
+    log.commit_prepared(_prepare(log, manifest, [0.5, 1.0]))
+    assert log.replay().head_frontier.commit_seq == 1
+    original = _corrupt_object(backend, manifest.payload_key)
+
+    # Cached replay relies on the backend's immutable-create contract.
+    assert log.replay().head_frontier.commit_seq == 1
+    with pytest.raises(VerificationError):
+        log.replay(force_full=True)
+
+    backend._objects[manifest.payload_key] = original

@@ -37,7 +37,7 @@ from .production_codec import (
     decode_production_params,
     validate_production_tensor_payload,
 )
-from .replay import replay_log
+from .replay import ProductionReplayCache, ReplayResult, replay_log
 from .run import RunManifest, RunSpec
 
 
@@ -48,6 +48,8 @@ class ProductionTransactionalLog:
         if transactional.spec.payload_codec != PRODUCTION_CODEC:
             raise RunInitializationError("run is not a production safetensors generation")
         self.transactional = transactional
+        self._replay_cache = ProductionReplayCache.empty()
+        self._replay_validation_device = None
 
     @property
     def backend(self) -> StorageBackend:
@@ -184,6 +186,29 @@ class ProductionTransactionalLog:
     def load_head(self):
         return self.transactional.load_head()
 
+    def set_replay_validation_device(self, device) -> None:
+        """Select the device used for large finite checks during this process."""
+
+        self._replay_validation_device = device
+
+    def replay(self, *, force_full: bool = False) -> ReplayResult:
+        """Replay authority, memoizing only verified immutable tensor objects.
+
+        Manifests and causal rules are checked on every call.  The cache avoids
+        rereading and decoding large content-addressed tensors whose complete
+        object identity was already verified in this process.
+        """
+
+        cache = ProductionReplayCache.empty() if force_full else self._replay_cache
+        result = replay_log(
+            self.transactional,
+            production_cache=cache,
+            production_validation_device=self._replay_validation_device,
+        )
+        if force_full:
+            self._replay_cache = cache
+        return result
+
     def publish_proposal(self, proposal: ProposalManifest, payload: bytes) -> ObjectRef:
         if proposal.run_id != self.spec.run_id or proposal.run_generation != self.spec.run_generation:
             raise CommitConflict("proposal belongs to another run generation")
@@ -258,7 +283,7 @@ class ProductionTransactionalLog:
         outer_optimizer_impl_digest: str,
         crash_at: str | None = None,
     ) -> PreparedLogTransition:
-        replay = replay_log(self.transactional)
+        replay = self.replay()
         selected_ids = tuple(sorted(set(selected_proposal_ids)))
         if not selected_ids:
             raise CommitConflict("cannot commit an empty proposal selection")

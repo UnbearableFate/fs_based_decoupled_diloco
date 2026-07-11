@@ -55,3 +55,27 @@ def test_terminal_probe_verifies_the_real_production_authority():
     assert "replay_log(log.transactional)" in source
     assert "proposal_inclusion_exactly_once" in source
     assert "production_log_is_authority" in source
+
+
+def test_syncer_records_each_transaction_critical_path_stage():
+    source = (ROOT / "fs_diloco" / "syncer.py").read_text()
+    metrics = (ROOT / "fs_diloco" / "metrics.py").read_text()
+    for stage in (
+        "catalog",
+        "proposal_observation",
+        "aggregation",
+        "outer_step",
+        "successor_prepare",
+        "head_cas_completed",
+        "post_cas_replay_completed",
+        "materialized_export",
+    ):
+        assert f'"{stage}"' in source
+    for field in (
+        "catalog_seconds",
+        "successor_prepare_seconds",
+        "head_cas_seconds",
+        "post_cas_replay_seconds",
+        "materialize_full_seconds",
+    ):
+        assert f'"{field}"' in metrics

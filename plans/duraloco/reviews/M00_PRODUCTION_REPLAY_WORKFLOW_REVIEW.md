@@ -58,14 +58,14 @@ portable contract tests. It is not a production large-tensor implementation.
 Catalog validation was moved to the vectorized production validator, but full
 production replay still called the scalar validator.
 
-### R2 — Steady-state replay and recovery replay were treated as one operation
+### R2 — Large immutable objects were reverified as if they could mutate
 
 The syncer performs full replay before preparation and again after every CAS.
 Even after replacing the scalar validator, repeatedly reading and validating
-the entire prefix makes steady-state work grow quadratically with transition
-count. Strict full replay is necessary at process start, takeover, checker, and
-explicit recovery boundaries; it is not necessary after a directly observed
-successor CAS when the process already owns a verified immutable prefix.
+every historical tensor makes large-object work grow quadratically with
+transition count. The manifests and causal rules are cheap enough to replay
+strictly every time; content-addressed tensor objects that were already
+verified in this process do not need another read and decode.
 
 ### R3 — Timing did not cover the transaction's full critical path
 
@@ -94,24 +94,28 @@ and any incremental fallback. It must:
 - verify params/outer-state pairing and all selection/causal/consumption rules;
 - reconstruct an immutable `ReplayResult` and `RuntimeView` from no local state.
 
-### Verified incremental successor extension
+### Verified immutable-object memoization
 
-Used only inside a process that already holds a strict verified `ReplayResult`.
-It may extend that result by one directly observed successor if and only if:
+Used only inside a process that already completed production replay. Every
+call still reloads the head, walks the complete manifest ancestry, and applies
+the same causal verifier. A large tensor read/decode may be skipped only when:
 
-- the newly loaded head names commit sequence `prior + 1`;
-- the new commit's parent ID and logical parent-head token match the cached head;
-- the new frontier's parent digest matches the cached frontier;
-- all newly referenced proposal manifests/payloads and successor params/outer
-  state pass the same production verification rules;
-- selection, lineage, interval, staleness, weights, fragments, scheduler, and
-  consumption are valid relative to the cached verified prefix;
-- the resulting prefix digest equals the digest produced by strict full replay
-  in tests.
+- its full `ObjectRef` identity `(key, sha256, size)` was successfully verified
+  earlier by the same process;
+- the storage contract continues to provide immutable-create semantics;
+- the current replay reaches that reference through a freshly verified
+  manifest chain.
 
 The cache is process memory only. It is never serialized and never authoritative.
-On head jump, conflict, mismatch, missing cache, response ambiguity, or any
-verification error, the path falls back to strict full replay.
+It is updated only after a complete replay succeeds. Fresh open, explicit
+verification, CAS conflict/response ambiguity, and cache deletion use an empty
+cache and therefore perform strict full tensor replay.
+
+This deliberately keeps one causal replay implementation instead of adding a
+second incremental state machine. At the M00 ten-transition bound, rereading
+small canonical manifests is preferable to duplicating lineage, staleness,
+selection, scheduler, and prefix-digest logic. Stage timings will determine
+whether a later phase needs a separately specified incremental manifest index.
 
 ## Implementation order
 
@@ -120,18 +124,18 @@ verification error, the path falls back to strict full replay.
 2. Add stage timing for catalog validation, proposal immutable observation,
    aggregation, successor immutable publication, CAS, post-CAS replay, and
    materialized export.
-3. Add an in-memory verified replay anchor to `ProductionTransactionalLog`.
-4. Implement a one-successor incremental verifier without changing committed
-   schemas or digests.
-5. Route production prepare and post-CAS `RuntimeView` construction through the
-   anchor; retain strict full replay for fresh open and every fallback.
-6. Audit fragment mode through the same mechanism.
+3. Add process-local verified immutable-object memoization to
+   `ProductionTransactionalLog` without changing committed schemas or digests.
+4. Route production prepare and post-CAS `RuntimeView` construction through
+   the memoized strict verifier; retain empty-cache full replay for fresh open
+   and every explicit fallback.
+5. Audit fragment mode through the same mechanism.
 
 ## Required tests before another submission
 
 - strict production replay never calls the scalar finite-value iterator;
-- strict and incremental results are equal for every prefix of a 10-transition
-  full run and a multi-fragment run;
+- memoized and empty-cache strict results are equal for every prefix of a
+  10-transition full run and a multi-fragment run;
 - cache deletion followed by strict replay yields the same digest;
 - head jump and CAS conflict force strict replay/reselection;
 - delayed response loss followed by a successor resolves by ancestry;

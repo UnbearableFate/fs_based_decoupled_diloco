@@ -4,13 +4,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import hashlib
+from typing import Any
 
 from fs_diloco.optimizer.reference_adapter import transition
 from fs_diloco.protocol.canonical_json import canonical_bytes, canonical_digest
 from fs_diloco.protocol.schemas import CommitManifest, FrontierManifest, HeadManifest, ObjectRef
 from fs_diloco.protocol.manifests import load_manifest_bytes
 from fs_diloco.protocol.schemas import ProposalManifest
-from fs_diloco.protocol.safetensors_validation import validate_tensor_payload
 from fs_diloco.testing.deterministic_reference import normalized_weights
 from fs_diloco.testing.deterministic_reference import vector_identity
 
@@ -59,6 +59,23 @@ class OrphanReport:
             "prepared_orphans": list(self.prepared_orphans),
             "uncommitted_proposals": list(self.uncommitted_proposals),
         }
+
+
+@dataclass
+class ProductionReplayCache:
+    """Process-local memoization of verified immutable production tensors."""
+
+    proposal_payloads: set[tuple[str, str, int]]
+    params_numels: dict[tuple[str, str, int], int]
+    outer_numels: dict[tuple[str, str, int], frozenset[int]]
+
+    @classmethod
+    def empty(cls) -> "ProductionReplayCache":
+        return cls(set(), {}, {})
+
+
+def _ref_identity(ref: ObjectRef) -> tuple[str, str, int]:
+    return (ref.key, ref.sha256, ref.size)
 
 
 def _parse_frontier(data: bytes, *, commit_seq: int) -> FrontierManifest:
@@ -413,16 +430,25 @@ def _read_production_proposal(
     return manifest
 
 
-def _replay_production_log(log: TransactionalLog) -> ReplayResult:
+def _replay_production_log(
+    log: TransactionalLog,
+    *,
+    cache: ProductionReplayCache | None = None,
+    validation_device: Any = None,
+) -> ReplayResult:
     from .production_codec import (
         PRODUCTION_CODEC,
         decode_production_outer_state,
         decode_production_params,
         production_optimizer_digest,
+        validate_production_tensor_payload,
     )
 
     if log.spec.payload_codec != PRODUCTION_CODEC:
         raise VerificationError("production replay received the wrong payload codec")
+    cached_proposals = set(cache.proposal_payloads) if cache is not None else set()
+    cached_params = dict(cache.params_numels) if cache is not None else {}
+    cached_outer = dict(cache.outer_numels) if cache is not None else {}
     loaded_head = log.load_head()
     head = loaded_head.manifest
     current_data = verified_get(log.backend, head.frontier_ref, commit_seq=head.commit_seq)
@@ -502,15 +528,25 @@ def _replay_production_log(log: TransactionalLog) -> ReplayResult:
     prefix_digests.append(_prefix_digest(log, genesis_head, frontiers[:1], ()))
     for fragment in genesis.fragments.values():
         reachable.update((fragment.params_ref.key, fragment.outer_state_ref.key))
-        params = decode_production_params(
-            verified_get(log.backend, fragment.params_ref, commit_seq=0)
-        )
-        outer = decode_production_outer_state(
-            verified_get(log.backend, fragment.outer_state_ref, commit_seq=0)
-        )
-        if {int(item.numel()) for key, item in outer.items() if key != "step"} != {
-            int(params.numel())
-        }:
+        params_key = _ref_identity(fragment.params_ref)
+        outer_key = _ref_identity(fragment.outer_state_ref)
+        params_numel = cached_params.get(params_key)
+        if params_numel is None:
+            params = decode_production_params(
+                verified_get(log.backend, fragment.params_ref, commit_seq=0)
+            )
+            params_numel = int(params.numel())
+            cached_params[params_key] = params_numel
+        outer_numels = cached_outer.get(outer_key)
+        if outer_numels is None:
+            outer = decode_production_outer_state(
+                verified_get(log.backend, fragment.outer_state_ref, commit_seq=0)
+            )
+            outer_numels = frozenset(
+                int(item.numel()) for key, item in outer.items() if key != "step"
+            )
+            cached_outer[outer_key] = outer_numels
+        if outer_numels != {params_numel}:
             raise VerificationError("genesis params/outer-state size mismatch", commit_seq=0)
 
     expected_impl = production_optimizer_digest(log.spec.optimizer_config.identity())
@@ -619,14 +655,18 @@ def _replay_production_log(log: TransactionalLog) -> ReplayResult:
                 sha256=proposal.payload_sha256,
                 size=proposal.payload_size,
             )
-            payload = verified_get(log.backend, payload_ref, commit_seq=index)
-            validate_tensor_payload(
-                payload,
-                tensor_key=proposal.tensor_key,
-                shape=proposal.shape,
-                dtype=proposal.dtype,
-                require_finite=True,
-            )
+            payload_identity = _ref_identity(payload_ref)
+            if payload_identity not in cached_proposals:
+                payload = verified_get(log.backend, payload_ref, commit_seq=index)
+                validate_production_tensor_payload(
+                    payload,
+                    tensor_key=proposal.tensor_key,
+                    shape=proposal.shape,
+                    dtype=proposal.dtype,
+                    require_finite=True,
+                    validation_device=validation_device,
+                )
+                cached_proposals.add(payload_identity)
             selected.append(proposal)
             last_lineage_sequence[lineage] = proposal.sequence
             consumed_interval_bases.add(interval_base)
@@ -647,15 +687,25 @@ def _replay_production_log(log: TransactionalLog) -> ReplayResult:
             raise VerificationError("committed weights differ from the oracle", commit_seq=index)
         if commit.outer_optimizer_impl_digest != expected_impl:
             raise VerificationError("production optimizer implementation digest mismatch", commit_seq=index)
-        new_params = decode_production_params(
-            verified_get(log.backend, commit.new_params_ref, commit_seq=index)
-        )
-        new_outer = decode_production_outer_state(
-            verified_get(log.backend, commit.new_outer_state_ref, commit_seq=index)
-        )
-        if {int(item.numel()) for key, item in new_outer.items() if key != "step"} != {
-            int(new_params.numel())
-        }:
+        params_key = _ref_identity(commit.new_params_ref)
+        outer_key = _ref_identity(commit.new_outer_state_ref)
+        params_numel = cached_params.get(params_key)
+        if params_numel is None:
+            new_params = decode_production_params(
+                verified_get(log.backend, commit.new_params_ref, commit_seq=index)
+            )
+            params_numel = int(new_params.numel())
+            cached_params[params_key] = params_numel
+        outer_numels = cached_outer.get(outer_key)
+        if outer_numels is None:
+            new_outer = decode_production_outer_state(
+                verified_get(log.backend, commit.new_outer_state_ref, commit_seq=index)
+            )
+            outer_numels = frozenset(
+                int(item.numel()) for key, item in new_outer.items() if key != "step"
+            )
+            cached_outer[outer_key] = outer_numels
+        if outer_numels != {params_numel}:
             raise VerificationError("transition params/outer-state size mismatch", commit_seq=index)
         expected_fragments = dict(previous.fragments)
         expected_fragments[commit.fragment_id] = type(old_fragment)(
@@ -699,7 +749,7 @@ def _replay_production_log(log: TransactionalLog) -> ReplayResult:
             _prefix_digest(log, prefix_head, frontiers[: index + 1], commits[:index])
         )
 
-    return ReplayResult(
+    result = ReplayResult(
         loaded_head=loaded_head,
         frontiers=frontiers,
         commits=commits,
@@ -709,13 +759,27 @@ def _replay_production_log(log: TransactionalLog) -> ReplayResult:
         committed_state_digest=prefix_digests[-1],
         reachable_keys=frozenset(reachable),
     )
+    if cache is not None:
+        cache.proposal_payloads = cached_proposals
+        cache.params_numels = cached_params
+        cache.outer_numels = cached_outer
+    return result
 
 
-def replay_log(log: TransactionalLog) -> ReplayResult:
+def replay_log(
+    log: TransactionalLog,
+    *,
+    production_cache: ProductionReplayCache | None = None,
+    production_validation_device: Any = None,
+) -> ReplayResult:
     if log.spec.payload_codec == "canonical-float-hex-v1":
         return _replay_reference_log(log)
     if log.spec.payload_codec == "safetensors-flat-v1":
-        return _replay_production_log(log)
+        return _replay_production_log(
+            log,
+            cache=production_cache,
+            validation_device=production_validation_device,
+        )
     raise VerificationError(f"unsupported replay payload codec: {log.spec.payload_codec}")
 
 

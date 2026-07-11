@@ -252,6 +252,7 @@ def initialize_generation(
         layout_digest=fragment_layout_digest(fragment_index),
     )
     log = ProductionTransactionalLog.initialize(backend, spec, initial)
+    log.set_replay_validation_device(device)
     view = build_runtime_view(log)
     return log, view, param_index, fragment_index, fragments, states
 
@@ -279,6 +280,7 @@ def resume_generation(
         config.run.run_id or "",
         config.init.run_generation,
     )
+    log.set_replay_validation_device(device)
     if log.spec.parameter_index_digest != param_index_digest(param_index):
         raise ValueError("parameter index differs from the committed run contract")
     if log.spec.fragment_layout_digest != fragment_layout_digest(fragment_index):
@@ -483,6 +485,7 @@ def run_syncer(config: Config) -> None:
                 stop_reason = "stop_after_global_tokens"
                 break
             fragment_id = 0 if len(view.fragments) == 1 else view.scheduler_cursor
+            catalog_start = time.monotonic()
             selected = collect_candidates(
                 catalog=catalog,
                 log=log,
@@ -491,6 +494,7 @@ def run_syncer(config: Config) -> None:
                 config=config,
                 fragment_id=fragment_id,
             )
+            catalog_done = time.monotonic()
             terminal_drain = finite_local_training_complete(paths, config)
             if len(selected) < config.sync.quorum_min and not (terminal_drain and selected):
                 logger.event(
@@ -505,14 +509,26 @@ def run_syncer(config: Config) -> None:
                     break
                 time.sleep(config.sync.scan_interval_seconds)
                 continue
+            logger.event(
+                "transaction_stage_completed",
+                stage="catalog",
+                target_commit_seq=view.commit_seq + 1,
+                selected_count=len(selected),
+                seconds=catalog_done - catalog_start,
+            )
 
-            payloads: list[bytes] = []
             tensors: list[torch.Tensor] = []
             for entry in selected:
                 payload = catalog.load_payload(entry)
                 log.publish_validated_proposal(entry.manifest, entry.payload)
-                payloads.append(payload)
                 tensors.append(_load_selected_tensor(entry, payload, device))
+            proposal_observation_done = time.monotonic()
+            logger.event(
+                "transaction_stage_completed",
+                stage="proposal_observation",
+                target_commit_seq=view.commit_seq + 1,
+                seconds=proposal_observation_done - catalog_done,
+            )
             current_fragment = fragments[fragment_id]
             if any(item.numel() != current_fragment.numel() for item in tensors):
                 raise ValueError("selected proposal tensor size differs from current fragment")
@@ -528,12 +544,17 @@ def run_syncer(config: Config) -> None:
                 },
                 config=log.spec.weighting_config,
             )
-            read_done = time.monotonic()
             ordered_weights = [weights[entry.proposal_id] for entry in selected]
             aggregate = tensors[0].mul(ordered_weights[0])
             for tensor, weight in zip(tensors[1:], ordered_weights[1:]):
                 aggregate = aggregate.add(tensor, alpha=weight)
             aggregation_done = time.monotonic()
+            logger.event(
+                "transaction_stage_completed",
+                stage="aggregation",
+                target_commit_seq=view.commit_seq + 1,
+                seconds=aggregation_done - proposal_observation_done,
+            )
             gradient = current_fragment - aggregate
             new_fragment, new_state = outer_optimizer_step(
                 current_fragment,
@@ -542,6 +563,12 @@ def run_syncer(config: Config) -> None:
                 config.outer_optimizer,
             )
             outer_done = time.monotonic()
+            logger.event(
+                "transaction_stage_completed",
+                stage="outer_step",
+                target_commit_seq=view.commit_seq + 1,
+                seconds=outer_done - aggregation_done,
+            )
             aggregate_digest = canonical_digest(
                 {
                     "proposal_ids": [entry.proposal_id for entry in selected],
@@ -549,6 +576,7 @@ def run_syncer(config: Config) -> None:
                     "weights": [weights[entry.proposal_id].hex() for entry in selected],
                 }
             )
+            prepare_start = time.monotonic()
             prepared = log.prepare_transition(
                 fragment_id=fragment_id,
                 selected_proposal_ids=[entry.proposal_id for entry in selected],
@@ -557,15 +585,38 @@ def run_syncer(config: Config) -> None:
                 aggregate_digest=aggregate_digest,
                 outer_optimizer_impl_digest=optimizer_impl_digest,
             )
+            prepare_done = time.monotonic()
+            logger.event(
+                "transaction_stage_completed",
+                stage="successor_prepare",
+                target_commit_seq=view.commit_seq + 1,
+                seconds=prepare_done - prepare_start,
+            )
+            cas_start = prepare_done
             try:
                 result = log.commit_prepared(prepared)
             except (CommitConflict, InjectedTimeout) as exc:
                 logger.event("head_conflict_replay", error=repr(exc), parent_commit_id=view.commit_id)
-                view = build_runtime_view(log)
+                view = build_runtime_view(log, force_full=True)
                 fragments, states = _load_committed_tensors(log, view, device=device)
                 continue
+            cas_done = time.monotonic()
+            logger.event(
+                "head_cas_completed",
+                commit_seq=result.commit_seq,
+                commit_id=result.commit_id,
+                seconds=cas_done - cas_start,
+            )
             prior_view = view
+            replay_start = time.monotonic()
             view = build_runtime_view(log)
+            replay_done = time.monotonic()
+            logger.event(
+                "post_cas_replay_completed",
+                commit_seq=view.commit_seq,
+                commit_id=view.commit_id,
+                seconds=replay_done - replay_start,
+            )
             if view.commit_id != result.commit_id or view.commit_seq != prior_view.commit_seq + 1:
                 raise RuntimeError("committed result and replay-derived RuntimeView differ")
             fragments[fragment_id] = new_fragment
@@ -581,6 +632,12 @@ def run_syncer(config: Config) -> None:
                 outer_states=states,
             )
             publish_done = time.monotonic()
+            logger.event(
+                "transaction_stage_completed",
+                stage="materialized_export",
+                target_commit_seq=view.commit_seq,
+                seconds=publish_done - publish_start,
+            )
             total_tokens = sum(entry.manifest.target_tokens_since_base for entry in selected)
             append_csv_row(
                 paths.metrics / "syncer_metrics.csv",
@@ -592,11 +649,16 @@ def run_syncer(config: Config) -> None:
                     "fragment_version": view.fragments[fragment_id].version,
                     "selected_count": len(selected),
                     "total_update_tokens": total_tokens,
-                    "read_seconds": 0.0,
-                    "fragment_read_seconds": 0.0,
-                    "aggregation_seconds": aggregation_done - read_done,
-                    "fragment_aggregation_seconds": aggregation_done - read_done,
+                    "catalog_seconds": catalog_done - catalog_start,
+                    "read_seconds": proposal_observation_done - catalog_done,
+                    "fragment_read_seconds": proposal_observation_done - catalog_done,
+                    "aggregation_seconds": aggregation_done - proposal_observation_done,
+                    "fragment_aggregation_seconds": aggregation_done
+                    - proposal_observation_done,
                     "outer_step_seconds": outer_done - aggregation_done,
+                    "successor_prepare_seconds": prepare_done - prepare_start,
+                    "head_cas_seconds": cas_done - cas_start,
+                    "post_cas_replay_seconds": replay_done - replay_start,
                     "publish_seconds": publish_done - publish_start,
                     "materialize_full_seconds": publish_done - publish_start,
                     "fragment_staleness_min": min(
