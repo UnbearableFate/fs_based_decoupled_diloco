@@ -8,8 +8,9 @@
 - Branch: `codex/duraloco-p06a-syncer-kernel`
 - Read-only P06 archive: `06e3ca2299d5eb1a720c1d8f9107af5223095525`
 - Maker implementation: `5a7150220bf3cc6a4a46d2a563466335163d21ad`
-- Current status: `checking`
+- Current status: `completed`
 - Acceptance: P06A-A01 through P06A-A20 pass at the Maker gate
+- Checker verdict: `PASS`, with no required-gate follow-up
 
 P06A decomposes the Central Reference Syncer without changing topology or
 authority. Deterministic selection/planning, ordered reduction and outer-step,
@@ -47,6 +48,18 @@ fresh unpaired artifacts a bounded grace period while preserving immediate
 cleanup as an explicit zero-grace mode. A targeted one-node regression, C1 and
 C2 all passed on the repaired clean commit before the single C9 attempt.
 
+### Independent Checker gate
+
+PBS `2362185.opbs`, run `20260711_p06a_checker_cea5a6d_1node`, independently
+checked persistence commit `cea5a6d806bc15fa4133795ff3f3f5909d9f9af1`
+and verified Maker implementation `5a7150220bf3cc6a4a46d2a563466335163d21ad`.
+It passed all 20 acceptance IDs, 10,000 unique reference traces, 396 tests with
+one explicit skip, the complete focused/C1/C2/C9 lineage, archive exactness,
+pure-kernel and capability audits. Its private counterexample reused a proposal
+identity with conflicting content and then attempted a head write through the
+prepare facade; both failed closed. The `checking -> completed` transition is
+authorized and does not authorize merging `main`.
+
 ### Limitations
 
 P06A deliberately retains the central syncer topology. The prepare facade is a
@@ -63,8 +76,9 @@ P06A completion does not authorize merging `main`.
 - 分支：`codex/duraloco-p06a-syncer-kernel`
 - 只读 P06 archive：`06e3ca2299d5eb1a720c1d8f9107af5223095525`
 - Maker implementation：`5a7150220bf3cc6a4a46d2a563466335163d21ad`
-- 当前状态：`checking`
+- 当前状态：`completed`
 - 验收：Maker gate 中 P06A-A01 至 P06A-A20 全部通过
+- Checker 结论：`PASS`，且没有 required-gate follow-up
 
 P06A 在不改变 topology 与 authority 的前提下分解 Central Reference Syncer。确定性
 selection/planning、ordered reduction 与 outer-step、transaction-attempt 构造和 semantic
@@ -97,6 +111,16 @@ cleanup 可能在 writer rename 与 metadata publication 之间删除新鲜且�
 修复为新鲜 unpaired artifact 设置有界 grace period，同时保留显式 zero-grace immediate
 cleanup 模式。修复后的同一干净 commit 先通过 targeted 单节点 regression、C1 与 C2，
 然后才执行唯一一次 C9。
+
+### 独立 Checker gate
+
+PBS `2362185.opbs`、run `20260711_p06a_checker_cea5a6d_1node` 独立复核
+persistence commit `cea5a6d806bc15fa4133795ff3f3f5909d9f9af1`，并验证 Maker
+implementation `5a7150220bf3cc6a4a46d2a563466335163d21ad`。它通过全部 20 项
+acceptance、10,000 条唯一 reference trace、396 项测试（另有 1 项显式跳过）、完整
+focused/C1/C2/C9 lineage、archive exactness、pure-kernel 与 capability audit。Checker
+专属反例让同一个 proposal identity 对应冲突 content，再尝试通过 prepare facade 写 head；
+两项操作均 fail closed。`checking -> completed` 转换获授权，这不授权合并 `main`。
 
 ### 限制
 

@@ -1,0 +1,32 @@
+{
+  "checker_hostname": "mg0007",
+  "checker_pbs_job_id": "2362185.opbs",
+  "checking_to_completed": "AUTHORIZED",
+  "checks": {
+    "acceptance_id_count": 20,
+    "archive_exact_equivalence": "PASS",
+    "c1_c2_c9_same_commit": "PASS",
+    "explicit_reference_traces": 10000,
+    "maker_lineage": [
+      "20260711_p06a_repair_5a71502_targeted1",
+      "20260711_p06a_repair_5a71502_c1",
+      "20260711_p06a_repair_5a71502_c2",
+      "20260711_p06a_repair_5a71502_c9"
+    ],
+    "novel_counterexample": {
+      "conditional_replace_exposed": false,
+      "conflicting_identity_rejected": true,
+      "head_write_rejected": true,
+      "name": "conflicting_proposal_identity_then_prepare_head_write",
+      "pass": true
+    },
+    "prepare_capability_static_runtime_audit": "PASS",
+    "pure_kernel_static_audit": "PASS"
+  },
+  "persistence_commit": "cea5a6d806bc15fa4133795ff3f3f5909d9f9af1",
+  "required_failures": [],
+  "required_gate_followups": "none",
+  "schema_version": 2,
+  "verdict": "PASS",
+  "verified_implementation": "5a7150220bf3cc6a4a46d2a563466335163d21ad"
+}

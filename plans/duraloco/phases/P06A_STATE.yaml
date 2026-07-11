@@ -1,9 +1,9 @@
 phase: P06A
-status: checking
+status: completed
 planning_basis_commit: 06e3ca2299d5eb1a720c1d8f9107af5223095525
 feature_branch: codex/duraloco-p06a-syncer-kernel
 current_loop: 5
-current_goal: "independent P06A decomposition, equivalence, and capability audit"
+current_goal: "P06A completed; hand off the verified decomposition boundary to P06B"
 checks:
   login_static: pass
   c1: pass_on_5a71502
@@ -17,7 +17,10 @@ focused_1node_attempt:
   result: pass
   manifest: artifacts/duraloco/P06A/20260711_p06a_archive_723e64a_1node/manifest.json
   archive_oracle: artifacts/duraloco/P06A/20260711_p06a_archive_723e64a_1node/oracle_trace.json
-checker_verdict: not_run
+checker_verdict: PASS
+checker_run_id: 20260711_p06a_checker_cea5a6d_1node
+checker_pbs_job_id: 2362185.opbs
+checker_persistence_commit: cea5a6d806bc15fa4133795ff3f3f5909d9f9af1
 c1_provisional:
   run_id: 20260711_p06a_c1_c834e57
   pbs_job_id: 2362037.opbs

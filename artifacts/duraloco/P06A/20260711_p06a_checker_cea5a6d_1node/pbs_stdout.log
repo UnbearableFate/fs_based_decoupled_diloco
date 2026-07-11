@@ -1,0 +1,38 @@
+## codex/duraloco-p06a-syncer-kernel
+cea5a6d806bc15fa4133795ff3f3f5909d9f9af1
+mg0007
+Python 3.13.13
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python scripts/agent/check_research_contract.py --root /work/xg24i002/x10041/fs_based_decoupled_diloco 
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python scripts/agent/check_phase_state.py plans/duraloco/STATE.yaml --root /work/xg24i002/x10041/fs_based_decoupled_diloco 
+bash -n scripts/miyabi/run_duraloco_p06a_unit_1node.pbs scripts/miyabi/run_duraloco_p06a_c1.pbs scripts/miyabi/run_duraloco_p06a_c2.pbs scripts/miyabi/run_duraloco_p06a_c9.pbs scripts/miyabi/run_duraloco_p06a_checker_1node.pbs 
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python scripts/agent/check_no_embedded_database.py --root /work/xg24i002/x10041/fs_based_decoupled_diloco --output /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P06A/20260711_p06a_checker_cea5a6d_1node/forbidden_surface.json 
+{
+  "finding_count": 0,
+  "findings": [],
+  "scanned_files": 260,
+  "status": "PASS"
+}
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python -m fs_diloco.testing.reference_cli --count 10000 --steps 12 
+{
+  "action_counts": {
+    "commit": 26276,
+    "decide": 11019,
+    "invalid_unknown_selection": 8827,
+    "publish": 73878,
+    "restart": 14347
+  },
+  "count": 10000,
+  "start_seed": 0,
+  "suite_digest": "7840b0ebcad828184ae5bdbb5d8b5f39427d66cf37343c7c8966f1549655ee7e",
+  "unique_state_digests": 10000
+}
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python -m pytest -q tests --junitxml /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P06A/20260711_p06a_checker_cea5a6d_1node/junit.xml 
+........................................................................ [ 18%]
+........................................................................ [ 36%]
+........................................................................ [ 54%]
+....................................s................................... [ 72%]
+........................................................................ [ 90%]
+.....................................                                    [100%]
+396 passed, 1 skipped in 19.57s
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python scripts/agent/check_p06a_final.py --root /work/xg24i002/x10041/fs_based_decoupled_diloco --artifact-root /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P06A/20260711_p06a_checker_cea5a6d_1node --maker-focused artifacts/duraloco/P06A/20260711_p06a_repair_5a71502_targeted1/manifest.json --maker-one artifacts/duraloco/P06A/20260711_p06a_repair_5a71502_c1/manifest.json --maker-two artifacts/duraloco/P06A/20260711_p06a_repair_5a71502_c2/manifest.json --maker-nine artifacts/duraloco/P06A/20260711_p06a_repair_5a71502_c9/manifest.json --oracle artifacts/duraloco/P06A/20260711_p06a_archive_723e64a_1node/oracle_trace.json --output /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P06A/20260711_p06a_checker_cea5a6d_1node/checker_results.json --report /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P06A/20260711_p06a_checker_cea5a6d_1node/checker_report.md 
+{"checker_hostname": "mg0007", "checker_pbs_job_id": "2362185.opbs", "checking_to_completed": "AUTHORIZED", "checks": {"acceptance_id_count": 20, "archive_exact_equivalence": "PASS", "c1_c2_c9_same_commit": "PASS", "explicit_reference_traces": 10000, "maker_lineage": ["20260711_p06a_repair_5a71502_targeted1", "20260711_p06a_repair_5a71502_c1", "20260711_p06a_repair_5a71502_c2", "20260711_p06a_repair_5a71502_c9"], "novel_counterexample": {"conditional_replace_exposed": false, "conflicting_identity_rejected": true, "head_write_rejected": true, "name": "conflicting_proposal_identity_then_prepare_head_write", "pass": true}, "prepare_capability_static_runtime_audit": "PASS", "pure_kernel_static_audit": "PASS"}, "persistence_commit": "cea5a6d806bc15fa4133795ff3f3f5909d9f9af1", "required_failures": [], "required_gate_followups": "none", "schema_version": 2, "verdict": "PASS", "verified_implementation": "5a7150220bf3cc6a4a46d2a563466335163d21ad"}
