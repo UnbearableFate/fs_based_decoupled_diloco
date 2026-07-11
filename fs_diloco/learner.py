@@ -735,6 +735,7 @@ def run_fragment_learner(
             for _ in range(config.training.inner_steps):
                 if fragment_stop_requested(paths, local_step, config):
                     break
+                step_started = time.monotonic()
                 loss, step_tokens, step_examples, grad_norm = train_one_step(
                     model,
                     batch_iter,
@@ -743,6 +744,7 @@ def run_fragment_learner(
                     device=device,
                     config=config,
                 )
+                step_seconds = time.monotonic() - step_started
                 local_step += 1
                 interval_tokens += step_tokens
                 interval_examples += step_examples
@@ -755,6 +757,7 @@ def run_fragment_learner(
                         "inner_step_summary",
                         local_step=local_step,
                         train_loss=loss,
+                        gpu_step_seconds=step_seconds,
                         global_merge_event=last_loaded_global_merge_event,
                     )
                 if time.monotonic() - last_heartbeat >= config.liveness.heartbeat_interval_seconds:
@@ -1212,6 +1215,7 @@ def run_learner(config: Config, learner_id: str, *, session_id: str | None = Non
             for _ in range(config.training.inner_steps):
                 if stop_requested(paths, local_step, config):
                     break
+                step_started = time.monotonic()
                 loss, step_tokens, step_examples, grad_norm = train_one_step(
                     model,
                     batch_iter,
@@ -1220,6 +1224,7 @@ def run_learner(config: Config, learner_id: str, *, session_id: str | None = Non
                     device=device,
                     config=config,
                 )
+                step_seconds = time.monotonic() - step_started
                 local_step += 1
                 interval_tokens += step_tokens
                 interval_examples += step_examples
@@ -1231,6 +1236,7 @@ def run_learner(config: Config, learner_id: str, *, session_id: str | None = Non
                         "inner_step_summary",
                         local_step=local_step,
                         train_loss=loss,
+                        gpu_step_seconds=step_seconds,
                         global_version=last_loaded_global_version,
                     )
                 if time.monotonic() - last_heartbeat >= config.liveness.heartbeat_interval_seconds:

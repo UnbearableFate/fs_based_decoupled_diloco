@@ -510,6 +510,18 @@ def _acquire_and_activate_owner(
         lease_sequence=loaded_lease.record.lease_sequence,
         seconds=time.monotonic() - acquire_start,
     )
+    # The former owner can commit stop while a standby is winning the
+    # observational lease CAS.  Replay once more before preparing an epoch
+    # bump so the terminal head does not create a guaranteed CAS-loser orphan.
+    if standby:
+        observed_view = build_runtime_view(log, force_full=True)
+        if observed_view.authoritative_stop is not None:
+            logger.event(
+                "standby_observed_authoritative_stop_after_lease",
+                reason=observed_view.authoritative_stop.reason,
+                commit_seq=observed_view.commit_seq,
+            )
+            return lease_manager, None, observed_view
     token = loaded_lease.record.owner_token
     fence_request_id = "fence-" + canonical_digest(
         {

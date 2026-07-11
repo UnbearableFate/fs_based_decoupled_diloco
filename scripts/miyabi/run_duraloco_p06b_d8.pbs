@@ -28,23 +28,5 @@ command=(mpirun --bind-to none -np 8 --hostfile "$PBS_NODEFILE" /usr/bin/env PRO
 printf '%q ' "${command[@]}" | tee "$ARTIFACT_ROOT/commands.log"; printf '\n' | tee -a "$ARTIFACT_ROOT/commands.log"; "${command[@]}" 2>&1 | tee -a "$ARTIFACT_ROOT/stdout.log"
 "$PYTHON_BIN" -m fs_diloco.analysis summary "$TRAINING_ROOT" --json | tee "$ARTIFACT_ROOT/training_summary.json"
 elapsed=$(($(date +%s)-started))
-"$PYTHON_BIN" - "$TRAINING_ROOT" "$ARTIFACT_ROOT" "$TRAIN_RUN" "$elapsed" <<'PY' | tee "$ARTIFACT_ROOT/d8_report.json"
-import csv,json,math,sys
-from pathlib import Path
-from fs_diloco.log.production import ProductionTransactionalLog
-from fs_diloco.runtime_view import build_runtime_view
-from fs_diloco.storage import PosixStorageBackend
-root,artifacts,run_id,elapsed=Path(sys.argv[1]),Path(sys.argv[2]),sys.argv[3],int(sys.argv[4])
-summary=json.loads((artifacts/'training_summary.json').read_text()); log=ProductionTransactionalLog.open(PosixStorageBackend(root/'authority'),run_id,0); view=build_runtime_view(log,force_full=True)
-events=[json.loads(x) for x in (root/'logs/distributed_committer.jsonl').read_text().splitlines()]; commits=[e for e in events if e.get('event_type')=='distributed_transition_committed']
-metrics=list(csv.DictReader((root/'metrics/learner_metrics.csv').open())); losses=[float(r['train_loss']) for r in metrics if r.get('train_loss')]
-heartbeats=[json.loads(p.read_text()) for p in sorted((root/'distributed/executors').glob('*.json'))]
-markers=[p for p in (root/'authority').rglob('*.json') if '/distributed/prepared/markers/' in p.as_posix()]
-report={'status':'PASS','learner_nodes':8,'learners':8,'executors':8,'dedicated_syncer_nodes':0,'committer_candidates':8,'running_committer_processes':2,'optimizer_transitions':view.optimizer_transition_count,'membership_revision':view.membership.revision if view.membership else None,'prepared_markers':len(markers),'distributed_commits':len(commits),'finite_loss_count':len(losses),'invalid_losses':sum(not math.isfinite(v) for v in losses),'elapsed_seconds':elapsed,'prepare_seconds':[e['publish_to_commit_seconds'] for e in commits],'prepared_bytes':sum(e['prepared_parameter_bytes']+e['prepared_outer_state_bytes'] for e in commits),'executor_resource_snapshots':heartbeats,'stop_reason':summary['stop_reason'],'coordination_protocol':log.spec.coordination_protocol}
-assert report['optimizer_transitions']==report['distributed_commits']==10 and report['prepared_markers']>=10
-assert losses and report['invalid_losses']==0 and elapsed<=900
-assert report['membership_revision']==0 and report['coordination_protocol']=='distributed-head-fenced-v1'
-assert report['stop_reason']=='stop_after_outer_steps' and len(heartbeats)==8
-print(json.dumps(report,indent=2,sort_keys=True))
-PY
+"$PYTHON_BIN" scripts/agent/create_p06b_d8_report.py --root "$TRAINING_ROOT" --artifacts "$ARTIFACT_ROOT" --run-id "$TRAIN_RUN" --elapsed-seconds "$elapsed" --output "$ARTIFACT_ROOT/d8_report.json" | tee -a "$ARTIFACT_ROOT/stdout.log"
 result=pass; exit_code=0

@@ -100,3 +100,11 @@ def test_executor_dependency_graph_has_no_authority_api():
     assert not any(name.startswith("fs_diloco.storage") for name in imports)
     assert not any(name.startswith("fs_diloco.coordination") for name in imports)
     assert "fs_diloco.log.production" not in imports
+
+
+def test_learner_has_no_prepared_result_adoption_path():
+    source = (
+        Path(__file__).resolve().parents[2] / "fs_diloco/learner.py"
+    ).read_text(encoding="utf-8")
+    assert "distributed/prepared" not in source
+    assert "PreparedFragmentResult" not in source

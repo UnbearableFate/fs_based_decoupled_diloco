@@ -144,6 +144,11 @@ def run_committer(
         )
     if log.spec.coordination_protocol != "distributed-head-fenced-v1":
         raise ValueError("floating committer opened a non-distributed generation")
+    # An authoritative stop is terminal.  In particular, a standby must not
+    # acquire a fresh fencing epoch after observing the stopped head.
+    if view.authoritative_stop is not None:
+        _publish_stop(paths, config=config, view=view, reason=view.authoritative_stop.reason)
+        return
     layout = DistributedLayout(log.layout)
     lease_manager, loaded_lease, view = _acquire_and_activate_owner(
         log=log,

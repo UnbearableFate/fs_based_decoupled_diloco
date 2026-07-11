@@ -5,10 +5,11 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
+import resource
 import socket
 import time
-import resource
 
 from safetensors.torch import load as load_safetensors_bytes
 
@@ -17,6 +18,7 @@ from fs_diloco.config import resolve_config
 from fs_diloco.log.codec import verified_get
 from fs_diloco.log.layout import LogLayout
 from fs_diloco.log.production_codec import decode_production_outer_state, decode_production_params
+from fs_diloco.logging_utils import JsonlLogger
 from fs_diloco.protocol.canonical_json import canonical_digest
 from fs_diloco.storage import PosixStorageBackend
 from fs_diloco.syncer_core.capabilities import PrepareObjectFacade
@@ -49,6 +51,32 @@ def _executor(args: argparse.Namespace) -> int:
         max_inflight=1,
         max_rss_bytes=args.max_rss_bytes,
     )
+    available_cpus = tuple(sorted(os.sched_getaffinity(0)))
+    executor_cpus = available_cpus[-min(len(available_cpus), budget.threads) :]
+    os.sched_setaffinity(0, executor_cpus)
+    numa_mems = None
+    try:
+        for line in Path("/proc/self/status").read_text(encoding="utf-8").splitlines():
+            if line.startswith("Mems_allowed_list:"):
+                numa_mems = line.split(":", 1)[1].strip()
+                break
+    except OSError:
+        pass
+    telemetry = JsonlLogger(
+        shared / "logs" / f"distributed_executor_{args.member_id}.jsonl",
+        f"distributed_executor:{args.member_id}",
+    )
+    telemetry.event(
+        "executor_started",
+        member_id=args.member_id,
+        executor_id=args.executor_id,
+        executor_session_id=args.executor_session_id,
+        threads=budget.threads,
+        max_inflight=budget.max_inflight,
+        max_rss_bytes=budget.max_rss_bytes,
+        cpu_affinity=list(executor_cpus),
+        numa_mems_allowed_list=numa_mems,
+    )
     active_path = shared / "distributed" / "active_work_order.json"
     heartbeat_path = shared / "distributed" / "executors" / f"{args.member_id}.json"
     heartbeat_path.parent.mkdir(parents=True, exist_ok=True)
@@ -58,7 +86,12 @@ def _executor(args: argparse.Namespace) -> int:
         if not isinstance(dispatch, dict) or dispatch.get("owner_member_id") != args.member_id:
             atomic_write_json(
                 heartbeat_path,
-                {"member_id": args.member_id, "status": "idle", "hostname": socket.gethostname(), "timestamp": time.time()},
+                {
+                    "member_id": args.member_id,
+                    "status": "idle",
+                    "hostname": socket.gethostname(),
+                    "timestamp": time.time(),
+                },
             )
             time.sleep(args.poll_seconds)
             continue
@@ -96,8 +129,14 @@ def _executor(args: argparse.Namespace) -> int:
         )
         atomic_write_json(
             heartbeat_path,
-            {"member_id": args.member_id, "status": "preparing", "work_order_id": order.work_order_id, "timestamp": time.time()},
+            {
+                "member_id": args.member_id,
+                "status": "preparing",
+                "work_order_id": order.work_order_id,
+                "timestamp": time.time(),
+            },
         )
+        prepare_started_at = time.time()
         prepare_started = time.monotonic()
         result, envelope = execute_work_order(
             facade=facade,
@@ -115,19 +154,36 @@ def _executor(args: argparse.Namespace) -> int:
         )
         completed.add(order.work_order_id)
         prepare_seconds = time.monotonic() - prepare_started
+        input_bytes = bundle.params_ref.size + bundle.outer_state_ref.size + sum(
+            item.payload_ref.size for item in bundle.proposals
+        )
+        output_bytes = result.params_ref.size + result.outer_state_ref.size
+        resource_snapshot = {
+            "member_id": args.member_id,
+            "executor_id": args.executor_id,
+            "executor_session_id": args.executor_session_id,
+            "work_order_id": order.work_order_id,
+            "prepared_result_id": result.prepared_result_id,
+            "attempt_envelope_id": envelope.attempt_envelope_id,
+            "prepare_started_at": prepare_started_at,
+            "prepare_finished_at": time.time(),
+            "prepare_seconds": prepare_seconds,
+            "rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024,
+            "threads": budget.threads,
+            "cpu_affinity": list(executor_cpus),
+            "numa_mems_allowed_list": numa_mems,
+            "input_bytes": input_bytes,
+            "output_bytes": output_bytes,
+            "logical_input_reads": 2 + len(bundle.proposals),
+            "logical_prepare_writes": 5,
+        }
+        telemetry.event("fragment_prepared", **resource_snapshot)
         atomic_write_json(
             heartbeat_path,
             {
                 "member_id": args.member_id,
                 "status": "prepared",
-                "work_order_id": order.work_order_id,
-                "prepared_result_id": result.prepared_result_id,
-                "attempt_envelope_id": envelope.attempt_envelope_id,
-                "prepare_seconds": prepare_seconds,
-                "rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024,
-                "threads": budget.threads,
-                "input_bytes": bundle.params_ref.size + bundle.outer_state_ref.size + sum(item.payload_ref.size for item in bundle.proposals),
-                "output_bytes": result.params_ref.size + result.outer_state_ref.size,
+                **resource_snapshot,
                 "timestamp": time.time(),
             },
         )

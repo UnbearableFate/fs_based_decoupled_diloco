@@ -14,6 +14,7 @@ import torch
 from safetensors.torch import load_file
 
 from fs_diloco.log.codec import canonical_object
+from fs_diloco.log.production import ProductionTransactionalLog
 from fs_diloco.storage import PosixStorageBackend
 
 
@@ -27,12 +28,18 @@ def _stored_json(root: Path, path: Path):
 
 
 def _commits(root: Path):
-    values = [
-        _stored_json(root, path)
-        for path in root.rglob("*.json")
-        if path.parent.name == "commits"
-    ]
-    return sorted(values, key=lambda item: item["commit_seq"])
+    spec = _run_spec(root)
+    log = ProductionTransactionalLog.open(
+        PosixStorageBackend(root), spec["run_id"], spec["run_generation"]
+    )
+    return [item.to_dict() for item in log.replay(force_full=True).commits]
+
+
+def _run_spec(root: Path):
+    paths = [path for path in root.rglob("run_spec.json")]
+    if len(paths) != 1:
+        raise AssertionError(f"expected one run spec under {root}, found {len(paths)}")
+    return _stored_json(root, paths[0])
 
 
 def _sha(path: Path) -> str:
@@ -56,6 +63,8 @@ def _latest_weight(root: Path) -> Path:
 def run(crs: Path, distributed: Path) -> dict[str, object]:
     crs_commits = _commits(crs / "authority")
     d_commits = _commits(distributed / "authority")
+    crs_spec = _run_spec(crs / "authority")
+    d_spec = _run_spec(distributed / "authority")
     crs_optimizer = [item for item in crs_commits if item["manifest_type"] == "commit"]
     d_optimizer = [item for item in d_commits if item["manifest_type"] == "commit"]
     if len(crs_optimizer) != 10 or len(d_optimizer) != 10:
@@ -144,8 +153,22 @@ def run(crs: Path, distributed: Path) -> dict[str, object]:
     ranges_overlap = max(min(crs_losses), min(d_losses)) <= min(max(crs_losses), max(d_losses))
     if not ranges_overlap:
         raise AssertionError("CRS/D8 loss smoke ranges do not overlap")
-    crs_controls = [item["control_kind"] for item in crs_commits if item["manifest_type"] == "control_commit"]
-    d_controls = [item["control_kind"] for item in d_commits if item["manifest_type"] == "control_commit"]
+    crs_controls = [
+        item["control_kind"]
+        for item in crs_commits
+        if item["manifest_type"] == "control_commit"
+    ]
+    d_controls = [
+        item["control_kind"]
+        for item in d_commits
+        if item["manifest_type"] == "control_commit"
+    ]
+    expected_crs_controls = ["epoch_bump", "epoch_bump", "stop"]
+    expected_distributed_controls = ["epoch_bump", "stop"]
+    if crs_controls != expected_crs_controls or d_controls != expected_distributed_controls:
+        raise AssertionError(
+            f"control sequence differs: CRS={crs_controls}, distributed={d_controls}"
+        )
     return {
         "schema": "duraloco-p06b-c9-d8-comparison-v1",
         "status": "PASS",
@@ -154,16 +177,20 @@ def run(crs: Path, distributed: Path) -> dict[str, object]:
         "exact_transition_links": exact_links,
         "numeric_tolerance": {"atol": atol, "rtol": rtol, "allclose": allclose},
         "max_abs_parameter_difference": max_abs,
-        "relative_l2_parameter_difference": math.sqrt(squared_error / max(squared_reference, 1e-30)),
+        "relative_l2_parameter_difference": math.sqrt(
+            squared_error / max(squared_reference, 1e-30)
+        ),
         "crs_final_weight_sha256": _sha(crs_weight),
         "distributed_final_weight_sha256": _sha(d_weight),
+        "crs_execution_backend_digest": crs_spec["execution_backend_digest"],
+        "distributed_execution_backend_digest": d_spec["execution_backend_digest"],
         "content_identity_claimed_across_backends": False,
         "crs_control_sequence": crs_controls,
         "distributed_control_sequence": d_controls,
         "control_semantics": {
             "epoch_bump_and_stop_schema_exact": True,
-            "crs_extra_epoch_bump_is_injected_takeover": crs_controls == ["epoch_bump", "epoch_bump", "stop"],
-            "distributed_no_fault_control": d_controls == ["epoch_bump", "stop"],
+            "crs_extra_epoch_bump_is_injected_takeover": crs_controls == expected_crs_controls,
+            "distributed_no_fault_control": d_controls == expected_distributed_controls,
         },
         "crs_loss": {"count": len(crs_losses), "min": min(crs_losses), "max": max(crs_losses)},
         "distributed_loss": {"count": len(d_losses), "min": min(d_losses), "max": max(d_losses)},
