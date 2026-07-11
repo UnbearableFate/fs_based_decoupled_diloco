@@ -6,12 +6,27 @@ from __future__ import annotations
 import argparse
 from dataclasses import replace
 import json
+import multiprocessing
 import os
 from pathlib import Path
+import shutil
 import socket
 import xml.etree.ElementTree as ET
 
-from fs_diloco.log import ProductionTransactionalLog, VerificationError
+from fs_diloco.log import (
+    ProductionTransactionalLog,
+    TransactionalLog,
+    VerificationError,
+    replay_log,
+)
+from fs_diloco.storage import (
+    FaultEvent,
+    FaultInjectingBackend,
+    FaultSchedule,
+    PosixStorageBackend,
+)
+from tests.log.helpers import initialize as initialize_reference
+from tests.log.helpers import proposal as reference_proposal
 from tests.log.test_production_runtime import _initialize, _prepare, _proposal
 
 from scripts.agent.check_run_manifest import validate as validate_manifest
@@ -83,6 +98,95 @@ def _counterexample() -> dict[str, object]:
         "final_commit_seq": strict.head_frontier.commit_seq,
         "pass": True,
     }
+
+
+def _kill_during_reference_prepare(root: str, run_id: str, proposal_id: str) -> None:
+    def kill_after_publish(stage: str) -> None:
+        if stage == "after_publish":
+            os._exit(41)
+
+    log = TransactionalLog.open(
+        PosixStorageBackend(root, stage_hook=kill_after_publish),
+        run_id,
+        0,
+    )
+    log.prepare_transition(fragment_id=0, selected_proposal_ids=[proposal_id])
+    os._exit(42)
+
+
+def _listing_omission_process_kill_counterexample(artifact_root: Path) -> dict[str, object]:
+    """A killed writer and omitted listing must not affect head-based recovery."""
+
+    store_root = artifact_root / "checker_no_db_kill_omission_store"
+    shutil.rmtree(store_root, ignore_errors=True)
+    run_id = "m00-checker-kill-omission"
+    base = PosixStorageBackend(store_root)
+    log = initialize_reference(base, run_id=run_id)
+    item = reference_proposal(
+        log,
+        learner="checker-killed-writer",
+        sequence=1,
+        values=(1.0, -1.0),
+    )
+    process = multiprocessing.get_context("spawn").Process(
+        target=_kill_during_reference_prepare,
+        args=(str(store_root), run_id, item.proposal_id),
+    )
+    process.start()
+    process.join(timeout=30)
+    if process.is_alive():
+        process.kill()
+        process.join(timeout=5)
+        raise AssertionError("process-kill counterexample child did not exit")
+    if process.exitcode != 41:
+        raise AssertionError(f"process-kill child exit differs: {process.exitcode}")
+
+    omitted_backend = FaultInjectingBackend(
+        PosixStorageBackend(store_root),
+        FaultSchedule(
+            20260711,
+            (FaultEvent("list_prefix", "after", 1, "omit_list"),),
+        ),
+    )
+    recovered = TransactionalLog.open(omitted_backend, run_id, 0)
+    omitted = recovered.backend.list_prefix(recovered.layout.immutable_prefix)
+    before = replay_log(recovered)
+    if omitted != () or before.head_frontier.commit_seq != 0:
+        raise AssertionError("listing omission changed committed recovery")
+    result = recovered.commit_transition(
+        fragment_id=0,
+        selected_proposal_ids=[item.proposal_id],
+    )
+    after = replay_log(recovered)
+    forbidden_suffixes = {"." + "d" + "b", "." + "sqli" + "te", "." + "sqli" + "te3"}
+    forbidden = [
+        path.relative_to(store_root).as_posix()
+        for path in store_root.rglob("*")
+        if path.is_file()
+        and (
+            path.suffix.casefold() in forbidden_suffixes
+            or ("sqli" + "te") in path.name.casefold()
+        )
+    ]
+    if (
+        result.commit_seq != 1
+        or after.head_frontier.commit_seq != 1
+        or after.consumption.get(item.proposal_id) != after.head_frontier.commit_id
+        or forbidden
+    ):
+        raise AssertionError("no-DB kill/listing-omission recovery did not converge")
+    trace = {
+        "name": "no_db_listing_omission_plus_process_kill",
+        "killed_process_exit_code": process.exitcode,
+        "listing_observation": list(omitted),
+        "recovered_before_commit_seq": before.head_frontier.commit_seq,
+        "recovered_after_commit_seq": after.head_frontier.commit_seq,
+        "proposal_logical_inclusion_count": int(item.proposal_id in after.consumption),
+        "database_files": forbidden,
+        "pass": True,
+    }
+    shutil.rmtree(store_root)
+    return trace
 
 
 def run(root: Path, artifact_root: Path) -> dict[str, object]:
@@ -158,6 +262,15 @@ def run(root: Path, artifact_root: Path) -> dict[str, object]:
     ):
         raise AssertionError("real-prefix replay benchmark differs")
 
+    reference = _load(artifact_root / "reference_10000.json")
+    if not (
+        reference["count"] == 10_000
+        and reference["unique_state_digests"] > 1
+        and len(reference["suite_digest"]) == 64
+        and reference["action_counts"]["invalid_unknown_selection"] > 0
+    ):
+        raise AssertionError("explicit 10,000-trace reference result differs")
+
     learner_source = (root / "fs_diloco/learner.py").read_text()
     commit_source = (root / "fs_diloco/log/commit.py").read_text()
     replay_source = (root / "fs_diloco/log/replay.py").read_text()
@@ -175,6 +288,9 @@ def run(root: Path, artifact_root: Path) -> dict[str, object]:
         raise AssertionError("M00 report is not bilingual")
 
     counterexample = _counterexample()
+    required_counterexample = _listing_omission_process_kill_counterexample(
+        artifact_root
+    )
     return {
         "schema_version": 1,
         "verdict": "PASS",
@@ -194,8 +310,12 @@ def run(root: Path, artifact_root: Path) -> dict[str, object]:
             "terminal_50x10": "PASS",
             "single_head_cas_static_audit": "PASS",
             "vectorized_and_memoized_replay": "PASS",
+            "explicit_reference_traces": 10_000,
             "attempt_lineage_reviewed": True,
             "novel_counterexample": counterexample,
+            "required_no_db_listing_omission_process_kill_counterexample": (
+                required_counterexample
+            ),
         },
         "required_failures": [],
     }
@@ -218,7 +338,10 @@ Independent PBS `{job}` on `{host}` checked persistence commit `{persistence}`.
 The complete 41-ID P00–P04 mapping and both explicit remaps pass. The current
 full suite, forbidden-surface scan, 1/2/9-node Maker lineage, real-prefix replay
 benchmark, single-head-CAS audit, terminal GPT-2/WikiText-2 50×10 authority
-probe, and a new stale-process/corrupt-successor counterexample all pass.
+probe, explicit 10,000-trace reference run, historical counterexamples, and both
+new counterexamples pass. The required combined counterexample kills a writer
+during immutable publication, omits a subsequent listing, recovers from Head,
+commits the proposal exactly once, and finds no database file.
 
 M00-A01 through M00-A12 are authorized as complete with no required-gate
 follow-up. This authorizes persistence of the completed M00 state and entry to
@@ -230,7 +353,9 @@ P05; it does not authorize an automatic merge to `main`.
 41 项 P00–P04 映射与两个显式语义重映射均通过。当前完整测试套件、禁止项扫描、
 单/双/九节点 Maker lineage、真实前缀 replay benchmark、单 head-CAS 静态审计、
 GPT-2/WikiText-2 50×10 终端权威检查，以及新增的“旧进程遇到损坏 successor”
-反例均通过。
+反例均通过。显式 10,000-trace reference 运行和历史反例也通过；计划要求的组合
+反例在 immutable publication 期间终止 writer、遗漏随后一次 listing，仍从 Head
+恢复、只提交 proposal 一次，且工作目录中没有数据库文件。
 
 Checker 授权 M00-A01 至 M00-A12 完成，且没有 required-gate follow-up。
 这允许持久化 M00 completed 状态并进入 P05，但不授权自动合并 `main`。

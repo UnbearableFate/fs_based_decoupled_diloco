@@ -715,3 +715,35 @@ replay 完全一致。最终结论为 `PASS`，M00-A12 已满足，且
 M00 仍假设只有一个 active syncer；lease/fencing 属于 P05，learner exact restart 与
 权威 GC 属于后续阶段。M00 已在其 feature branch 归档；下一阶段是 P05
 lease/fencing/failover。无需额外 M00 Maker 实验，也不自动合并 `main`。
+
+## Post-completion requirement audit / 完成后逐项复核
+
+### English
+
+A literal requirement-by-requirement audit reopened M00 after archival commit
+`dc84a54`. The prior Checker passed its implemented checks, but its handoff did
+not run the plan's explicit 10,000-trace reference command and its new
+counterexample did not combine all three mandated conditions: an empty-of-DB
+working directory, listing omission, and process kill. The production
+crash-point matrix, checkpoint-only warm-start non-claim, malformed/future/stale
+catalog flood, and CAS-conflict reprepare behavior also lacked direct tests.
+
+The audit adds those tests and strengthens the independent Checker. M00 is
+returned to `checking` until a clean one-node compute job passes the complete
+suite, explicit historical counterexamples, 10,000 traces, and the exact
+combined counterexample. The verified runtime implementation and successful
+1/2/9-node Maker lineage remain unchanged; no further nine-node submission is
+planned or warranted for test/evidence-only changes.
+
+### 中文
+
+对计划逐条进行字面复核后，M00 在归档提交 `dc84a54` 之后重新进入检查。先前 Checker
+通过了其实际执行的检查，但交接没有运行计划明确要求的 10,000-trace reference 命令；
+其新增反例也没有同时组合“工作目录无 DB、listing omission、process kill”三个条件。
+production crash-point 矩阵、仅 checkpoint 的 warm-start non-claim、
+malformed/future/stale catalog flood，以及 CAS 冲突后重新 prepare 也缺少直接测试。
+
+本次复核补齐这些测试并加强独立 Checker。只有新的干净单节点 compute job 同时通过
+完整套件、显式历史反例、10,000 traces 和精确组合反例后，M00 才能再次完成。已验证
+runtime 实现及成功的单/双/九节点 Maker lineage 不变；这些仅测试/证据变更不需要、
+也不应触发新的九节点提交。

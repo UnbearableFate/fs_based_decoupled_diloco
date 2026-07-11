@@ -10,6 +10,8 @@ from safetensors.torch import save as save_safetensors_bytes
 
 import fs_diloco.log.replay as replay_module
 from fs_diloco.log import (
+    CRASH_POINTS,
+    CommitConflict,
     InjectedLogCrash,
     ProductionTransactionalLog,
     RunSpec,
@@ -149,6 +151,43 @@ def test_prepared_production_outputs_are_invisible_until_head_cas():
     assert after.fragments[0].outer_state_ref == prepared.commit.new_outer_state_ref
 
 
+@pytest.mark.parametrize("crash_at", CRASH_POINTS)
+def test_production_crash_matrix_recovers_from_durable_head_only(crash_at):
+    _, log = _initialize(f"production-crash-{crash_at}")
+    manifest = _proposal(log, learner="learner-0", sequence=1, values=[1.0, 2.0])
+
+    with pytest.raises(InjectedLogCrash):
+        log.commit_transition(
+            fragment_id=manifest.fragment_id,
+            selected_proposal_ids=[manifest.proposal_id],
+            new_params=encode_production_params(torch.tensor([0.5, 1.0])),
+            new_outer_state=encode_production_outer_state(
+                init_outer_state(
+                    torch.tensor([0.5, 1.0]),
+                    log.spec.optimizer_config,
+                )
+            ),
+            aggregate_digest=canonical_digest({"proposal": manifest.proposal_id}),
+            outer_optimizer_impl_digest=production_optimizer_digest(
+                log.spec.optimizer_config.identity()
+            ),
+            crash_at=crash_at,
+        )
+
+    expected_seq = 1 if crash_at == "after_head_cas" else 0
+    recovered = log.replay(force_full=True)
+    assert recovered.head_frontier.commit_seq == expected_seq
+    assert (manifest.proposal_id in recovered.consumed_proposal_ids) is (
+        expected_seq == 1
+    )
+    reopened = ProductionTransactionalLog.open(
+        log.backend,
+        log.spec.run_id,
+        log.spec.run_generation,
+    )
+    assert reopened.replay(force_full=True) == recovered
+
+
 def test_fresh_process_recovers_identical_runtime_view_without_local_state():
     backend, log = _initialize("production-restart")
     manifest = _proposal(log, learner="learner-0", sequence=1, values=[1.0, 2.0])
@@ -178,6 +217,28 @@ def test_response_loss_is_resolved_from_ancestry_after_successor():
         first.proposal_id,
         second.proposal_id,
     }
+
+
+def test_production_cas_conflict_requires_replay_and_fresh_prepare():
+    _, log = _initialize("production-cas-reprepare")
+    left = _proposal(log, learner="learner-left", sequence=1, values=[1.0, 2.0])
+    right = _proposal(log, learner="learner-right", sequence=1, values=[2.0, 3.0])
+    prepared_left = _prepare(log, left, [0.5, 1.0])
+    stale_right = _prepare(log, right, [1.0, 1.5])
+
+    log.commit_prepared(prepared_left)
+    with pytest.raises(CommitConflict):
+        log.commit_prepared(stale_right)
+
+    refreshed = log.replay(force_full=True)
+    assert refreshed.head_frontier.commit_seq == 1
+    assert right.proposal_id not in refreshed.consumed_proposal_ids
+    prepared_right = _prepare(log, right, [1.0, 1.5])
+    assert prepared_right.parent_head != stale_right.parent_head
+    log.commit_prepared(prepared_right)
+    final = log.replay(force_full=True)
+    assert final.head_frontier.commit_seq == 2
+    assert final.consumed_proposal_ids == {left.proposal_id, right.proposal_id}
 
 
 def test_production_replay_routes_around_scalar_protocol_validator():

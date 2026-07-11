@@ -13,10 +13,12 @@ from fs_diloco.log.production_codec import (
     PRODUCTION_CODEC,
     encode_production_outer_state,
     encode_production_params,
+    production_optimizer_digest,
 )
 from fs_diloco.outer_optim import init_outer_state
 from fs_diloco.proposal_catalog import ProposalCatalog
 from fs_diloco.runtime_view import build_runtime_view
+from fs_diloco.protocol.canonical_json import canonical_digest
 from fs_diloco.storage import InMemoryStorageBackend
 
 
@@ -24,7 +26,7 @@ def _digest(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
 
 
-def _log():
+def _log(*, max_global_staleness=64):
     params = torch.tensor([0.0, 0.0])
     spec = RunSpec(
         run_id="catalog-run",
@@ -34,6 +36,7 @@ def _log():
         fragment_layout_digest=_digest("layout"),
         outer_optimizer_schema_digest=_digest("outer"),
         payload_codec=PRODUCTION_CODEC,
+        max_global_staleness=max_global_staleness,
     )
     return ProductionTransactionalLog.initialize(
         InMemoryStorageBackend(),
@@ -47,8 +50,8 @@ def _log():
     )
 
 
-def _candidate(root, view, *, suffix, sequence, values):
-    directory = root / "updates" / "pending" / "learner_000"
+def _candidate(root, view, *, suffix, sequence, values, learner="learner_000"):
+    directory = root / "updates" / "pending" / learner
     directory.mkdir(parents=True, exist_ok=True)
     tensor = directory / f"update_{suffix}.params.safetensors"
     marker = directory / f"update_{suffix}.meta.json"
@@ -60,8 +63,8 @@ def _candidate(root, view, *, suffix, sequence, values):
             "run_id": view.run_id,
             "run_generation": view.run_generation,
             "update_id": f"observed-{suffix}",
-            "learner_id": "learner_000",
-            "learner_session_id": "session-0",
+            "learner_id": learner,
+            "learner_session_id": f"session-{learner}",
             "proposal_sequence": sequence,
             "base_global_version": view.commit_seq,
             "base_commit_id": view.commit_id,
@@ -113,3 +116,78 @@ def test_future_candidate_is_quarantined_without_affecting_authority(tmp_path):
     assert catalog.scan(metadata_paths=[marker], log=log, view=view) == ()
     assert list((tmp_path / "quarantine").glob("q-*.json"))
     assert build_runtime_view(log).view_digest == view.view_digest
+
+
+def test_malformed_future_and_stale_flood_cannot_hide_current_valid_candidate(tmp_path):
+    log = _log(max_global_staleness=0)
+    initial = build_runtime_view(log)
+    catalog = ProposalCatalog(
+        namespace_root=tmp_path,
+        quarantine_root=tmp_path / "quarantine",
+    )
+
+    advance = _candidate(
+        tmp_path,
+        initial,
+        suffix="advance",
+        sequence=1,
+        values=[1.0, 2.0],
+        learner="learner_advance",
+    )
+    entry = catalog.scan(metadata_paths=[advance], log=log, view=initial)[0]
+    log.publish_validated_proposal(entry.manifest, entry.payload)
+    params = torch.tensor([0.5, 1.0])
+    outer = init_outer_state(params, log.spec.optimizer_config)
+    log.commit_transition(
+        fragment_id=0,
+        selected_proposal_ids=[entry.proposal_id],
+        new_params=encode_production_params(params),
+        new_outer_state=encode_production_outer_state(outer),
+        aggregate_digest=canonical_digest({"proposal": entry.proposal_id}),
+        outer_optimizer_impl_digest=production_optimizer_digest(
+            log.spec.optimizer_config.identity()
+        ),
+    )
+    current = build_runtime_view(log)
+
+    stale = _candidate(
+        tmp_path,
+        initial,
+        suffix="stale",
+        sequence=1,
+        values=[2.0, 3.0],
+        learner="learner_stale",
+    )
+    future = _candidate(
+        tmp_path,
+        current,
+        suffix="future-flood",
+        sequence=1,
+        values=[3.0, 4.0],
+        learner="learner_future",
+    )
+    future_payload = json.loads(future.read_text())
+    future_payload["base_commit_seq"] = current.commit_seq + 100
+    atomic_write_json(future, future_payload)
+    malformed = tmp_path / "updates" / "pending" / "learner_bad" / "broken.meta.json"
+    malformed.parent.mkdir(parents=True, exist_ok=True)
+    malformed.write_text("{not-json", encoding="utf-8")
+    valid = _candidate(
+        tmp_path,
+        current,
+        suffix="valid",
+        sequence=1,
+        values=[4.0, 5.0],
+        learner="learner_valid",
+    )
+
+    observed = catalog.scan(
+        metadata_paths=[future, malformed, stale, future, valid, malformed, stale],
+        log=log,
+        view=current,
+    )
+    assert len(observed) == 1
+    assert observed[0].manifest.learner_id == "learner_valid"
+    assert catalog.select(observed, fragment_id=0, quorum_max=1) == observed
+    assert len(list((tmp_path / "quarantine").glob("q-*.json"))) >= 3
+    assert build_runtime_view(log).view_digest == current.view_digest

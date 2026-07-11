@@ -30,19 +30,64 @@ git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"
 hostname | tee "$ARTIFACT_ROOT/hostname.log"
 "$PYTHON_BIN" --version 2>&1 | tee "$ARTIFACT_ROOT/python_version.log"
 
+printf '%q ' sha256sum -c SHA256SUMS.txt > "$ARTIFACT_ROOT/commands.log"
+printf '\n' >> "$ARTIFACT_ROOT/commands.log"
+(
+  cd plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans
+  sha256sum -c SHA256SUMS.txt
+) 2>&1 | tee "$ARTIFACT_ROOT/plan_checksums.log"
+
+printf '%q ' "$PYTHON_BIN" scripts/agent/check_research_contract.py --root "$CHECKOUT_ROOT" \
+  >> "$ARTIFACT_ROOT/commands.log"
+printf '\n' >> "$ARTIFACT_ROOT/commands.log"
+"$PYTHON_BIN" scripts/agent/check_research_contract.py --root "$CHECKOUT_ROOT" \
+  2>&1 | tee "$ARTIFACT_ROOT/research_contract.log"
+
+printf '%q ' "$PYTHON_BIN" scripts/agent/check_phase_state.py \
+  plans/duraloco/phases/M00_STATE.yaml --root "$CHECKOUT_ROOT" \
+  >> "$ARTIFACT_ROOT/commands.log"
+printf '\n' >> "$ARTIFACT_ROOT/commands.log"
+"$PYTHON_BIN" scripts/agent/check_phase_state.py \
+  plans/duraloco/phases/M00_STATE.yaml --root "$CHECKOUT_ROOT" \
+  2>&1 | tee "$ARTIFACT_ROOT/phase_state.log"
+
+printf '%q ' bash -n scripts/miyabi/*.pbs >> "$ARTIFACT_ROOT/commands.log"
+printf '\n' >> "$ARTIFACT_ROOT/commands.log"
+for script in scripts/miyabi/*.pbs; do bash -n "$script"; done \
+  2>&1 | tee "$ARTIFACT_ROOT/pbs_syntax.log"
+
 printf '%q ' "$PYTHON_BIN" scripts/agent/check_no_embedded_database.py \
   --root "$CHECKOUT_ROOT" --output "$ARTIFACT_ROOT/forbidden_surface.json" \
-  > "$ARTIFACT_ROOT/commands.log"
+  >> "$ARTIFACT_ROOT/commands.log"
 printf '\n' >> "$ARTIFACT_ROOT/commands.log"
 "$PYTHON_BIN" scripts/agent/check_no_embedded_database.py --root "$CHECKOUT_ROOT" \
   --output "$ARTIFACT_ROOT/forbidden_surface.json" \
   2>&1 | tee "$ARTIFACT_ROOT/forbidden_surface.log"
+
+printf '%q ' "$PYTHON_BIN" -m fs_diloco.testing.reference_cli --count 10000 --steps 12 \
+  >> "$ARTIFACT_ROOT/commands.log"
+printf '\n' >> "$ARTIFACT_ROOT/commands.log"
+"$PYTHON_BIN" -m fs_diloco.testing.reference_cli --count 10000 --steps 12 \
+  | tee "$ARTIFACT_ROOT/reference_10000.json"
 
 printf '%q ' "$PYTHON_BIN" -m pytest -q tests --junitxml "$ARTIFACT_ROOT/junit.xml" \
   >> "$ARTIFACT_ROOT/commands.log"
 printf '\n' >> "$ARTIFACT_ROOT/commands.log"
 "$PYTHON_BIN" -m pytest -q tests --junitxml "$ARTIFACT_ROOT/junit.xml" \
   2>&1 | tee "$ARTIFACT_ROOT/pytest.log"
+
+HISTORICAL_TESTS=(
+  tests/reference/test_random_traces.py::test_trace_commit_uses_oldest_first_quorum_policy_not_proposal_id_order
+  tests/storage/test_posix_multiprocess.py::test_independent_identical_cas_requests_still_have_one_winner
+  tests/log/test_cas_conflict.py::test_delayed_response_loss_resolution_finds_a_committed_ancestor
+  tests/log/test_production_runtime.py::test_forced_full_replay_detects_historical_object_corruption
+  tests/log/test_production_runtime.py::test_fresh_process_recovers_identical_runtime_view_without_local_state
+)
+printf '%q ' "$PYTHON_BIN" -m pytest -q "${HISTORICAL_TESTS[@]}" \
+  >> "$ARTIFACT_ROOT/commands.log"
+printf '\n' >> "$ARTIFACT_ROOT/commands.log"
+"$PYTHON_BIN" -m pytest -q "${HISTORICAL_TESTS[@]}" \
+  2>&1 | tee "$ARTIFACT_ROOT/historical_counterexamples.log"
 
 printf '%q ' "$PYTHON_BIN" scripts/agent/check_m00_final.py --root "$CHECKOUT_ROOT" \
   --artifact-root "$ARTIFACT_ROOT" --output "$ARTIFACT_ROOT/checker_results.json" \
@@ -53,7 +98,10 @@ printf '\n' >> "$ARTIFACT_ROOT/commands.log"
   --report "$ARTIFACT_ROOT/checker_report.md" 2>&1 | tee "$ARTIFACT_ROOT/final_audit.log"
 
 qstat "$PBS_JOBID" | tee "$ARTIFACT_ROOT/qstat_final.log"
-cat "$ARTIFACT_ROOT/forbidden_surface.log" "$ARTIFACT_ROOT/pytest.log" \
+cat "$ARTIFACT_ROOT/plan_checksums.log" "$ARTIFACT_ROOT/research_contract.log" \
+  "$ARTIFACT_ROOT/phase_state.log" "$ARTIFACT_ROOT/pbs_syntax.log" \
+  "$ARTIFACT_ROOT/forbidden_surface.log" "$ARTIFACT_ROOT/reference_10000.json" \
+  "$ARTIFACT_ROOT/pytest.log" "$ARTIFACT_ROOT/historical_counterexamples.log" \
   "$ARTIFACT_ROOT/final_audit.log" > "$ARTIFACT_ROOT/stdout.log"
 : > "$ARTIFACT_ROOT/stderr.log"
 "$PYTHON_BIN" scripts/agent/create_run_manifest.py \
@@ -64,6 +112,7 @@ cat "$ARTIFACT_ROOT/forbidden_surface.log" "$ARTIFACT_ROOT/pytest.log" \
   --exit-code 0 --result pass \
   --assertion "all 41 P00-P04 remapped acceptance IDs have current M00 evidence" \
   --assertion "single authority, attempt lineage, terminal 50x10, and replay cache audit passed" \
-  --assertion "new stale-process corrupt-successor counterexample failed closed"
+  --assertion "explicit 10000-trace reference suite and historical counterexamples passed" \
+  --assertion "no-DB listing-omission plus process-kill counterexample recovered exactly once"
 "$PYTHON_BIN" scripts/agent/check_run_manifest.py "$ARTIFACT_ROOT/manifest.json" \
   --root "$CHECKOUT_ROOT"
