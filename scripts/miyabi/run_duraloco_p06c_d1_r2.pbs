@@ -56,6 +56,7 @@ trap 'echo "[ERROR] P06C D1-R2 failed at line $LINENO" | tee -a "$ARTIFACT_ROOT/
 [[ "$(hostname)" == mg* ]]
 [[ "$(git rev-parse HEAD)" == "$EXPECTED_COMMIT" ]]
 [[ -z "$(git status --porcelain=v1)" ]]
+[[ "$STORAGE_ROOT" == "$PROJECT_ROOT"/* ]]
 hostname | tee "$ARTIFACT_ROOT/hosts.log"
 git status --short --branch | tee "$ARTIFACT_ROOT/git_status.log"
 git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"

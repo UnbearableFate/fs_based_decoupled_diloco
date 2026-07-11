@@ -225,3 +225,35 @@ records:
       rationale: "read-only path correction before D1 submission"
       parent_run_id: null
     artifacts: []
+  - error_id: E-P06C-20260711-08
+    phase_and_gate: P06C/D1-R2
+    observed_at_utc: "2026-07-11T13:11:46Z"
+    pbs_job_id: 2363042.opbs
+    hosts: [mg0005]
+    git_commit: 582521177bc397126d73299badda5a42759e1cb5
+    classification: unexpected_failure
+    phenomenon:
+      exit_code: 1
+      exception: "ValueError: run.shared_root must stay inside project root"
+      terminal_state: "Floating Committer failed during config resolution; executors and learners were never started"
+      log_excerpt: artifacts/duraloco/P06C/20260711_p06c_d1_r2_5825211/committer.log
+    expected: "D1-R2 training root resolves beneath the repository's ignored runs/ directory"
+    impact:
+      acceptance_ids: [P06C-A04, P06C-A07, P06C-A23]
+      invariants: ["all configured runtime paths must satisfy project-root containment"]
+      committed_prefix_safe: true
+    cause:
+      confirmed: ["qsub passed STORAGE_ROOT=/work/xg24i002/x10041/duraloco_runs/... outside PROJECT_ROOT", "resolve_config correctly rejected the path before generation initialization"]
+      unknown: []
+    repair:
+      change: "retry with STORAGE_ROOT=$PROJECT_ROOT/runs/... and add a PBS preflight containment assertion"
+      rationale: "runs/ is project-contained and gitignored, matching the configuration path contract"
+    verification:
+      minimal_reproduction: "resolve the same config with a project-contained shared root"
+      targeted_gate: "D1-R2 reaches generation initialization, both executors, and strict runtime report"
+      qualification_ladder: ["Miyabi 1-node D1-R2 rerun"]
+    retry_decision:
+      authorized: true
+      rationale: "configuration-only preflight failure before model loading or authority creation"
+      parent_run_id: 20260711_p06c_d1_r2_5825211
+    artifacts: [artifacts/duraloco/P06C/20260711_p06c_d1_r2_5825211]
