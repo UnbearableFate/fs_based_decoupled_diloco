@@ -102,8 +102,9 @@ def main() -> int:
             item for item in _jsonl(path) if item.get("event_type") == "fragment_prepared"
         )
     observed_attempt_ids = {str(item["attempt_envelope_id"]) for item in executor_events}
-    if observed_attempt_ids != all_attempt_ids:
-        raise AssertionError("executor telemetry and authoritative marker attempts differ")
+    if not all_attempt_ids.issubset(observed_attempt_ids):
+        raise AssertionError("committed authoritative attempts are missing executor telemetry")
+    abandoned_attempt_ids = observed_attempt_ids - all_attempt_ids
 
     metric_path = args.root / "metrics" / "learner_metrics.csv"
     metrics = list(csv.DictReader(metric_path.open(encoding="utf-8")))
@@ -126,6 +127,9 @@ def main() -> int:
         "optimizer_transitions": len(commits),
         "prepared_attempts": len(all_attempt_ids),
         "duplicate_attempts": len(all_attempt_ids) - len(commits),
+        "total_observed_attempts": len(observed_attempt_ids),
+        "abandoned_old_epoch_attempts": len(abandoned_attempt_ids),
+        "abandoned_attempt_envelope_ids": sorted(abandoned_attempt_ids),
         "total_prepare_seconds": total_prepare_seconds,
         "duplicate_prepare_seconds_estimate": total_prepare_seconds / len(all_attempt_ids)
         * (len(all_attempt_ids) - len(commits)),

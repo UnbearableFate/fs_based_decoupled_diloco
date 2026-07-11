@@ -321,3 +321,35 @@ records:
       rationale: "non-terminal 2-node harness race; repair is proven from the smallest failure shape before D8"
       parent_run_id: 20260711_p06c_d2_r2_ee05529
     artifacts: [artifacts/duraloco/P06C/20260711_p06c_d2_r2_ee05529, runs/P06C/20260711_p06c_d2_r2_ee05529]
+  - error_id: E-P06C-20260711-11
+    phase_and_gate: P06C/D2-R2-analysis
+    observed_at_utc: "2026-07-11T13:30:18Z"
+    pbs_job_id: 2363093.opbs
+    hosts: [mg0005, mg0008]
+    git_commit: 33a8a6887c739beb197c8f453d4cafb1b6b969b5
+    classification: unexpected_failure
+    phenomenon:
+      exit_code: 1
+      exception: "AssertionError: executor telemetry and authoritative marker attempts differ"
+      terminal_state: "all four transitions, three fencing epochs, and the full fault tape completed; post-run report rejected extra old-epoch executor attempts"
+      log_excerpt: duraloco_p06c_d2.o2363093
+    expected: "every committed-FWO attempt has telemetry, while auditable abandoned old-epoch attempts remain allowed and separately counted"
+    impact:
+      acceptance_ids: [P06C-A09, P06C-A12, P06C-A14, P06C-A15]
+      invariants: ["committer takeover may abandon prepared old-epoch work without treating it as committed lineage"]
+      committed_prefix_safe: true
+    cause:
+      confirmed: ["report compared all executor telemetry for exact equality with attempts belonging only to committed FWO IDs", "committer and whole-host takeover correctly produced additional prepared attempts for fenced old-epoch work orders"]
+      unknown: []
+    repair:
+      change: "require committed attempt IDs to be a subset of telemetry and report extra IDs as abandoned_old_epoch_attempts"
+      rationale: "preserves audit evidence while keeping committed ancestry as the only winner/consumption authority"
+    verification:
+      minimal_reproduction: "strictly replay the preserved job 2363093 authority and rerun both P06C reports"
+      targeted_gate: "report-only compute job passes against immutable D2 raw evidence without rerunning the successful failure tape"
+      qualification_ladder: ["Miyabi 1-node analysis of preserved D2-R2 evidence"]
+    retry_decision:
+      authorized: true
+      rationale: "runtime and terminal fault matrix succeeded; optimized plan requires reanalysis of preserved raw evidence for an analysis-only defect"
+      parent_run_id: 20260711_p06c_d2_r2_33a8a68
+    artifacts: [artifacts/duraloco/P06C/20260711_p06c_d2_r2_33a8a68, runs/P06C/20260711_p06c_d2_r2_33a8a68]
