@@ -1,0 +1,13 @@
+phase: P06C
+status: in_progress
+planning_basis_commit: 98c1b92d943f9aef290b6b549db5baf06c225428
+feature_branch: codex/duraloco-p06c-redundant-fragment-executors
+current_loop: 1
+current_goal: "factor-two ownership, mode identity, and duplicate-result RED/property gate"
+checks:
+  login_static: not_run
+  d1_r2: not_run
+  d2_r2: not_run
+  d8_r2: not_run
+checker_verdict: not_run
+next_action: "freeze D-06C01 through D-06C10 and implement the schema/property gate"

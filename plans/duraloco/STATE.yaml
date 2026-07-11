@@ -1,14 +1,14 @@
-phase: P06B
-status: completed
-planning_basis_branch: codex/duraloco-p06a-syncer-kernel
-planning_basis_commit: 4ce89280f99553f6d81821978367c53acaf10214
-verified_dependency_implementation: 5a7150220bf3cc6a4a46d2a563466335163d21ad
-verified_dependency_checker_commit: cea5a6d806bc15fa4133795ff3f3f5909d9f9af1
-actual_base_branch: codex/duraloco-p06a-syncer-kernel
-actual_base_commit: 4ce89280f99553f6d81821978367c53acaf10214
-feature_branch: codex/duraloco-p06b-learner-hosted-sync
-current_loop: 6
-current_goal: "P06B completed; hand off verified factor-one baseline to P06C"
+phase: P06C
+status: in_progress
+planning_basis_branch: codex/duraloco-p06b-learner-hosted-sync
+planning_basis_commit: 98c1b92d943f9aef290b6b549db5baf06c225428
+verified_dependency_implementation: d5e2901b75ef504a31a365790b7b9518c329dbe7
+verified_dependency_checker_commit: b26046734af21eb51fc59b4689c6580ebe9d504a
+actual_base_branch: codex/duraloco-p06b-learner-hosted-sync
+actual_base_commit: 98c1b92d943f9aef290b6b549db5baf06c225428
+feature_branch: codex/duraloco-p06c-redundant-fragment-executors
+current_loop: 1
+current_goal: "factor-two ownership, mode identity, and duplicate-result RED/property gate"
 attempts_for_current_failure: 0
 last_terminal_failure_review: null
 terminal_retry_authorized: false
@@ -16,56 +16,59 @@ terminal_retry_qualification:
   targeted_1node_benchmark: null
   miyabi_1node: null
   miyabi_2node: null
-last_verified_commit: b26046734af21eb51fc59b4689c6580ebe9d504a
+last_verified_commit: null
 checks:
-  local_static: static_pass
-  local_runtime: unit_pass
-  miyabi_login_static: static_pass
-  miyabi_d1: miyabi_d1_pass
-  miyabi_d2: miyabi_d2_pass
-  miyabi_d8: miyabi_d8_pass
-  independent_checker: contract_pass
+  local_static: not_run
+  local_runtime: not_run
+  miyabi_login_static: not_run
+  miyabi_d1_r2: not_run
+  miyabi_d2_r2: not_run
+  miyabi_d8_r2: not_run
 acceptance:
-  P06B-A01: {result: pass, evidence: ["105 focused tests; distributed RunSpec/membership replay"]}
-  P06B-A02: {result: pass, evidence: ["ownership golden/property tests"]}
-  P06B-A03: {result: pass, evidence: ["membership/heartbeat authority tests"]}
-  P06B-A04: {result: pass, evidence: ["D1/D2/D8 separate LFE processes and budget manifests"]}
-  P06B-A05: {result: pass, evidence: ["prepare facade AST/runtime capability tests"]}
-  P06B-A06: {result: pass, evidence: ["strict FWO tests and D8 work-order objects"]}
-  P06B-A07: {result: pass, evidence: ["marker-last PFT tests and 10 D8 markers"]}
-  P06B-A08: {result: pass, evidence: ["PBS 2362603.opbs exact links and frozen numeric tolerance"]}
-  P06B-A09: {result: pass, evidence: ["P05 fencing regressions and D2 epoch-2 takeover"]}
-  P06B-A10: {result: pass, evidence: ["coordination response-loss/crash matrix; terminal race repair"]}
-  P06B-A11: {result: pass, evidence: ["stale-parent/membership PFT validation tests"]}
-  P06B-A12: {result: pass, evidence: ["learner boundary adoption test; no PFT import path"]}
-  P06B-A13: {result: pass, evidence: ["D2 storage-only executor/committer/whole-node recovery"]}
-  P06B-A14: {result: pass, evidence: ["PBS 2362549.opbs"]}
-  P06B-A15: {result: pass, evidence: ["PBS 2362562.opbs"]}
-  P06B-A16: {result: pass, evidence: ["PBS 2362567.opbs topology: 8 learners/LFEs, 0 dedicated syncer"]}
-  P06B-A17: {result: pass, evidence: ["PBS 2362567.opbs: GPT-2/WikiText-2 50x10, 470s"]}
-  P06B-A18: {result: pass, evidence: ["PBS 2362603.opbs comparison PASS"]}
-  P06B-A19: {result: pass, evidence: ["D8 CPU/NUMA/RSS/GPU/Lustre/stage latency report"]}
-  P06B-A20: {result: pass, evidence: ["forbidden_surface finding_count=0; one global head"]}
-  P06B-A21: {result: pass, evidence: ["CRS read-only comparison; distributed generation isolated"]}
-  P06B-A22: {result: pass, evidence: ["PBS 2362890.opbs; bilingual report/manifests/checksums clean"]}
-  P06B-A23: {result: pass, evidence: ["fresh-generation/rollback report; next phase frozen as P06C"]}
-open_decisions: []
+  P06C-A01: {result: not_run, evidence: []}
+  P06C-A02: {result: not_run, evidence: []}
+  P06C-A03: {result: not_run, evidence: []}
+  P06C-A04: {result: not_run, evidence: []}
+  P06C-A05: {result: not_run, evidence: []}
+  P06C-A06: {result: not_run, evidence: []}
+  P06C-A07: {result: not_run, evidence: []}
+  P06C-A08: {result: not_run, evidence: []}
+  P06C-A09: {result: not_run, evidence: []}
+  P06C-A10: {result: not_run, evidence: []}
+  P06C-A11: {result: not_run, evidence: []}
+  P06C-A12: {result: not_run, evidence: []}
+  P06C-A13: {result: not_run, evidence: []}
+  P06C-A14: {result: not_run, evidence: []}
+  P06C-A15: {result: not_run, evidence: []}
+  P06C-A16: {result: not_run, evidence: []}
+  P06C-A17: {result: not_run, evidence: []}
+  P06C-A18: {result: not_run, evidence: []}
+  P06C-A19: {result: not_run, evidence: []}
+  P06C-A20: {result: not_run, evidence: []}
+  P06C-A21: {result: not_run, evidence: []}
+  P06C-A22: {result: not_run, evidence: []}
+  P06C-A23: {result: not_run, evidence: []}
+  P06C-A24: {result: not_run, evidence: []}
+open_decisions:
+  - D-06C01
+  - D-06C02
+  - D-06C03
+  - D-06C04
+  - D-06C05
+  - D-06C06
+  - D-06C07
+  - D-06C08
+  - D-06C09
+  - D-06C10
 open_blockers: []
 artifacts:
-  - plans/duraloco/phases/P06A_PHASE_REPORT.md
-  - plans/duraloco/checker_reports/P06A_FINAL_CHECKER_REPORT.md
-  - artifacts/duraloco/P06A/20260711_p06a_checker_cea5a6d_1node
   - plans/duraloco/phases/P06B_PHASE_REPORT.md
-  - plans/duraloco/errors/P06B_ERROR_LEDGER.yaml
-  - artifacts/duraloco/P06B/20260711_p06b_final_d5e2901_unit
-  - artifacts/duraloco/P06B/20260711_p06b_final_d5e2901_d1
-  - artifacts/duraloco/P06B/20260711_p06b_final_d5e2901_d2
-  - artifacts/duraloco/P06B/20260711_p06b_final_d5e2901_d8
-  - artifacts/duraloco/P06B/20260711_p06b_compare_8b1c476_1node
   - plans/duraloco/checker_reports/P06B_FINAL_CHECKER_REPORT.md
+  - plans/duraloco/errors/P06B_ERROR_LEDGER.yaml
+  - plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/P06A_P06B_IMPLEMENTATION_LESSONS.md
   - artifacts/duraloco/P06B/20260711_p06b_checker_b260467_1node
-next_action: "P06C"
+next_action: "freeze D-06C01 through D-06C10 and implement factor-two/duplicate property gate before any runtime launch"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
-checker_report: plans/duraloco/checker_reports/P06B_FINAL_CHECKER_REPORT.md
+checker_report: null
