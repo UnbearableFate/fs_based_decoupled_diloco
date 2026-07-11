@@ -13,14 +13,22 @@ from pathlib import Path
 import torch
 from safetensors.torch import load_file
 
+from fs_diloco.log.codec import canonical_object
+from fs_diloco.storage import PosixStorageBackend
+
 
 def _json(path: Path):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def _stored_json(root: Path, path: Path):
+    """Read a canonical JSON payload through the POSIX backend envelope."""
+    return canonical_object(PosixStorageBackend(root).get(path.relative_to(root).as_posix()))
+
+
 def _commits(root: Path):
     values = [
-        _json(path)
+        _stored_json(root, path)
         for path in root.rglob("*.json")
         if path.parent.name == "commits"
     ]
@@ -77,13 +85,13 @@ def run(crs: Path, distributed: Path) -> dict[str, object]:
         item["work_order_id"]: item
         for path in (distributed / "authority").rglob("*.json")
         if "/distributed/work-orders/" in path.as_posix() and not path.name.endswith(".inputs.json")
-        for item in [_json(path)]
+        for item in [_stored_json(distributed / "authority", path)]
     }
     results = {
         item["prepared_result_id"]: item
         for path in (distributed / "authority").rglob("*.json")
         if "/distributed/prepared/results/" in path.as_posix()
-        for item in [_json(path)]
+        for item in [_stored_json(distributed / "authority", path)]
     }
     events = [
         json.loads(line)
