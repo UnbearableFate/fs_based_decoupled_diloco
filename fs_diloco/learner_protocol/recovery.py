@@ -1,0 +1,92 @@
+"""Warm learner recovery derived from immutable publication facts."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+import json
+
+from fs_diloco.log.layout import LogLayout
+
+from .publication import LearnerImmutableBackend
+from .session import LearnerSession
+
+
+@dataclass(frozen=True)
+class WarmRecoveryReport:
+    new_session: LearnerSession
+    published_intervals: int
+    committed_intervals: int
+    lost_tokens: int
+    repeated_tokens_estimate: int
+    next_sequence: int
+    warm_not_exact: bool = True
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "new_session": self.new_session.to_dict(),
+            "published_intervals": self.published_intervals,
+            "committed_intervals": self.committed_intervals,
+            "lost_tokens": self.lost_tokens,
+            "repeated_tokens_estimate": self.repeated_tokens_estimate,
+            "next_sequence": self.next_sequence,
+            "warm_not_exact": self.warm_not_exact,
+        }
+
+
+def recover_learner(
+    backend: LearnerImmutableBackend,
+    layout: LogLayout,
+    *,
+    learner_id: str,
+    committed_proposal_ids: frozenset[str],
+    new_session_id: str | None = None,
+) -> WarmRecoveryReport:
+    prefix = f"{layout.learner_publication_prefix}{learner_id}/"
+    markers = [key for key in backend.list_prefix(prefix) if "/markers/" in key]
+    published = 0
+    committed = 0
+    lost_tokens = 0
+    identities: set[tuple[str, int, int]] = set()
+    for key in sorted(markers):
+        try:
+            body = json.loads(backend.get(key))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError(f"invalid learner publication marker: {key}") from exc
+        if not isinstance(body, dict) or body.get("record_type") != "learner_publication_marker":
+            raise ValueError(f"invalid learner publication marker schema: {key}")
+        interval = body.get("interval")
+        if not isinstance(interval, dict) or interval.get("learner_id") != learner_id:
+            raise ValueError(f"publication marker learner identity mismatch: {key}")
+        identity = (
+            str(interval.get("learner_session_id")),
+            int(interval.get("sequence", -1)),
+            int(interval.get("fragment_id", -1)),
+        )
+        if identity in identities:
+            raise ValueError("duplicate learner publication identity")
+        identities.add(identity)
+        proposal_id = body.get("proposal_id")
+        if not isinstance(proposal_id, str) or not proposal_id:
+            raise ValueError("publication marker lacks proposal_id")
+        tokens = int(interval.get("target_tokens", -1))
+        if tokens < 1:
+            raise ValueError("publication marker target_tokens must be positive")
+        published += 1
+        if proposal_id in committed_proposal_ids:
+            committed += 1
+        else:
+            lost_tokens += tokens
+    new_session = LearnerSession.new(
+        layout.run_id,
+        layout.run_generation,
+        learner_id,
+        session_id=new_session_id,
+    )
+    return WarmRecoveryReport(
+        new_session=new_session,
+        published_intervals=published,
+        committed_intervals=committed,
+        lost_tokens=lost_tokens,
+        repeated_tokens_estimate=0,
+        next_sequence=1,
+    )

@@ -52,13 +52,18 @@ def test_marker_last_response_loss_retry_is_idempotent():
     assert result == again
     operations = [record for record in backend.history if record.operation == "put_immutable"]
     first_created = [record.key for record in operations if record.outcome == "created"]
-    assert first_created == [result.payload_ref.key, result.request_ref.key, result.marker_ref.key]
+    assert first_created == [
+        result.session_ref.key,
+        result.payload_ref.key,
+        result.request_ref.key,
+        result.marker_ref.key,
+    ]
     assert not any(record.operation == "conditional_replace" for record in backend.history)
 
 
 def test_after_effect_timeout_retries_by_request_identity():
     backend = InMemoryStorageBackend()
-    backend.inject_failure(FailureRule("put_immutable", "after", occurrence=3))
+    backend.inject_failure(FailureRule("put_immutable", "after", occurrence=4))
     layout = LogLayout("run-a", 0)
     session = LearnerSession.new("run-a", 0, "learner_000", session_id="session-a")
     publisher = LearnerPublisher(backend, layout)

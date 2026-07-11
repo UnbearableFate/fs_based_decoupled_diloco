@@ -1,0 +1,27 @@
+
+==================================== ERRORS ====================================
+__ ERROR collecting tests/learner_protocol/test_interval_session_adoption.py ___
+ImportError while importing test module '/work/xg24i002/x10041/fs_based_decoupled_diloco/tests/learner_protocol/test_interval_session_adoption.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/home/x10041/.local/share/uv/python/cpython-3.13.13-linux-aarch64-gnu/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/learner_protocol/test_interval_session_adoption.py:5: in <module>
+    from fs_diloco.learner_protocol.adoption import (
+E   ModuleNotFoundError: No module named 'fs_diloco.learner_protocol'
+_____ ERROR collecting tests/learner_protocol/test_publication_recovery.py _____
+ImportError while importing test module '/work/xg24i002/x10041/fs_based_decoupled_diloco/tests/learner_protocol/test_publication_recovery.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+/home/x10041/.local/share/uv/python/cpython-3.13.13-linux-aarch64-gnu/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/learner_protocol/test_publication_recovery.py:7: in <module>
+    from fs_diloco.learner_protocol.data_cursor import DataCursor
+E   ModuleNotFoundError: No module named 'fs_diloco.learner_protocol'
+=========================== short test summary info ============================
+ERROR tests/learner_protocol/test_interval_session_adoption.py
+ERROR tests/learner_protocol/test_publication_recovery.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!!
+2 errors in 0.15s

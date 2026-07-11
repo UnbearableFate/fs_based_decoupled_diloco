@@ -42,6 +42,14 @@ class LogLayout:
         return f"{self.root}/immutable/proposals/"
 
     @property
+    def learner_session_prefix(self) -> str:
+        return f"{self.root}/immutable/learner-sessions/"
+
+    @property
+    def learner_publication_prefix(self) -> str:
+        return f"{self.root}/immutable/learner-publications/"
+
+    @property
     def run_manifest_key(self) -> str:
         return f"{self.root}/control/run-manifest.json"
 
@@ -58,6 +66,46 @@ class LogLayout:
 
     def proposal_payload_key(self, sha256: str) -> str:
         return self._content_key("proposals/payloads", sha256, "safetensors")
+
+    def learner_session_key(self, learner_id: str, session_id: str) -> str:
+        return normalize_key(
+            f"{self.learner_session_prefix}{_component(learner_id, 'learner_id')}/"
+            f"{_component(session_id, 'session_id')}.json"
+        )
+
+    def learner_publication_request_key(
+        self,
+        learner_id: str,
+        session_id: str,
+        sequence: int,
+        fragment_id: int,
+    ) -> str:
+        return normalize_key(
+            f"{self.learner_publication_prefix}{_component(learner_id, 'learner_id')}/"
+            f"{_component(session_id, 'session_id')}/requests/"
+            f"{self._publication_component(sequence, fragment_id)}.json"
+        )
+
+    def learner_publication_marker_key(
+        self,
+        learner_id: str,
+        session_id: str,
+        sequence: int,
+        fragment_id: int,
+    ) -> str:
+        return normalize_key(
+            f"{self.learner_publication_prefix}{_component(learner_id, 'learner_id')}/"
+            f"{_component(session_id, 'session_id')}/markers/"
+            f"{self._publication_component(sequence, fragment_id)}.json"
+        )
+
+    @staticmethod
+    def _publication_component(sequence: int, fragment_id: int) -> str:
+        if type(sequence) is not int or sequence < 1:
+            raise ValueError("publication sequence must be positive")
+        if type(fragment_id) is not int or fragment_id < 0:
+            raise ValueError("publication fragment_id must be non-negative")
+        return f"{sequence:020d}-f{fragment_id:08d}"
 
     def params_key(self, fragment_id: int, sha256: str) -> str:
         return self._payload_key("params", fragment_id, sha256)
