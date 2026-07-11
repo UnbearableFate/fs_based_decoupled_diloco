@@ -459,7 +459,11 @@ def run_syncer(config: Config) -> None:
         fragment_thetas=fragments,
         outer_states=states,
     )
-    catalog = ProposalCatalog(namespace_root=paths.shared_root, quarantine_root=paths.quarantine)
+    catalog = ProposalCatalog(
+        namespace_root=paths.shared_root,
+        quarantine_root=paths.quarantine,
+        validation_device=device,
+    )
     optimizer_impl_digest = production_optimizer_digest(log.spec.optimizer_config.identity())
     last_progress = time.time()
     last_global = last_progress

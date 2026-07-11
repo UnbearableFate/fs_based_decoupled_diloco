@@ -66,6 +66,7 @@ def validate_production_tensor_payload(
     shape: tuple[int, ...],
     dtype: str,
     require_finite: bool = True,
+    validation_device: torch.device | str | None = None,
 ) -> ValidatedProductionPayload:
     """Strictly validate a large production tensor with vectorized finiteness."""
 
@@ -87,8 +88,12 @@ def validate_production_tensor_payload(
             raise ProtocolError(
                 "PAYLOAD_DTYPE", f"dtype {tensor.dtype} != expected {expected_dtype}"
             )
-        if require_finite and not bool(torch.isfinite(tensor).all().item()):
-            raise ProtocolError("PAYLOAD_NONFINITE", "payload contains non-finite values")
+        if require_finite:
+            validation_tensor = tensor
+            if tensor.numel() >= 1_000_000 and validation_device is not None:
+                validation_tensor = tensor.to(device=validation_device, non_blocking=False)
+            if not bool(torch.isfinite(validation_tensor).all().item()):
+                raise ProtocolError("PAYLOAD_NONFINITE", "payload contains non-finite values")
         return ValidatedProductionPayload(
             data=payload,
             sha256=hashlib.sha256(payload).hexdigest(),

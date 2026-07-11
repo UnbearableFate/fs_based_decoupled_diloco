@@ -58,9 +58,16 @@ class CatalogEntry:
 class ProposalCatalog:
     """Full rescans are safe; listing order, duplicates, and omissions are hints only."""
 
-    def __init__(self, *, namespace_root: Path, quarantine_root: Path) -> None:
+    def __init__(
+        self,
+        *,
+        namespace_root: Path,
+        quarantine_root: Path,
+        validation_device: object | None = None,
+    ) -> None:
         self.namespace_root = namespace_root.resolve(strict=False)
         self.quarantine_root = quarantine_root
+        self.validation_device = validation_device
         self._quarantine = QuarantineRegistry()
 
     def _persist_error(
@@ -143,6 +150,7 @@ class ProposalCatalog:
             shape=header.shape,
             dtype=dtype,
             require_finite=True,
+            validation_device=self.validation_device,
         )
         payload_sha256 = validated_payload.sha256
         local_start = int(metadata.get("local_step_start", -1))
