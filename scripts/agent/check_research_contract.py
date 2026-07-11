@@ -20,7 +20,7 @@ REQUIRED_TERMS = (
     "Exact learner restart",
 )
 REQUIRED_INVARIANTS = {f"I-{number:03d}" for number in range(1, 13)}
-REQUIRED_CLAIMS = {f"P0-C{number:03d}" for number in range(1, 9)}
+REQUIRED_CLAIMS = {f"P0-C{number:03d}" for number in range(1, 13)}
 
 
 def _links(path: Path, text: str) -> list[str]:

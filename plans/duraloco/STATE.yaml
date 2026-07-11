@@ -7,7 +7,7 @@ actual_base_commit: 92acc3af0c2e80951dfcbf20c738841428a8b906
 feature_branch: codex/duraloco-p05-syncer-failover
 current_loop: 4
 current_goal: "run the independent Checker over the passing final Maker ladder"
-attempts_for_current_failure: 0
+attempts_for_current_failure: 1
 last_terminal_failure_review: null
 terminal_retry_authorized: false
 terminal_retry_qualification:
@@ -53,7 +53,8 @@ artifacts:
   - artifacts/duraloco/P05/20260711_p05_impl_82dbec1_1node
   - artifacts/duraloco/P05/20260711_p05_impl_82dbec1_2node
   - artifacts/duraloco/P05/20260711_p05_impl_82dbec1_gpt2_9n_50x10
-next_action: "persist the passing Maker ladder, run the independent P05 Checker, then archive P05 if authorized"
+  - artifacts/duraloco/P05/20260711_p05_checker_f6b6b1c_1node
+next_action: "rerun the independent Checker after synchronizing its P0 claim cardinality with the 12-row traceability contract"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

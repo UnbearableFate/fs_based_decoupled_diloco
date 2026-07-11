@@ -79,6 +79,17 @@ The Maker ladder is complete. A clean-worktree Checker must still add an
 unlisted counterexample and review clock assumptions plus D-M0010–D-M0012
 attribution. P05 must remain checking until that artifact passes.
 
+#### Checker attempt 1 — `20260711_p05_checker_f6b6b1c_1node`
+
+PBS `2360299.opbs` on `mg0005` stopped at the first static research-contract
+check before runtime tests. Expected: the checker accepts the current 12-row
+P0 traceability set. Actual: it expected the historical eight-row set and
+reported P0-C009–P0-C012 as extras. Root cause is confirmed: the traceability
+file was extended by the M00 implementation-lessons planning update, while
+`check_research_contract.py` retained its pre-update cardinality. No Maker
+runtime or authority assertion ran or failed. The checker contract now expects
+P0-C001–P0-C012, and the retry is parent-linked to this failed manifest.
+
 ### Known limitations and next action
 
 Learner interval/session boundary and warm-recovery semantics remain P06 scope.
@@ -156,6 +167,15 @@ owner 边界 strict replay、权威 stop control transition，以及与 control 
 Maker ladder 已完成。仍需从干净 worktree 运行 Checker；Checker 必须增加 Maker 未
 列出的反例，并审查时钟假设与 D-M0010–D-M0012 证据归属。该 artifact 通过前，
 P05 必须保持 checking。
+
+#### Checker 尝试 1 — `20260711_p05_checker_f6b6b1c_1node`
+
+PBS `2360299.opbs` 在 `mg0005` 上于第一个静态 research-contract 检查停止，尚未
+运行 runtime 测试。预期是 Checker 接受当前 12 行 P0 traceability；实际仍按历史
+8 行集合检查，并把 P0-C009–P0-C012 报为额外项。根因已确认：M00 implementation
+lessons 规划更新扩展了 traceability，但 `check_research_contract.py` 保留了更新前的
+cardinality。没有 Maker runtime 或 authority assertion 运行或失败。现在 Checker
+contract 明确要求 P0-C001–P0-C012，重试将通过 parent ID 连接此失败 manifest。
 
 ### 已知限制与下一步
 
