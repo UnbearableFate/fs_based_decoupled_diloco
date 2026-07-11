@@ -89,7 +89,7 @@ def run_terminal_probe(
     ]
     if (
         len(selected_proposal_ids) != len(set(selected_proposal_ids))
-        or set(selected_proposal_ids) != replay.consumption
+        or set(selected_proposal_ids) != set(replay.consumption)
     ):
         raise AssertionError("terminal authority contains a double inclusion")
     if [item.control_kind for item in control_commits] != [
