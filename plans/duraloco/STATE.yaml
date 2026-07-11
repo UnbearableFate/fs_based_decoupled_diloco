@@ -51,6 +51,8 @@ acceptance:
       - artifacts/duraloco/M00/20260711_m00_2d572d4_gpt2_9n_50x10/training.log
       - artifacts/duraloco/M00/20260711_m00_c1c2404_gpt2_9n_50x10/manifest.json
       - artifacts/duraloco/M00/20260711_m00_c1c2404_gpt2_9n_50x10/training.log
+      - artifacts/duraloco/M00/20260711_m00_d3a7dce_gpt2_9n_50x10/manifest.json
+      - artifacts/duraloco/M00/20260711_m00_d3a7dce_gpt2_9n_50x10/training.log
   M00-A12: {result: not_run, evidence: []}
 open_decisions: []
 open_blockers: []
@@ -68,7 +70,10 @@ artifacts:
   - artifacts/duraloco/M00/20260711_m00_c1c2404_1node_requal
   - artifacts/duraloco/M00/20260711_m00_c1c2404_2node_requal
   - artifacts/duraloco/M00/20260711_m00_c1c2404_gpt2_9n_50x10
-next_action: "rerun the 1/2/9-node ladder with large finite-value validation on the syncer GPU"
+  - artifacts/duraloco/M00/20260711_m00_d3a7dce_1node_requal
+  - artifacts/duraloco/M00/20260711_m00_d3a7dce_2node_requal
+  - artifacts/duraloco/M00/20260711_m00_d3a7dce_gpt2_9n_50x10
+next_action: "rerun the 1/2/9-node ladder with parallel payload read, SHA, and validation"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

@@ -197,6 +197,27 @@ two-node and nine-node compute qualification remain in progress.
 - Repair: pass the syncer's selected compute device into the production catalog
   and execute large vectorized finite checks on GPU; CPU remains the default for
   small fixtures and non-accelerated paths.
+
+#### Nine-node attempt 5 — `20260711_m00_d3a7dce_gpt2_9n_50x10`
+
+- Time/identity: PBS `2359172.opbs`, nine compute hosts led by `mg1078`,
+  implementation `d3a7dce861fdb564b4904b7801588e129bdceb06`. The same clean commit
+  passed jobs `2359170.opbs` (one node) and `2359171.opbs` (two nodes).
+- Phenomenon: GPU finite checks preserved correctness but did not materially
+  reduce the approximately 100-second first-transition latency. Sequence 1
+  committed exactly once before deliberate termination.
+- Expected/actual: after moving finite checks to GPU, the remaining eight
+  500 MB payload reads and SHA calculations were still serialized by the
+  catalog scan.
+- Reason: confirmed by the unchanged transition timing and sequential scan
+  implementation; validation is independent across learner proposals.
+- Impact: M00-A11 only; the committed sequence-1 prefix is valid. The operator
+  terminated the job deliberately (`Exit_status=271`).
+- Evidence: `artifacts/duraloco/M00/20260711_m00_d3a7dce_gpt2_9n_50x10/manifest.json`,
+  `training.log`, and same-commit one/two-node manifests.
+- Repair: perform independent catalog candidate read, SHA, structural, and
+  finite validation concurrently while preserving deterministic result order
+  and serializing quarantine registry writes.
 - Impact: M00-A03, M00-A04, M00-A09, P02-A04, and P04 replay requalification.
 - Evidence: `artifacts/duraloco/M00/20260711_m00_04da7ee_1node/manifest.json`,
   `one_node_contract.json`, full syncer/learner logs, and `stdout.log`.
@@ -385,6 +406,24 @@ generation metadata 与 M00 静态/运行 harness。源码、配置、脚本与�
   `training.log` 与同 commit 单/双节点 manifests。
 - 修复：将 syncer 选定 compute device 传入 production catalog，大 tensor 的向量化
   finite check 在 GPU 执行；小 fixture 与无 accelerator 路径仍默认 CPU。
+
+#### 九节点第 5 次尝试 — `20260711_m00_d3a7dce_gpt2_9n_50x10`
+
+- 时间/身份：PBS `2359172.opbs`，以 `mg1078` 为首的九个 compute nodes，实现提交
+  `d3a7dce861fdb564b4904b7801588e129bdceb06`。同一干净提交通过了
+  `2359170.opbs`（单节点）与 `2359171.opbs`（双节点）。
+- 现象：GPU finite check 保持正确性，但未显著降低首个 transition 约 100 秒的延迟；
+  sequence 1 恰好提交一次后被人工终止。
+- 预期/实际：finite check 移到 GPU 后，剩余 8 个约 500 MB payload 的读取与 SHA 计算
+  仍由 catalog scan 串行执行。
+- 原因：transition timing 基本不变且 scan 实现为串行；不同 learner proposal 的验证
+  实际相互独立。
+- 影响：仅 M00-A11；已提交 sequence-1 prefix 合法。operator 主动终止 job
+  （`Exit_status=271`）。
+- 证据：`artifacts/duraloco/M00/20260711_m00_d3a7dce_gpt2_9n_50x10/manifest.json`、
+  `training.log` 与同 commit 单/双节点 manifests。
+- 修复：并行执行独立 catalog candidate 的 read、SHA、结构与 finite validation，同时
+  保持结果顺序确定性并串行化 quarantine registry 写入。
 
 ### 限制与下一动作
 

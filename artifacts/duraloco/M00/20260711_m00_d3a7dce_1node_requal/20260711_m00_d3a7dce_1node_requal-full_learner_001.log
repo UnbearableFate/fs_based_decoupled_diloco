@@ -1,0 +1,20 @@
+{"actor": "learner_001", "device": "cpu", "event_type": "process_start", "hostname": "mg0003", "learner_id": "learner_001", "run_id": "20260711_m00_d3a7dce_1node_requal-full", "timestamp": 1783729078.1454644}
+{"actor": "learner_001", "event_type": "loaded_global", "hostname": "mg0003", "timestamp": 1783729080.309346, "version": 0}
+{"actor": "learner_001", "event_type": "inner_optimizer_reset", "hostname": "mg0003", "timestamp": 1783729080.310758, "version": 0}
+{"actor": "learner_001", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0003", "local_step": 1, "timestamp": 1783729080.4174066, "train_loss": 4.210011005401611}
+{"actor": "learner_001", "event_type": "inner_step_summary", "global_version": 0, "hostname": "mg0003", "local_step": 2, "timestamp": 1783729080.4228365, "train_loss": 4.14077615737915}
+{"actor": "learner_001", "event_type": "update_written", "file_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/M00/20260711_m00_d3a7dce_1node_requal/full/updates/pending/learner_001/update_5c4bea7384af.params.safetensors", "hostname": "mg0003", "local_step": 2, "timestamp": 1783729080.4333882, "tokens": 64, "train_loss": 4.175393581390381, "update_id": "learner_001_00000002_5c4bea7384af"}
+{"actor": "learner_001", "event_type": "heartbeat_written", "hostname": "mg0003", "local_step": 2, "timestamp": 1783729080.4390092}
+{"actor": "learner_001", "current_version": 0, "event_type": "latest_polled", "found_version": 1, "hostname": "mg0003", "timestamp": 1783729080.8411853}
+{"actor": "learner_001", "event_type": "global_adopted", "hostname": "mg0003", "timestamp": 1783729080.8428066, "version": 1}
+{"actor": "learner_001", "event_type": "inner_optimizer_reset", "hostname": "mg0003", "timestamp": 1783729080.8436825, "version": 1}
+{"actor": "learner_001", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0003", "local_step": 3, "timestamp": 1783729080.8553648, "train_loss": 4.485049724578857}
+{"actor": "learner_001", "event_type": "inner_step_summary", "global_version": 1, "hostname": "mg0003", "local_step": 4, "timestamp": 1783729080.8599966, "train_loss": 4.478410720825195}
+{"actor": "learner_001", "event_type": "update_written", "file_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/M00/20260711_m00_d3a7dce_1node_requal/full/updates/pending/learner_001/update_52121f9f56b0.params.safetensors", "hostname": "mg0003", "local_step": 4, "timestamp": 1783729080.8676941, "tokens": 64, "train_loss": 4.481730222702026, "update_id": "learner_001_00000004_52121f9f56b0"}
+{"actor": "learner_001", "event_type": "heartbeat_written", "hostname": "mg0003", "local_step": 4, "timestamp": 1783729080.872177}
+{"actor": "learner_001", "current_version": 1, "event_type": "latest_polled", "found_version": 2, "hostname": "mg0003", "timestamp": 1783729081.0737522}
+{"actor": "learner_001", "event_type": "global_adopted", "hostname": "mg0003", "timestamp": 1783729081.0756166, "version": 2}
+{"actor": "learner_001", "event_type": "inner_optimizer_reset", "hostname": "mg0003", "timestamp": 1783729081.0765233, "version": 2}
+{"actor": "learner_001", "event_type": "stop_seen", "hostname": "mg0003", "reason": "stop_after_outer_steps", "timestamp": 1783729081.077687}
+{"actor": "learner_001", "deleted_files": 4, "event_type": "retention_cleanup", "hostname": "mg0003", "keep_last": 0, "role": "learner", "timestamp": 1783729081.0852444, "update_dir": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/M00/20260711_m00_d3a7dce_1node_requal/full/updates/pending/learner_001"}
+{"actor": "learner_001", "event_type": "process_exit", "global_version": 2, "hostname": "mg0003", "local_step": 4, "timestamp": 1783729081.0861027}

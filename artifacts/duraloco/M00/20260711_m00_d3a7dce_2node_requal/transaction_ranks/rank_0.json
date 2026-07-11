@@ -1,0 +1,15 @@
+{
+  "committed_state_digest": "df4bb42f429b627811687ed89e254442c25b06a135e24cf0fd3aa8b81eff5092",
+  "conflicts": 2,
+  "double_inclusions": 0,
+  "double_winners": 0,
+  "final_commit_seq": 22,
+  "hostname": "mg0003",
+  "rank": 0,
+  "response_loss_recovered": true,
+  "rounds": 20,
+  "second_node_takeover": true,
+  "status": "PASS",
+  "wins": 18,
+  "world_size": 2
+}
