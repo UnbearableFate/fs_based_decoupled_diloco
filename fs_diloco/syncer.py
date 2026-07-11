@@ -23,16 +23,23 @@ from .fragment_index import build_fragment_index, fragment_layout_digest, load_f
 from .hf_model import choose_device, load_causal_lm_and_tokenizer
 from .logging_utils import JsonlLogger, log_uncaught_exception
 from .metrics import SYNCER_METRIC_FIELDS, append_csv_row
-from .outer_optim import init_outer_state, outer_optimizer_step
+from .outer_optim import init_outer_state
 from .param_index import build_param_index, flatten_trainable_params, load_param_index, param_index_digest
 from .paths import RunPaths, prepare_run_dirs
 from .proposal_catalog import CatalogEntry, ProposalCatalog
 from .protocol.canonical_json import canonical_digest
 from .retention import cleanup_all_learner_update_artifacts, cleanup_syncer_model_artifacts
 from .runtime_view import RuntimeView, build_runtime_view
+from .syncer_core import (
+    PlanningCandidate,
+    apply_outer_transition,
+    build_fragment_plan,
+    build_transition_attempt,
+    reduce_fragment,
+)
 from .storage import InjectedTimeout, NotFound, PosixStorageBackend
 from .tensor_codec import save_global_weights, save_outer_state
-from .testing.deterministic_reference import ReferenceOptimizerConfig, ReferenceWeightingConfig, normalized_weights
+from .testing.deterministic_reference import ReferenceOptimizerConfig, ReferenceWeightingConfig
 from .wandb_logging import (
     syncer_wandb_project_name,
     syncer_wandb_run_name,
@@ -807,11 +814,11 @@ def run_syncer(
                 seconds=catalog_done - catalog_start,
             )
 
-            tensors: list[torch.Tensor] = []
+            tensors: dict[str, torch.Tensor] = {}
             for entry in selected:
                 payload = catalog.load_payload(entry)
                 log.publish_validated_proposal(entry.manifest, entry.payload)
-                tensors.append(_load_selected_tensor(entry, payload, device))
+                tensors[entry.proposal_id] = _load_selected_tensor(entry, payload, device)
             proposal_observation_done = time.monotonic()
             logger.event(
                 "transaction_stage_completed",
@@ -820,24 +827,32 @@ def run_syncer(
                 seconds=proposal_observation_done - catalog_done,
             )
             current_fragment = fragments[fragment_id]
-            if any(item.numel() != current_fragment.numel() for item in tensors):
-                raise ValueError("selected proposal tensor size differs from current fragment")
-            weights = normalized_weights(
-                {
-                    entry.proposal_id: entry.manifest.target_tokens_since_base
+            plan = build_fragment_plan(
+                (
+                    PlanningCandidate(
+                        proposal_id=entry.proposal_id,
+                        learner_id=entry.manifest.learner_id,
+                        sequence=entry.manifest.sequence,
+                        fragment_id=entry.manifest.fragment_id,
+                        target_tokens=entry.manifest.target_tokens_since_base,
+                        base_fragment_version=entry.manifest.base_fragment_version,
+                        payload_sha256=entry.manifest.payload_sha256,
+                    )
                     for entry in selected
-                },
-                staleness={
-                    entry.proposal_id: view.fragments[fragment_id].version
-                    - entry.manifest.base_fragment_version
-                    for entry in selected
-                },
-                config=log.spec.weighting_config,
+                ),
+                fragment_id=fragment_id,
+                current_fragment_version=view.fragments[fragment_id].version,
+                parent_commit_id=view.commit_id,
+                parent_commit_seq=view.commit_seq,
+                parent_frontier_digest=view.frontier_sha256,
+                quorum_max=len(selected),
+                weighting_config=log.spec.weighting_config,
             )
-            ordered_weights = [weights[entry.proposal_id] for entry in selected]
-            aggregate = tensors[0].mul(ordered_weights[0])
-            for tensor, weight in zip(tensors[1:], ordered_weights[1:]):
-                aggregate = aggregate.add(tensor, alpha=weight)
+            aggregate = reduce_fragment(
+                plan=plan,
+                proposal_tensors=tensors,
+                current_params=current_fragment,
+            )
             aggregation_done = time.monotonic()
             logger.event(
                 "transaction_stage_completed",
@@ -845,13 +860,15 @@ def run_syncer(
                 target_commit_seq=view.commit_seq + 1,
                 seconds=aggregation_done - proposal_observation_done,
             )
-            gradient = current_fragment - aggregate
-            new_fragment, new_state = outer_optimizer_step(
-                current_fragment,
-                gradient,
-                states[fragment_id],
-                config.outer_optimizer,
+            computation = apply_outer_transition(
+                aggregate=aggregate,
+                current_params=current_fragment,
+                current_outer_state=states[fragment_id],
+                optimizer_config=config.outer_optimizer,
+                optimizer_implementation_digest=optimizer_impl_digest,
             )
+            new_fragment = computation.new_params
+            new_state = dict(computation.new_outer_state)
             outer_done = time.monotonic()
             logger.event(
                 "transaction_stage_completed",
@@ -859,32 +876,23 @@ def run_syncer(
                 target_commit_seq=view.commit_seq + 1,
                 seconds=outer_done - aggregation_done,
             )
-            aggregate_digest = canonical_digest(
-                {
-                    "proposal_ids": [entry.proposal_id for entry in selected],
-                    "payload_sha256": [entry.manifest.payload_sha256 for entry in selected],
-                    "weights": [weights[entry.proposal_id].hex() for entry in selected],
-                }
+            attempt = build_transition_attempt(
+                plan=plan,
+                computation=computation,
+                owner_id=owner_id,
+                owner_session_id=owner_session_id,
+                fencing_epoch=view.fencing_epoch,
+                outer_optimizer_impl_digest=optimizer_impl_digest,
             )
             prepare_start = time.monotonic()
             prepared = log.prepare_transition(
-                fragment_id=fragment_id,
-                selected_proposal_ids=[entry.proposal_id for entry in selected],
-                new_params=encode_production_params(new_fragment),
-                new_outer_state=encode_production_outer_state(new_state),
-                aggregate_digest=aggregate_digest,
-                outer_optimizer_impl_digest=optimizer_impl_digest,
-                request_id="optimizer-" + canonical_digest(
-                    {
-                        "owner_id": owner_id,
-                        "owner_session_id": owner_session_id,
-                        "fencing_epoch": view.fencing_epoch,
-                        "parent_commit_id": view.commit_id,
-                        "selected_proposal_ids": [
-                            entry.proposal_id for entry in selected
-                        ],
-                    }
-                ),
+                fragment_id=attempt.fragment_id,
+                selected_proposal_ids=attempt.selected_proposal_ids,
+                new_params=attempt.new_params,
+                new_outer_state=attempt.new_outer_state,
+                aggregate_digest=attempt.aggregate_digest,
+                outer_optimizer_impl_digest=attempt.outer_optimizer_impl_digest,
+                request_id=attempt.request_id,
             )
             prepare_done = time.monotonic()
             logger.event(

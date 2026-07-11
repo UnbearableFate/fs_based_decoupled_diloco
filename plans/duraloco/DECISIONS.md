@@ -566,3 +566,75 @@ P05+ 的规范性路线决策生效。
 - Rejected: `null` creates an alternate canonical spelling; loose cross-session links obscure recovery.
 - Compatibility: preserves Protocol-v2 canonical omission.
 - Reversibility: none within the current protocol generation.
+
+## D-06A01 — One-way syncer kernel dependency boundary
+
+- Context: P06A must expose reusable data-plane computation without creating a second selector, optimizer, or transaction state machine.
+- Candidates: copy the central syncer into a new executor; wrap the whole syncer; move validated metadata planning, ordered reduction, the existing outer step, and transition-attempt construction behind pure typed functions.
+- Choice: `syncer_core` receives only validated immutable inputs. `ProposalCatalog.select` delegates to its one oldest-first selection kernel, aggregation calls the existing `outer_optim.outer_optimizer_step`, and authority remains exclusively in `ProductionTransactionalLog.prepare_transition/commit_prepared`. Orchestration depends on kernels; kernels never depend on orchestration, storage listing, leases, clocks, or process identity.
+- Rejected: code copying creates semantic drift; a whole-syncer wrapper does not establish a prepare-only boundary.
+- Compatibility: the CRS keeps its public CLI and exact request/aggregate identities.
+- Reversibility: module names may change, but the one-way dependency and single executable semantic path may not be weakened.
+
+## D-06A02 — Byte, paired-state semantic, and numeric evidence are distinct
+
+- Context: one generic semantic hash can conceal whether equality concerns exact object bytes, the parameter/outer-state pair, or a tolerance comparison.
+- Candidates: one digest; tensor digest only; three explicit evidence types.
+- Choice: SHA-256 identifies exact encoded bytes; a paired-state semantic digest binds parameter bytes, outer-state bytes, and optimizer implementation; a numeric comparison report separately records both content digests, backend identities, tolerances, maximum errors, and verdict.
+- Rejected: one digest cannot honestly represent cross-backend numeric equivalence.
+- Compatibility: production object refs remain byte-addressed and existing transition identities are unchanged.
+- Reversibility: evidence schemas may be extended through new versions, not reinterpreted.
+
+## D-06A03 — Same-backend exactness and cross-backend tolerance
+
+- Context: the archive CRS is GPU-oriented while the planned LFE defaults to CPU.
+- Candidates: require universal bitwise equality; allow unspecified approximate equality; scope equality by execution backend identity.
+- Choice: the same FWO executed with the same device/backend, Torch/BLAS identity, dtype, thread count, and reduction order must have exact content identity. CPU/GPU comparisons retain both content digests and use pre-registered `atol`/`rtol`; they never claim content identity.
+- Rejected: cross-device universal bitwise equality is not credible; unspecified approximation is unauditable.
+- Compatibility: P06A CRS differential evidence uses a matched backend and exact bytes.
+- Reversibility: another backend requires a new implementation identity and comparison evidence.
+
+## D-06A04 — Grace and cutoff facts stop at orchestration
+
+- Context: grace windows use a monotonic clock, but planning must be replayable without time.
+- Candidates: let the kernel read time; commit wall-clock timestamps; have orchestration produce the validated candidate snapshot and explicit parent/planning facts.
+- Choice: the CRS orchestration alone waits/scans until its cutoff, then passes validated candidate metadata, parent/frontier facts, current fragment version, quorum bound, and weighting identity to the pure planner. Directory order and the clock never enter kernel semantics.
+- Rejected: kernel clock reads are unreplayable; identity-bearing observational timestamps add nondeterminism.
+- Compatibility: the existing grace behavior and canonical post-cutoff selection remain unchanged.
+- Reversibility: future committed cutoff policies may add explicit replayable fields.
+
+## D-06A05 — Pure transition attempt, existing authoritative adapter
+
+- Context: future LFEs need to construct results without receiving commit authority.
+- Candidates: pass a production log into the kernel; implement another commit adapter; return immutable bytes and identity fields to the existing log.
+- Choice: `build_transition_attempt` returns the exact selected IDs, encoded parameter/state bytes, aggregate digest, implementation digest, and stable request ID. Only the CRS authoritative orchestration passes those fields to the existing production log and calls commit.
+- Rejected: giving a kernel/log wrapper head access collapses the capability boundary; a second adapter duplicates recovery semantics.
+- Compatibility: request identity and the one head-CAS linearization point are byte-for-byte preserved.
+- Reversibility: distributed final-transition schemas may wrap this input in a new generation, but cannot bypass the production log authority.
+
+## D-06A06 — Strict inactive FWO/PFT v1 schemas
+
+- Context: P06B needs protocol identities frozen before they become active, without changing the P06 generation.
+- Candidates: loose dictionaries; add fields directly to P06; strict inactive versioned objects.
+- Choice: FWO v1 strictly binds parent, fragment, committed fencing/membership/ownership facts, canonical selected proposals and hex weights, and policy/backend/layout identities. Prepared output separates a canonical result from executor/session/attempt evidence. Unknown fields, explicit nulls, noncanonical weights, and same-ID conflicting content fail closed.
+- Rejected: loose or in-place schemas permit identity drift and invalidate the archived generation.
+- Compatibility: these objects are offline/inactive throughout P06A and cannot be adopted or committed by P06 readers.
+- Reversibility: activation or field changes require the P06B distributed run generation or a later schema version.
+
+## D-06A07 — CRS retention and deprecation gate
+
+- Context: decomposition must not prematurely remove the verified reference and fallback path.
+- Candidates: delete CRS in P06A; retain indefinitely as an implicit writer; retain as the sole P06A committer and later read-only oracle/fallback.
+- Choice: the dedicated CRS remains the only P06A production committer. P06B removes its write capability from distributed generations but retains offline/shadow reference and explicit fallback. Deletion is ineligible before P06C and subsequent acceptance evidence establishes a replacement lifecycle.
+- Rejected: early deletion loses the oracle; implicit concurrent CRS writes create a second authority.
+- Compatibility: C1/C2/C9 topology and public CLI remain available.
+- Reversibility: later removal needs its own acceptance and rollback plan.
+
+## D-06A08 — Capability audit scope
+
+- Context: same-account Miyabi processes cannot be treated as a Byzantine OS sandbox, but accidental authority wiring must fail visibly.
+- Candidates: source grep only; runtime object inspection only; combined import/call audit and restricted-facade test.
+- Choice: static AST audit forbids pure/executor modules from storage, coordination, clock, listing, and head-CAS dependencies. Runtime tests construct a facade exposing only prefix-scoped immutable get/put and prove head/control paths plus mutation/listing methods are absent or denied.
+- Rejected: either static or runtime evidence alone misses dynamic construction or unused imports.
+- Compatibility: the claim is explicitly software least authority under the crash/omission model, not malicious same-user isolation.
+- Reversibility: stronger process/credential isolation may be added without weakening this baseline.

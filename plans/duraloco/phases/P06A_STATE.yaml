@@ -1,0 +1,13 @@
+phase: P06A
+status: in_progress
+planning_basis_commit: 06e3ca2299d5eb1a720c1d8f9107af5223095525
+feature_branch: codex/duraloco-p06a-syncer-kernel
+current_loop: 1
+current_goal: "archive characterization and decomposed-kernel exactness"
+checks:
+  login_static: in_progress
+  c1: not_run
+  c2: not_run
+  c9: not_run
+checker_verdict: not_run
+next_action: "run the focused P06A suite on one Miyabi compute node"

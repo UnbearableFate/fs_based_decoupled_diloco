@@ -159,7 +159,19 @@ def _phase_state(phase: str, acceptance_count: int, *, status: str) -> dict:
         }
         for number in range(1, acceptance_count + 1)
     }
-    if phase in {"P05", "P06", "P07", "P08", "P09", "P10", "P11", "P12"}:
+    if phase in {
+        "P05",
+        "P06",
+        "P06A",
+        "P06B",
+        "P06C",
+        "P07",
+        "P08",
+        "P09",
+        "P10",
+        "P11",
+        "P12",
+    }:
         payload["last_terminal_failure_review"] = None
         payload["terminal_retry_authorized"] = False
         payload["terminal_retry_qualification"] = {
@@ -169,7 +181,14 @@ def _phase_state(phase: str, acceptance_count: int, *, status: str) -> dict:
         }
     if status == "completed":
         payload["last_verified_commit"] = "d" * 40
-        payload["checks"] = {"miyabi_9node": "miyabi_9node_pass"}
+        terminal_checks = {
+            "P06A": {"miyabi_c9": "miyabi_c9_pass"},
+            "P06B": {"miyabi_d8": "miyabi_d8_pass"},
+            "P06C": {"miyabi_d8_r2": "miyabi_d8_r2_pass"},
+        }
+        payload["checks"] = terminal_checks.get(
+            phase, {"miyabi_9node": "miyabi_9node_pass"}
+        )
         payload["checker_report"] = "checker.md"
     return payload
 
@@ -180,13 +199,28 @@ def test_updated_acceptance_counts_and_dependency_graph(tmp_path):
     p05 = _phase_state("P05", 20, status="planned")
     assert _run(tmp_path, p05, previous=m00).returncode == 0
 
-    p07 = _phase_state("P07", 19, status="completed")
-    p08 = _phase_state("P08", 16, status="completed")
+    p06 = _phase_state("P06", 20, status="completed")
+    p06a = _phase_state("P06A", 20, status="planned")
+    assert _run(tmp_path, p06a, previous=p06).returncode == 0
+    p06a_completed = _phase_state("P06A", 20, status="completed")
+    p06b = _phase_state("P06B", 23, status="planned")
+    assert _run(tmp_path, p06b, previous=p06a_completed).returncode == 0
+    p06b_completed = _phase_state("P06B", 23, status="completed")
+    p06c = _phase_state("P06C", 24, status="planned")
+    assert _run(tmp_path, p06c, previous=p06b_completed).returncode == 0
+
+    p06c_completed = _phase_state("P06C", 24, status="completed")
+    p07 = _phase_state("P07", 19, status="planned")
+    assert _run(tmp_path, p07, previous=p06c_completed).returncode == 0
+    p07_completed = _phase_state("P07", 19, status="completed")
+    p08 = _phase_state("P08", 16, status="planned")
+    assert _run(tmp_path, p08, previous=p07_completed).returncode == 0
+    p08_completed = _phase_state("P08", 16, status="completed")
     p10 = _phase_state("P10", 17, status="planned")
-    assert _run(tmp_path, p10, previous=[p07, p08]).returncode == 0
-    missing_dependency = _run(tmp_path, p10, previous=p08)
+    assert _run(tmp_path, p10, previous=p08_completed).returncode == 0
+    missing_dependency = _run(tmp_path, p10, previous=p07_completed)
     assert missing_dependency.returncode != 0
-    assert "P07" in missing_dependency.stderr
+    assert "P08" in missing_dependency.stderr
 
     p12 = _phase_state("P12", 20, status="completed")
     p09 = _phase_state("P09", 16, status="planned")

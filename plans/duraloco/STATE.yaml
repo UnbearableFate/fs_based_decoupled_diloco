@@ -1,74 +1,59 @@
-phase: P06
-status: completed
-planning_basis_branch: codex/duraloco-p05-syncer-failover
-planning_basis_commit: 82dbec10e1a738cfaa88212698e7e8cf5a0f7ae1
-actual_base_branch: codex/duraloco-p05-syncer-failover
-actual_base_commit: 419577899a64a12cc602870d059a092f9319bed1
-feature_branch: codex/duraloco-p06-learner-protocol
-current_loop: 4
-current_goal: "P06 completed; hand off the verified archive baseline to P06A syncer characterization and decomposition"
+phase: P06A
+status: in_progress
+planning_basis_branch: codex/duraloco-p06-learner-protocol
+planning_basis_commit: 06e3ca2299d5eb1a720c1d8f9107af5223095525
+verified_dependency_implementation: 2581a4d6286c7d0666f76aa3cc9d8122e66f6d25
+verified_dependency_checker_commit: 030129e045c4e5a2abb80eb100a0e28fb78d384d
+actual_base_branch: codex/duraloco-p06-learner-protocol
+actual_base_commit: 06e3ca2299d5eb1a720c1d8f9107af5223095525
+feature_branch: codex/duraloco-p06a-syncer-kernel
+plan_handoff_commit: c4b34d961b7d3a82ece4f16324cf6a69c7b2f5b7
+current_loop: 1
+current_goal: "generate the archive characterization trace and prove the decomposed CRS kernels are exact"
 attempts_for_current_failure: 0
-last_terminal_failure_review: plans/duraloco/reviews/P06_TERMINAL_WRAPPER_FAILURE_REVIEW.md
-terminal_retry_authorized: true
+last_terminal_failure_review: null
+terminal_retry_authorized: false
 terminal_retry_qualification:
-  targeted_1node_benchmark: artifacts/duraloco/P06/20260711_p06_repair_2581a4d_targeted1/manifest.json
-  miyabi_1node: artifacts/duraloco/P06/20260711_p06_repair_2581a4d_1node/manifest.json
-  miyabi_2node: artifacts/duraloco/P06/20260711_p06_repair_2581a4d_2node/manifest.json
-last_verified_commit: 2581a4d6286c7d0666f76aa3cc9d8122e66f6d25
+  targeted_1node_benchmark: null
+  miyabi_1node: null
+  miyabi_2node: null
+last_verified_commit: null
 checks:
-  local_static: static_pass
-  local_runtime: unit_pass
-  miyabi_login_static: static_pass
-  miyabi_1node: miyabi_1node_pass
-  miyabi_2node: miyabi_2node_pass
-  miyabi_9node: miyabi_9node_pass
+  local_static: not_run
+  local_runtime: not_run
+  miyabi_login_static: not_run
+  miyabi_c1: not_run
+  miyabi_c2: not_run
+  miyabi_c9: not_run
 acceptance:
-  P06-A01: {result: pass, evidence: [tests/learner_protocol/test_interval_session_adoption.py]}
-  P06-A02: {result: pass, evidence: [tests/learner_protocol/test_interval_session_adoption.py, fs_diloco/learner_protocol/session.py]}
-  P06-A03: {result: pass, evidence: [tests/learner_protocol/test_publication_recovery.py]}
-  P06-A04: {result: pass, evidence: [fs_diloco/learner_protocol/adoption.py, tests/learner_protocol/test_runtime_integration_contract.py]}
-  P06-A05: {result: pass, evidence: [fs_diloco/learner_protocol/adoption.py, configs/duraloco_milestone_gpt2_9node_50x10.yaml]}
-  P06-A06: {result: pass, evidence: [artifacts/duraloco/P06/20260711_p06_repair_2581a4d_2node/two_node_report.json]}
-  P06-A07: {result: pass, evidence: [fs_diloco/learner_protocol/recovery.py, artifacts/duraloco/P06/20260711_p06_repair_2581a4d_2node/two_node_report.json]}
-  P06-A08: {result: pass, evidence: [tests/reference/test_reference_outer_optim.py, tests/test_fragment_merge.py]}
-  P06-A09: {result: pass, evidence: [artifacts/duraloco/P06/20260711_p06_repair_2581a4d_1node/one_node_report.json]}
-  P06-A10: {result: pass, evidence: [artifacts/duraloco/P06/20260711_p06_repair_2581a4d_2node/manifest.json]}
-  P06-A11: {result: pass, evidence: [tests/learner_protocol/test_runtime_integration_contract.py, tests/test_removed_config_keys.py]}
-  P06-A12: {result: pass, evidence: [tests/learner_protocol/test_publication_recovery.py]}
-  P06-A13: {result: pass, evidence: [tests/learner_protocol/test_interval_session_adoption.py]}
-  P06-A14: {result: pass, evidence: [artifacts/duraloco/P06/20260711_p06_repair_2581a4d_1node/manifest.json, artifacts/duraloco/P06/20260711_p06_repair_2581a4d_2node/manifest.json]}
-  P06-A15: {result: pass, evidence: [artifacts/duraloco/P06/20260711_p06_repair_2581a4d_1node/forbidden_surface.json, fs_diloco/learner_protocol/recovery.py]}
-  P06-A16: {result: pass, evidence: [artifacts/duraloco/P06/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1/terminal_gate_report.json]}
-  P06-A17: {result: pass, evidence: [tests/learner_protocol/test_runtime_integration_contract.py, tests/log/test_milestone_gate_contract.py]}
-  P06-A18: {result: pass, evidence: [tests/learner_protocol/test_publication_recovery.py, tests/learner_protocol/test_runtime_integration_contract.py]}
-  P06-A19: {result: pass, evidence: [tests/learner_protocol/test_publication_recovery.py, tests/protocol/test_validation_matrix.py]}
-  P06-A20: {result: pass, evidence: [artifacts/duraloco/P06/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1/terminal_gate_report.json, tests/learner_protocol/test_runtime_integration_contract.py]}
+  P06A-A01: {result: not_run, evidence: [scripts/agent/create_p06a_characterization.py]}
+  P06A-A02: {result: not_run, evidence: [fs_diloco/syncer_core/planning.py, tests/syncer_decomposition/test_kernel_purity.py]}
+  P06A-A03: {result: not_run, evidence: [fs_diloco/syncer_core/aggregation.py, tests/syncer_decomposition/test_old_new_differential.py]}
+  P06A-A04: {result: not_run, evidence: [tests/syncer_decomposition/test_old_new_differential.py]}
+  P06A-A05: {result: not_run, evidence: [plans/duraloco/DECISIONS.md, fs_diloco/syncer_core/semantic_digest.py]}
+  P06A-A06: {result: not_run, evidence: [fs_diloco/syncer.py]}
+  P06A-A07: {result: not_run, evidence: [fs_diloco/syncer_core/transaction_attempt.py, fs_diloco/log/production.py]}
+  P06A-A08: {result: not_run, evidence: [tests/syncer_decomposition/test_kernel_purity.py]}
+  P06A-A09: {result: not_run, evidence: [fs_diloco/syncer_core/capabilities.py, tests/syncer_decomposition/test_capability_surface.py]}
+  P06A-A10: {result: not_run, evidence: [fs_diloco/protocol/work_order_v1.py, fs_diloco/protocol/prepared_transition_v1.py, tests/syncer_decomposition/test_fwo_pft_schema.py]}
+  P06A-A11: {result: not_run, evidence: [tests/coordination]}
+  P06A-A12: {result: not_run, evidence: []}
+  P06A-A13: {result: not_run, evidence: []}
+  P06A-A14: {result: not_run, evidence: []}
+  P06A-A15: {result: not_run, evidence: [tests/syncer_decomposition/test_old_new_differential.py]}
+  P06A-A16: {result: not_run, evidence: [tests/log/test_production_runtime.py]}
+  P06A-A17: {result: not_run, evidence: [tests/test_removed_config_keys.py]}
+  P06A-A18: {result: not_run, evidence: [tests/syncer_decomposition/test_capability_surface.py]}
+  P06A-A19: {result: not_run, evidence: []}
+  P06A-A20: {result: not_run, evidence: []}
 open_decisions: []
 open_blockers: []
 artifacts:
-  - plans/duraloco/phases/P06_DRIFT_REPORT.md
-  - artifacts/duraloco/P06/20260711_p06_red_0f88501_1node
-  - artifacts/duraloco/P06/20260711_p06_green_7f9029a_1node
-  - artifacts/duraloco/P06/20260711_p06_runtime_5d5b946_1node
-  - artifacts/duraloco/P06/20260711_p06_impl_d3a2b9d_1node
-  - artifacts/duraloco/P06/20260711_p06_impl_911ed8b_1node
-  - artifacts/duraloco/P06/20260711_p06_impl_cdb3f27_1node
-  - artifacts/duraloco/P06/20260711_p06_impl_cdb3f27_2node
-  - artifacts/duraloco/P06/20260711_p06_impl_ed4e604_1node
-  - artifacts/duraloco/P06/20260711_p06_impl_2e2110a_1node
-  - artifacts/duraloco/P06/20260711_p06_impl_2e2110a_2node
-  - artifacts/duraloco/P06/20260711_p06_impl_696babe_1node
-  - artifacts/duraloco/P06/20260711_p06_impl_696babe_2node
-  - artifacts/duraloco/P06/20260711_p06_impl_696babe_gpt2_9n_50x10
-  - plans/duraloco/reviews/P06_TERMINAL_WRAPPER_FAILURE_REVIEW.md
-  - artifacts/duraloco/P06/20260711_p06_repair_2581a4d_targeted1
-  - artifacts/duraloco/P06/20260711_p06_repair_2581a4d_1node
-  - artifacts/duraloco/P06/20260711_p06_repair_2581a4d_2node
-  - artifacts/duraloco/P06/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1
+  - plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/CURRENT_REPOSITORY_ALIGNMENT_REVIEW.md
   - plans/duraloco/phases/P06_PHASE_REPORT.md
   - artifacts/duraloco/P06/20260711_p06_checker_030129e_1node
-next_action: "start P06A from archive commit 06e3ca2 using the verified P06 evidence baseline"
+next_action: "commit the P06A RED/GREEN slice, run it on a one-node compute allocation, and persist the characterization bundle"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
-checker_report: artifacts/duraloco/P06/20260711_p06_checker_030129e_1node/checker_report.md
+checker_report: null

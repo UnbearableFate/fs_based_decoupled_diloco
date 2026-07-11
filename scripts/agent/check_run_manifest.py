@@ -66,7 +66,19 @@ TERMINATION_KINDS = {
     "unknown",
 }
 QUALIFICATION_FIELDS = {"targeted_1node_benchmark", "miyabi_1node", "miyabi_2node"}
-V2_PHASES = {"P05", "P06", "P07", "P08", "P09", "P10", "P11", "P12"}
+V2_PHASES = {
+    "P05",
+    "P06",
+    "P06A",
+    "P06B",
+    "P06C",
+    "P07",
+    "P08",
+    "P09",
+    "P10",
+    "P11",
+    "P12",
+}
 
 
 class ManifestError(RuntimeError):

@@ -18,6 +18,7 @@ from fs_diloco.protocol.schemas import ProposalManifest
 from fs_diloco.protocol.validation import ValidationContext, validate_causal, validate_metadata
 
 from .runtime_view import RuntimeView
+from .syncer_core.planning import PlanningCandidate, select_candidate_ids
 from .log.production_codec import (
     ValidatedProductionPayload,
     validate_production_tensor_payload,
@@ -317,16 +318,25 @@ class ProposalCatalog:
         fragment_id: int,
         quorum_max: int,
     ) -> tuple[CatalogEntry, ...]:
-        by_learner: dict[str, CatalogEntry] = {}
-        for entry in entries:
-            if entry.manifest.fragment_id != fragment_id:
-                continue
-            current = by_learner.get(entry.manifest.learner_id)
-            key = (entry.manifest.sequence, entry.proposal_id)
-            if current is None or key < (current.manifest.sequence, current.proposal_id):
-                by_learner[entry.manifest.learner_id] = entry
-        selected = sorted(by_learner.values(), key=lambda item: item.proposal_id)
-        return tuple(selected[:quorum_max])
+        materialized = tuple(entries)
+        by_id = {entry.proposal_id: entry for entry in materialized}
+        selected_ids = select_candidate_ids(
+            (
+                PlanningCandidate(
+                    proposal_id=entry.proposal_id,
+                    learner_id=entry.manifest.learner_id,
+                    sequence=entry.manifest.sequence,
+                    fragment_id=entry.manifest.fragment_id,
+                    target_tokens=entry.manifest.target_tokens_since_base,
+                    base_fragment_version=entry.manifest.base_fragment_version,
+                    payload_sha256=entry.manifest.payload_sha256,
+                )
+                for entry in materialized
+            ),
+            fragment_id=fragment_id,
+            quorum_max=quorum_max,
+        )
+        return tuple(by_id[proposal_id] for proposal_id in selected_ids)
 
     @staticmethod
     def load_payload(entry: CatalogEntry) -> bytes:

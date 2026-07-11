@@ -40,6 +40,15 @@ CHECK_VALUES = {
     "miyabi_1node_pass",
     "miyabi_2node_pass",
     "miyabi_9node_pass",
+    "miyabi_c1_pass",
+    "miyabi_c2_pass",
+    "miyabi_c9_pass",
+    "miyabi_d1_pass",
+    "miyabi_d2_pass",
+    "miyabi_d8_pass",
+    "miyabi_d1_r2_pass",
+    "miyabi_d2_r2_pass",
+    "miyabi_d8_r2_pass",
     "skipped_not_required",
     "failed",
     "blocked",
@@ -53,6 +62,9 @@ ACCEPTANCE_COUNTS = {
     "P04": 9,
     "P05": 20,
     "P06": 20,
+    "P06A": 20,
+    "P06B": 23,
+    "P06C": 24,
     "P07": 19,
     "P08": 16,
     "P09": 16,
@@ -105,6 +117,9 @@ PHASE_ORDER = (
     "M00",
     "P05",
     "P06",
+    "P06A",
+    "P06B",
+    "P06C",
     "P07",
     "P08",
     "P10",
@@ -121,14 +136,29 @@ PHASE_DEPENDENCIES = {
     "M00": {"P04"},
     "P05": {"M00"},
     "P06": {"P05"},
-    "P07": {"P06"},
-    "P08": {"P06"},
-    "P10": {"P07", "P08"},
+    "P06A": {"P06"},
+    "P06B": {"P06A"},
+    "P06C": {"P06B"},
+    "P07": {"P06C"},
+    "P08": {"P07"},
+    "P10": {"P08"},
     "P11": {"P10"},
     "P12": {"P11"},
     "P09": {"P12"},
 }
-TERMINAL_RETRY_PHASES = {"P05", "P06", "P07", "P08", "P09", "P10", "P11", "P12"}
+TERMINAL_RETRY_PHASES = {
+    "P05",
+    "P06",
+    "P06A",
+    "P06B",
+    "P06C",
+    "P07",
+    "P08",
+    "P09",
+    "P10",
+    "P11",
+    "P12",
+}
 
 
 def _phase_rank(value: Any) -> int:
@@ -267,9 +297,20 @@ def validate(payload: dict[str, Any], *, root: Path) -> None:
             raise StateError("completed phase cannot have open blockers")
         if any(value in {"not_run", "failed", "blocked"} for value in checks.values()):
             raise StateError("completed phase contains an unresolved check status")
-        requires_9node = _phase_rank(payload["phase"]) >= _phase_rank("P04")
-        if requires_9node and checks.get("miyabi_9node") != "miyabi_9node_pass":
-            raise StateError("P04+ completion requires the terminal Miyabi 9-node GPT-2 gate")
+        terminal_checks = {
+            "P06A": ("miyabi_c9", "miyabi_c9_pass"),
+            "P06B": ("miyabi_d8", "miyabi_d8_pass"),
+            "P06C": ("miyabi_d8_r2", "miyabi_d8_r2_pass"),
+        }
+        terminal_key, terminal_value = terminal_checks.get(
+            payload["phase"], ("miyabi_9node", "miyabi_9node_pass")
+        )
+        requires_terminal = _phase_rank(payload["phase"]) >= _phase_rank("P04")
+        if requires_terminal and checks.get(terminal_key) != terminal_value:
+            raise StateError(
+                f"{payload['phase']} completion requires terminal check "
+                f"{terminal_key}={terminal_value}"
+            )
     if payload["requires_human_approval"] and not payload["approval_reason"]:
         raise StateError("requires_human_approval needs approval_reason")
 

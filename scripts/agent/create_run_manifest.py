@@ -100,7 +100,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    v2_phases = {"P05", "P06", "P07", "P08", "P09", "P10", "P11", "P12"}
+    v2_phases = {
+        "P05",
+        "P06",
+        "P06A",
+        "P06B",
+        "P06C",
+        "P07",
+        "P08",
+        "P09",
+        "P10",
+        "P11",
+        "P12",
+    }
     schema_version = args.schema_version
     if schema_version is None:
         schema_version = 2 if args.phase in v2_phases else 1
