@@ -13,8 +13,8 @@ checks:
   local_static: static_pass
   local_runtime: contract_pass
   miyabi_login_static: static_pass
-  miyabi_1node: failed
-  miyabi_2node: not_run
+  miyabi_1node: miyabi_1node_pass
+  miyabi_2node: miyabi_2node_pass
   miyabi_9node: failed
 acceptance:
   M00-A01: {result: not_run, evidence: []}
@@ -26,7 +26,7 @@ acceptance:
   M00-A07: {result: not_run, evidence: []}
   M00-A08: {result: not_run, evidence: []}
   M00-A09:
-    result: fail
+    result: pass
     evidence:
       - artifacts/duraloco/M00/20260711_m00_97a6876_1node/manifest.json
       - artifacts/duraloco/M00/20260711_m00_97a6876_1node/one_node_contract.json
@@ -34,6 +34,7 @@ acceptance:
       - artifacts/duraloco/M00/20260711_m00_97a6876_1node/20260711_m00_97a6876_1node-fragment_after_recovery.json
       - artifacts/duraloco/M00/20260711_m00_1bd8e10_1node_requal/manifest.json
       - artifacts/duraloco/M00/20260711_m00_1bd8e10_1node_requal/junit.xml
+      - artifacts/duraloco/M00/20260711_m00_680126a_1node_requal/manifest.json
   M00-A10:
     result: pass
     evidence:
@@ -60,6 +61,8 @@ acceptance:
       - artifacts/duraloco/M00/20260711_m00_1056f0d_gpt2_9n_50x10/manifest.json
       - artifacts/duraloco/M00/20260711_m00_1056f0d_gpt2_9n_50x10/training.log
       - artifacts/duraloco/M00/20260711_m00_1056f0d_payload_benchmark/report.json
+      - artifacts/duraloco/M00/20260711_m00_680126a_gpt2_9n_50x10/manifest.json
+      - artifacts/duraloco/M00/20260711_m00_680126a_gpt2_9n_50x10/qstat_final.log
   M00-A12: {result: not_run, evidence: []}
 open_decisions: []
 open_blockers: []
@@ -88,7 +91,11 @@ artifacts:
   - artifacts/duraloco/M00/20260711_m00_1056f0d_gpt2_9n_50x10
   - artifacts/duraloco/M00/20260711_m00_1056f0d_payload_benchmark
   - artifacts/duraloco/M00/20260711_m00_1bd8e10_1node_requal
-next_action: "rerun the ladder after remapping the authority test to permit learner immutable proposal objects but forbid learner head CAS"
+  - artifacts/duraloco/M00/20260711_m00_680126a_1node_requal
+  - artifacts/duraloco/M00/20260711_m00_680126a_2node_requal
+  - artifacts/duraloco/M00/20260711_m00_680126a_gpt2_9n_50x10
+  - plans/duraloco/reviews/M00_PRODUCTION_REPLAY_WORKFLOW_REVIEW.md
+next_action: "pause submissions; review the full production replay workflow, replace scalar production replay validation, and design bounded incremental verification before any further qsub"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

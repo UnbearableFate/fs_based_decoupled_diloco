@@ -281,6 +281,36 @@ two-node and nine-node compute qualification remain in progress.
   and `junit.xml`.
 - Repair: assert immutable proposal publication is present while explicitly
   forbidding learner head-CAS surfaces.
+
+#### Nine-node attempt 8 — `20260711_m00_680126a_gpt2_9n_50x10`
+
+- Time/identity: PBS `2359220.opbs`, nine compute hosts led by `mg0913`,
+  implementation `680126a1459d72f35efd0a2612c94298a96ab0f9`. The same clean commit
+  passed jobs `2359218.opbs` (one node) and `2359219.opbs` (two nodes).
+- Phenomenon: all eight learners published their immutable bfloat16 proposal
+  objects in parallel before their discovery markers. Filesystem timestamps
+  show proposal objects at seconds 1029–1030, proposal manifests at 1031–1034,
+  new params at 1037, and commit/frontier/outer-state/head at 1038. Thus head
+  CAS sequence 1 completed about eight seconds after the last proposal marker.
+  The process then made no derived-progress log entry before deliberate
+  termination.
+- Expected/actual: the publication path is now fast enough. After CAS,
+  `build_runtime_view` performed a full production replay and called the
+  dependency-free scalar `validate_tensor_payload` on every committed proposal.
+  For each 124-million-element bfloat16 proposal this uses a Python
+  `struct.iter_unpack` loop, reintroducing the exact large-tensor bottleneck
+  outside the catalog path.
+- Reason: confirmed jointly by immutable object mtimes, the sequence-1 head,
+  absence of `transition_committed`, and production replay lines 617–630.
+- Impact: M00-A11 only; sequence 1 is a valid committed prefix and derived
+  exports may be incomplete. The operator terminated the job deliberately
+  (`Exit_status=271`).
+- Evidence: `artifacts/duraloco/M00/20260711_m00_680126a_gpt2_9n_50x10/manifest.json`,
+  `training.log`, `qstat_final.log`, and the retained authority object timeline.
+- Response: no further nine-node submission will be made immediately. The
+  workflow is paused for a full replay-path review: production replay must use
+  the production vectorized validator, and steady-state sync must avoid repeated
+  full-prefix payload verification while restart/checker replay remains strict.
 - Impact: M00-A03, M00-A04, M00-A09, P02-A04, and P04 replay requalification.
 - Evidence: `artifacts/duraloco/M00/20260711_m00_04da7ee_1node/manifest.json`,
   `one_node_contract.json`, full syncer/learner logs, and `stdout.log`.
@@ -544,6 +574,30 @@ generation metadata 与 M00 静态/运行 harness。源码、配置、脚本与�
   与 `junit.xml`。
 - 修复：断言存在 immutable proposal publication，同时显式禁止 learner head-CAS
   surface。
+
+#### 九节点第 8 次尝试 — `20260711_m00_680126a_gpt2_9n_50x10`
+
+- 时间/身份：PBS `2359220.opbs`，以 `mg0913` 为首的九个 compute nodes，实现提交
+  `680126a1459d72f35efd0a2612c94298a96ab0f9`。同一干净提交通过了
+  `2359218.opbs`（单节点）与 `2359219.opbs`（双节点）。
+- 现象：8 个 learner 均在 discovery marker 前并行发布 immutable bfloat16 proposal
+  objects。文件时间线显示 proposal objects 位于 1029–1030 秒、proposal manifests
+  位于 1031–1034 秒、新 params 位于 1037 秒，commit/frontier/outer-state/head 位于
+  1038 秒。因此 sequence 1 的 head CAS 在最后 marker 后约 8 秒即完成；之后在人工
+  终止前没有新的 derived-progress log。
+- 预期/实际：publication path 已足够快。CAS 后，`build_runtime_view` 执行 full
+  production replay，并对每个 committed proposal 调用无依赖标量
+  `validate_tensor_payload`。每个 bfloat16 proposal 约 1.24 亿元素，该函数以 Python
+  `struct.iter_unpack` 循环，再次在 catalog 之外引入同一大 tensor 瓶颈。
+- 原因：immutable object mtime、sequence-1 head、缺失 `transition_committed` 与
+  production replay 第 617–630 行共同证实。
+- 影响：仅 M00-A11；sequence 1 为合法 committed prefix，derived exports 可能不完整。
+  operator 主动终止 job（`Exit_status=271`）。
+- 证据：`artifacts/duraloco/M00/20260711_m00_680126a_gpt2_9n_50x10/manifest.json`、
+  `training.log`、`qstat_final.log` 与保留的 authority object timeline。
+- 响应：不会立即再次提交九节点任务。工作流暂停并进行完整 replay-path review：
+  production replay 必须使用 production 向量化 validator；steady-state sync 不应反复
+  验证完整历史 payload，而 restart/checker replay 仍保持严格。
 
 ### 限制与下一动作
 

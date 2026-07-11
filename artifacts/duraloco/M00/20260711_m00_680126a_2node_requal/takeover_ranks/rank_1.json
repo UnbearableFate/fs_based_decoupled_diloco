@@ -1,0 +1,16 @@
+{
+  "consumed_proposal_ids": [
+    "p-c205baf93b5627fc7b6577d6019231da741550ed056c880452c011efcb83e739",
+    "p-ee3a671b8785853a8b81778cb39cf08b0ef3801f343b37f8238cd75d05367688"
+  ],
+  "double_inclusions": 0,
+  "final_commit_seq": 2,
+  "final_runtime_view_digest": "4d8092cc418c129dd5a8cd879de7a5e7230a6e6319ef37037b017b1e9c72d56f",
+  "hostname": "mg0005",
+  "local_database_files": [],
+  "rank": 1,
+  "recovered_predecessor_digest": "f464ee11e6a210f70715a5c9b58e8303158c576e336647e2d988373914f96c59",
+  "role": "takeover_process",
+  "status": "PASS",
+  "world_size": 2
+}
