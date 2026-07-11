@@ -20,12 +20,13 @@ def _request(
     owner: str = "syncer-a",
     session: str = "session-a",
     now_ns: int = 100,
+    observed_fencing_epoch: int = 0,
 ) -> LeaseRequest:
     return LeaseRequest(
         request_id=request_id,
         owner_id=owner,
         owner_session_id=session,
-        observed_fencing_epoch=0,
+        observed_fencing_epoch=observed_fencing_epoch,
         now_ns=now_ns,
         ttl_ns=50,
     )
@@ -104,6 +105,7 @@ def test_clock_only_affects_takeover_liveness_not_fencing_safety():
             owner="syncer-b",
             session="session-b",
             now_ns=10_000,
+            observed_fencing_epoch=state.fencing_epoch,
         )
     )
     token_b = OwnerToken.from_lease(lease_b)
