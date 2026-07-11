@@ -60,11 +60,15 @@ class AdoptionKernel:
 
     def observe_successor(self, frontier: AuthorityFrontier) -> "AdoptionKernel":
         self._require_nonterminal()
-        if frontier.commit_seq <= self.adopted.commit_seq:
+        if frontier.commit_seq == self.adopted.commit_seq and frontier != self.adopted:
+            raise ValueError("conflicting authority frontiers share one commit sequence")
+        if frontier.commit_seq < self.adopted.commit_seq:
             return self
         if self.phase is AdoptionPhase.READY:
             return replace(self, adopted=frontier, pending=None)
         pending = self.pending
+        if pending is not None and frontier.commit_seq == pending.commit_seq and frontier != pending:
+            raise ValueError("conflicting pending frontiers share one commit sequence")
         if pending is None or frontier.commit_seq > pending.commit_seq:
             pending = frontier
         return replace(self, pending=pending)

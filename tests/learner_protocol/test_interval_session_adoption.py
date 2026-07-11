@@ -92,6 +92,36 @@ def test_adoption_is_deferred_until_boundary_and_digest_is_order_independent():
     )
     assert adopted.state_digest == alternate.state_digest
 
+    forward = (
+        AdoptionKernel.bootstrap(_frontier(1))
+        .begin_interval("interval-b")
+        .observe_successor(_frontier(2))
+        .observe_successor(_frontier(3))
+    )
+    reverse = (
+        AdoptionKernel.bootstrap(_frontier(1))
+        .begin_interval("interval-b")
+        .observe_successor(_frontier(3))
+        .observe_successor(_frontier(2))
+    )
+    assert forward.state_digest == reverse.state_digest
+
+
+def test_conflicting_frontier_at_one_sequence_fails_closed():
+    kernel = AdoptionKernel.bootstrap(_frontier(1)).begin_interval("interval-a")
+    conflict = AuthorityFrontier(
+        commit_id="different",
+        commit_seq=2,
+        frontier_sha256="f" * 64,
+        fragment_versions={0: 2, 1: 2},
+        fencing_epoch=1,
+        owner_id="syncer-a",
+        owner_session_id="owner-a",
+    )
+    observed = kernel.observe_successor(_frontier(2))
+    with pytest.raises(ValueError, match="conflicting"):
+        observed.observe_successor(conflict)
+
 
 def test_stop_and_no_progress_are_terminal_and_have_priority():
     kernel = AdoptionKernel.bootstrap(_frontier(1)).begin_interval("interval-a")

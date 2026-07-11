@@ -75,6 +75,27 @@ def test_after_effect_timeout_retries_by_request_identity():
     assert backend.get(recovered.marker_ref.key) == recovered.marker_bytes
 
 
+@pytest.mark.parametrize("timing", ["before", "after"])
+@pytest.mark.parametrize("occurrence", [1, 2, 3, 4])
+def test_publication_crash_response_loss_matrix_recovers(timing: str, occurrence: int):
+    backend = InMemoryStorageBackend()
+    backend.inject_failure(FailureRule("put_immutable", timing, occurrence=occurrence))
+    layout = LogLayout("run-a", 0)
+    session = LearnerSession.new("run-a", 0, "learner_000", session_id="session-a")
+    publisher = LearnerPublisher(backend, layout)
+    interval = _interval(session)
+    with pytest.raises(Exception):
+        publisher.publish(interval, b"payload", tensor_key="fragment_params", shape=(1,))
+    backend.clear_failures()
+    result = publisher.publish(
+        interval, b"payload", tensor_key="fragment_params", shape=(1,)
+    )
+    markers = backend.list_prefix(layout.learner_publication_prefix)
+    assert [key for key in markers if "/markers/" in key] == [result.marker_ref.key]
+    assert backend.get(result.marker_ref.key) == result.marker_bytes
+    assert not any(record.operation == "conditional_replace" for record in backend.history)
+
+
 def test_request_identity_matrix_and_canonical_optional_omission():
     backend = InMemoryStorageBackend()
     layout = LogLayout("run-a", 0)

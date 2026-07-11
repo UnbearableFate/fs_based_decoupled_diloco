@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
 import json
 
 from fs_diloco.log.layout import LogLayout
+from fs_diloco.protocol.canonical_json import canonical_digest
 
 from .publication import LearnerImmutableBackend
 from .session import LearnerSession
@@ -54,6 +56,22 @@ def recover_learner(
             raise ValueError(f"invalid learner publication marker: {key}") from exc
         if not isinstance(body, dict) or body.get("record_type") != "learner_publication_marker":
             raise ValueError(f"invalid learner publication marker schema: {key}")
+        required = {
+            "record_type",
+            "protocol_version",
+            "request_id",
+            "request_digest",
+            "interval",
+            "interval_digest",
+            "payload_ref",
+            "request_ref",
+            "tensor_key",
+            "shape",
+            "proposal_id",
+        }
+        found = set(body)
+        if found != required and found != required | {"previous_interval_proposal_id"}:
+            raise ValueError(f"learner publication marker fields differ: {key}")
         interval = body.get("interval")
         if not isinstance(interval, dict) or interval.get("learner_id") != learner_id:
             raise ValueError(f"publication marker learner identity mismatch: {key}")
@@ -71,6 +89,44 @@ def recover_learner(
         tokens = int(interval.get("target_tokens", -1))
         if tokens < 1:
             raise ValueError("publication marker target_tokens must be positive")
+        if body.get("interval_digest") != canonical_digest(interval):
+            raise ValueError("publication marker interval digest differs")
+        marker_identity = dict(body)
+        marker_identity.pop("proposal_id")
+        if proposal_id != "proposal-" + canonical_digest(marker_identity):
+            raise ValueError("publication marker proposal identity differs")
+        request_ref = body.get("request_ref")
+        if not isinstance(request_ref, dict) or set(request_ref) != {"key", "size", "sha256"}:
+            raise ValueError("publication marker request ref differs")
+        request_bytes = backend.get(str(request_ref["key"]))
+        if len(request_bytes) != int(request_ref["size"]) or (
+            hashlib.sha256(request_bytes).hexdigest() != request_ref["sha256"]
+        ):
+            raise ValueError("publication request object identity differs")
+        try:
+            request = json.loads(request_bytes)
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError("publication request object is malformed") from exc
+        if not isinstance(request, dict):
+            raise ValueError("publication request object is not a mapping")
+        request_identity = dict(request)
+        for field in ("record_type", "protocol_version", "request_id", "request_digest"):
+            request_identity.pop(field, None)
+        if request.get("request_id") != body.get("request_id") or (
+            request.get("request_digest") != body.get("request_digest")
+        ):
+            raise ValueError("publication request and marker identity differ")
+        if request.get("request_digest") != canonical_digest(request_identity):
+            raise ValueError("publication request digest differs")
+        session_record = LearnerSession(
+            run_id=layout.run_id,
+            run_generation=layout.run_generation,
+            learner_id=learner_id,
+            session_id=identity[0],
+        )
+        session_bytes = backend.get(layout.learner_session_key(learner_id, identity[0]))
+        if session_bytes != session_record.canonical_bytes():
+            raise ValueError("learner session record differs from publication marker")
         published += 1
         if proposal_id in committed_proposal_ids:
             committed += 1

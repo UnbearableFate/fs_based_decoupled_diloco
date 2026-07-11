@@ -32,7 +32,11 @@ from .hf_data import Batch, build_batch_iterator
 from .hf_model import choose_device, load_causal_lm_and_tokenizer
 from .logging_utils import JsonlLogger, log_uncaught_exception
 from .log.layout import LogLayout
-from .learner_protocol.adoption import OptimizerAdoptionPolicy, optimizer_reset_targets
+from .learner_protocol.adoption import (
+    AdoptionKernel,
+    OptimizerAdoptionPolicy,
+    optimizer_reset_targets,
+)
 from .learner_protocol.data_cursor import DataCursor
 from .learner_protocol.interval import AuthorityFrontier, ContributionInterval
 from .learner_protocol.publication import LearnerPublisher, PublicationResult
@@ -664,6 +668,9 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
                 rng_cursor=RngCursor(config.training.seed + learner_index, local_step),
                 transport_dtype=config.io.tensor_dtype,
             )
+            adoption_kernel = AdoptionKernel.bootstrap(interval.base).begin_interval(
+                f"{learner_session.session_id}:{interval.sequence}:{fragment_id}"
+            )
             losses: list[float] = []
             interval_tokens = 0
             interval_examples = 0
@@ -715,6 +722,9 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
                 if config.learner.poll_latest_during_inner_steps:
                     maybe_latest = read_fragment_latest_if_newer(paths, last_loaded_global_merge_event)
                     if maybe_latest is not None:
+                        adoption_kernel = adoption_kernel.observe_successor(
+                            authority_frontier_from_latest(maybe_latest)
+                        )
                         logger.event(
                             "successor_observed_mid_interval",
                             observed_commit_seq=int(maybe_latest["commit_seq"]),
@@ -761,6 +771,7 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
                 fragment_norm=fragment_norm,
                 fragment_tensor=fragment_tensor,
             )
+            adoption_kernel = adoption_kernel.mark_published(publication.proposal_id)
             # Fragment updates are consumed on a per-fragment schedule, so local
             # step order is not a safe retention key for pending files.
             write_seconds = time.monotonic() - write_start
@@ -852,6 +863,9 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
                     ),
                 )
                 if maybe_latest is not None:
+                    adoption_kernel = adoption_kernel.observe_successor(
+                        authority_frontier_from_latest(maybe_latest)
+                    ).adopt_successor()
                     (
                         last_loaded_global_merge_event,
                         last_loaded_fragment_versions,
@@ -892,14 +906,17 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
                             global_merge_event=last_loaded_global_merge_event,
                             fragments=changed,
                             fragment_versions=last_loaded_fragment_versions,
+                            adoption_state_digest=adoption_kernel.state_digest,
                         )
                 elif not paths.stop_json.exists():
+                    adoption_kernel = adoption_kernel.declare_no_progress("deadline")
                     no_progress = True
                     logger.event(
                         "no_progress",
                         outcome="terminal",
                         interval_digest=interval.interval_digest,
                         base_commit_seq=interval.base.commit_seq,
+                        adoption_state_digest=adoption_kernel.state_digest,
                     )
             if no_progress:
                 break
@@ -1095,6 +1112,9 @@ def run_learner(config: Config, learner_id: str) -> None:
                 rng_cursor=RngCursor(config.training.seed + learner_index, local_step),
                 transport_dtype=config.io.tensor_dtype,
             )
+            adoption_kernel = AdoptionKernel.bootstrap(interval.base).begin_interval(
+                f"{learner_session.session_id}:{interval.sequence}:0"
+            )
             losses: list[float] = []
             interval_tokens = 0
             interval_examples = 0
@@ -1142,6 +1162,9 @@ def run_learner(config: Config, learner_id: str) -> None:
                 if config.learner.poll_latest_during_inner_steps:
                     maybe_latest = read_latest_if_newer(paths, last_loaded_global_version)
                     if maybe_latest is not None:
+                        adoption_kernel = adoption_kernel.observe_successor(
+                            authority_frontier_from_latest(maybe_latest)
+                        )
                         logger.event(
                             "successor_observed_mid_interval",
                             observed_commit_seq=int(maybe_latest["commit_seq"]),
@@ -1191,6 +1214,7 @@ def run_learner(config: Config, learner_id: str) -> None:
                 param_norm=param_norm,
                 flat=flat,
             )
+            adoption_kernel = adoption_kernel.mark_published(publication.proposal_id)
             write_seconds = time.monotonic() - write_start
             last_update_id = update_id
             local_update_index += 1
@@ -1264,6 +1288,9 @@ def run_learner(config: Config, learner_id: str) -> None:
                     found_version=maybe_latest.get("version") if maybe_latest else None,
                 )
                 if maybe_latest is not None:
+                    adoption_kernel = adoption_kernel.observe_successor(
+                        authority_frontier_from_latest(maybe_latest)
+                    ).adopt_successor()
                     last_loaded_global_version = adopt_global(
                         model=model,
                         latest=maybe_latest,
@@ -1290,14 +1317,17 @@ def run_learner(config: Config, learner_id: str) -> None:
                         policy=config.learner.inner_optimizer_adoption_policy,
                         reset_parameter_count=len(reset_parameters),
                         version=last_loaded_global_version,
+                        adoption_state_digest=adoption_kernel.state_digest,
                     )
                 elif not paths.stop_json.exists():
+                    adoption_kernel = adoption_kernel.declare_no_progress("deadline")
                     no_progress = True
                     logger.event(
                         "no_progress",
                         outcome="terminal",
                         interval_digest=interval.interval_digest,
                         base_commit_seq=interval.base.commit_seq,
+                        adoption_state_digest=adoption_kernel.state_digest,
                     )
             if no_progress:
                 break

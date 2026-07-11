@@ -7,7 +7,7 @@ actual_base_commit: 419577899a64a12cc602870d059a092f9319bed1
 feature_branch: codex/duraloco-p06-learner-protocol
 current_loop: 3
 current_goal: "integrate interval publication, boundary adoption, and warm recovery into the single learner runtime"
-attempts_for_current_failure: 0
+attempts_for_current_failure: 1
 last_terminal_failure_review: null
 terminal_retry_authorized: false
 terminal_retry_qualification:
@@ -51,7 +51,8 @@ artifacts:
   - artifacts/duraloco/P06/20260711_p06_green_7f9029a_1node
   - artifacts/duraloco/P06/20260711_p06_runtime_5d5b946_1node
   - artifacts/duraloco/P06/20260711_p06_impl_d3a2b9d_1node
-next_action: "rerun the one-node gate from a dedicated clean worktree after excluding a shared-worktree infrastructure attempt"
+  - artifacts/duraloco/P06/20260711_p06_impl_911ed8b_1node
+next_action: "rerun from a clean worktree with the runtime root contained inside that checkout"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
