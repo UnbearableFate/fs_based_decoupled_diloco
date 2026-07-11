@@ -7,7 +7,13 @@ import torch
 from safetensors.torch import save as save_safetensors_bytes
 
 from fs_diloco.coordination import OwnerToken
-from fs_diloco.log import CommitConflict, InjectedLogCrash, ProductionTransactionalLog, RunSpec
+from fs_diloco.log import (
+    CRASH_POINTS,
+    CommitConflict,
+    InjectedLogCrash,
+    ProductionTransactionalLog,
+    RunSpec,
+)
 from fs_diloco.log.production_codec import (
     PRODUCTION_CODEC,
     encode_production_outer_state,
@@ -212,3 +218,134 @@ def test_control_response_loss_resolves_from_ancestry_after_successor():
     assert resolved is not None
     assert resolved.commit_id == prepared.commit.commit_id
     assert build_runtime_view(standby).commit_seq == 2
+
+
+def test_optimizer_response_loss_resolves_after_takeover_successor():
+    backend, log = _initialize("fenced-optimizer-response-loss")
+    log.activate_owner(
+        token=OwnerToken("syncer-a", "session-a", 1), request_id="fence-a"
+    )
+    proposal = _proposal(log)
+    prepared = _prepare(log, proposal, "optimizer-a")
+    with pytest.raises(InjectedLogCrash):
+        log.commit_prepared(prepared, crash_at="after_head_cas")
+
+    standby = ProductionTransactionalLog.open(backend, log.spec.run_id, 0)
+    standby.activate_owner(
+        token=OwnerToken("syncer-b", "session-b", 2), request_id="fence-b"
+    )
+    resolved = standby.resolve_mutation(
+        request_id=prepared.commit.request_id,
+        request_digest=prepared.commit.request_digest,
+    )
+    assert resolved is not None
+    assert resolved.commit_id == prepared.commit.commit_id
+    assert build_runtime_view(standby).optimizer_transition_count == 1
+
+
+def test_stop_response_loss_replays_from_authority():
+    backend, log = _initialize("fenced-stop-response-loss")
+    log.activate_owner(
+        token=OwnerToken("syncer-a", "session-a", 1), request_id="fence-a"
+    )
+    prepared = log.prepare_control_transition(
+        control_kind="stop",
+        token=OwnerToken("syncer-a", "session-a", 1),
+        request_id="stop-a",
+        stop_reason="operator_requested",
+    )
+    with pytest.raises(InjectedLogCrash):
+        log.commit_prepared(prepared, crash_at="after_head_cas")
+
+    reopened = ProductionTransactionalLog.open(backend, log.spec.run_id, 0)
+    resolved = reopened.resolve_mutation(
+        request_id=prepared.commit.request_id,
+        request_digest=prepared.commit.request_digest,
+    )
+    assert resolved is not None
+    assert resolved.commit_id == prepared.commit.commit_id
+    assert build_runtime_view(reopened).authoritative_stop.reason == "operator_requested"
+
+
+def test_reused_optimizer_request_id_with_distinct_content_fails_before_output_puts():
+    backend, log = _initialize("fenced-optimizer-request-conflict")
+    log.activate_owner(
+        token=OwnerToken("syncer-a", "session-a", 1), request_id="fence-a"
+    )
+    first = _proposal(log, learner="learner-a")
+    log.commit_prepared(_prepare(log, first, "optimizer-shared"))
+    second = _proposal(log, learner="learner-b")
+    history_start = len(backend.history)
+    with pytest.raises(CommitConflict, match="request identity conflicts"):
+        _prepare(log, second, "optimizer-shared")
+    assert not any(
+        record.operation == "put_immutable"
+        for record in backend.history[history_start:]
+    )
+
+
+@pytest.mark.parametrize("crash_at", CRASH_POINTS)
+def test_fenced_optimizer_crash_matrix_has_no_stuck_selection_and_can_continue(crash_at):
+    backend, active = _initialize(f"fenced-optimizer-crash-{crash_at}")
+    active.activate_owner(
+        token=OwnerToken("syncer-a", "session-a", 1), request_id="fence-a"
+    )
+    proposal = _proposal(active, learner="learner-before-crash")
+    with pytest.raises(InjectedLogCrash):
+        active.commit_transition(
+            fragment_id=0,
+            selected_proposal_ids=[proposal.proposal_id],
+            new_params=encode_production_params(torch.tensor([0.5, 1.0])),
+            new_outer_state=encode_production_outer_state(
+                init_outer_state(torch.tensor([0.5, 1.0]), active.spec.optimizer_config)
+            ),
+            aggregate_digest=canonical_digest({"proposal": proposal.proposal_id}),
+            outer_optimizer_impl_digest=production_optimizer_digest(
+                active.spec.optimizer_config.identity()
+            ),
+            request_id="optimizer-before-crash",
+            crash_at=crash_at,
+        )
+    expected = 1 if crash_at == "after_head_cas" else 0
+    assert build_runtime_view(active, force_full=True).optimizer_transition_count == expected
+
+    standby = ProductionTransactionalLog.open(backend, active.spec.run_id, 0)
+    standby.activate_owner(
+        token=OwnerToken("syncer-b", "session-b", 2), request_id="fence-b"
+    )
+    fresh = _proposal(standby, learner="learner-after-crash")
+    standby.commit_prepared(_prepare(standby, fresh, "optimizer-after-crash"))
+    final = build_runtime_view(standby, force_full=True)
+    assert final.optimizer_transition_count == expected + 1
+    assert fresh.proposal_id in final.consumed_proposal_ids
+
+
+@pytest.mark.parametrize(
+    "crash_at",
+    [
+        "before_commit_put",
+        "after_commit_put",
+        "before_frontier_put",
+        "after_frontier_put",
+        "before_head_cas",
+        "after_head_cas",
+    ],
+)
+def test_authoritative_stop_crash_matrix_retries_or_resolves(crash_at):
+    backend, log = _initialize(f"fenced-stop-crash-{crash_at}")
+    token = OwnerToken("syncer-a", "session-a", 1)
+    log.activate_owner(token=token, request_id="fence-a")
+    with pytest.raises(InjectedLogCrash):
+        log.commit_stop(
+            reason="operator_requested", request_id="stop-a", crash_at=crash_at
+        )
+    reopened = ProductionTransactionalLog.open(backend, log.spec.run_id, 0)
+    view = build_runtime_view(reopened, force_full=True)
+    if crash_at == "after_head_cas":
+        assert view.authoritative_stop is not None
+    else:
+        assert view.authoritative_stop is None
+        log.commit_stop(reason="operator_requested", request_id="stop-a")
+        view = build_runtime_view(log, force_full=True)
+    assert view.authoritative_stop.reason == "operator_requested"
+    assert view.optimizer_transition_count == 0

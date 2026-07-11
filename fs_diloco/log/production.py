@@ -594,6 +594,28 @@ class ProductionTransactionalLog:
             },
             config=self.spec.weighting_config,
         )
+        optimizer_request_digest: str | None = None
+        if owner_token is not None:
+            if not isinstance(request_id, str) or not request_id:
+                raise CommitConflict("fenced optimizer transition requires request_id")
+            optimizer_request_body = {
+                "operation": "optimizer",
+                "request_id": request_id,
+                "owner_id": owner_token.owner_id,
+                "owner_session_id": owner_token.owner_session_id,
+                "fencing_epoch": owner_token.fencing_epoch,
+                "parent_commit_id": replay.head_frontier.commit_id,
+                "selected_proposal_ids": list(selected_ids),
+                "aggregate_digest": aggregate_digest,
+            }
+            optimizer_request_digest = canonical_digest(optimizer_request_body)
+            committed_request = replay.control_requests.get(request_id)
+            if committed_request is not None:
+                if committed_request[0] != optimizer_request_digest:
+                    raise CommitConflict(
+                        "optimizer request identity conflicts with committed content"
+                    )
+                raise CommitConflict("optimizer request is already committed")
         _fire(crash_at, "before_params_put")
         params = decode_production_params(new_params)
         params_digest = hashlib.sha256(new_params).hexdigest()
@@ -644,26 +666,14 @@ class ProductionTransactionalLog:
                 "outer_optimizer_impl_digest": outer_optimizer_impl_digest,
                 "new_params_ref": params_ref.to_dict(),
                 "new_outer_state_ref": outer_ref.to_dict(),
-            }
+        }
         if owner_token is not None:
-            if not isinstance(request_id, str) or not request_id:
-                raise CommitConflict("fenced optimizer transition requires request_id")
-            optimizer_request_body = {
-                "operation": "optimizer",
-                "request_id": request_id,
-                "owner_id": owner_token.owner_id,
-                "owner_session_id": owner_token.owner_session_id,
-                "fencing_epoch": owner_token.fencing_epoch,
-                "parent_commit_id": replay.head_frontier.commit_id,
-                "selected_proposal_ids": list(selected_ids),
-                "aggregate_digest": aggregate_digest,
-            }
             commit_body.update(
                 {
                     "owner_id": owner_token.owner_id,
                     "owner_session_id": owner_token.owner_session_id,
                     "request_id": request_id,
-                    "request_digest": canonical_digest(optimizer_request_body),
+                    "request_digest": optimizer_request_digest,
                     "optimizer_transition_count": self._optimizer_transition_count(replay)
                     + 1,
                 }
