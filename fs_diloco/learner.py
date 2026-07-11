@@ -352,6 +352,7 @@ def write_update(
     learner_session_id: str,
     proposal_sequence: int,
     base_global_version: int,
+    base_fragment_version: int,
     base_commit_id: str,
     base_commit_seq: int,
     base_frontier_digest: str,
@@ -391,6 +392,7 @@ def write_update(
         "hostname": socket.gethostname(),
         "pid": os.getpid(),
         "base_global_version": base_global_version,
+        "base_fragment_version": base_fragment_version,
         "base_commit_id": base_commit_id,
         "base_commit_seq": base_commit_seq,
         "base_frontier_digest": base_frontier_digest,
@@ -1059,6 +1061,15 @@ def run_learner(config: Config, learner_id: str) -> None:
                 learner_session_id=learner_session_id,
                 proposal_sequence=local_step,
                 base_global_version=base_global_version,
+                base_fragment_version=int(
+                    (base_authority.get("fragment_versions") or {}).get(
+                        "0",
+                        base_authority.get(
+                            "optimizer_transition_count",
+                            base_authority.get("global_merge_event", 0),
+                        ),
+                    )
+                ),
                 base_commit_id=str(base_authority["commit_id"]),
                 base_commit_seq=int(base_authority["commit_seq"]),
                 base_frontier_digest=str(base_authority["frontier_sha256"]),

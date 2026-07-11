@@ -79,3 +79,11 @@ def test_analysis_and_terminal_probe_count_only_optimizer_transitions():
         assert "isinstance(commit, CommitManifest)" in source
     assert '"global_merge_event": view.optimizer_transition_count' in analysis_source
     assert '"global_outer_transitions": view.optimizer_transition_count' in probe_source
+
+
+def test_full_latest_and_proposal_keep_fragment_version_separate_from_control_seq():
+    syncer_source = inspect.getsource(syncer._latest_common)
+    learner_source = inspect.getsource(__import__("fs_diloco.learner", fromlist=["write_update"]))
+    assert '"fragment_versions"' in syncer_source
+    assert '"base_fragment_version": base_fragment_version' in learner_source
+    assert 'base_authority.get("fragment_versions")' in learner_source

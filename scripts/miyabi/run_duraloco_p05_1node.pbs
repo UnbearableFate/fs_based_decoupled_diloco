@@ -131,6 +131,19 @@ run_process_smoke() {
   wait "$sync_pid"
   "$PYTHON_BIN" -m fs_diloco.analysis summary "$root" --json \
     | tee "$ARTIFACT_ROOT/${label}_before_recovery.json"
+  "$PYTHON_BIN" - "$ARTIFACT_ROOT/${label}_before_recovery.json" "$config" <<'PY'
+import json
+from pathlib import Path
+import sys
+import yaml
+
+summary = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+config = yaml.safe_load(Path(sys.argv[2]).read_text(encoding="utf-8"))
+expected = int(config["sync"]["stop_after_outer_steps"])
+assert summary["optimizer_transition_count"] == expected
+assert summary["global_merge_event"] == expected
+assert summary["stop_reason"] == "stop_after_outer_steps"
+PY
   before_digest=$("$PYTHON_BIN" -c \
     'import json,sys; print(json.load(open(sys.argv[1]))["committed_state_digest"])' \
     "$ARTIFACT_ROOT/${label}_before_recovery.json")

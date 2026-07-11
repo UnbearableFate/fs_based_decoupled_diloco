@@ -114,6 +114,10 @@ def _latest_common(config: Config, view: RuntimeView) -> dict[str, Any]:
         "version": view.commit_seq,
         "global_merge_event": view.optimizer_transition_count,
         "optimizer_transition_count": view.optimizer_transition_count,
+        "fragment_versions": {
+            str(fragment_id): state.version
+            for fragment_id, state in sorted(view.fragments.items())
+        },
         "commit_id": view.commit_id,
         "commit_seq": view.commit_seq,
         "frontier_sha256": view.frontier_sha256,
