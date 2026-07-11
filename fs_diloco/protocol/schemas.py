@@ -342,6 +342,79 @@ class ProposalSelection:
 
 
 @dataclass(frozen=True)
+class StopProjection:
+    request_id: str
+    request_digest: str
+    reason: str
+    committed_at_seq: int
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "StopProjection":
+        _strict_fields(
+            payload,
+            {"request_id", "request_digest", "reason", "committed_at_seq"},
+        )
+        return cls(
+            request_id=_string(payload["request_id"], "request_id"),
+            request_digest=_sha(payload["request_digest"], "request_digest"),
+            reason=_string(payload["reason"], "reason"),
+            committed_at_seq=_integer(
+                payload["committed_at_seq"], "committed_at_seq", minimum=1
+            ),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "request_id": self.request_id,
+            "request_digest": self.request_digest,
+            "reason": self.reason,
+            "committed_at_seq": self.committed_at_seq,
+        }
+
+
+@dataclass(frozen=True)
+class CoordinationProjection:
+    optimizer_transition_count: int
+    owner_id: str
+    owner_session_id: str
+    stop: StopProjection | None = None
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "CoordinationProjection":
+        _strict_fields(
+            payload,
+            {"optimizer_transition_count", "owner_id", "owner_session_id"},
+            {"stop"},
+        )
+        raw_stop = payload.get("stop")
+        if raw_stop is None and "stop" in payload:
+            raise _error(
+                "SCHEMA_TYPE",
+                "absent coordination stop must be omitted rather than encoded as null",
+            )
+        return cls(
+            optimizer_transition_count=_integer(
+                payload["optimizer_transition_count"], "optimizer_transition_count"
+            ),
+            owner_id=_string(payload["owner_id"], "owner_id"),
+            owner_session_id=_string(
+                payload["owner_session_id"], "owner_session_id"
+            ),
+            stop=StopProjection.from_dict(raw_stop) if raw_stop is not None else None,
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "optimizer_transition_count": self.optimizer_transition_count,
+            "owner_id": self.owner_id,
+            "owner_session_id": self.owner_session_id,
+        }
+        if self.stop is not None:
+            payload["stop"] = self.stop.to_dict()
+        return payload
+
+
+@dataclass(frozen=True)
 class CommitManifest:
     MANIFEST_TYPE: ClassVar[str] = "commit"
     protocol_version: int
@@ -361,6 +434,11 @@ class CommitManifest:
     new_params_ref: ObjectRef
     new_outer_state_ref: ObjectRef
     created_at: str | None = None
+    owner_id: str | None = None
+    owner_session_id: str | None = None
+    request_id: str | None = None
+    request_digest: str | None = None
+    optimizer_transition_count: int | None = None
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, Any]) -> "CommitManifest":
@@ -383,7 +461,14 @@ class CommitManifest:
             "new_params_ref",
             "new_outer_state_ref",
         }
-        _strict_fields(payload, required, {"created_at"})
+        coordination_fields = {
+            "owner_id",
+            "owner_session_id",
+            "request_id",
+            "request_digest",
+            "optimizer_transition_count",
+        }
+        _strict_fields(payload, required, {"created_at", *coordination_fields})
         if payload["manifest_type"] != cls.MANIFEST_TYPE:
             raise _error("SCHEMA_ENUM", "manifest_type must be commit")
         selected = payload["selected_proposals"]
@@ -393,6 +478,12 @@ class CommitManifest:
         created_at = payload.get("created_at")
         if created_at is not None:
             created_at = _string(created_at, "created_at")
+        present_coordination = coordination_fields & set(payload)
+        if present_coordination and present_coordination != coordination_fields:
+            raise _error(
+                "SCHEMA_MISSING_FIELD",
+                "fenced optimizer commit coordination fields must be all present or all absent",
+            )
         instance = cls(
             protocol_version=_protocol(payload["protocol_version"]),
             run_id=_string(payload["run_id"], "run_id"),
@@ -415,6 +506,35 @@ class CommitManifest:
             new_params_ref=ObjectRef.from_dict(payload["new_params_ref"]),
             new_outer_state_ref=ObjectRef.from_dict(payload["new_outer_state_ref"]),
             created_at=created_at,
+            owner_id=(
+                _string(payload["owner_id"], "owner_id")
+                if "owner_id" in payload
+                else None
+            ),
+            owner_session_id=(
+                _string(payload["owner_session_id"], "owner_session_id")
+                if "owner_session_id" in payload
+                else None
+            ),
+            request_id=(
+                _string(payload["request_id"], "request_id")
+                if "request_id" in payload
+                else None
+            ),
+            request_digest=(
+                _sha(payload["request_digest"], "request_digest")
+                if "request_digest" in payload
+                else None
+            ),
+            optimizer_transition_count=(
+                _integer(
+                    payload["optimizer_transition_count"],
+                    "optimizer_transition_count",
+                    minimum=1,
+                )
+                if "optimizer_transition_count" in payload
+                else None
+            ),
         )
         if instance.new_fragment_version != instance.previous_fragment_version + 1:
             raise _error("FRAGMENT_VERSION", "new fragment version must increment by one")
@@ -452,6 +572,151 @@ class CommitManifest:
             "new_params_ref": self.new_params_ref.to_dict(),
             "new_outer_state_ref": self.new_outer_state_ref.to_dict(),
         }
+        if self.created_at is not None:
+            payload["created_at"] = self.created_at
+        if self.owner_id is not None:
+            payload.update(
+                {
+                    "owner_id": self.owner_id,
+                    "owner_session_id": self.owner_session_id,
+                    "request_id": self.request_id,
+                    "request_digest": self.request_digest,
+                    "optimizer_transition_count": self.optimizer_transition_count,
+                }
+            )
+        return payload
+
+
+@dataclass(frozen=True)
+class ControlCommitManifest:
+    MANIFEST_TYPE: ClassVar[str] = "control_commit"
+    protocol_version: int
+    run_id: str
+    run_generation: int
+    commit_seq: int
+    commit_id: str
+    parent_commit_id: str
+    parent_head_version: str
+    control_kind: str
+    prior_fencing_epoch: int
+    fencing_epoch: int
+    owner_id: str
+    owner_session_id: str
+    request_id: str
+    request_digest: str
+    optimizer_transition_count: int
+    stop_reason: str | None = None
+    created_at: str | None = None
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "ControlCommitManifest":
+        required = {
+            "manifest_type",
+            "protocol_version",
+            "run_id",
+            "run_generation",
+            "commit_seq",
+            "commit_id",
+            "parent_commit_id",
+            "parent_head_version",
+            "control_kind",
+            "prior_fencing_epoch",
+            "fencing_epoch",
+            "owner_id",
+            "owner_session_id",
+            "request_id",
+            "request_digest",
+            "optimizer_transition_count",
+        }
+        _strict_fields(payload, required, {"stop_reason", "created_at"})
+        if payload["manifest_type"] != cls.MANIFEST_TYPE:
+            raise _error("SCHEMA_ENUM", "manifest_type must be control_commit")
+        kind = payload["control_kind"]
+        if kind not in {"epoch_bump", "stop"}:
+            raise _error("SCHEMA_ENUM", f"unsupported control_kind: {kind!r}")
+        stop_reason = payload.get("stop_reason")
+        if stop_reason is None and "stop_reason" in payload:
+            raise _error(
+                "SCHEMA_TYPE", "absent stop_reason must be omitted rather than null"
+            )
+        if kind == "stop" and stop_reason is None:
+            raise _error("SCHEMA_MISSING_FIELD", "stop control commit requires stop_reason")
+        if kind != "stop" and stop_reason is not None:
+            raise _error("SCHEMA_UNKNOWN_FIELD", "epoch bump cannot carry stop_reason")
+        created_at = payload.get("created_at")
+        if created_at is not None:
+            created_at = _string(created_at, "created_at")
+        instance = cls(
+            protocol_version=_protocol(payload["protocol_version"]),
+            run_id=_string(payload["run_id"], "run_id"),
+            run_generation=_integer(payload["run_generation"], "run_generation"),
+            commit_seq=_integer(payload["commit_seq"], "commit_seq", minimum=1),
+            commit_id=_string(payload["commit_id"], "commit_id"),
+            parent_commit_id=_string(payload["parent_commit_id"], "parent_commit_id"),
+            parent_head_version=_string(
+                payload["parent_head_version"], "parent_head_version"
+            ),
+            control_kind=kind,
+            prior_fencing_epoch=_integer(
+                payload["prior_fencing_epoch"], "prior_fencing_epoch"
+            ),
+            fencing_epoch=_integer(payload["fencing_epoch"], "fencing_epoch"),
+            owner_id=_string(payload["owner_id"], "owner_id"),
+            owner_session_id=_string(
+                payload["owner_session_id"], "owner_session_id"
+            ),
+            request_id=_string(payload["request_id"], "request_id"),
+            request_digest=_sha(payload["request_digest"], "request_digest"),
+            optimizer_transition_count=_integer(
+                payload["optimizer_transition_count"], "optimizer_transition_count"
+            ),
+            stop_reason=(
+                _string(stop_reason, "stop_reason") if stop_reason is not None else None
+            ),
+            created_at=created_at,
+        )
+        if kind == "epoch_bump" and instance.fencing_epoch <= instance.prior_fencing_epoch:
+            raise _error(
+                "FENCING_EPOCH",
+                "epoch bump must strictly increase the fencing epoch",
+            )
+        if kind == "stop" and instance.fencing_epoch != instance.prior_fencing_epoch:
+            raise _error("FENCING_EPOCH", "stop cannot change the fencing epoch")
+        if instance.commit_id != commit_id_for(instance.identity_body()):
+            raise _error(
+                "COMMIT_ID_MISMATCH",
+                "control commit ID does not match canonical body",
+                fatal=True,
+            )
+        return instance
+
+    def identity_body(self) -> dict[str, Any]:
+        body = self.to_dict()
+        body.pop("commit_id")
+        body.pop("created_at", None)
+        return body
+
+    def to_dict(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "manifest_type": self.MANIFEST_TYPE,
+            "protocol_version": self.protocol_version,
+            "run_id": self.run_id,
+            "run_generation": self.run_generation,
+            "commit_seq": self.commit_seq,
+            "commit_id": self.commit_id,
+            "parent_commit_id": self.parent_commit_id,
+            "parent_head_version": self.parent_head_version,
+            "control_kind": self.control_kind,
+            "prior_fencing_epoch": self.prior_fencing_epoch,
+            "fencing_epoch": self.fencing_epoch,
+            "owner_id": self.owner_id,
+            "owner_session_id": self.owner_session_id,
+            "request_id": self.request_id,
+            "request_digest": self.request_digest,
+            "optimizer_transition_count": self.optimizer_transition_count,
+        }
+        if self.stop_reason is not None:
+            payload["stop_reason"] = self.stop_reason
         if self.created_at is not None:
             payload["created_at"] = self.created_at
         return payload
@@ -498,6 +763,7 @@ class FrontierManifest:
     fragments: Mapping[int, FragmentState]
     scheduler_state: Mapping[str, int]
     consumed_proposal_ids: tuple[str, ...]
+    coordination: CoordinationProjection | None
     frontier_sha256: str
 
     @classmethod
@@ -516,7 +782,7 @@ class FrontierManifest:
             "consumed_proposal_ids",
             "frontier_sha256",
         }
-        _strict_fields(payload, required)
+        _strict_fields(payload, required, {"coordination"})
         if payload["manifest_type"] != cls.MANIFEST_TYPE:
             raise _error("SCHEMA_ENUM", "manifest_type must be frontier")
         raw_fragments = payload["fragments"]
@@ -555,6 +821,12 @@ class FrontierManifest:
         parent_digest = payload["parent_frontier_sha256"]
         if parent_digest is not None:
             parent_digest = _sha(parent_digest, "parent_frontier_sha256")
+        raw_coordination = payload.get("coordination")
+        if raw_coordination is None and "coordination" in payload:
+            raise _error(
+                "SCHEMA_TYPE",
+                "absent frontier coordination must be omitted rather than encoded as null",
+            )
         instance = cls(
             protocol_version=_protocol(payload["protocol_version"]),
             run_id=_string(payload["run_id"], "run_id"),
@@ -568,6 +840,11 @@ class FrontierManifest:
                 {"next_fragment_cursor": next_fragment_cursor}
             ),
             consumed_proposal_ids=tuple(consumed),
+            coordination=(
+                CoordinationProjection.from_dict(raw_coordination)
+                if raw_coordination is not None
+                else None
+            ),
             frontier_sha256=_sha(payload["frontier_sha256"], "frontier_sha256"),
         )
         if instance.frontier_sha256 != frontier_digest_for(instance.identity_body()):
@@ -580,7 +857,7 @@ class FrontierManifest:
         return body
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload: dict[str, Any] = {
             "manifest_type": self.MANIFEST_TYPE,
             "protocol_version": self.protocol_version,
             "run_id": self.run_id,
@@ -596,6 +873,9 @@ class FrontierManifest:
             "consumed_proposal_ids": list(self.consumed_proposal_ids),
             "frontier_sha256": self.frontier_sha256,
         }
+        if self.coordination is not None:
+            payload["coordination"] = self.coordination.to_dict()
+        return payload
 
 
 @dataclass(frozen=True)
@@ -697,7 +977,14 @@ class DropDecision:
         }
 
 
-Manifest = ProposalManifest | CommitManifest | FrontierManifest | HeadManifest | DropDecision
+Manifest = (
+    ProposalManifest
+    | CommitManifest
+    | ControlCommitManifest
+    | FrontierManifest
+    | HeadManifest
+    | DropDecision
+)
 
 
 def parse_manifest(payload: Mapping[str, Any]) -> Manifest:
@@ -710,6 +997,7 @@ def parse_manifest(payload: Mapping[str, Any]) -> Manifest:
     parsers = {
         "proposal": ProposalManifest.from_dict,
         "commit": CommitManifest.from_dict,
+        "control_commit": ControlCommitManifest.from_dict,
         "frontier": FrontierManifest.from_dict,
         "head": HeadManifest.from_dict,
         "drop_decision": DropDecision.from_dict,
