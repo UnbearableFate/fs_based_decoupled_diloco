@@ -218,6 +218,28 @@ two-node and nine-node compute qualification remain in progress.
 - Repair: perform independent catalog candidate read, SHA, structural, and
   finite validation concurrently while preserving deterministic result order
   and serializing quarantine registry writes.
+
+#### Nine-node attempt 6 — `20260711_m00_cd5bd73_gpt2_9n_50x10`
+
+- Time/identity: PBS `2359186.opbs`, nine compute hosts led by `mg0932`,
+  implementation `cd5bd732940b67ed04ca43ac1569dc7990780fde`. The same clean commit
+  passed jobs `2359180.opbs` (one node) and `2359183.opbs` (two nodes).
+- Phenomenon: concurrent candidate validation retained deterministic selection
+  and committed sequence 1 exactly once, but the first interval still consumed
+  about 100 seconds before deliberate termination.
+- Expected/actual: the run continued to move and hash eight float32 GPT-2 flat
+  payloads, roughly 4 GB, for every transition. That mandatory byte volume alone
+  remained incompatible with the hard 15-minute 10-transition gate on this
+  Lustre path.
+- Reason: confirmed by the unchanged first-transition timing after concurrency
+  and by the frozen `io.tensor_dtype: float32` payload width.
+- Impact: M00-A11 only; the committed sequence-1 prefix is valid. The operator
+  terminated the job deliberately (`Exit_status=271`).
+- Evidence: `artifacts/duraloco/M00/20260711_m00_cd5bd73_gpt2_9n_50x10/manifest.json`,
+  `training.log`, exact `run_config.yaml`, and same-commit one/two-node manifests.
+- Repair: use bfloat16 learner proposal serialization, matching the terminal
+  model/training precision and halving proposal I/O; aggregation and committed
+  production parameters remain float32.
 - Impact: M00-A03, M00-A04, M00-A09, P02-A04, and P04 replay requalification.
 - Evidence: `artifacts/duraloco/M00/20260711_m00_04da7ee_1node/manifest.json`,
   `one_node_contract.json`, full syncer/learner logs, and `stdout.log`.
@@ -424,6 +446,24 @@ generation metadata 与 M00 静态/运行 harness。源码、配置、脚本与�
   `training.log` 与同 commit 单/双节点 manifests。
 - 修复：并行执行独立 catalog candidate 的 read、SHA、结构与 finite validation，同时
   保持结果顺序确定性并串行化 quarantine registry 写入。
+
+#### 九节点第 6 次尝试 — `20260711_m00_cd5bd73_gpt2_9n_50x10`
+
+- 时间/身份：PBS `2359186.opbs`，以 `mg0932` 为首的九个 compute nodes，实现提交
+  `cd5bd732940b67ed04ca43ac1569dc7990780fde`。同一干净提交通过了
+  `2359180.opbs`（单节点）与 `2359183.opbs`（双节点）。
+- 现象：并行 candidate validation 保持确定性 selection，sequence 1 仍恰好提交一次；
+  但首个 interval 仍约需 100 秒，随后被人工终止。
+- 预期/实际：每个 transition 仍需移动并 hash 8 个 float32 GPT-2 flat payload，总计约
+  4 GB；在当前 Lustre 路径上，仅该必要字节量即无法满足 15 分钟内 10 transitions。
+- 原因：并发后首个 transition timing 未变化，且冻结配置仍为
+  `io.tensor_dtype: float32`，共同证实。
+- 影响：仅 M00-A11；已提交 sequence-1 prefix 合法。operator 主动终止 job
+  （`Exit_status=271`）。
+- 证据：`artifacts/duraloco/M00/20260711_m00_cd5bd73_gpt2_9n_50x10/manifest.json`、
+  `training.log`、精确 `run_config.yaml` 与同 commit 单/双节点 manifests。
+- 修复：learner proposal serialization 改为 bfloat16，与 terminal model/training precision
+  一致并将 proposal I/O 减半；aggregation 与 committed production params 仍为 float32。
 
 ### 限制与下一动作
 

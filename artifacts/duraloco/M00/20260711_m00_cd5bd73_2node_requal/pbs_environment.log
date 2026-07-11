@@ -1,0 +1,5 @@
+PBS_JOBID=2359183.opbs
+PBS_NODEFILE=/var/spool/pbs/aux/2359183.opbs
+STORAGE_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/M00/20260711_m00_cd5bd73_2node_requal
+BACKEND_ROUNDS=100
+TRANSACTION_ROUNDS=20

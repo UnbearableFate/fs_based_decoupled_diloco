@@ -1,0 +1,18 @@
+{
+  "backend_double_winners": 0,
+  "backend_rounds": 100,
+  "backend_visibility_failures": 0,
+  "hosts": [
+    "mg0003",
+    "mg0004"
+  ],
+  "local_database_files": [],
+  "production_final_commit_seq": 2,
+  "production_final_runtime_view_digest": "9266469c9868239fcc945e270d0f2e65c19da8b028e1fdac98fc1c0e9ae2228b",
+  "production_takeover": true,
+  "status": "PASS",
+  "transaction_committed_state_digest": "3fd61865dc6ad7778dfbc4132fc2d9b2a0a19744304b3255c227c1c991ddf8db",
+  "transaction_double_inclusions": 0,
+  "transaction_double_winners": 0,
+  "transaction_rounds": 20
+}
