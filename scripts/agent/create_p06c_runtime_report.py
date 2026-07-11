@@ -80,6 +80,7 @@ def main() -> int:
                 "work_order_id": order.work_order_id,
                 "prepared_result_id": commit.prepared_result_id,
                 "owner_member_ids": list(order.owner_member_ids),
+                "redundancy_policy": order.redundancy_policy.to_dict(),
                 "attempt_envelope_ids": sorted(attempt_ids),
                 "executor_ids": sorted(executor_ids),
             }

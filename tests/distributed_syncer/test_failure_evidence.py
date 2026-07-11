@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import copy
+from types import SimpleNamespace
 
 import pytest
 
 from fs_diloco.distributed_syncer.failure_evidence import FailureEvidenceV1
+from fs_diloco.distributed_syncer.committer import _committed_membership_candidates
 from fs_diloco.distributed_syncer.membership import (
     DistributedMemberV1,
     MembershipRevisionV1,
@@ -81,3 +83,17 @@ def test_legacy_unbound_removal_request_fails_closed():
         ReconfigurationRequestV1.from_dict(
             {"remove_member_id": "member-0", "evidence_digest": "1" * 64}
         )
+
+
+def test_committed_reconfiguration_excludes_removed_learner_proposals():
+    membership = _members()
+    successor = MembershipRevisionV1.create(1, membership.members[1:])
+    candidates = tuple(
+        SimpleNamespace(manifest=SimpleNamespace(learner_id=f"learner-{index}"))
+        for index in range(3)
+    )
+    selected = _committed_membership_candidates(candidates, successor)
+    assert tuple(item.manifest.learner_id for item in selected) == (
+        "learner-1",
+        "learner-2",
+    )

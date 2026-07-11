@@ -64,6 +64,13 @@ def _payload_ref(entry) -> ObjectRef:
     )
 
 
+def _committed_membership_candidates(selected, membership: MembershipRevisionV1):
+    active_learner_ids = {item.learner_id for item in membership.members}
+    return tuple(
+        entry for entry in selected if entry.manifest.learner_id in active_learner_ids
+    )
+
+
 def _wait_for_result(
     backend,
     layout: DistributedLayout,
@@ -347,6 +354,7 @@ def run_committer(
                 config=config,
                 fragment_id=fragment_id,
             )
+            selected = _committed_membership_candidates(selected, membership)
             terminal_drain = finite_local_training_complete(paths, config)
             if len(selected) < config.sync.quorum_min and not (terminal_drain and selected):
                 if time.monotonic() - last_progress > config.liveness.no_progress_timeout_seconds:
