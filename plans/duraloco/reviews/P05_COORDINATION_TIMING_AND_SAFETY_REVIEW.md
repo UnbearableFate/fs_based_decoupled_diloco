@@ -49,8 +49,25 @@ replayed one authoritative stop. Both nodes reported identical committed-state
 and runtime-view digests, zero split-brain commits, and zero double inclusion.
 
 The short-TTL result validates the mechanism and stage measurement. It does not
-replace the production GPT-2 replay baseline. The final 9-node terminal report
-must record the production-TTL active-kill takeover RTO before P05 can complete.
+replace the production GPT-2 replay baseline.
+
+PBS `2360276.opbs`, run
+`20260711_p05_impl_82dbec1_gpt2_9n_50x10`, supplied that production measurement.
+The active renewed through lease sequence 3, was SIGKILLed after optimizer
+transition 2, and the standby committed epoch 2 after 68.722 s. Its combined
+fence-commit plus empty-cache strict-replay stage took 22.053 s. Steady post-CAS
+replay after takeover remained 4.813–4.925 s and head CAS 0.008–0.020 s. The
+authoritative stop stage took 49.380 s over the full 80-proposal prefix and
+committed sequence 13 with optimizer count 10.
+
+The takeover stayed inside the predeclared 75 s RTO envelope. The stop-stage
+measurement exceeds the 45 s lease TTL, so the TTL is not presented as a bound
+on every control operation. If another contender acquires during such a long
+operation, the two epoch/control CAS attempts race on the same head and only one
+wins; the loser strictly replays. Thus this tail can affect liveness and which
+owner records stop, but not split-brain safety. The observed terminal result was
+epoch 2 standby ownership, one stop control transition, 10 optimizer transitions,
+zero split brain, and zero double inclusion.
 
 ## 中文
 
@@ -92,5 +109,18 @@ optimizer 与 stop mutation，恰好提交一个 optimizer transition，并重�
 stop。两个节点的 committed-state/runtime-view digest 相同，split brain 与 double
 inclusion 均为零。
 
-短 TTL 结果验证了机制和分阶段测量，但不能替代生产 GPT-2 replay baseline。P05
-完成前，最终 9 节点 terminal report 必须记录生产 TTL 下 active kill 的 takeover RTO。
+短 TTL 结果验证了机制和分阶段测量，但不能替代生产 GPT-2 replay baseline。
+
+PBS `2360276.opbs`、run `20260711_p05_impl_82dbec1_gpt2_9n_50x10` 给出了生产
+测量。active 续约到 lease sequence 3，在 optimizer transition 2 后被 SIGKILL；
+standby 在 68.722 秒后提交 epoch 2。其 fence commit 加空 cache strict replay 阶段
+耗时 22.053 秒。接管后稳态 post-CAS replay 为 4.813–4.925 秒，head CAS 为
+0.008–0.020 秒。覆盖完整 80-proposal prefix 的权威 stop 阶段耗时 49.380 秒，最终
+提交 sequence 13，而 optimizer count 为 10。
+
+takeover 满足预先声明的 75 秒 RTO 包络。stop 阶段实测超过 45 秒 TTL，因此 TTL
+不被宣称为所有 control operation 的耗时上界。如果另一个 contender 在长操作期间
+acquire，两个 epoch/control CAS 会在同一 head 上竞争，只有一个成功，失败方严格
+replay。因此该 tail 会影响活性以及由哪个 owner 记录 stop，但不会破坏 split-brain
+安全。terminal 实测最终为 epoch 2 standby owner、一个 stop control transition、
+10 个 optimizer transition、零 split brain、零 double inclusion。

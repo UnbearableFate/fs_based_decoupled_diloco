@@ -6,7 +6,7 @@ actual_base_branch: codex/duraloco-m00-sqlite-free-rebase
 actual_base_commit: 92acc3af0c2e80951dfcbf20c738841428a8b906
 feature_branch: codex/duraloco-p05-syncer-failover
 current_loop: 4
-current_goal: "run the final same-commit 1/2/9-node ladder and independent Checker"
+current_goal: "run the independent Checker over the passing final Maker ladder"
 attempts_for_current_failure: 0
 last_terminal_failure_review: null
 terminal_retry_authorized: false
@@ -21,7 +21,7 @@ checks:
   miyabi_login_static: static_pass
   miyabi_1node: miyabi_1node_pass
   miyabi_2node: miyabi_2node_pass
-  miyabi_9node: not_run
+  miyabi_9node: miyabi_9node_pass
 acceptance:
   P05-A01: {result: pass, evidence: [fs_diloco/log/production.py, tests/coordination/test_production_fencing.py]}
   P05-A02: {result: pass, evidence: [artifacts/duraloco/P05/20260711_p05_full_2a8ab75_1node/manifest.json]}
@@ -37,12 +37,12 @@ acceptance:
   P05-A12: {result: pass, evidence: [tests/coordination/test_production_fencing.py]}
   P05-A13: {result: not_run, evidence: []}
   P05-A14: {result: pass, evidence: [artifacts/duraloco/P05/20260711_p05_full_2a8ab75_1node/forbidden_surface.json]}
-  P05-A15: {result: not_run, evidence: []}
+  P05-A15: {result: pass, evidence: [artifacts/duraloco/P05/20260711_p05_impl_82dbec1_gpt2_9n_50x10/manifest.json, artifacts/duraloco/P05/20260711_p05_impl_82dbec1_gpt2_9n_50x10/terminal_gate_report.json]}
   P05-A16: {result: pass, evidence: [tests/coordination/test_reference_state_machine.py, artifacts/duraloco/P05/20260711_p05_full_2a8ab75_1node/manifest.json]}
   P05-A17: {result: pass, evidence: [tests/log/test_production_runtime.py, tests/coordination/test_production_fencing.py]}
   P05-A18: {result: pass, evidence: [plans/duraloco/reviews/P05_COORDINATION_TIMING_AND_SAFETY_REVIEW.md, artifacts/duraloco/P05/20260711_p05_failover_2a8ab75_2node/ranks/rank_1.json]}
-  P05-A19: {result: not_run, evidence: [fs_diloco/analysis.py, fs_diloco/log/training_probe.py, artifacts/duraloco/P05/20260711_p05_full_2a8ab75_1node/manifest.json]}
-  P05-A20: {result: not_run, evidence: []}
+  P05-A19: {result: pass, evidence: [fs_diloco/analysis.py, fs_diloco/log/training_probe.py, artifacts/duraloco/P05/20260711_p05_impl_82dbec1_gpt2_9n_50x10/terminal_gate_report.json]}
+  P05-A20: {result: pass, evidence: [artifacts/duraloco/P05/20260711_p05_impl_82dbec1_gpt2_9n_50x10/active_kill.json, artifacts/duraloco/P05/20260711_p05_impl_82dbec1_gpt2_9n_50x10/terminal_gate_report.json]}
 open_decisions: []
 open_blockers: []
 artifacts:
@@ -50,7 +50,10 @@ artifacts:
   - plans/duraloco/reviews/P05_COORDINATION_TIMING_AND_SAFETY_REVIEW.md
   - artifacts/duraloco/P05/20260711_p05_full_2a8ab75_1node
   - artifacts/duraloco/P05/20260711_p05_failover_2a8ab75_2node
-next_action: "commit checking state, rerun 1-node then 2-node on that clean commit, and submit one 9-node terminal gate"
+  - artifacts/duraloco/P05/20260711_p05_impl_82dbec1_1node
+  - artifacts/duraloco/P05/20260711_p05_impl_82dbec1_2node
+  - artifacts/duraloco/P05/20260711_p05_impl_82dbec1_gpt2_9n_50x10
+next_action: "persist the passing Maker ladder, run the independent P05 Checker, then archive P05 if authorized"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

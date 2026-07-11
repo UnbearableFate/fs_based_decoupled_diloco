@@ -1,0 +1,4 @@
+PBS_JOBID=2360276.opbs
+PBS_NODEFILE=/var/spool/pbs/aux/2360276.opbs
+RUN_ID=20260711_p05_impl_82dbec1_gpt2_9n_50x10
+SHARED_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/fs_diloco/20260711_p05_impl_82dbec1_gpt2_9n_50x10

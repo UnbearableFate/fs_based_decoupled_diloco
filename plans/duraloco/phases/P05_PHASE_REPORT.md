@@ -8,9 +8,9 @@
 - Branch: `codex/duraloco-p05-syncer-failover`
 - Drift-preserving base: `92acc3af0c2e80951dfcbf20c738841428a8b906`
 - Current status: `checking`
-- Current verified Maker candidate: `2a8ab75dc523f1b489809841b448a743a0fafaf8`
-- Completed acceptance targets: P05-A01–A08, A10–A12, A14, A16–A18
-- Pending acceptance targets: P05-A09, A13, A15, A19, A20
+- Current verified Maker implementation: `82dbec10e1a738cfaa88212698e7e8cf5a0f7ae1`
+- Completed acceptance targets: P05-A01–A08, A10–A12, A14–A20
+- Pending acceptance targets: P05-A09, A13
 - Checker verdict: pending
 
 P05 adds one dependency-free coordination reference model, a conditional
@@ -22,6 +22,17 @@ only runtime and head-CAS authority. Full and fragment learners now carry the
 fragment version independently from control commit sequence.
 
 ### Current Maker evidence
+
+- Final clean same-commit ladder: PBS `2360270.opbs` one-node, PBS
+  `2360275.opbs` two-node, and PBS `2360276.opbs` nine-node, all at
+  `82dbec10e1a738cfaa88212698e7e8cf5a0f7ae1` with schema-v2 parent lineage.
+- The 9-node terminal run used eight learner nodes plus active and standby
+  syncers on the ninth node. Active was SIGKILLed after optimizer transition 2;
+  standby committed epoch 2 and completed all 10 optimizer transitions plus a
+  separate stop control transition in 9m52s. All learners reached 600 local
+  steps, all 96 recorded losses were finite, 80 proposals were included exactly
+  once, 11 checkpoints were retained, takeover RTO was 68.722 s, and split
+  brain/double inclusion were both zero.
 
 - PBS `2360246.opbs`, run `20260711_p05_full_2a8ab75_1node`: forbidden scan
   passed; 352 tests passed with one explicit skip; 1,000 reference traces
@@ -62,20 +73,18 @@ fragment version independently from control commit sequence.
   The learner metadata was separated and the harness gained explicit count and
   stop-reason assertions; PBS `2360246` is the valid successor.
 
-### Pending terminal and Checker gates
+### Pending Checker gate
 
-The final clean candidate still requires the same-commit 1→2 qualification,
-the 9-node GPT-2/WikiText-2 50×10 active/standby SIGKILL takeover terminal run,
-and a clean-worktree Checker that adds an unlisted counterexample and reviews
-clock assumptions plus D-M0010–D-M0012 attribution. P05 must remain checking
-until those artifacts pass.
+The Maker ladder is complete. A clean-worktree Checker must still add an
+unlisted counterexample and review clock assumptions plus D-M0010–D-M0012
+attribution. P05 must remain checking until that artifact passes.
 
 ### Known limitations and next action
 
 Learner interval/session boundary and warm-recovery semantics remain P06 scope.
-No historical database run is migrated or resumed. Next: persist the checking
-candidate, rerun 1→2 on it, run the 9-node terminal gate once, then run the
-independent Checker and archive P05 if every P05-A01–A20 item is green.
+No historical database run is migrated or resumed. Next: persist the passing
+Maker ladder, run the independent Checker, and archive P05 if it authorizes the
+remaining P05-A09/P05-A13 gates.
 
 ## 中文
 
@@ -85,9 +94,9 @@ independent Checker and archive P05 if every P05-A01–A20 item is green.
 - 分支：`codex/duraloco-p05-syncer-failover`
 - 保留漂移后的基线：`92acc3af0c2e80951dfcbf20c738841428a8b906`
 - 当前状态：`checking`
-- 当前 Maker 候选：`2a8ab75dc523f1b489809841b448a743a0fafaf8`
-- 已完成验收：P05-A01–A08、A10–A12、A14、A16–A18
-- 待完成验收：P05-A09、A13、A15、A19、A20
+- 当前 Maker implementation：`82dbec10e1a738cfaa88212698e7e8cf5a0f7ae1`
+- 已完成验收：P05-A01–A08、A10–A12、A14–A20
+- 待完成验收：P05-A09、A13
 - Checker 结论：待运行
 
 P05 增加了唯一的 dependency-free coordination 参考模型、conditional 观测性 lease、
@@ -98,6 +107,16 @@ owner 边界 strict replay、权威 stop control transition，以及与 control 
 与 control commit sequence 分开传递。
 
 ### 当前 Maker 证据
+
+- 最终干净同 commit ladder：PBS `2360270.opbs` 单节点、PBS `2360275.opbs`
+  双节点，以及 PBS `2360276.opbs` 九节点，全部绑定
+  `82dbec10e1a738cfaa88212698e7e8cf5a0f7ae1`，并使用 schema-v2 parent lineage。
+- 九节点 terminal 使用八个 learner node，并在第九节点同时运行 active/standby
+  syncer。active 在 optimizer transition 2 后被 SIGKILL；standby 提交 epoch 2，
+  在 9 分 52 秒内完成全部 10 个 optimizer transition 和独立 stop control
+  transition。每个 learner 达到 600 local steps，96 个 loss 全部有限，80 个
+  proposal 各自恰好包含一次，保留 11 个 checkpoint，takeover RTO 为 68.722 秒，
+  split brain 和 double inclusion 均为零。
 
 - PBS `2360246.opbs`、run `20260711_p05_full_2a8ab75_1node`：禁止项扫描
   通过；352 项测试通过、1 项显式跳过；1,000 条参考 trace 通过；十 commit POSIX
@@ -132,15 +151,14 @@ owner 边界 strict replay、权威 stop control transition，以及与 control 
   harness 也没有断言目标 optimizer count。该 run 保留但排除出验收。修正 learner
   metadata 并加入 count/stop-reason 强断言后，PBS `2360246` 成为有效后继。
 
-### 待完成 terminal 与 Checker gate
+### 待完成 Checker gate
 
-最终干净候选仍需同 commit 的 1→2 qualification、9 节点 GPT-2/WikiText-2 50×10
-active/standby SIGKILL takeover terminal run，以及从干净 worktree 运行的 Checker；
-Checker 必须增加 Maker 未列出的反例，并审查时钟假设与 D-M0010–D-M0012 证据归属。
-这些 artifact 全部通过前，P05 必须保持 checking。
+Maker ladder 已完成。仍需从干净 worktree 运行 Checker；Checker 必须增加 Maker 未
+列出的反例，并审查时钟假设与 D-M0010–D-M0012 证据归属。该 artifact 通过前，
+P05 必须保持 checking。
 
 ### 已知限制与下一步
 
 learner interval/session boundary 与 warm recovery 语义属于 P06。不会迁移或续跑任何
-历史数据库 run。下一步：持久化 checking 候选，在该候选上重跑 1→2，一次运行
-9 节点 terminal gate，然后运行独立 Checker；仅在 P05-A01–A20 全绿后归档 P05。
+历史数据库 run。下一步：持久化通过的 Maker ladder，运行独立 Checker；若其授权
+剩余的 P05-A09/P05-A13，再归档 P05。
