@@ -1,62 +1,65 @@
-phase: M00
-status: completed
-planning_basis_branch: codex/duraloco-p04-transaction-log
-planning_basis_commit: a655413cea6ebe9bc368b5827318efd766683b5a
-actual_base_branch: no_sql
-actual_base_commit: f32b9ddf3fd6443947c178aee667029df1c7f86d
-feature_branch: codex/duraloco-m00-sqlite-free-rebase
-current_loop: 4
-current_goal: "M00 SQLite-free runtime and P00-P04 requalification completed after literal requirement audit"
+phase: P05
+status: in_progress
+planning_basis_branch: codex/duraloco-m00-sqlite-free-rebase
+planning_basis_commit: 89ae48aae5956b09fc6685074d3ea0eaea36b816
+actual_base_branch: codex/duraloco-m00-sqlite-free-rebase
+actual_base_commit: 92acc3af0c2e80951dfcbf20c738841428a8b906
+feature_branch: codex/duraloco-p05-syncer-failover
+current_loop: 1
+current_goal: "freeze the coordination reference state machine and authoritative fencing boundary"
 attempts_for_current_failure: 0
-last_verified_commit: c052438a3cfe5e16c3b154fc842f32dcd61ec6ff
+last_terminal_failure_review: null
+terminal_retry_authorized: false
+terminal_retry_qualification:
+  targeted_1node_benchmark: null
+  miyabi_1node: null
+  miyabi_2node: null
+last_verified_commit: null
 checks:
   local_static: static_pass
-  local_runtime: contract_pass
+  local_runtime: not_run
   miyabi_login_static: static_pass
-  miyabi_1node: miyabi_1node_pass
-  miyabi_2node: miyabi_2node_pass
-  miyabi_9node: miyabi_9node_pass
+  miyabi_1node: not_run
+  miyabi_2node: not_run
+  miyabi_9node: not_run
 acceptance:
-  M00-A01: {result: pass, evidence: [artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/forbidden_surface.json, scripts/agent/check_no_embedded_database.py]}
-  M00-A02: {result: pass, evidence: [fs_diloco/log/production.py, fs_diloco/log/commit.py, artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/terminal_gate_report.json]}
-  M00-A03: {result: pass, evidence: [fs_diloco/runtime_view.py, fs_diloco/log/replay.py, tests/log/test_production_runtime.py]}
-  M00-A04: {result: pass, evidence: [fs_diloco/proposal_catalog.py, tests/test_proposal_catalog.py, tests/log/test_production_runtime.py]}
-  M00-A05: {result: pass, evidence: [fs_diloco/log/production_codec.py, tests/log/test_production_runtime.py, artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/terminal_gate_report.json]}
-  M00-A06: {result: pass, evidence: [fs_diloco/log/bootstrap.py, tests/log/test_bootstrap.py, tests/log/test_production_runtime.py, artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/manifest.json]}
-  M00-A07: {result: pass, evidence: [fs_diloco/analysis.py, fs_diloco/log/training_probe.py, artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/training_summary.json]}
-  M00-A08: {result: pass, evidence: [plans/duraloco/M00_P00_P04_ACCEPTANCE_MAPPING.json, plans/duraloco/M00_P00_P04_ACCEPTANCE_MAPPING.md]}
-  M00-A09: {result: pass, evidence: [artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/manifest.json, artifacts/duraloco/M00/20260711_m00_c052438_1node_requal/junit.xml, artifacts/duraloco/M00/20260711_m00_checker_c4753d4_1node/junit.xml]}
-  M00-A10: {result: pass, evidence: [artifacts/duraloco/M00/20260711_m00_c052438_2node_requal/manifest.json, artifacts/duraloco/M00/20260711_m00_c052438_2node_requal/two_node_summary.json]}
-  M00-A11: {result: pass, evidence: [artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/manifest.json, artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10/terminal_gate_report.json]}
-  M00-A12: {result: pass, evidence: [artifacts/duraloco/M00/20260711_m00_checker_c4753d4_1node/checker_report.md, artifacts/duraloco/M00/20260711_m00_checker_c4753d4_1node/checker_results.json]}
-open_decisions: []
+  P05-A01: {result: not_run, evidence: []}
+  P05-A02: {result: not_run, evidence: []}
+  P05-A03: {result: not_run, evidence: []}
+  P05-A04: {result: not_run, evidence: []}
+  P05-A05: {result: not_run, evidence: []}
+  P05-A06: {result: not_run, evidence: []}
+  P05-A07: {result: not_run, evidence: []}
+  P05-A08: {result: not_run, evidence: []}
+  P05-A09: {result: not_run, evidence: []}
+  P05-A10: {result: not_run, evidence: []}
+  P05-A11: {result: not_run, evidence: []}
+  P05-A12: {result: not_run, evidence: []}
+  P05-A13: {result: not_run, evidence: []}
+  P05-A14: {result: not_run, evidence: []}
+  P05-A15: {result: not_run, evidence: []}
+  P05-A16: {result: not_run, evidence: []}
+  P05-A17: {result: not_run, evidence: []}
+  P05-A18: {result: not_run, evidence: []}
+  P05-A19: {result: not_run, evidence: []}
+  P05-A20: {result: not_run, evidence: []}
+open_decisions:
+  - D-0501
+  - D-0502
+  - D-0503
+  - D-0504
+  - D-0505
+  - D-0506
+  - D-0507
+  - D-0508
+  - D-0509
+  - D-0510
+  - D-0511
 open_blockers: []
 artifacts:
-  - artifacts/duraloco/M00/20260711_m00_6e615e1_1node
-  - artifacts/duraloco/M00/20260711_m00_74b5cbe_1node
-  - artifacts/duraloco/M00/20260711_m00_04da7ee_1node
-  - artifacts/duraloco/M00/20260711_m00_97a6876_1node
-  - artifacts/duraloco/M00/20260711_m00_81b442c_2node
-  - artifacts/duraloco/M00/20260711_m00_dec182e_gpt2_9n_50x10
-  - artifacts/duraloco/M00/20260711_m00_342e975_gpt2_9n_50x10
-  - artifacts/duraloco/M00/20260711_m00_2d572d4_gpt2_9n_50x10
-  - artifacts/duraloco/M00/20260711_m00_c1c2404_gpt2_9n_50x10
-  - artifacts/duraloco/M00/20260711_m00_d3a7dce_gpt2_9n_50x10
-  - artifacts/duraloco/M00/20260711_m00_cd5bd73_gpt2_9n_50x10
-  - artifacts/duraloco/M00/20260711_m00_1056f0d_gpt2_9n_50x10
-  - artifacts/duraloco/M00/20260711_m00_680126a_gpt2_9n_50x10
-  - artifacts/duraloco/M00/20260711_m00_6e85182_replay_benchmark
-  - artifacts/duraloco/M00/20260711_m00_6e85182_1node_requal
-  - artifacts/duraloco/M00/20260711_m00_c052438_1node_requal
-  - artifacts/duraloco/M00/20260711_m00_c052438_2node_requal
-  - artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10
-  - artifacts/duraloco/M00/20260711_m00_checker_358ecc0_1node
-  - artifacts/duraloco/M00/20260711_m00_checker_040a95a_1node
-  - artifacts/duraloco/M00/20260711_m00_checker_b558f76_1node
-  - artifacts/duraloco/M00/20260711_m00_checker_c4753d4_1node
-  - plans/duraloco/reviews/M00_PRODUCTION_REPLAY_WORKFLOW_REVIEW.md
-next_action: "start P05 syncer lease, fencing, and failover from the corrected archived M00 branch tip"
+  - plans/duraloco/phases/P05_DRIFT_REPORT.md
+next_action: "add failing coordination traces and freeze D-0501 through D-0511"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
-checker_report: artifacts/duraloco/M00/20260711_m00_checker_c4753d4_1node/checker_report.md
+checker_report: null
