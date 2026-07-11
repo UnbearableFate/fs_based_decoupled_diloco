@@ -33,6 +33,7 @@ def run_terminal_probe(
     recovery_by_learner: dict[str, int] = {}
     adoption_by_learner: dict[str, int] = {}
     recovery_backpressure_by_learner: dict[str, int] = {}
+    recovery_committed_by_learner: dict[str, int] = {}
     for index in range(8):
         learner_id = f"learner_{index:03d}"
         events = _events(training_root / "logs" / f"{learner_id}.jsonl")
@@ -44,6 +45,10 @@ def run_terminal_probe(
         }
         sessions_by_learner[learner_id] = sessions
         recovery_by_learner[learner_id] = len(recoveries)
+        recovery_committed_by_learner[learner_id] = max(
+            (int(row.get("committed_intervals", 0)) for row in recoveries),
+            default=0,
+        )
         adoption_by_learner[learner_id] = sum(
             row.get("event_type") in {"global_adopted", "fragments_adopted"}
             for row in events
@@ -57,8 +62,11 @@ def run_terminal_probe(
             raise AssertionError(f"{learner_id} did not record boundary adoption")
     if len(sessions_by_learner["learner_000"]) < 2:
         raise AssertionError("restarted learner did not create a distinct session")
-    if recovery_backpressure_by_learner["learner_000"] < 1:
-        raise AssertionError("restarted learner bypassed committed-successor backpressure")
+    if (
+        recovery_backpressure_by_learner["learner_000"] < 1
+        and recovery_committed_by_learner["learner_000"] < 1
+    ):
+        raise AssertionError("restarted learner did not reconcile its prior publication")
 
     backend = PosixStorageBackend(training_root / "authority")
     layout = LogLayout(run_id, 0)
@@ -115,6 +123,7 @@ def run_terminal_probe(
         "warm_recovery_events": recovery_by_learner,
         "boundary_adoption_events": adoption_by_learner,
         "recovery_backpressure_events": recovery_backpressure_by_learner,
+        "recovery_committed_intervals": recovery_committed_by_learner,
         "optimizer_adoption_policy": "reset_all",
         "numeric_contract": "bfloat16-proposal-to-float32-aggregate-commit-v1",
         "assertions": {

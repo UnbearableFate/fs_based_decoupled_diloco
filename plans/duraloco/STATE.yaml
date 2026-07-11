@@ -7,7 +7,7 @@ actual_base_commit: 419577899a64a12cc602870d059a092f9319bed1
 feature_branch: codex/duraloco-p06-learner-protocol
 current_loop: 3
 current_goal: "complete a clean same-commit P06 one/two/nine-node Maker ladder"
-attempts_for_current_failure: 0
+attempts_for_current_failure: 1
 last_terminal_failure_review: null
 terminal_retry_authorized: false
 terminal_retry_qualification:
@@ -55,7 +55,9 @@ artifacts:
   - artifacts/duraloco/P06/20260711_p06_impl_cdb3f27_1node
   - artifacts/duraloco/P06/20260711_p06_impl_cdb3f27_2node
   - artifacts/duraloco/P06/20260711_p06_impl_ed4e604_1node
-next_action: "run the final same-commit 1-node then 2-node qualification with committed-interval recovery reconciliation"
+  - artifacts/duraloco/P06/20260711_p06_impl_2e2110a_1node
+  - artifacts/duraloco/P06/20260711_p06_impl_2e2110a_2node
+next_action: "rerun the final 1/2-node ladder after accepting either ancestry reconciliation or successor backpressure at restart"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

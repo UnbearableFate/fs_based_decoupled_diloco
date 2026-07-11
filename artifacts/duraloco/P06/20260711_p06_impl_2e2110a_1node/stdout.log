@@ -1,0 +1,151 @@
+{
+  "finding_count": 0,
+  "findings": [],
+  "scanned_files": 235,
+  "status": "PASS"
+}
+{
+  "action_counts": {
+    "commit": 2666,
+    "decide": 1047,
+    "invalid_unknown_selection": 899,
+    "publish": 7388,
+    "restart": 1424
+  },
+  "count": 1000,
+  "start_seed": 0,
+  "suite_digest": "bf7c6538396f59b02c9240b03c13354dd6d3a84e18ff67848b689b448560dfb1",
+  "unique_state_digests": 1000
+}
+........................................................................ [ 18%]
+........................................................................ [ 37%]
+........................................................................ [ 56%]
+....................................s................................... [ 75%]
+........................................................................ [ 94%]
+...................                                                      [100%]
+378 passed, 1 skipped in 19.46s
+{
+  "authority": "committed-transition-log",
+  "commit_id": "c-904796fa35f1c4215a5ac59e7e36f4ecf2e8111ee96831df97f05790754024b5",
+  "commit_seq": 3,
+  "committed_selected_counts_by_event": {
+    "1": 1
+  },
+  "committed_state_digest": "1739dddb0dc5d3f5b697367af213aace88db94e78e39e489974b78b02d46d757",
+  "consumed_proposal_count": 1,
+  "fragment_versions": {
+    "0": 1
+  },
+  "frontier_sha256": "ce6f86c4c57aef31ee9348d3e576e8b4151b0ee5dbe1d4337b582fa515ab3c93",
+  "global_merge_event": 1,
+  "heartbeats": {
+    "learner_000": {
+      "format_version": 1,
+      "hostname": "mg0005",
+      "last_loaded_global_version": 3,
+      "last_local_step": 4,
+      "last_update_id": "learner_000_00000004_ab2ef1eb567b",
+      "learner_id": "learner_000",
+      "phase": "process_exit",
+      "pid": 1261703,
+      "run_id": "20260711_p06_impl_2e2110a_1node-training",
+      "status": "stopped",
+      "timestamp": 1783749442.225113,
+      "tokens_per_sec": null
+    }
+  },
+  "latest": {
+    "authority": "committed-transition-log-and-head-fence",
+    "commit_id": "c-904796fa35f1c4215a5ac59e7e36f4ecf2e8111ee96831df97f05790754024b5",
+    "commit_seq": 3,
+    "committed_interval_identities": [
+      [
+        "learner_000",
+        "learner_000-461a803d51e847a59fae940b44a7d0f7",
+        0,
+        1
+      ]
+    ],
+    "committed_state_digest": "1739dddb0dc5d3f5b697367af213aace88db94e78e39e489974b78b02d46d757",
+    "created_at": 1783749441.4885132,
+    "fencing_epoch": 1,
+    "format_version": 1,
+    "fragment_versions": {
+      "0": 1
+    },
+    "frontier_sha256": "ce6f86c4c57aef31ee9348d3e576e8b4151b0ee5dbe1d4337b582fa515ab3c93",
+    "global_merge_event": 1,
+    "optim_path": "/work/xg24i002/x10041/duraloco_worktrees/p06-final-2e2110a/runs/duraloco/P06/20260711_p06_impl_2e2110a_1node/training/optim/outer_v000003.safetensors",
+    "optimizer_transition_count": 1,
+    "owner_id": "syncer-a",
+    "owner_session_id": "20260711_p06_impl_2e2110a_1node-owner",
+    "param_index_path": "/work/xg24i002/x10041/duraloco_worktrees/p06-final-2e2110a/runs/duraloco/P06/20260711_p06_impl_2e2110a_1node/training/control/param_index.json",
+    "run_generation": 0,
+    "run_id": "20260711_p06_impl_2e2110a_1node-training",
+    "runtime_view_digest": "c74ad0a9fdc564fff6a9d77c44b314e567c694d857f609fa175e7d4a0e79bbb1",
+    "total_seen_tokens": 256,
+    "version": 3,
+    "weight_path": "/work/xg24i002/x10041/duraloco_worktrees/p06-final-2e2110a/runs/duraloco/P06/20260711_p06_impl_2e2110a_1node/training/weights/global_v000003.safetensors"
+  },
+  "latest_export_valid": true,
+  "latest_kind": "full",
+  "learner_fragment_adoption": {
+    "learner_000": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    }
+  },
+  "learner_local_steps": {
+    "learner_000": 4
+  },
+  "learner_metrics": {
+    "exists": true,
+    "path": "/work/xg24i002/x10041/duraloco_worktrees/p06-final-2e2110a/runs/duraloco/P06/20260711_p06_impl_2e2110a_1node/training/metrics/learner_metrics.csv",
+    "rows": 2
+  },
+  "loss_summary": {
+    "count": 2,
+    "invalid_or_nonfinite": 0,
+    "max": 4.437056303024292,
+    "min": 4.3936262130737305,
+    "obvious_divergence": false
+  },
+  "materialized_weight_exists": true,
+  "optimizer_transition_count": 1,
+  "payload_codec": "safetensors-flat-v1",
+  "run_generation": 0,
+  "run_id": "20260711_p06_impl_2e2110a_1node-training",
+  "runtime_view_digest": "c74ad0a9fdc564fff6a9d77c44b314e567c694d857f609fa175e7d4a0e79bbb1",
+  "shared_root": "/work/xg24i002/x10041/duraloco_worktrees/p06-final-2e2110a/runs/duraloco/P06/20260711_p06_impl_2e2110a_1node/training",
+  "stop_reason": "stop_after_outer_steps",
+  "syncer_log_flags": {
+    "error": false,
+    "no_progress_timeout": false,
+    "uncaught_exception": false
+  },
+  "syncer_metrics": {
+    "exists": true,
+    "path": "/work/xg24i002/x10041/duraloco_worktrees/p06-final-2e2110a/runs/duraloco/P06/20260711_p06_impl_2e2110a_1node/training/metrics/syncer_metrics.csv",
+    "rows": 1
+  },
+  "total_seen_tokens": 256,
+  "update_manifest": {
+    "exists": true,
+    "path": "/work/xg24i002/x10041/duraloco_worktrees/p06-final-2e2110a/runs/duraloco/P06/20260711_p06_impl_2e2110a_1node/training/metrics/update_manifest.csv",
+    "rows": 2
+  }
+}
+{
+  "boundary_adoptions": 2,
+  "finite_losses": [
+    4.437056303024292,
+    4.3936262130737305
+  ],
+  "local_steps": 4,
+  "publication_request_ids": [
+    "learner-publish-c2cedd14de5bf3859603f07b0f4dbfa63694db92cf088abd09f41f7bd2adbc8c",
+    "learner-publish-fed973e3f1c2b0c214d3a292f95878faa02680b7540801bc7dea7cb6d666d92b"
+  ],
+  "published_intervals": 2,
+  "status": "PASS"
+}
