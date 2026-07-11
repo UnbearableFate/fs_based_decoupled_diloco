@@ -1,5 +1,5 @@
 phase: P06B
-status: checking
+status: completed
 planning_basis_branch: codex/duraloco-p06a-syncer-kernel
 planning_basis_commit: 4ce89280f99553f6d81821978367c53acaf10214
 verified_dependency_implementation: 5a7150220bf3cc6a4a46d2a563466335163d21ad
@@ -8,7 +8,7 @@ actual_base_branch: codex/duraloco-p06a-syncer-kernel
 actual_base_commit: 4ce89280f99553f6d81821978367c53acaf10214
 feature_branch: codex/duraloco-p06b-learner-hosted-sync
 current_loop: 6
-current_goal: "independent P06B Checker audit"
+current_goal: "P06B completed; hand off verified factor-one baseline to P06C"
 attempts_for_current_failure: 0
 last_terminal_failure_review: null
 terminal_retry_authorized: false
@@ -16,7 +16,7 @@ terminal_retry_qualification:
   targeted_1node_benchmark: null
   miyabi_1node: null
   miyabi_2node: null
-last_verified_commit: d5e2901b75ef504a31a365790b7b9518c329dbe7
+last_verified_commit: b26046734af21eb51fc59b4689c6580ebe9d504a
 checks:
   local_static: static_pass
   local_runtime: unit_pass
@@ -24,6 +24,7 @@ checks:
   miyabi_d1: miyabi_d1_pass
   miyabi_d2: miyabi_d2_pass
   miyabi_d8: miyabi_d8_pass
+  independent_checker: contract_pass
 acceptance:
   P06B-A01: {result: pass, evidence: ["105 focused tests; distributed RunSpec/membership replay"]}
   P06B-A02: {result: pass, evidence: ["ownership golden/property tests"]}
@@ -46,7 +47,7 @@ acceptance:
   P06B-A19: {result: pass, evidence: ["D8 CPU/NUMA/RSS/GPU/Lustre/stage latency report"]}
   P06B-A20: {result: pass, evidence: ["forbidden_surface finding_count=0; one global head"]}
   P06B-A21: {result: pass, evidence: ["CRS read-only comparison; distributed generation isolated"]}
-  P06B-A22: {result: not_run, evidence: ["Maker report/manifests/checksums ready; independent Checker pending"]}
+  P06B-A22: {result: pass, evidence: ["PBS 2362890.opbs; bilingual report/manifests/checksums clean"]}
   P06B-A23: {result: pass, evidence: ["fresh-generation/rollback report; next phase frozen as P06C"]}
 open_decisions: []
 open_blockers: []
@@ -61,8 +62,10 @@ artifacts:
   - artifacts/duraloco/P06B/20260711_p06b_final_d5e2901_d2
   - artifacts/duraloco/P06B/20260711_p06b_final_d5e2901_d8
   - artifacts/duraloco/P06B/20260711_p06b_compare_8b1c476_1node
-next_action: "run the independent P06B Checker; on PASS complete P06B and start P06C Loop 0"
+  - plans/duraloco/checker_reports/P06B_FINAL_CHECKER_REPORT.md
+  - artifacts/duraloco/P06B/20260711_p06b_checker_b260467_1node
+next_action: "P06C"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
-checker_report: pending
+checker_report: plans/duraloco/checker_reports/P06B_FINAL_CHECKER_REPORT.md

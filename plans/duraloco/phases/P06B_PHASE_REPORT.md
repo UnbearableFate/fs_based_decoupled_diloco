@@ -9,8 +9,9 @@
 - P06A basis: `4ce89280f99553f6d81821978367c53acaf10214`
 - Runtime implementation: `d5e2901b75ef504a31a365790b7b9518c329dbe7`
 - Evidence tooling: `8b1c47683d42ee547c9bbfdc95e15958bbeb6afb`
-- Maker acceptance: P06B-A01–A21 and A23 pass; A22 awaits the independent Checker
-- Current status: `checking`
+- Acceptance: P06B-A01 through P06B-A23 pass
+- Current status: `completed`
+- Checker: PBS `2362890.opbs`, `PASS`, no required-gate follow-up
 
 P06B starts a fresh `distributed-head-fenced-v1` generation. Its genesis freezes
 revision-zero membership, factor-one rendezvous ownership, executor sessions,
@@ -53,6 +54,14 @@ post-lease replay and epoch preparation. The repaired runtime treats the expecte
 orphan commit. The facade is a crash/omission least-authority boundary, not a
 Byzantine sandbox for arbitrary code under the same Unix account. P06B provides
 factor one only; overlapping prepare begins in P06C.
+
+### Independent Checker
+
+The Checker audited persistence commit `b26046734af21eb51fc59b4689c6580ebe9d504a`,
+ran 10,000 unique reference traces and the full suite (408 passed, one explicit
+skip), validated all Maker manifests and checksums, and replayed a private
+conflicting-prepared-identity plus forbidden-head-write counterexample. Both
+mutations failed closed. The `checking → completed` transition is authorized.
 
 ## 中文
 
@@ -101,3 +110,10 @@ replay 与 epoch prepare 之间提交。修复后的 runtime 将预期 `CommitCo
 保留 race evidence，且不生成 successor 或 orphan commit。facade 是 crash/omission model
 下的 least-authority 边界，不是同一 Unix 账号任意代码的 Byzantine sandbox。P06B 仅提供
 factor one；overlapping prepare 从 P06C 开始。
+
+### 独立 Checker
+
+Checker 复核 persistence commit `b26046734af21eb51fc59b4689c6580ebe9d504a`，运行
+10,000 条唯一 reference trace 与完整测试（408 项通过、1 项显式跳过），验证全部 Maker
+manifest/checksum，并执行私有的 conflicting prepared identity 与禁止 head write 反例；两项
+mutation 均 fail closed。`checking → completed` 转换获授权。

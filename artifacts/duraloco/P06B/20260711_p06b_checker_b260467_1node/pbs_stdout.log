@@ -1,0 +1,38 @@
+## codex/duraloco-p06b-learner-hosted-sync
+b26046734af21eb51fc59b4689c6580ebe9d504a
+mg0010
+Python 3.13.13
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python scripts/agent/check_research_contract.py --root /work/xg24i002/x10041/fs_based_decoupled_diloco
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python scripts/agent/check_phase_state.py plans/duraloco/STATE.yaml --root /work/xg24i002/x10041/fs_based_decoupled_diloco
+bash -n scripts/miyabi/benchmark_duraloco_p06_wrapper_1node.pbs scripts/miyabi/benchmark_m00_payload_validation.pbs scripts/miyabi/benchmark_m00_production_replay.pbs scripts/miyabi/run_1node_debug.pbs scripts/miyabi/run_1node_fragment_debug.pbs scripts/miyabi/run_1node_lm_eval.pbs scripts/miyabi/run_2node_debug.pbs scripts/miyabi/run_2node_fragment_debug.pbs scripts/miyabi/run_9node_fragment_gpt2_wikitext2_5000steps.pbs scripts/miyabi/run_9node_fragment_gpt2_wikitext2_50x4.pbs scripts/miyabi/run_9node_gpt2_wikitext2_5000steps.pbs scripts/miyabi/run_9node_gpt2_wikitext2.pbs scripts/miyabi/run_duraloco_m00_1node.pbs scripts/miyabi/run_duraloco_m00_2node.pbs scripts/miyabi/run_duraloco_m00_checker_1node.pbs scripts/miyabi/run_duraloco_milestone_9node_gpt2_50x10.pbs scripts/miyabi/run_duraloco_p00_baseline.pbs scripts/miyabi/run_duraloco_p00_p02_tests.pbs scripts/miyabi/run_duraloco_p01_tests.pbs scripts/miyabi/run_duraloco_p02_reference.pbs scripts/miyabi/run_duraloco_p03_storage_1node.pbs scripts/miyabi/run_duraloco_p03_storage_2node.pbs scripts/miyabi/run_duraloco_p04_log_1node.pbs scripts/miyabi/run_duraloco_p04_log_2node.pbs scripts/miyabi/run_duraloco_p05_1node.pbs scripts/miyabi/run_duraloco_p05_2node.pbs scripts/miyabi/run_duraloco_p05_9node_gpt2_50x10.pbs scripts/miyabi/run_duraloco_p05_checker_1node.pbs scripts/miyabi/run_duraloco_p05_unit_1node.pbs scripts/miyabi/run_duraloco_p06_1node.pbs scripts/miyabi/run_duraloco_p06_2node.pbs scripts/miyabi/run_duraloco_p06_9node_gpt2_50x10.pbs scripts/miyabi/run_duraloco_p06a_c1.pbs scripts/miyabi/run_duraloco_p06a_c2.pbs scripts/miyabi/run_duraloco_p06a_c9.pbs scripts/miyabi/run_duraloco_p06a_checker_1node.pbs scripts/miyabi/run_duraloco_p06a_unit_1node.pbs scripts/miyabi/run_duraloco_p06b_checker_1node.pbs scripts/miyabi/run_duraloco_p06b_compare_1node.pbs scripts/miyabi/run_duraloco_p06b_d1.pbs scripts/miyabi/run_duraloco_p06b_d2.pbs scripts/miyabi/run_duraloco_p06b_d8.pbs scripts/miyabi/run_duraloco_p06b_unit_1node.pbs scripts/miyabi/run_duraloco_p06_checker_1node.pbs scripts/miyabi/run_duraloco_p06_unit_1node.pbs
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python scripts/agent/check_no_embedded_database.py --root /work/xg24i002/x10041/fs_based_decoupled_diloco --output /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P06B/20260711_p06b_checker_b260467_1node/forbidden_surface.json
+{
+  "finding_count": 0,
+  "findings": [],
+  "scanned_files": 289,
+  "status": "PASS"
+}
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python -m fs_diloco.testing.reference_cli --count 10000 --steps 12
+{
+  "action_counts": {
+    "commit": 26276,
+    "decide": 11019,
+    "invalid_unknown_selection": 8827,
+    "publish": 73878,
+    "restart": 14347
+  },
+  "count": 10000,
+  "start_seed": 0,
+  "suite_digest": "7840b0ebcad828184ae5bdbb5d8b5f39427d66cf37343c7c8966f1549655ee7e",
+  "unique_state_digests": 10000
+}
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python -m pytest -q tests --junitxml /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P06B/20260711_p06b_checker_b260467_1node/junit.xml
+........................................................................ [ 17%]
+........................................................................ [ 35%]
+........................................................................ [ 52%]
+................................................s....................... [ 70%]
+........................................................................ [ 88%]
+.................................................                        [100%]
+408 passed, 1 skipped in 20.09s
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python scripts/agent/check_p06b_final.py --root /work/xg24i002/x10041/fs_based_decoupled_diloco --artifact-root /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P06B/20260711_p06b_checker_b260467_1node --manifest /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P06B/20260711_p06b_final_d5e2901_unit/manifest.json --manifest /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P06B/20260711_p06b_final_d5e2901_d1/manifest.json --manifest /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P06B/20260711_p06b_final_d5e2901_d2/manifest.json --manifest /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P06B/20260711_p06b_final_d5e2901_d8/manifest.json --manifest /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P06B/20260711_p06b_compare_8b1c476_1node/manifest.json --output /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P06B/20260711_p06b_checker_b260467_1node/checker_results.json
+{"acceptance_id_count": 23, "checker_hostname": "mg0010", "checker_pbs_job_id": "2362890.opbs", "checking_to_completed": "AUTHORIZED", "novel_counterexample": {"conditional_replace_exposed": false, "pass": true, "prepare_head_write_rejected": true, "same_identity_conflicting_content_rejected": true}, "persistence_commit": "b26046734af21eb51fc59b4689c6580ebe9d504a", "required_gate_followups": "none", "schema_version": 2, "verdict": "PASS", "verified_evidence_commit": "8b1c47683d42ee547c9bbfdc95e15958bbeb6afb", "verified_runtime_implementation": "d5e2901b75ef504a31a365790b7b9518c329dbe7"}

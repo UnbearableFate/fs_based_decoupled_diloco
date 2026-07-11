@@ -1,0 +1,18 @@
+{
+  "acceptance_id_count": 23,
+  "checker_hostname": "mg0010",
+  "checker_pbs_job_id": "2362890.opbs",
+  "checking_to_completed": "AUTHORIZED",
+  "novel_counterexample": {
+    "conditional_replace_exposed": false,
+    "pass": true,
+    "prepare_head_write_rejected": true,
+    "same_identity_conflicting_content_rejected": true
+  },
+  "persistence_commit": "b26046734af21eb51fc59b4689c6580ebe9d504a",
+  "required_gate_followups": "none",
+  "schema_version": 2,
+  "verdict": "PASS",
+  "verified_evidence_commit": "8b1c47683d42ee547c9bbfdc95e15958bbeb6afb",
+  "verified_runtime_implementation": "d5e2901b75ef504a31a365790b7b9518c329dbe7"
+}

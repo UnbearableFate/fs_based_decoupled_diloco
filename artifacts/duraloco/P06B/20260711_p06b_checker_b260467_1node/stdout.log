@@ -1,0 +1,27 @@
+{
+  "finding_count": 0,
+  "findings": [],
+  "scanned_files": 289,
+  "status": "PASS"
+}
+{
+  "action_counts": {
+    "commit": 26276,
+    "decide": 11019,
+    "invalid_unknown_selection": 8827,
+    "publish": 73878,
+    "restart": 14347
+  },
+  "count": 10000,
+  "start_seed": 0,
+  "suite_digest": "7840b0ebcad828184ae5bdbb5d8b5f39427d66cf37343c7c8966f1549655ee7e",
+  "unique_state_digests": 10000
+}
+........................................................................ [ 17%]
+........................................................................ [ 35%]
+........................................................................ [ 52%]
+................................................s....................... [ 70%]
+........................................................................ [ 88%]
+.................................................                        [100%]
+408 passed, 1 skipped in 20.09s
+{"acceptance_id_count": 23, "checker_hostname": "mg0010", "checker_pbs_job_id": "2362890.opbs", "checking_to_completed": "AUTHORIZED", "novel_counterexample": {"conditional_replace_exposed": false, "pass": true, "prepare_head_write_rejected": true, "same_identity_conflicting_content_rejected": true}, "persistence_commit": "b26046734af21eb51fc59b4689c6580ebe9d504a", "required_gate_followups": "none", "schema_version": 2, "verdict": "PASS", "verified_evidence_commit": "8b1c47683d42ee547c9bbfdc95e15958bbeb6afb", "verified_runtime_implementation": "d5e2901b75ef504a31a365790b7b9518c329dbe7"}
