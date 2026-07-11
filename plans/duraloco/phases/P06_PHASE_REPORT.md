@@ -8,9 +8,9 @@
 - Branch: `codex/duraloco-p06-learner-protocol`
 - P05 archival base: `419577899a64a12cc602870d059a092f9319bed1`
 - Verified Maker implementation: `2581a4d6286c7d0666f76aa3cc9d8122e66f6d25`
-- Current status: `checking`
+- Current status: `completed`
 - Acceptance: P06-A01 through P06-A20 pass at the Maker gate
-- Checker verdict: pending
+- Checker verdict: `PASS`, with no required-gate follow-up
 
 P06 keeps the single public `fs_diloco.learner` runtime and adds one
 dependency-free learner-protocol kernel. Each proposal now binds an immutable
@@ -72,6 +72,24 @@ The immutable failure manifest and bilingual workflow review are preserved.
 Per retry discipline, the repair passed targeted one-node, full one-node, and
 two-node gates on the same clean commit before the single terminal retry.
 
+### Independent Checker gate
+
+PBS `2360636.opbs`, run `20260711_p06_checker_030129e_1node`, independently
+checked persistence commit `030129e045c4e5a2abb80eb100a0e28fb78d384d` in a
+clean worktree and verified Maker implementation
+`2581a4d6286c7d0666f76aa3cc9d8122e66f6d25`. It passed the static research and
+SQLite-free contracts, 10,000 unique reference traces, 378 tests with one
+explicit skip, all 20 acceptance IDs, and the complete one/two/nine-node
+lineage.
+
+The Checker-only counterexample corrupted an immutable publication request on
+read and combined that failure with a mid-interval committed successor. The
+request failed closed before a new session interval could begin, the successor
+remained pending until the boundary, and the learner performed zero head-CAS
+operations. The final verdict is `PASS`, required-gate follow-ups are `none`,
+and the `checking -> completed` transition is authorized. This does not
+authorize merging `main`.
+
 ### Limitations
 
 P06 warm recovery does not preserve inner optimizer, RNG, or dataset iterator
@@ -87,9 +105,9 @@ database is present. P06 completion does not authorize merging `main`.
 - 分支：`codex/duraloco-p06-learner-protocol`
 - P05 归档基线：`419577899a64a12cc602870d059a092f9319bed1`
 - 已验证 Maker implementation：`2581a4d6286c7d0666f76aa3cc9d8122e66f6d25`
-- 当前状态：`checking`
+- 当前状态：`completed`
 - 验收：Maker gate 中 P06-A01 至 P06-A20 全部通过
-- Checker 结论：待运行
+- Checker 结论：`PASS`，且没有 required-gate follow-up
 
 P06 保留唯一公共 `fs_diloco.learner` runtime，并增加唯一 dependency-free learner
 protocol kernel。每个 proposal 现在绑定 immutable learner session、session 内单调
@@ -138,6 +156,21 @@ RTO 为 68.920 秒，standby strict replay 为 21.922 秒。
 因此在 runtime 前失败。immutable failure manifest 与双语 workflow review 均保留。
 按照 retry 纪律，修复在同一干净 commit 上依次通过 targeted 单节点、完整单节点和双节点，
 之后才执行唯一一次 terminal retry。
+
+### 独立 Checker gate
+
+PBS `2360636.opbs`、run `20260711_p06_checker_030129e_1node` 在干净 worktree
+中独立检查 persistence commit
+`030129e045c4e5a2abb80eb100a0e28fb78d384d`，并验证 Maker implementation
+`2581a4d6286c7d0666f76aa3cc9d8122e66f6d25`。它通过静态 research 与
+SQLite-free contract、10,000 条唯一 reference trace、378 项测试（另有 1 项显式
+跳过）、全部 20 项验收，以及完整的单/双/九节点 lineage。
+
+Checker 专属反例在读取时损坏 immutable publication request，并同时注入 interval
+中途出现的 committed successor。损坏请求在新 session interval 开始前 fail closed，
+successor 保持 pending 直到 boundary，learner 的 head-CAS 操作为零。最终 verdict 为
+`PASS`，required-gate follow-up 为 `none`，并授权 `checking -> completed` 状态转换；
+这不授权合并 `main`。
 
 ### 限制
 

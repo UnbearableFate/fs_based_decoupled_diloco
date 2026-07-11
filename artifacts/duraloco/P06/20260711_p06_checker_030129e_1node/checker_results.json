@@ -1,0 +1,31 @@
+{
+  "checker_hostname": "mg0013",
+  "checker_pbs_job_id": "2360636.opbs",
+  "checking_to_completed": "AUTHORIZED",
+  "checks": {
+    "acceptance_id_count": 20,
+    "explicit_reference_traces": 10000,
+    "maker_lineage": [
+      "20260711_p06_repair_2581a4d_1node",
+      "20260711_p06_repair_2581a4d_2node",
+      "20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1"
+    ],
+    "novel_counterexample": {
+      "adoption_deferred_to_boundary": true,
+      "corrupt_request_rejected": true,
+      "learner_head_cas_operations": 0,
+      "name": "corrupt_publication_request_then_mid_interval_successor",
+      "pass": true
+    },
+    "one_node_real_path": "PASS",
+    "single_learner_runtime_static_audit": "PASS",
+    "terminal_50x10_learner_restart": "PASS",
+    "two_node_warm_restart": "PASS"
+  },
+  "persistence_commit": "030129e045c4e5a2abb80eb100a0e28fb78d384d",
+  "required_failures": [],
+  "required_gate_followups": "none",
+  "schema_version": 2,
+  "verdict": "PASS",
+  "verified_implementation": "2581a4d6286c7d0666f76aa3cc9d8122e66f6d25"
+}

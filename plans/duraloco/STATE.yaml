@@ -1,12 +1,12 @@
 phase: P06
-status: checking
+status: completed
 planning_basis_branch: codex/duraloco-p05-syncer-failover
 planning_basis_commit: 82dbec10e1a738cfaa88212698e7e8cf5a0f7ae1
 actual_base_branch: codex/duraloco-p05-syncer-failover
 actual_base_commit: 419577899a64a12cc602870d059a092f9319bed1
 feature_branch: codex/duraloco-p06-learner-protocol
 current_loop: 4
-current_goal: "run the independent Checker over the passing P06 Maker ladder"
+current_goal: "P06 completed; preserve the verified baseline for automatic P07/P08 progression"
 attempts_for_current_failure: 0
 last_terminal_failure_review: plans/duraloco/reviews/P06_TERMINAL_WRAPPER_FAILURE_REVIEW.md
 terminal_retry_authorized: true
@@ -66,8 +66,9 @@ artifacts:
   - artifacts/duraloco/P06/20260711_p06_repair_2581a4d_2node
   - artifacts/duraloco/P06/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1
   - plans/duraloco/phases/P06_PHASE_REPORT.md
-next_action: "persist the passing Maker ladder and run the independent Checker"
+  - artifacts/duraloco/P06/20260711_p06_checker_030129e_1node
+next_action: "start P07 and P08 independently from the verified P06 report baseline"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
-checker_report: null
+checker_report: artifacts/duraloco/P06/20260711_p06_checker_030129e_1node/checker_report.md

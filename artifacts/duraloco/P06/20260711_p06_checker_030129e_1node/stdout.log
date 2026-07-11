@@ -1,0 +1,27 @@
+{
+  "finding_count": 0,
+  "findings": [],
+  "scanned_files": 238,
+  "status": "PASS"
+}
+{
+  "action_counts": {
+    "commit": 26276,
+    "decide": 11019,
+    "invalid_unknown_selection": 8827,
+    "publish": 73878,
+    "restart": 14347
+  },
+  "count": 10000,
+  "start_seed": 0,
+  "suite_digest": "7840b0ebcad828184ae5bdbb5d8b5f39427d66cf37343c7c8966f1549655ee7e",
+  "unique_state_digests": 10000
+}
+........................................................................ [ 18%]
+........................................................................ [ 37%]
+........................................................................ [ 56%]
+....................................s................................... [ 75%]
+........................................................................ [ 94%]
+...................                                                      [100%]
+378 passed, 1 skipped in 20.03s
+{"checker_hostname": "mg0013", "checker_pbs_job_id": "2360636.opbs", "checking_to_completed": "AUTHORIZED", "checks": {"acceptance_id_count": 20, "explicit_reference_traces": 10000, "maker_lineage": ["20260711_p06_repair_2581a4d_1node", "20260711_p06_repair_2581a4d_2node", "20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1"], "novel_counterexample": {"adoption_deferred_to_boundary": true, "corrupt_request_rejected": true, "learner_head_cas_operations": 0, "name": "corrupt_publication_request_then_mid_interval_successor", "pass": true}, "one_node_real_path": "PASS", "single_learner_runtime_static_audit": "PASS", "terminal_50x10_learner_restart": "PASS", "two_node_warm_restart": "PASS"}, "persistence_commit": "030129e045c4e5a2abb80eb100a0e28fb78d384d", "required_failures": [], "required_gate_followups": "none", "schema_version": 2, "verdict": "PASS", "verified_implementation": "2581a4d6286c7d0666f76aa3cc9d8122e66f6d25"}
