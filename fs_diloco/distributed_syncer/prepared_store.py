@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import hashlib
 
-from fs_diloco.protocol.canonical_json import canonical_bytes, canonical_object
+from fs_diloco.log.codec import canonical_object
+from fs_diloco.protocol.canonical_json import canonical_bytes
 from fs_diloco.protocol.prepared_transition_v1 import (
     PreparedAttemptEnvelopeV1,
     PreparedFragmentResultV1,
