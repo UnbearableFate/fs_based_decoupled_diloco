@@ -19,7 +19,11 @@ def _json(path: Path):
 
 
 def _commits(root: Path):
-    values = [_json(path) for path in root.rglob("immutable/commits/*.json")]
+    values = [
+        _json(path)
+        for path in root.rglob("*.json")
+        if path.parent.name == "commits"
+    ]
     return sorted(values, key=lambda item: item["commit_seq"])
 
 
