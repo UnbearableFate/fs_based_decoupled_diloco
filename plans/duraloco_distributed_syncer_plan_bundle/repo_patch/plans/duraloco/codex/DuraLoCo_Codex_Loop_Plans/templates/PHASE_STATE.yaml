@@ -1,0 +1,61 @@
+schema_version: 3
+project: duraloco
+phase: PXX
+status: planned  # planned|in_progress|checking|completed|blocked
+branch: codex/duraloco-...
+basis:
+  phase: PPREV
+  verified_commit: null
+  dependency_digest: null
+current_commit: null
+working_tree_clean: null
+architecture:
+  mode: central_reference  # central_reference|distributed_r1|distributed_r2
+  dedicated_syncer_nodes: null
+  learner_nodes: null
+  learner_processes: null
+  executor_processes: null
+  replication_factor: null
+  controller_mode: fixed  # fixed|shadow|system_enforced|algorithm_enforced
+  global_head_mode: single
+  per_fragment_heads: false
+membership:
+  revision: null
+  digest: null
+ownership:
+  algorithm: null
+  digest: null
+committer:
+  owner_id: null
+  session_id: null
+  fencing_epoch: null
+progress:
+  current_loop: null
+  next_smallest_gap: null
+  acceptance_total: 0
+  acceptance_passed: 0
+  acceptance_blocked: 0
+validation:
+  local: not_run
+  C1: not_applicable
+  C2: not_applicable
+  C9: not_applicable
+  D1: not_applicable
+  D2: not_applicable
+  D8: not_applicable
+  D8_R2: not_applicable
+checker:
+  status: not_run
+  verdict: null
+  report: null
+artifacts:
+  latest_run_id: null
+  phase_report: null
+  oracle_or_equivalence_report: null
+  authority_audit: null
+  topology_manifest: null
+  checksums_verified: false
+blockers: []
+decisions_open: []
+next_action: null
+updated_at: null

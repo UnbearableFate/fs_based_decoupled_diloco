@@ -1,0 +1,114 @@
+{
+  "schema_version": 3,
+  "run_id": "<stable-run-id>",
+  "parent_run_id": null,
+  "phase": "PXX",
+  "validation_shape": "D8",
+  "attempt_class": "pass|fail|inconclusive|queued_cancelled|deliberate_termination|retry",
+  "repository": {
+    "commit": "<git-sha>",
+    "branch": "<branch>",
+    "working_tree_clean": true,
+    "plan_checksum": "<sha256>",
+    "implementation_digest": "<digest>"
+  },
+  "topology": {
+    "mode": "central_reference|distributed_r1|distributed_r2",
+    "learner_nodes": 8,
+    "learner_processes": 8,
+    "executor_processes": 8,
+    "dedicated_syncer_nodes": 0,
+    "central_reference_mode": "absent|offline|shadow|authoritative",
+    "replication_factor": 2,
+    "hedge_mode": "off|warm|active_active_test|hedged",
+    "controller_mode": "fixed|shadow|system_enforced|algorithm_enforced",
+    "roles": []
+  },
+  "authority": {
+    "run_generation": "<generation>",
+    "global_head_before": "<object-ref>",
+    "global_head_after": "<object-ref>",
+    "committed_prefix_digest": "<digest>",
+    "membership_revision": 0,
+    "membership_digest": "<digest>",
+    "ownership_digest": "<digest>",
+    "committer_owner_id": "<id>",
+    "committer_session_id": "<id>",
+    "committer_fencing_epoch": 0,
+    "per_fragment_heads": false
+  },
+  "workload": {
+    "model": "gpt2",
+    "dataset": "wikitext-2",
+    "inner_steps": 50,
+    "target_outer_transitions": 10,
+    "seed": 0,
+    "target_tokens": null,
+    "actual_tokens": null
+  },
+  "numeric": {
+    "proposal_dtype": "bfloat16",
+    "accumulation_dtype": "float32",
+    "committed_param_dtype": "float32",
+    "fragment_layout_digest": "<digest>",
+    "selection_policy_digest": "<digest>",
+    "outer_optimizer_digest": "<digest>",
+    "execution_backend_digest": "<digest>",
+    "numeric_comparison_mode": "exact_content|tolerance_report"
+  },
+  "resources": {
+    "pbs_job_id": "<job-id>",
+    "queue": "<queue>",
+    "requested_nodes": 8,
+    "requested_walltime": "00:15:00",
+    "hostnames": [],
+    "gpu_mapping": [],
+    "cpu_affinity": [],
+    "numa_policy": [],
+    "lfe_cpu_threads": null,
+    "lfe_rss_budget_bytes": null,
+    "inflight_io_budget_bytes": null
+  },
+  "lineage": {
+    "proposal_ids": [],
+    "work_order_ids": [],
+    "prepared_result_digests": [],
+    "prepared_attempt_ids": [],
+    "committed_transition_ids": [],
+    "snapshot_ids": [],
+    "capsule_ids": [],
+    "fault_tape_id": null,
+    "controller_decision_ids": []
+  },
+  "results": {
+    "terminal_status": "<status>",
+    "exit_status": null,
+    "wall_time_seconds": null,
+    "committed_outer_transitions": null,
+    "finite_loss": null,
+    "double_logical_inclusion": 0,
+    "mixed_parameter_outer_state": 0,
+    "live_objects_deleted": 0,
+    "central_distributed_digest_match": null,
+    "gpu_step_time_summary": {},
+    "lfe_resource_summary": {},
+    "storage_summary": {},
+    "latency_stage_summary": {},
+    "fault_recovery_summary": {}
+  },
+  "artifacts": {
+    "root": "artifacts/duraloco/PXX/<run-id>/",
+    "commands": "commands.txt",
+    "raw_events": "events.jsonl",
+    "topology_manifest": "topology.json",
+    "authority_timeline": "authority.jsonl",
+    "checker_report": "checker_report.md",
+    "phase_report": "phase_report.md",
+    "checksums": "SHA256SUMS.txt"
+  },
+  "exclusion": {
+    "excluded_from_formal_analysis": false,
+    "reason_code": null,
+    "reason_detail": null
+  }
+}

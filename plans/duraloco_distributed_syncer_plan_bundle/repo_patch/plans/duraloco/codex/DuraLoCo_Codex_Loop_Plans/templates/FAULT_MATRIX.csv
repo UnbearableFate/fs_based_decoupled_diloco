@@ -1,0 +1,7 @@
+fault_id,phase,topology,role,injection_point,expected_safety,expected_liveness,max_rto_seconds,max_rpo,required_artifacts,status
+F-001,P06B,D2,executor,before_pft_marker,no_commit,reassign_and_recompute,,,manifest|events|authority_timeline,planned
+F-002,P06B,D2,committer,after_head_cas_before_response,no_duplicate_commit,ancestry_reconcile,,,manifest|events|head_history,planned
+F-003,P06C,D8-R2,primary_executor,mid_reduce,same_fwo_single_logical_commit,backup_or_hedge_completes,,,manifest|pft_digests|fault_tape,planned
+F-004,P06C,D8-R2,whole_node,learner_and_committer_loss,no_split_brain,committed_reconfiguration,,,manifest|qstat|authority_timeline,planned
+F-005,P07,D8-R2,gc,concurrent_prepare_commit,zero_live_deletion,gc_may_delay,,,reachability|gc_plan|restore_report,planned
+F-006,P10,D8-R2,controller,head_epoch_change,old_action_not_applied,safe_fallback_or_replay,,,decision_trace|authority_timeline,planned
