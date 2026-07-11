@@ -761,3 +761,20 @@ the failed artifact is retained in attempt lineage.
 原因：测试读取了不存在的 `ReplayResult.consumed_proposal_ids`，而正确的权威字段是
 `ReplayResult.consumption`。现有 runtime 没有违反语义断言。测试已改为使用公开 replay
 结果，失败 artifact 保留在 attempt lineage 中。
+
+The second audit Checker attempt, PBS `2359349.opbs` at `b558f76`, passed all
+295 current tests, the explicit 10,000 traces, and all five named historical
+counterexamples. Its combined counterexample also killed the child at the
+intended POSIX publication stage, observed an omitted listing, recovered at
+commit 0, and committed the proposal to commit 1. The Checker then rejected its
+own success because it compared `ReplayResult.consumption[proposal_id]`—the
+documented inclusion sequence integer—to a commit-ID string. Review of the
+replay data model confirms the required value is integer `1`; the assertion is
+corrected without changing runtime code.
+
+第二次复核 Checker 尝试为提交 `b558f76` 上的 PBS `2359349.opbs`。295 项当前测试、
+显式 10,000 traces 和五个具名历史反例全部通过。组合反例也按预期在 POSIX publication
+阶段终止子进程、观察到 listing omission、在 commit 0 恢复并将 proposal 提交至
+commit 1。随后 Checker 错误地把 `ReplayResult.consumption[proposal_id]`（公开定义的
+logical inclusion 序号整数）与 commit-ID 字符串比较，从而拒绝了自身成功结果。复核
+replay 数据模型后确认正确值为整数 `1`；仅修正 Checker 断言，runtime 代码未变。

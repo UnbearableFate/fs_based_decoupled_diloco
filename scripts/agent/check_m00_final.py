@@ -171,7 +171,7 @@ def _listing_omission_process_kill_counterexample(artifact_root: Path) -> dict[s
     if (
         result.commit_seq != 1
         or after.head_frontier.commit_seq != 1
-        or after.consumption.get(item.proposal_id) != after.head_frontier.commit_id
+        or after.consumption.get(item.proposal_id) != 1
         or forbidden
     ):
         raise AssertionError("no-DB kill/listing-omission recovery did not converge")

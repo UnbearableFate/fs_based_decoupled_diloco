@@ -7,7 +7,7 @@ actual_base_commit: f32b9ddf3fd6443947c178aee667029df1c7f86d
 feature_branch: codex/duraloco-m00-sqlite-free-rebase
 current_loop: 4
 current_goal: "close post-completion M00 requirement-audit gaps and rerun independent Checker"
-attempts_for_current_failure: 1
+attempts_for_current_failure: 2
 last_verified_commit: c052438a3cfe5e16c3b154fc842f32dcd61ec6ff
 checks:
   local_static: static_pass
@@ -52,6 +52,7 @@ artifacts:
   - artifacts/duraloco/M00/20260711_m00_c052438_gpt2_9n_50x10
   - artifacts/duraloco/M00/20260711_m00_checker_358ecc0_1node
   - artifacts/duraloco/M00/20260711_m00_checker_040a95a_1node
+  - artifacts/duraloco/M00/20260711_m00_checker_b558f76_1node
   - plans/duraloco/reviews/M00_PRODUCTION_REPLAY_WORKFLOW_REVIEW.md
 next_action: "run updated one-node independent Checker with explicit 10000 traces and required combined counterexample"
 automatic_progression: true

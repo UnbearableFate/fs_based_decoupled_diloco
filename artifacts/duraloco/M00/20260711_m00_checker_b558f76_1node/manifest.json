@@ -1,0 +1,33 @@
+{
+  "assertions": [
+    "295 current tests, explicit 10000 traces, and five historical counterexamples passed",
+    "combined counterexample converged but checker compared inclusion sequence to commit ID"
+  ],
+  "backend": "lustre",
+  "commands_log": "commands.log",
+  "config_digest": "3a4d57b6edfb433993d3896aee4b53a732af2f4c0b697e0b1ba0e2270171c25f",
+  "config_path": "scripts/miyabi/run_duraloco_m00_checker_1node.pbs",
+  "dataset_revision": null,
+  "dirty_paths": [],
+  "dirty_tree": false,
+  "ended_at_utc": "2026-07-11T01:59:42.733669Z",
+  "exit_code": 1,
+  "git_branch": "codex/duraloco-m00-sqlite-free-rebase",
+  "git_commit": "b558f76800d368e5018bd6722c6491ba3221e2a9",
+  "hostname": "mg0003",
+  "manifest_sha256": "a24319cd0ec16addf1a88da2cb40aea7c08f76bfbf5e3afd8a75d0fad61c96bb",
+  "model_revision": null,
+  "parent_run_id": "20260711_m00_c052438_gpt2_9n_50x10",
+  "pbs_job_id": "2359349.opbs",
+  "pbs_nodefile_digest": null,
+  "phase": "M00",
+  "purpose": "contract",
+  "python_version": "3.9.25",
+  "result": "fail",
+  "run_id": "20260711_m00_checker_b558f76_1node",
+  "schema_version": 1,
+  "seed": null,
+  "started_at_utc": "2026-07-11T01:59:42.733669Z",
+  "stderr": "pbs_output.log",
+  "stdout": "final_audit.log"
+}

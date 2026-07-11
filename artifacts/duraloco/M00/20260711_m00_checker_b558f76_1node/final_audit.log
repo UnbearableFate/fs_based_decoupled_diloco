@@ -1,0 +1,13 @@
+Traceback (most recent call last):
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/scripts/agent/check_m00_final.py", line 382, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/scripts/agent/check_m00_final.py", line 373, in main
+    result = run(root, args.artifact_root.resolve())
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/scripts/agent/check_m00_final.py", line 291, in run
+    required_counterexample = _listing_omission_process_kill_counterexample(
+        artifact_root
+    )
+  File "/work/xg24i002/x10041/fs_based_decoupled_diloco/scripts/agent/check_m00_final.py", line 177, in _listing_omission_process_kill_counterexample
+    raise AssertionError("no-DB kill/listing-omission recovery did not converge")
+AssertionError: no-DB kill/listing-omission recovery did not converge
