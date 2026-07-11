@@ -23,6 +23,7 @@ from fs_diloco.proposal_catalog import ProposalCatalog
 from fs_diloco.protocol.canonical_json import canonical_digest
 from fs_diloco.protocol.schemas import ObjectRef
 from fs_diloco.protocol.work_order_v1 import FragmentWorkOrderV1
+from fs_diloco.protocol.work_order_v2 import RedundantFragmentWorkOrderV2
 from fs_diloco.runtime_view import build_runtime_view
 from fs_diloco.storage import PosixStorageBackend
 from fs_diloco.syncer import (
@@ -41,11 +42,17 @@ from fs_diloco.syncer import (
 )
 
 from .executor import ExecutorBudget
+from .duplicate_validation import (
+    PreparedResultObservation,
+    decide_duplicate_results,
+)
+from .hedge_policy import RedundancyPolicyV1
 from .input_bundle import ExecutorInputBundleV1, publish_input_bundle
 from .layout import DistributedLayout
 from .membership import MembershipRevisionV1
 from .ownership import derive_ownership
 from .prepared_store import load_prepared_attempt
+from .reconfiguration import ReconfigurationRequestV1
 from .work_order_store import publish_work_order
 
 
@@ -60,22 +67,93 @@ def _payload_ref(entry) -> ObjectRef:
 def _wait_for_result(
     backend,
     layout: DistributedLayout,
-    order: FragmentWorkOrderV1,
+    order: FragmentWorkOrderV1 | RedundantFragmentWorkOrderV2,
     *,
+    active_path: Path,
+    allowed_executor_ids: tuple[str, ...],
     timeout_seconds: float,
 ):
     deadline = time.monotonic() + timeout_seconds
     prefix = f"{layout.prepared_prefix}markers/{order.work_order_id}/"
     while time.monotonic() < deadline:
         markers = backend.list_prefix(prefix)
+        loaded = []
         for key in markers:
             result, envelope = load_prepared_attempt(backend, key)
             if (
                 result.work_order_id == order.work_order_id
                 and result.parent_commit_id == order.parent_commit_id
                 and envelope.membership_revision == order.membership_revision
+                and envelope.executor_id in allowed_executor_ids
             ):
-                return result, envelope
+                loaded.append((result, envelope))
+        required_attempts = 1
+        if isinstance(order, RedundantFragmentWorkOrderV2):
+            dispatch = safe_read_json(active_path)
+            if not isinstance(dispatch, dict) or dispatch.get("work_order_id") != order.work_order_id:
+                raise RuntimeError("active dispatch disappeared or changed while awaiting result")
+            failed = dispatch.get("failed_member_ids", [])
+            if (
+                not isinstance(failed, list)
+                or any(not isinstance(value, str) for value in failed)
+                or not set(failed).issubset(order.owner_member_ids)
+            ):
+                raise ValueError("derived dispatch has invalid failed-member evidence")
+            surviving = tuple(
+                member_id for member_id in order.owner_member_ids if member_id not in failed
+            )
+            if not surviving:
+                raise RuntimeError("no redundant executor remains eligible")
+            mode = order.redundancy_policy.mode
+            backup_activated = dispatch.get("backup_activated", False)
+            if type(backup_activated) is not bool:
+                raise ValueError("derived dispatch backup activation must be boolean")
+            published_at = dispatch.get("published_at")
+            if not isinstance(published_at, (int, float)) or isinstance(published_at, bool):
+                raise ValueError("derived dispatch has invalid publication time")
+            elapsed_ms = max(0, int((time.time() - float(published_at)) * 1000))
+            backup_is_eligible = (
+                order.backup_member_id in surviving
+                and (
+                    mode == "active_active"
+                    or backup_activated
+                    or (
+                        mode == "hedged"
+                        and order.redundancy_policy.hedge_delay_ms is not None
+                        and elapsed_ms >= order.redundancy_policy.hedge_delay_ms
+                    )
+                )
+            )
+            primary_is_eligible = order.primary_member_id in surviving
+            required_attempts = int(primary_is_eligible) + int(backup_is_eligible)
+            if required_attempts == 0:
+                raise RuntimeError("failure evidence requires backup activation before progress")
+        if len(loaded) >= required_attempts:
+            decision = decide_duplicate_results(
+                order.work_order_id,
+                tuple(
+                    PreparedResultObservation(
+                        work_order_id=result.work_order_id,
+                        prepared_result_id=result.prepared_result_id,
+                        attempt_envelope_id=envelope.attempt_envelope_id,
+                        executor_id=envelope.executor_id,
+                    )
+                    for result, envelope in loaded
+                ),
+                required_attempts=required_attempts,
+            )
+            result = next(
+                result
+                for result, _envelope in loaded
+                if result.prepared_result_id == decision.prepared_result_id
+            )
+            envelopes = tuple(
+                sorted(
+                    (envelope for _result, envelope in loaded),
+                    key=lambda item: item.attempt_envelope_id,
+                )
+            )
+            return result, envelopes, decision
         time.sleep(0.1)
     raise TimeoutError(f"timed out waiting for prepared result {order.work_order_id}")
 
@@ -83,7 +161,7 @@ def _wait_for_result(
 def _validate_result(
     backend,
     *,
-    order: FragmentWorkOrderV1,
+    order: FragmentWorkOrderV1 | RedundantFragmentWorkOrderV2,
     result,
     expected_aggregate_digest: str,
 ) -> tuple[bytes, bytes]:
@@ -109,9 +187,13 @@ def run_committer(
     member_id: str,
     owner_session_id: str,
     standby: bool = False,
+    replication_factor: int = 1,
+    redundancy_policy: RedundancyPolicyV1 | None = None,
 ) -> None:
     if not membership.member(member_id).committer_eligible:
         raise ValueError("floating committer is not a committed candidate")
+    if type(replication_factor) is not int or replication_factor not in {1, 2}:
+        raise ValueError("replication factor must be one or two")
     paths = RunPaths(Path(config.run.shared_root or "."))
     prepare_run_dirs(paths, config.sync.num_learners)
     distributed_root = paths.shared_root / "distributed"
@@ -139,11 +221,19 @@ def run_committer(
             backend,
             device="cpu",
             run_spec_factory=distributed_run_spec_factory(
-                membership=membership, budget=budget
+                membership=membership,
+                budget=budget,
+                replication_factor=replication_factor,
             ),
         )
     if log.spec.coordination_protocol != "distributed-head-fenced-v1":
         raise ValueError("floating committer opened a non-distributed generation")
+    if log.spec.ownership_replication_factor != replication_factor:
+        raise ValueError("committer replication factor differs from immutable RunSpec")
+    if replication_factor == 2 and redundancy_policy is None:
+        raise ValueError("factor-two committer requires a redundancy policy")
+    if replication_factor == 1 and redundancy_policy is not None:
+        raise ValueError("factor-one committer cannot carry a redundancy policy")
     # An authoritative stop is terminal.  In particular, a standby must not
     # acquire a fresh fencing epoch after observing the stopped head.
     if view.authoritative_stop is not None:
@@ -200,12 +290,26 @@ def run_committer(
                 )
                 next_renew = time.monotonic() + config.coordination.renew_interval_seconds
             request = safe_read_json(reconfigure_path)
-            if isinstance(request, dict) and request.get("remove_member_id"):
-                remove_member_id = str(request["remove_member_id"])
+            if request is not None:
+                if not isinstance(request, dict):
+                    raise ValueError("reconfiguration request must be a JSON object")
+                reconfiguration = ReconfigurationRequestV1.from_dict(request)
+                if (
+                    reconfiguration.expected_membership_revision != membership.revision
+                    or reconfiguration.expected_membership_digest
+                    != membership.membership_digest
+                    or reconfiguration.evidence.run_id != view.run_id
+                    or reconfiguration.evidence.run_generation != view.run_generation
+                ):
+                    raise ValueError("reconfiguration request differs from committed membership")
+                remove_member_id = reconfiguration.remove_member_id
                 remaining = tuple(
                     item for item in membership.members if item.member_id != remove_member_id
                 )
-                if len(remaining) == len(membership.members) or not remaining:
+                if (
+                    len(remaining) == len(membership.members)
+                    or len(remaining) < replication_factor
+                ):
                     raise ValueError("invalid membership removal request")
                 successor = MembershipRevisionV1.create(
                     membership.revision + 1, remaining
@@ -214,7 +318,8 @@ def run_committer(
                     {
                         "parent_commit_id": view.commit_id,
                         "membership_digest": successor.membership_digest,
-                        "evidence_digest": str(request.get("evidence_digest") or ""),
+                        "reconfiguration_request_id": reconfiguration.request_id,
+                        "failure_evidence_id": reconfiguration.evidence.evidence_id,
                     }
                 )
                 log.commit_membership(
@@ -228,6 +333,8 @@ def run_committer(
                     "membership_reconfigured",
                     revision=membership.revision,
                     removed_member_id=remove_member_id,
+                    reconfiguration_request_id=reconfiguration.request_id,
+                    failure_evidence_id=reconfiguration.evidence.evidence_id,
                     membership_digest=membership.membership_digest,
                     commit_seq=view.commit_seq,
                 )
@@ -279,8 +386,8 @@ def run_committer(
             )
             if ownership.ownership_digest != view.membership.ownership_digest:
                 raise RuntimeError("local ownership differs from committed projection")
-            owner_member_id = ownership.owner_ids(fragment_id)[0]
-            order = FragmentWorkOrderV1.with_computed_id(
+            owner_member_ids = ownership.owner_ids(fragment_id)
+            base_order = FragmentWorkOrderV1.with_computed_id(
                 {
                     "schema": FragmentWorkOrderV1.SCHEMA,
                     "run_id": view.run_id,
@@ -310,6 +417,20 @@ def run_committer(
                     "fragment_layout_digest": log.spec.fragment_layout_digest,
                 }
             )
+            order: FragmentWorkOrderV1 | RedundantFragmentWorkOrderV2
+            if replication_factor == 2:
+                if redundancy_policy is None:
+                    raise AssertionError("factor-two policy disappeared")
+                order = RedundantFragmentWorkOrderV2.with_computed_id(
+                    {
+                        "schema": RedundantFragmentWorkOrderV2.SCHEMA,
+                        "base_work_order": base_order.to_dict(),
+                        "owner_member_ids": list(owner_member_ids),
+                        "redundancy_policy": redundancy_policy.to_dict(),
+                    }
+                )
+            else:
+                order = base_order
             bundle = ExecutorInputBundleV1.create(
                 {
                     "schema": ExecutorInputBundleV1.SCHEMA,
@@ -334,16 +455,23 @@ def run_committer(
                 active_path,
                 {
                     "work_order_id": order.work_order_id,
-                    "owner_member_id": owner_member_id,
+                    "owner_member_ids": list(owner_member_ids),
                     "membership_revision": order.membership_revision,
                     "ownership_digest": order.ownership_digest,
                     "published_at": time.time(),
+                    "backup_activated": False,
+                    "failed_member_ids": [],
                 },
             )
-            result, envelope = _wait_for_result(
+            allowed_executor_ids = tuple(
+                membership.member(owner_id).executor_id for owner_id in owner_member_ids
+            )
+            result, envelopes, duplicate_decision = _wait_for_result(
                 backend,
                 layout,
                 order,
+                active_path=active_path,
+                allowed_executor_ids=allowed_executor_ids,
                 timeout_seconds=config.liveness.no_progress_timeout_seconds,
             )
             params_data, outer_data = _validate_result(
@@ -369,6 +497,8 @@ def run_committer(
                 aggregate_digest=result.aggregate_digest,
                 outer_optimizer_impl_digest=order.outer_optimizer_impl_digest,
                 request_id=request_id,
+                distributed_work_order_id=order.work_order_id,
+                prepared_result_id=result.prepared_result_id,
             )
             log.commit_prepared(prepared)
             view = build_runtime_view(log)
@@ -388,8 +518,13 @@ def run_committer(
                 optimizer_transition_count=view.optimizer_transition_count,
                 work_order_id=order.work_order_id,
                 prepared_result_id=result.prepared_result_id,
-                attempt_envelope_id=envelope.attempt_envelope_id,
-                executor_member_id=owner_member_id,
+                attempt_envelope_ids=list(duplicate_decision.attempt_envelope_ids),
+                executor_ids=list(duplicate_decision.executor_ids),
+                owner_member_ids=list(owner_member_ids),
+                redundancy_mode=(
+                    redundancy_policy.mode if redundancy_policy is not None else "factor_one"
+                ),
+                observed_attempt_count=len(envelopes),
                 publish_to_commit_seconds=time.monotonic() - dispatch_started,
                 prepared_parameter_bytes=result.params_ref.size,
                 prepared_outer_state_bytes=result.outer_state_ref.size,

@@ -1,0 +1,68 @@
+#!/bin/bash
+#PBS -N duraloco_p06c_unit
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:10:00
+#PBS -j oe
+#PBS -m ae
+
+set -eEuo pipefail
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat CUDA_VISIBLE_DEVICES=""
+PROJECT_ROOT="${PROJECT_ROOT:-${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}}"
+PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
+: "${EXPECTED_COMMIT:?EXPECTED_COMMIT is required}"
+: "${ARTIFACT_ROOT:?ARTIFACT_ROOT is required}"
+: "${RUN_ID:?RUN_ID is required}"
+PARENT_RUN_ID="${PARENT_RUN_ID:-}"
+cd "$PROJECT_ROOT"
+[[ "$(hostname)" == mg* ]]
+[[ "$(git rev-parse HEAD)" == "$EXPECTED_COMMIT" ]]
+[[ -z "$(git status --porcelain=v1)" ]]
+mkdir -p "$ARTIFACT_ROOT"
+touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log" "$ARTIFACT_ROOT/commands.log"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+
+result=fail
+exit_code=1
+finish() {
+  observed=$?
+  if [[ "$result" == pass ]]; then exit_code=0; elif [[ "$observed" -ne 0 ]]; then exit_code=$observed; fi
+  qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
+  args=(
+    --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json"
+    --phase P06C --purpose unit --run-id "$RUN_ID" --schema-version 2
+    --validation-shape p06c-factor-two-schema-property-and-transition-binding-1node
+    --backend memory --config scripts/miyabi/run_duraloco_p06c_unit_1node.pbs
+    --commands-log commands.log --stdout stdout.log --stderr stderr.log
+    --exit-code "$exit_code" --result "$result"
+    --termination-kind "$([[ "$result" == pass ]] && echo success || echo test_failure)"
+    --pbs-queue debug-g --requested-resources select=1:mpiprocs=1,walltime=00:10:00
+    --last-qstat-state R --termination-detail "P06C factor-two ownership, mode, duplicate, evidence, and final-transition identity gate"
+    --assertion "factor-two owner order and FWO v2 redundancy policy identity are canonical"
+    --assertion "equivalent duplicate attempts converge and divergent same-FWO results fail closed"
+    --assertion "failure evidence has no authority and final transition binds exact FWO/PFR identity"
+  )
+  if [[ -n "$PARENT_RUN_ID" ]]; then args+=(--parent-run-id "$PARENT_RUN_ID"); fi
+  "$PYTHON_BIN" scripts/agent/create_run_manifest.py "${args[@]}" || true
+}
+trap finish EXIT
+trap 'echo "[ERROR] P06C unit failed at line $LINENO" | tee -a "$ARTIFACT_ROOT/stderr.log"' ERR
+
+git status --short --branch | tee "$ARTIFACT_ROOT/git_status.log"
+git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"
+hostname | tee "$ARTIFACT_ROOT/hostname.log"
+"$PYTHON_BIN" --version 2>&1 | tee "$ARTIFACT_ROOT/python_version.log"
+module list 2>&1 | cat > "$ARTIFACT_ROOT/modules.log"
+run_command() {
+  printf '%q ' "$@" | tee -a "$ARTIFACT_ROOT/commands.log"
+  printf '\n' | tee -a "$ARTIFACT_ROOT/commands.log"
+  "$@" 2>&1 | tee -a "$ARTIFACT_ROOT/stdout.log"
+}
+run_command "$PYTHON_BIN" scripts/agent/check_phase_state.py plans/duraloco/STATE.yaml --root "$PROJECT_ROOT"
+run_command "$PYTHON_BIN" scripts/agent/check_no_embedded_database.py --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/forbidden_surface.json"
+run_command "$PYTHON_BIN" -m pytest -q tests/distributed_syncer tests/syncer_decomposition \
+  tests/test_proposal_catalog.py tests/test_outer_optim.py tests/coordination \
+  tests/log/test_production_runtime.py --junitxml "$ARTIFACT_ROOT/junit.xml"
+result=pass
+exit_code=0

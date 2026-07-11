@@ -83,8 +83,10 @@ class RunSpec:
                 raise ValueError("distributed protocol requires complete bootstrap facts")
             if self.distributed_membership is None or self.distributed_membership.revision != 0:
                 raise ValueError("distributed bootstrap membership must be revision zero")
-            if self.ownership_replication_factor != 1:
-                raise ValueError("P06B distributed bootstrap requires factor one")
+            if self.ownership_replication_factor not in {1, 2}:
+                raise ValueError("distributed bootstrap replication factor must be one or two")
+            if self.ownership_replication_factor > len(self.distributed_membership.members):
+                raise ValueError("distributed bootstrap has insufficient members for factor")
             validate_sha256(self.execution_backend_digest or "", field="execution_backend_digest")
             validate_sha256(self.prepare_capability_digest or "", field="prepare_capability_digest")
         elif any(value is not None for value in distributed_values):

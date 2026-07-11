@@ -475,6 +475,8 @@ class CommitManifest:
     request_id: str | None = None
     request_digest: str | None = None
     optimizer_transition_count: int | None = None
+    distributed_work_order_id: str | None = None
+    prepared_result_id: str | None = None
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, Any]) -> "CommitManifest":
@@ -504,7 +506,12 @@ class CommitManifest:
             "request_digest",
             "optimizer_transition_count",
         }
-        _strict_fields(payload, required, {"created_at", *coordination_fields})
+        distributed_fields = {"distributed_work_order_id", "prepared_result_id"}
+        _strict_fields(
+            payload,
+            required,
+            {"created_at", *coordination_fields, *distributed_fields},
+        )
         if payload["manifest_type"] != cls.MANIFEST_TYPE:
             raise _error("SCHEMA_ENUM", "manifest_type must be commit")
         selected = payload["selected_proposals"]
@@ -519,6 +526,17 @@ class CommitManifest:
             raise _error(
                 "SCHEMA_MISSING_FIELD",
                 "fenced optimizer commit coordination fields must be all present or all absent",
+            )
+        present_distributed = distributed_fields & set(payload)
+        if present_distributed and present_distributed != distributed_fields:
+            raise _error(
+                "SCHEMA_MISSING_FIELD",
+                "distributed optimizer commit identity fields must be both present or both absent",
+            )
+        if present_distributed and present_coordination != coordination_fields:
+            raise _error(
+                "SCHEMA_MISSING_FIELD",
+                "distributed optimizer identity requires fenced coordination fields",
             )
         instance = cls(
             protocol_version=_protocol(payload["protocol_version"]),
@@ -571,6 +589,18 @@ class CommitManifest:
                 if "optimizer_transition_count" in payload
                 else None
             ),
+            distributed_work_order_id=(
+                _string(
+                    payload["distributed_work_order_id"], "distributed_work_order_id"
+                )
+                if "distributed_work_order_id" in payload
+                else None
+            ),
+            prepared_result_id=(
+                _string(payload["prepared_result_id"], "prepared_result_id")
+                if "prepared_result_id" in payload
+                else None
+            ),
         )
         if instance.new_fragment_version != instance.previous_fragment_version + 1:
             raise _error("FRAGMENT_VERSION", "new fragment version must increment by one")
@@ -618,6 +648,13 @@ class CommitManifest:
                     "request_id": self.request_id,
                     "request_digest": self.request_digest,
                     "optimizer_transition_count": self.optimizer_transition_count,
+                }
+            )
+        if self.distributed_work_order_id is not None:
+            payload.update(
+                {
+                    "distributed_work_order_id": self.distributed_work_order_id,
+                    "prepared_result_id": self.prepared_result_id,
                 }
             )
         return payload

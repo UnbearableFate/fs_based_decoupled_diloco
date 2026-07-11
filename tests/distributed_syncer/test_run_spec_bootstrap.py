@@ -62,3 +62,32 @@ def test_unknown_distributed_bootstrap_field_fails_closed():
     payload["distributed_execution"]["heartbeat_members"] = []
     with pytest.raises(ValueError, match="distributed execution"):
         RunSpec.from_dict(payload)
+
+
+def test_factor_two_run_spec_is_fresh_and_fails_if_membership_is_insufficient():
+    membership = MembershipRevisionV1.create(
+        0,
+        (
+            _membership().members[0],
+            DistributedMemberV1(
+                member_id="member-1",
+                learner_id="learner-1",
+                learner_session_id="learner-session-1",
+                executor_id="executor-1",
+                executor_session_id="executor-session-1",
+                node_id="node-1",
+                capability_digest="2" * 64,
+                committer_eligible=True,
+            ),
+        ),
+    )
+    factor_two = RunSpec(
+        **{
+            **_spec().__dict__,
+            "distributed_membership": membership,
+            "ownership_replication_factor": 2,
+        }
+    )
+    assert RunSpec.from_dict(factor_two.to_dict()) == factor_two
+    with pytest.raises(ValueError, match="insufficient"):
+        RunSpec(**{**_spec().__dict__, "ownership_replication_factor": 2})

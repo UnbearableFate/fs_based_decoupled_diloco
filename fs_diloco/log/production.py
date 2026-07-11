@@ -609,6 +609,8 @@ class ProductionTransactionalLog:
         aggregate_digest: str,
         outer_optimizer_impl_digest: str,
         request_id: str | None = None,
+        distributed_work_order_id: str | None = None,
+        prepared_result_id: str | None = None,
         crash_at: str | None = None,
     ) -> PreparedLogTransition:
         replay = self.replay()
@@ -685,6 +687,13 @@ class ProductionTransactionalLog:
             config=self.spec.weighting_config,
         )
         optimizer_request_digest: str | None = None
+        distributed_identity = (distributed_work_order_id, prepared_result_id)
+        if (distributed_work_order_id is None) != (prepared_result_id is None):
+            raise CommitConflict("distributed optimizer identity fields must be paired")
+        if any(value is not None for value in distributed_identity) and (
+            self.spec.coordination_protocol != "distributed-head-fenced-v1"
+        ):
+            raise CommitConflict("only distributed generations bind work-order results")
         if owner_token is not None:
             if not isinstance(request_id, str) or not request_id:
                 raise CommitConflict("fenced optimizer transition requires request_id")
@@ -698,6 +707,13 @@ class ProductionTransactionalLog:
                 "selected_proposal_ids": list(selected_ids),
                 "aggregate_digest": aggregate_digest,
             }
+            if distributed_work_order_id is not None:
+                optimizer_request_body.update(
+                    {
+                        "distributed_work_order_id": distributed_work_order_id,
+                        "prepared_result_id": prepared_result_id,
+                    }
+                )
             optimizer_request_digest = canonical_digest(optimizer_request_body)
             committed_request = replay.control_requests.get(request_id)
             if committed_request is not None:
@@ -766,6 +782,13 @@ class ProductionTransactionalLog:
                     "request_digest": optimizer_request_digest,
                     "optimizer_transition_count": self._optimizer_transition_count(replay)
                     + 1,
+                }
+            )
+        if distributed_work_order_id is not None:
+            commit_body.update(
+                {
+                    "distributed_work_order_id": distributed_work_order_id,
+                    "prepared_result_id": prepared_result_id,
                 }
             )
         commit = _make_commit(commit_body)

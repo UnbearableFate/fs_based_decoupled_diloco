@@ -46,7 +46,10 @@ def revision_zero_membership(
 
 
 def distributed_run_spec_factory(
-    *, membership: MembershipRevisionV1, budget: ExecutorBudget
+    *,
+    membership: MembershipRevisionV1,
+    budget: ExecutorBudget,
+    replication_factor: int = 1,
 ):
     backend_digest = canonical_digest(execution_backend_identity(threads=budget.threads))
 
@@ -65,7 +68,7 @@ def distributed_run_spec_factory(
             payload_codec=PRODUCTION_CODEC,
             coordination_protocol="distributed-head-fenced-v1",
             distributed_membership=membership,
-            ownership_replication_factor=1,
+            ownership_replication_factor=replication_factor,
             execution_backend_digest=backend_digest,
             prepare_capability_digest=membership.capability_set_digest,
         )

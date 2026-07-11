@@ -33,3 +33,67 @@ records:
       rationale: "small targeted harness-only rerun; no D8 terminal failure"
       parent_run_id: 20260711_p06c_red_7caaaa3_1node
     artifacts: [artifacts/duraloco/P06C/20260711_p06c_red_7caaaa3_1node]
+  - error_id: E-P06C-20260711-02
+    phase_and_gate: P06C/IMPLEMENT-orientation
+    observed_at_utc: "2026-07-11T13:03:23Z"
+    pbs_job_id: null
+    hosts: [miyabi-g1]
+    git_commit: 97435c9aa52bbcb780f0c321bc564e35213e0815
+    classification: unexpected_failure
+    phenomenon:
+      exit_code: 2
+      exception: "sed: P06C plan and phase-report paths did not exist"
+      terminal_state: "two guessed paths failed; other requested files remained readable"
+      log_excerpt: null
+    expected: "read the exact P06C plan path and treat the not-yet-created report as absent state"
+    impact:
+      acceptance_ids: [P06C-A23]
+      invariants: ["workflow inspection must distinguish absent planned artifacts from runtime failure"]
+      committed_prefix_safe: true
+    cause:
+      confirmed: ["used an abbreviated guessed plan filename; P06C phase report had not yet been created"]
+      unknown: []
+    repair:
+      change: "locate P06C paths with rg --files before reading and defer report creation to PERSIST"
+      rationale: "repository enumeration is authoritative for tracked filenames"
+    verification:
+      minimal_reproduction: "rg --files plans/duraloco | rg 'P06C|06C|p06c'"
+      targeted_gate: "exact plan, error ledger, and state paths enumerated"
+      qualification_ladder: ["login-node read-only inspection"]
+    retry_decision:
+      authorized: true
+      rationale: "read-only path correction; no runtime validation was attempted"
+      parent_run_id: null
+    artifacts: []
+  - error_id: E-P06C-20260711-03
+    phase_and_gate: P06C/IMPLEMENT-test-inventory
+    observed_at_utc: "2026-07-11T13:03:23Z"
+    pbs_job_id: null
+    hosts: [miyabi-g1]
+    git_commit: 97435c9aa52bbcb780f0c321bc564e35213e0815
+    classification: unexpected_failure
+    phenomenon:
+      exit_code: 2
+      exception: "sed: tests/distributed_syncer/test_membership.py did not exist"
+      terminal_state: "one guessed test path failed; other source/test reads succeeded"
+      log_excerpt: null
+    expected: "enumerate the actual membership test filenames before reading helpers"
+    impact:
+      acceptance_ids: [P06C-A10, P06C-A11]
+      invariants: ["test evidence must be based on existing repository paths"]
+      committed_prefix_safe: true
+    cause:
+      confirmed: ["membership tests are split across test_membership_commit.py and test_membership_ownership.py"]
+      unknown: []
+    repair:
+      change: "use rg --files tests/distributed_syncer | rg membership before subsequent reads"
+      rationale: "removes filename guessing from the inspection workflow"
+    verification:
+      minimal_reproduction: "rg --files tests/distributed_syncer | rg 'membership|reconfig|failure|transition'"
+      targeted_gate: "both actual membership test files enumerated and read successfully"
+      qualification_ladder: ["login-node read-only inspection"]
+    retry_decision:
+      authorized: true
+      rationale: "read-only path correction; no test result was inferred"
+      parent_run_id: null
+    artifacts: []

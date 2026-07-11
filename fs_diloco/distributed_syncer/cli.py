@@ -20,6 +20,7 @@ from fs_diloco.log.layout import LogLayout
 from fs_diloco.log.production_codec import decode_production_outer_state, decode_production_params
 from fs_diloco.logging_utils import JsonlLogger
 from fs_diloco.protocol.canonical_json import canonical_digest
+from fs_diloco.protocol.work_order_v2 import RedundantFragmentWorkOrderV2
 from fs_diloco.storage import PosixStorageBackend
 from fs_diloco.syncer_core.capabilities import PrepareObjectFacade
 
@@ -27,6 +28,7 @@ from .executor import ExecutorBudget, execute_work_order
 from .bootstrap import revision_zero_membership
 from .committer import run_committer
 from .input_bundle import load_input_bundle
+from .hedge_policy import RedundancyPolicyV1, execution_eligible
 from .layout import DistributedLayout
 from .work_order_store import load_work_order
 
@@ -83,7 +85,17 @@ def _executor(args: argparse.Namespace) -> int:
     completed: set[str] = set()
     while not (shared / "control" / "stop.json").exists():
         dispatch = safe_read_json(active_path)
-        if not isinstance(dispatch, dict) or dispatch.get("owner_member_id") != args.member_id:
+        raw_owner_ids = dispatch.get("owner_member_ids") if isinstance(dispatch, dict) else None
+        if raw_owner_ids is None and isinstance(dispatch, dict):
+            legacy_owner = dispatch.get("owner_member_id")
+            raw_owner_ids = [legacy_owner] if isinstance(legacy_owner, str) else None
+        if (
+            not isinstance(dispatch, dict)
+            or not isinstance(raw_owner_ids, list)
+            or not raw_owner_ids
+            or any(not isinstance(value, str) or not value for value in raw_owner_ids)
+            or args.member_id not in raw_owner_ids
+        ):
             atomic_write_json(
                 heartbeat_path,
                 {
@@ -105,6 +117,39 @@ def _executor(args: argparse.Namespace) -> int:
             or order.membership_revision != int(dispatch.get("membership_revision", -1))
         ):
             raise ValueError("derived dispatch differs from authoritative work order")
+        owner_member_ids = tuple(raw_owner_ids)
+        if isinstance(order, RedundantFragmentWorkOrderV2):
+            if owner_member_ids != order.owner_member_ids:
+                raise ValueError("derived owner roles differ from authoritative work order")
+            owner_role = "primary" if args.member_id == order.primary_member_id else "backup"
+            published_at = dispatch.get("published_at")
+            if not isinstance(published_at, (int, float)) or isinstance(published_at, bool):
+                raise ValueError("derived dispatch has invalid publication time")
+            backup_activated = dispatch.get("backup_activated", False)
+            elapsed_ms = max(0, int((time.time() - float(published_at)) * 1000))
+            if not execution_eligible(
+                order.redundancy_policy,
+                owner_role=owner_role,
+                elapsed_ms=elapsed_ms,
+                backup_activated=backup_activated,
+            ):
+                atomic_write_json(
+                    heartbeat_path,
+                    {
+                        "member_id": args.member_id,
+                        "status": "standby",
+                        "work_order_id": order.work_order_id,
+                        "owner_role": owner_role,
+                        "redundancy_mode": order.redundancy_policy.mode,
+                        "timestamp": time.time(),
+                    },
+                )
+                time.sleep(args.poll_seconds)
+                continue
+        else:
+            if len(owner_member_ids) != 1:
+                raise ValueError("factor-one dispatch must name exactly one owner")
+            owner_role = "primary"
         bundle = load_input_bundle(facade, layout, work_order_id)
         if bundle.parent_commit_id != order.parent_commit_id:
             raise ValueError("input bundle parent differs from work order")
@@ -133,6 +178,7 @@ def _executor(args: argparse.Namespace) -> int:
                 "member_id": args.member_id,
                 "status": "preparing",
                 "work_order_id": order.work_order_id,
+                "owner_role": owner_role,
                 "timestamp": time.time(),
             },
         )
@@ -165,6 +211,12 @@ def _executor(args: argparse.Namespace) -> int:
             "work_order_id": order.work_order_id,
             "prepared_result_id": result.prepared_result_id,
             "attempt_envelope_id": envelope.attempt_envelope_id,
+            "owner_role": owner_role,
+            "redundancy_mode": (
+                order.redundancy_policy.mode
+                if isinstance(order, RedundantFragmentWorkOrderV2)
+                else "factor_one"
+            ),
             "prepare_started_at": prepare_started_at,
             "prepare_finished_at": time.time(),
             "prepare_seconds": prepare_seconds,
@@ -215,6 +267,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     committer.add_argument("--threads", type=int, default=8)
     committer.add_argument("--max-rss-bytes", type=int, default=16 * 1024**3)
     committer.add_argument("--standby", action="store_true")
+    committer.add_argument("--replication-factor", type=int, choices=(1, 2), default=1)
+    committer.add_argument(
+        "--execution-mode", choices=("warm_standby", "active_active", "hedged")
+    )
+    committer.add_argument("--hedge-delay-ms", type=int)
     return parser.parse_args(argv)
 
 
@@ -242,6 +299,18 @@ def main(argv: list[str] | None = None) -> int:
             node_ids=node_ids,
             budget=budget,
         )
+        redundancy_policy = None
+        if args.replication_factor == 2:
+            if args.execution_mode is None:
+                raise ValueError("factor-two committer requires --execution-mode")
+            policy_payload: dict[str, object] = {"mode": args.execution_mode}
+            if args.execution_mode == "hedged":
+                policy_payload["hedge_delay_ms"] = args.hedge_delay_ms
+            elif args.hedge_delay_ms is not None:
+                raise ValueError("--hedge-delay-ms is valid only for hedged mode")
+            redundancy_policy = RedundancyPolicyV1.from_dict(policy_payload)
+        elif args.execution_mode is not None or args.hedge_delay_ms is not None:
+            raise ValueError("factor-one committer cannot configure redundancy mode")
         run_committer(
             config,
             membership=membership,
@@ -249,6 +318,8 @@ def main(argv: list[str] | None = None) -> int:
             member_id=args.member_id,
             owner_session_id=args.owner_session_id,
             standby=args.standby,
+            replication_factor=args.replication_factor,
+            redundancy_policy=redundancy_policy,
         )
         return 0
     raise AssertionError(args.command)
