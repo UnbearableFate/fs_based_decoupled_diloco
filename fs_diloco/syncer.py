@@ -532,7 +532,23 @@ def _acquire_and_activate_owner(
         }
     )
     fence_start = time.monotonic()
-    result = log.activate_owner(token=token, request_id=fence_request_id)
+    try:
+        result = log.activate_owner(token=token, request_id=fence_request_id)
+    except CommitConflict:
+        if not standby:
+            raise
+        # Stop may win after the post-lease replay and before epoch prepare.
+        # ProductionTransactionalLog rejects that epoch before CAS; resolve the
+        # expected terminal race from the now-current committed head.
+        observed_view = build_runtime_view(log)
+        if observed_view.authoritative_stop is None:
+            raise
+        logger.event(
+            "standby_lost_fence_to_authoritative_stop",
+            reason=observed_view.authoritative_stop.reason,
+            commit_seq=observed_view.commit_seq,
+        )
+        return lease_manager, None, observed_view
     view = build_runtime_view(log)
     logger.event(
         "coordination_stage_completed",

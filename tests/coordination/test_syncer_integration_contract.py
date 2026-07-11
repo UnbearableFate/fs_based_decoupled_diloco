@@ -68,6 +68,7 @@ def test_syncer_stop_and_takeover_use_committed_coordination_path():
     assert "log.commit_stop(" in source
     assert "standby_wait" in source
     assert "standby_observed_authoritative_stop_after_lease" in source
+    assert "standby_lost_fence_to_authoritative_stop" in source
     assert "build_runtime_view(log, force_full=True)" in source
     assert "NotImplementedError" not in source
     assert "derived-from-committed-stop-control-transition" in source
