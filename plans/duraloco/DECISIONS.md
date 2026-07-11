@@ -382,7 +382,7 @@ P05+ 的规范性路线决策生效。
 
 - Context: wall clocks can move and different hosts can disagree near expiry.
 - Candidates: trust wall-clock expiry for safety; require synchronized clocks for every commit; use time only to decide when takeover may be attempted.
-- Choice: TTL uses integer nanoseconds from a monotonic process clock for local renew scheduling and a declared maximum cross-host skew envelope for takeover delay. A standby waits until the recorded expiry plus the skew allowance before acquire. Clock disagreement may delay or cause competing attempts, but only the epoch/owner/session fact in the head chain authorizes commits.
+- Choice: the shared lease records integer UTC nanoseconds, while each process uses its monotonic clock only to schedule its own renew attempts. A declared maximum cross-host wall-clock skew envelope delays takeover: standby waits until recorded UTC expiry plus the allowance before acquire. Clock disagreement may delay or cause competing attempts, but only the epoch/owner/session fact in the head chain authorizes commits.
 - Rejected: wall-clock-only fencing admits split brain; per-commit clock synchronization makes storage availability part of safety.
 - Compatibility: M00 has no lease and is treated as an unfenced epoch-zero prefix that cannot receive new P05 production commits.
 - Reversibility: the skew envelope and clock source may be tightened after measurement without changing committed history.

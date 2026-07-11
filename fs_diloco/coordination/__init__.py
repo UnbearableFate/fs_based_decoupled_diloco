@@ -10,12 +10,17 @@ from .state_machine import (
     OwnerToken,
     StopRequest,
 )
+from .lease import LeaseManager, LeaseMutation, LeaseRecord as DurableLeaseRecord, LoadedLease
 
 __all__ = [
     "CoordinationConflict",
     "CoordinationState",
     "LeaseBook",
     "LeaseRecord",
+    "DurableLeaseRecord",
+    "LeaseManager",
+    "LeaseMutation",
+    "LoadedLease",
     "LeaseRequest",
     "MutationRequestConflict",
     "OwnerToken",

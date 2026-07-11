@@ -49,6 +49,10 @@ class LogLayout:
     def head_key(self) -> str:
         return f"{self.root}/control/head.json"
 
+    @property
+    def lease_key(self) -> str:
+        return f"{self.root}/control/lease.json"
+
     def proposal_key(self, proposal_id: str) -> str:
         return normalize_key(f"{self.proposal_prefix}{_component(proposal_id, 'proposal_id')}.json")
 
