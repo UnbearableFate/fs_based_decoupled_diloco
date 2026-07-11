@@ -6,7 +6,7 @@ actual_base_branch: codex/duraloco-p05-syncer-failover
 actual_base_commit: 419577899a64a12cc602870d059a092f9319bed1
 feature_branch: codex/duraloco-p06-learner-protocol
 current_loop: 4
-current_goal: "P06 completed; preserve the verified baseline for automatic P07/P08 progression"
+current_goal: "P06 completed; hand off the verified archive baseline to P06A syncer characterization and decomposition"
 attempts_for_current_failure: 0
 last_terminal_failure_review: plans/duraloco/reviews/P06_TERMINAL_WRAPPER_FAILURE_REVIEW.md
 terminal_retry_authorized: true
@@ -67,7 +67,7 @@ artifacts:
   - artifacts/duraloco/P06/20260711_p06_repair_2581a4d_gpt2_9n_50x10_retry1
   - plans/duraloco/phases/P06_PHASE_REPORT.md
   - artifacts/duraloco/P06/20260711_p06_checker_030129e_1node
-next_action: "start P07 and P08 independently from the verified P06 report baseline"
+next_action: "start P06A from archive commit 06e3ca2 using the verified P06 evidence baseline"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
