@@ -9,8 +9,10 @@ from fs_diloco.config import Config, resolve_config
 
 
 def test_p05_run_spec_freezes_head_fenced_coordination():
+    config = Config()
+    config.run.run_id = "run-test"
     spec = syncer._run_spec(
-        Config(),
+        config,
         parameter_digest="a" * 64,
         layout_digest="b" * 64,
     )
