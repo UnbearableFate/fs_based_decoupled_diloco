@@ -150,6 +150,7 @@ class IOSection:
 class LearnerSection:
     poll_latest_during_inner_steps: bool = False
     adopt_global_after_upload: bool = True
+    inner_optimizer_adoption_policy: str = "reset_all"
 
 
 @dataclass
@@ -314,6 +315,15 @@ def resolve_config(
         raise ValueError("coordination.max_clock_skew_seconds must be non-negative")
     if config.coordination.standby_poll_seconds <= 0:
         raise ValueError("coordination.standby_poll_seconds must be positive")
+    if config.learner.inner_optimizer_adoption_policy not in {
+        "reset_all",
+        "reset_updated_fragment",
+        "preserve",
+    }:
+        raise ValueError(
+            "learner.inner_optimizer_adoption_policy must be reset_all, "
+            "reset_updated_fragment, or preserve"
+        )
     for field_name in ("keep_last_global_versions", "keep_last_learner_update_versions"):
         value = getattr(config.io, field_name)
         if value is not None and int(value) < 1:

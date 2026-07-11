@@ -85,6 +85,7 @@ io:
 learner:
   poll_latest_during_inner_steps: false
   adopt_global_after_upload: true
+  inner_optimizer_adoption_policy: reset_all
 
 fragments:
   enabled: true

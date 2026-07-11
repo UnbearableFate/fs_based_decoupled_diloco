@@ -5,8 +5,8 @@ planning_basis_commit: 82dbec10e1a738cfaa88212698e7e8cf5a0f7ae1
 actual_base_branch: codex/duraloco-p05-syncer-failover
 actual_base_commit: 419577899a64a12cc602870d059a092f9319bed1
 feature_branch: codex/duraloco-p06-learner-protocol
-current_loop: 2
-current_goal: "make the dependency-free learner protocol RED contracts pass on a compute node"
+current_loop: 3
+current_goal: "integrate interval publication, boundary adoption, and warm recovery into the single learner runtime"
 attempts_for_current_failure: 0
 last_terminal_failure_review: null
 terminal_retry_authorized: false
@@ -17,7 +17,7 @@ terminal_retry_qualification:
 last_verified_commit: null
 checks:
   local_static: static_pass
-  local_runtime: not_run
+  local_runtime: unit_pass
   miyabi_login_static: static_pass
   miyabi_1node: not_run
   miyabi_2node: not_run
@@ -48,7 +48,8 @@ open_blockers: []
 artifacts:
   - plans/duraloco/phases/P06_DRIFT_REPORT.md
   - artifacts/duraloco/P06/20260711_p06_red_0f88501_1node
-next_action: "run the first GREEN unit gate from the implementation commit"
+  - artifacts/duraloco/P06/20260711_p06_green_7f9029a_1node
+next_action: "run the integrated unit suite and tiny one-node production path on a compute node"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

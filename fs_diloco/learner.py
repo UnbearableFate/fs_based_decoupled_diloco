@@ -9,12 +9,13 @@ import os
 import socket
 import time
 import uuid
+import hashlib
 from pathlib import Path
 from typing import Any
 
 import torch
 
-from .atomic_io import atomic_write_json, file_size, safe_read_json, sha256_file
+from .atomic_io import atomic_write_json, file_size, safe_read_json
 from .config import Config, resolve_config
 from .constants import FORMAT_VERSION, LEARNER_STATUS_ACTIVE, LEARNER_STATUS_STOPPED, learner_index_from_id
 from .failure_sim import maybe_crash, maybe_sleep_jitter, should_skip_upload
@@ -31,6 +32,13 @@ from .hf_data import Batch, build_batch_iterator
 from .hf_model import choose_device, load_causal_lm_and_tokenizer
 from .logging_utils import JsonlLogger, log_uncaught_exception
 from .log.layout import LogLayout
+from .learner_protocol.adoption import OptimizerAdoptionPolicy, optimizer_reset_targets
+from .learner_protocol.data_cursor import DataCursor
+from .learner_protocol.interval import AuthorityFrontier, ContributionInterval
+from .learner_protocol.publication import LearnerPublisher, PublicationResult
+from .learner_protocol.recovery import recover_learner
+from .learner_protocol.rng_state import RngCursor
+from .learner_protocol.session import LearnerSession
 from .metrics import LEARNER_METRIC_FIELDS, UPDATE_MANIFEST_FIELDS, append_csv_row
 from .param_index import (
     build_param_index,
@@ -47,22 +55,54 @@ from .tensor_codec import dtype_from_name, load_global_weights_flat, save_update
 _SUCCESSFUL_STOP_REASONS = {"completed", "stop_after_outer_steps", "stop_after_global_tokens"}
 
 
-def publish_proposal_payload(
-    *,
-    paths: RunPaths,
-    config: Config,
-    tensor_path: Path,
-    digest: str,
-) -> None:
-    """Publish proposal bytes once from the learner before its discovery marker."""
+def authority_frontier_from_latest(latest: dict[str, Any]) -> AuthorityFrontier:
+    """Freeze the committed authority fields used for one contribution interval."""
 
-    backend = PosixStorageBackend(paths.authority)
-    layout = LogLayout(config.run.run_id, config.init.run_generation)
-    backend.put_immutable(
-        layout.proposal_payload_key(digest),
-        tensor_path.read_bytes(),
-        sha256=digest,
+    raw_versions = latest.get("fragment_versions") or {"0": latest.get("version", 0)}
+    return AuthorityFrontier(
+        commit_id=str(latest["commit_id"]),
+        commit_seq=int(latest["commit_seq"]),
+        frontier_sha256=str(latest["frontier_sha256"]),
+        fragment_versions={int(key): int(value) for key, value in raw_versions.items()},
+        fencing_epoch=int(latest.get("fencing_epoch", 0)),
+        owner_id=latest.get("owner_id"),
+        owner_session_id=latest.get("owner_session_id"),
     )
+
+
+def _parameter_fragment_map(fragment_index: dict[str, Any]) -> dict[str, int]:
+    result: dict[str, int] = {}
+    for fragment in fragment_index["fragments"]:
+        fragment_id = int(fragment["fragment_id"])
+        for item in fragment.get("slices") or []:
+            name = str(item["param_name"])
+            prior = result.setdefault(name, fragment_id)
+            if prior != fragment_id:
+                raise ValueError(f"parameter {name} crosses fragment boundaries")
+    return result
+
+
+def apply_inner_optimizer_adoption_policy(
+    *,
+    model: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+    scheduler: torch.optim.lr_scheduler.LRScheduler | None,
+    config: Config,
+    changed_fragments: set[int],
+    parameter_fragments: dict[str, int],
+) -> tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LRScheduler | None, list[str]]:
+    policy = OptimizerAdoptionPolicy(config.learner.inner_optimizer_adoption_policy)
+    if not config.fragments.reset_inner_optimizer_on_fragment_adopt:
+        policy = OptimizerAdoptionPolicy.PRESERVE
+    targets = optimizer_reset_targets(policy, changed_fragments, parameter_fragments)
+    if policy is OptimizerAdoptionPolicy.RESET_ALL:
+        new_optimizer, new_scheduler = build_inner_optimizer_and_scheduler(model, config)
+        return new_optimizer, new_scheduler, sorted(targets)
+    if policy is OptimizerAdoptionPolicy.RESET_UPDATED_FRAGMENT:
+        named = dict(model.named_parameters())
+        for name in targets:
+            optimizer.state.pop(named[name], None)
+    return optimizer, scheduler, sorted(targets)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -349,8 +389,7 @@ def write_update(
     paths: RunPaths,
     config: Config,
     learner_id: str,
-    learner_session_id: str,
-    proposal_sequence: int,
+    interval: ContributionInterval,
     base_global_version: int,
     base_fragment_version: int,
     base_commit_id: str,
@@ -366,7 +405,7 @@ def write_update(
     grad_norm: float | None,
     param_norm: float,
     flat: torch.Tensor,
-) -> tuple[str, Path, Path, dict[str, Any]]:
+) -> tuple[str, Path, Path, dict[str, Any], PublicationResult]:
     update_uuid = uuid.uuid4().hex[:12]
     update_id = f"{learner_id}_{local_step:08d}_{update_uuid}"
     update_dir = paths.updates_pending / learner_id
@@ -374,20 +413,33 @@ def write_update(
     meta_path = update_dir / f"update_{update_uuid}.meta.json"
     created_at = time.time()
     save_update_vector(tensor_path, flat, dtype=dtype_from_name(config.io.tensor_dtype))
-    digest = sha256_file(tensor_path)
-    publish_proposal_payload(
-        paths=paths,
-        config=config,
-        tensor_path=tensor_path,
-        digest=digest,
+    payload_bytes = tensor_path.read_bytes()
+    digest = hashlib.sha256(payload_bytes).hexdigest()
+    publication = LearnerPublisher(
+        PosixStorageBackend(paths.authority),
+        LogLayout(config.run.run_id or "", config.init.run_generation),
+    ).publish(
+        interval,
+        payload_bytes,
+        tensor_key="local_params",
+        shape=(int(flat.numel()),),
     )
     metadata = {
         "format_version": FORMAT_VERSION,
         "run_id": config.run.run_id,
         "update_id": update_id,
         "learner_id": learner_id,
-        "learner_session_id": learner_session_id,
-        "proposal_sequence": proposal_sequence,
+        "learner_session_id": interval.session.session_id,
+        "proposal_sequence": interval.sequence,
+        "publication_request_id": publication.request_id,
+        "publication_request_digest": publication.request_digest,
+        "publication_proposal_id": publication.proposal_id,
+        "interval_digest": interval.interval_digest,
+        "data_cursor_start": interval.start_cursor.to_dict(),
+        "data_cursor_end": interval.end_cursor.to_dict(),
+        "rng_cursor": interval.rng_cursor.to_dict(),
+        "inner_optimizer_adoption_policy": config.learner.inner_optimizer_adoption_policy,
+        "numeric_contract": "proposal-transport-to-float32-commit-v1",
         "run_generation": config.init.run_generation,
         "hostname": socket.gethostname(),
         "pid": os.getpid(),
@@ -413,7 +465,7 @@ def write_update(
         "committed_at": time.time(),
     }
     atomic_write_json(meta_path, metadata)
-    return update_id, tensor_path, meta_path, metadata
+    return update_id, tensor_path, meta_path, metadata, publication
 
 
 def write_fragment_update(
@@ -421,8 +473,7 @@ def write_fragment_update(
     paths: RunPaths,
     config: Config,
     learner_id: str,
-    learner_session_id: str,
-    proposal_sequence: int,
+    interval: ContributionInterval,
     fragment_id: int,
     base_fragment_version: int,
     base_global_merge_event: int,
@@ -440,7 +491,7 @@ def write_fragment_update(
     param_norm: float,
     fragment_norm: float,
     fragment_tensor: torch.Tensor,
-) -> tuple[str, Path, Path, dict[str, Any]]:
+) -> tuple[str, Path, Path, dict[str, Any], PublicationResult]:
     update_uuid = uuid.uuid4().hex[:12]
     update_id = f"{learner_id}_{local_step:08d}_f{fragment_id:03d}_{update_uuid}"
     update_dir = paths.updates_pending / learner_id
@@ -448,12 +499,16 @@ def write_fragment_update(
     meta_path = update_dir / f"update_{update_uuid}_fragment_{fragment_id:03d}.meta.json"
     created_at = time.time()
     save_fragment_update(tensor_path, fragment_tensor, dtype_from_name(config.io.tensor_dtype))
-    digest = sha256_file(tensor_path)
-    publish_proposal_payload(
-        paths=paths,
-        config=config,
-        tensor_path=tensor_path,
-        digest=digest,
+    payload_bytes = tensor_path.read_bytes()
+    digest = hashlib.sha256(payload_bytes).hexdigest()
+    publication = LearnerPublisher(
+        PosixStorageBackend(paths.authority),
+        LogLayout(config.run.run_id or "", config.init.run_generation),
+    ).publish(
+        interval,
+        payload_bytes,
+        tensor_key="fragment_params",
+        shape=(int(fragment_tensor.numel()),),
     )
     metadata = {
         "format_version": FORMAT_VERSION,
@@ -461,8 +516,17 @@ def write_fragment_update(
         "run_id": config.run.run_id,
         "update_id": update_id,
         "learner_id": learner_id,
-        "learner_session_id": learner_session_id,
-        "proposal_sequence": proposal_sequence,
+        "learner_session_id": interval.session.session_id,
+        "proposal_sequence": interval.sequence,
+        "publication_request_id": publication.request_id,
+        "publication_request_digest": publication.request_digest,
+        "publication_proposal_id": publication.proposal_id,
+        "interval_digest": interval.interval_digest,
+        "data_cursor_start": interval.start_cursor.to_dict(),
+        "data_cursor_end": interval.end_cursor.to_dict(),
+        "rng_cursor": interval.rng_cursor.to_dict(),
+        "inner_optimizer_adoption_policy": config.learner.inner_optimizer_adoption_policy,
+        "numeric_contract": "proposal-transport-to-float32-commit-v1",
         "run_generation": config.init.run_generation,
         "hostname": socket.gethostname(),
         "pid": os.getpid(),
@@ -489,7 +553,7 @@ def write_fragment_update(
         "committed_at": time.time(),
     }
     atomic_write_json(meta_path, metadata)
-    return update_id, tensor_path, meta_path, metadata
+    return update_id, tensor_path, meta_path, metadata, publication
 
 
 def run_fragment_learner(config: Config, learner_id: str) -> None:
@@ -498,7 +562,11 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
     logger = JsonlLogger(paths.logs / f"{learner_id}.jsonl", learner_id)
     log_uncaught_exception(logger)
     learner_index = learner_index_from_id(learner_id)
-    learner_session_id = f"{learner_id}-{uuid.uuid4().hex}"
+    learner_session = LearnerSession.new(
+        config.run.run_id or "",
+        config.init.run_generation,
+        learner_id,
+    )
     torch.manual_seed(config.training.seed + learner_index)
     device = choose_device()
     logger.event(
@@ -530,6 +598,7 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
     )
     last_authority = latest
     optimizer, scheduler = build_inner_optimizer_and_scheduler(model, config)
+    parameter_fragments = _parameter_fragment_map(fragment_index)
     tokens_since_fragment_load = {fragment_id: 0 for fragment_id in last_loaded_fragment_versions}
     local_update_index = 0
     fragment_adopt_count = 0
@@ -564,6 +633,15 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
     last_heartbeat = time.monotonic()
     last_update_id: str | None = None
     had_error = False
+    no_progress = False
+    recovery = recover_learner(
+        PosixStorageBackend(paths.authority),
+        LogLayout(config.run.run_id or "", config.init.run_generation),
+        learner_id=learner_id,
+        committed_proposal_ids=frozenset(),
+        new_session_id=learner_session.session_id,
+    )
+    logger.event("warm_recovery", **recovery.to_dict())
 
     try:
         while not fragment_stop_requested(paths, local_step, config):
@@ -571,6 +649,21 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
             interval_start_step = local_step
             base_global_merge_event = last_loaded_global_merge_event
             base_authority = last_authority
+            fragment_id = select_fragment(
+                local_update_index,
+                int(fragment_index["num_fragments"]),
+                schedule=config.fragments.schedule,
+            )
+            interval = ContributionInterval.start(
+                session=learner_session,
+                sequence=local_update_index + 1,
+                fragment_id=fragment_id,
+                base=authority_frontier_from_latest(base_authority),
+                start_step=local_step,
+                start_cursor=DataCursor(local_step, 0),
+                rng_cursor=RngCursor(config.training.seed + learner_index, local_step),
+                transport_dtype=config.io.tensor_dtype,
+            )
             losses: list[float] = []
             interval_tokens = 0
             interval_examples = 0
@@ -590,6 +683,7 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
                 local_step += 1
                 interval_tokens += step_tokens
                 interval_examples += step_examples
+                interval = interval.record_step(tokens=step_tokens, examples=step_examples)
                 for fragment_id in tokens_since_fragment_load:
                     tokens_since_fragment_load[fragment_id] += step_tokens
                 losses.append(loss)
@@ -621,37 +715,12 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
                 if config.learner.poll_latest_during_inner_steps:
                     maybe_latest = read_fragment_latest_if_newer(paths, last_loaded_global_merge_event)
                     if maybe_latest is not None:
-                        (
-                            last_loaded_global_merge_event,
-                            last_loaded_fragment_versions,
-                            changed,
-                        ) = adopt_fragment_updates(
-                            model=model,
-                            latest=maybe_latest,
-                            param_index=param_index,
-                            fragment_index=fragment_index,
-                            last_loaded_fragment_versions=last_loaded_fragment_versions,
-                            device=device,
+                        logger.event(
+                            "successor_observed_mid_interval",
+                            observed_commit_seq=int(maybe_latest["commit_seq"]),
+                            adopted_commit_seq=int(base_authority["commit_seq"]),
+                            adoption_deferred_to_boundary=True,
                         )
-                        last_authority = maybe_latest
-                        if changed:
-                            fragment_adopt_count += len(changed)
-                            last_adopted_fragments = changed
-                            for fragment_id in changed:
-                                tokens_since_fragment_load[fragment_id] = 0
-                            if config.fragments.reset_inner_optimizer_on_fragment_adopt:
-                                optimizer, scheduler = build_inner_optimizer_and_scheduler(model, config)
-                                logger.event(
-                                    "inner_optimizer_reset",
-                                    version=last_loaded_global_merge_event,
-                                    fragments=changed,
-                                )
-                            logger.event(
-                                "fragments_adopted",
-                                global_merge_event=last_loaded_global_merge_event,
-                                fragments=changed,
-                                fragment_versions=last_loaded_fragment_versions,
-                            )
 
             if not losses:
                 continue
@@ -662,23 +731,18 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
                 continue
 
             write_start = time.monotonic()
+            interval = interval.close(end_cursor=DataCursor(local_step, 0))
             flat = flatten_trainable_params(model, param_index).float()
             param_norm = float(flat.norm().item())
             mean_loss = sum(losses) / len(losses)
-            fragment_id = select_fragment(
-                local_update_index,
-                int(fragment_index["num_fragments"]),
-                schedule=config.fragments.schedule,
-            )
-            base_fragment_version = int(last_loaded_fragment_versions[fragment_id])
+            base_fragment_version = int(interval.base.fragment_versions[fragment_id])
             fragment_tensor = extract_fragment(flat, fragment_index, fragment_id)
             fragment_norm = float(fragment_tensor.norm().item())
-            update_id, tensor_path, _meta_path, metadata = write_fragment_update(
+            update_id, tensor_path, _meta_path, metadata, publication = write_fragment_update(
                 paths=paths,
                 config=config,
                 learner_id=learner_id,
-                learner_session_id=learner_session_id,
-                proposal_sequence=local_update_index + 1,
+                interval=interval,
                 fragment_id=fragment_id,
                 base_fragment_version=base_fragment_version,
                 base_global_merge_event=base_global_merge_event,
@@ -713,6 +777,9 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
                 local_step=local_step,
                 train_loss=mean_loss,
                 tokens=interval_tokens,
+                interval_digest=interval.interval_digest,
+                publication_request_id=publication.request_id,
+                publication_proposal_id=publication.proposal_id,
             )
             append_csv_row(
                 paths.metrics / "learner_metrics.csv",
@@ -803,19 +870,39 @@ def run_fragment_learner(config: Config, learner_id: str) -> None:
                         last_adopted_fragments = changed
                         for changed_fragment_id in changed:
                             tokens_since_fragment_load[changed_fragment_id] = 0
-                        if config.fragments.reset_inner_optimizer_on_fragment_adopt:
-                            optimizer, scheduler = build_inner_optimizer_and_scheduler(model, config)
-                            logger.event(
-                                "inner_optimizer_reset",
-                                version=last_loaded_global_merge_event,
-                                fragments=changed,
+                        optimizer, scheduler, reset_parameters = (
+                            apply_inner_optimizer_adoption_policy(
+                                model=model,
+                                optimizer=optimizer,
+                                scheduler=scheduler,
+                                config=config,
+                                changed_fragments=set(changed),
+                                parameter_fragments=parameter_fragments,
                             )
+                        )
+                        logger.event(
+                            "inner_optimizer_adoption",
+                            policy=config.learner.inner_optimizer_adoption_policy,
+                            reset_parameter_count=len(reset_parameters),
+                            version=last_loaded_global_merge_event,
+                            fragments=changed,
+                        )
                         logger.event(
                             "fragments_adopted",
                             global_merge_event=last_loaded_global_merge_event,
                             fragments=changed,
                             fragment_versions=last_loaded_fragment_versions,
                         )
+                elif not paths.stop_json.exists():
+                    no_progress = True
+                    logger.event(
+                        "no_progress",
+                        outcome="terminal",
+                        interval_digest=interval.interval_digest,
+                        base_commit_seq=interval.base.commit_seq,
+                    )
+            if no_progress:
+                break
             maybe_crash(config.failure_sim)
     except Exception:
         had_error = True
@@ -927,7 +1014,11 @@ def run_learner(config: Config, learner_id: str) -> None:
     logger = JsonlLogger(paths.logs / f"{learner_id}.jsonl", learner_id)
     log_uncaught_exception(logger)
     learner_index = learner_index_from_id(learner_id)
-    learner_session_id = f"{learner_id}-{uuid.uuid4().hex}"
+    learner_session = LearnerSession.new(
+        config.run.run_id or "",
+        config.init.run_generation,
+        learner_id,
+    )
     torch.manual_seed(config.training.seed + learner_index)
     device = choose_device()
     logger.event(
@@ -977,6 +1068,16 @@ def run_learner(config: Config, learner_id: str) -> None:
     last_heartbeat = time.monotonic()
     last_update_id: str | None = None
     had_error = False
+    no_progress = False
+    local_update_index = 0
+    recovery = recover_learner(
+        PosixStorageBackend(paths.authority),
+        LogLayout(config.run.run_id or "", config.init.run_generation),
+        learner_id=learner_id,
+        committed_proposal_ids=frozenset(),
+        new_session_id=learner_session.session_id,
+    )
+    logger.event("warm_recovery", **recovery.to_dict())
 
     try:
         while not stop_requested(paths, local_step, config):
@@ -984,6 +1085,16 @@ def run_learner(config: Config, learner_id: str) -> None:
             interval_start_step = local_step
             base_global_version = last_loaded_global_version
             base_authority = last_authority
+            interval = ContributionInterval.start(
+                session=learner_session,
+                sequence=local_update_index + 1,
+                fragment_id=0,
+                base=authority_frontier_from_latest(base_authority),
+                start_step=local_step,
+                start_cursor=DataCursor(local_step, 0),
+                rng_cursor=RngCursor(config.training.seed + learner_index, local_step),
+                transport_dtype=config.io.tensor_dtype,
+            )
             losses: list[float] = []
             interval_tokens = 0
             interval_examples = 0
@@ -1004,6 +1115,7 @@ def run_learner(config: Config, learner_id: str) -> None:
                 interval_tokens += step_tokens
                 interval_examples += step_examples
                 tokens_since_global_load += step_tokens
+                interval = interval.record_step(tokens=step_tokens, examples=step_examples)
                 losses.append(loss)
                 if local_step % max(1, config.training.log_every_steps) == 0:
                     logger.event(
@@ -1030,17 +1142,12 @@ def run_learner(config: Config, learner_id: str) -> None:
                 if config.learner.poll_latest_during_inner_steps:
                     maybe_latest = read_latest_if_newer(paths, last_loaded_global_version)
                     if maybe_latest is not None:
-                        last_loaded_global_version = adopt_global(
-                            model=model,
-                            latest=maybe_latest,
-                            param_index=param_index,
-                            device=device,
+                        logger.event(
+                            "successor_observed_mid_interval",
+                            observed_commit_seq=int(maybe_latest["commit_seq"]),
+                            adopted_commit_seq=int(base_authority["commit_seq"]),
+                            adoption_deferred_to_boundary=True,
                         )
-                        last_authority = maybe_latest
-                        optimizer, scheduler = build_inner_optimizer_and_scheduler(model, config)
-                        tokens_since_global_load = 0
-                        logger.event("global_adopted", version=last_loaded_global_version)
-                        logger.event("inner_optimizer_reset", version=last_loaded_global_version)
 
             if not losses:
                 continue
@@ -1051,15 +1158,15 @@ def run_learner(config: Config, learner_id: str) -> None:
                 continue
 
             write_start = time.monotonic()
+            interval = interval.close(end_cursor=DataCursor(local_step, 0))
             flat = flatten_trainable_params(model, param_index).float()
             param_norm = float(flat.norm().item())
             mean_loss = sum(losses) / len(losses)
-            update_id, tensor_path, _meta_path, metadata = write_update(
+            update_id, tensor_path, _meta_path, metadata, publication = write_update(
                 paths=paths,
                 config=config,
                 learner_id=learner_id,
-                learner_session_id=learner_session_id,
-                proposal_sequence=local_step,
+                interval=interval,
                 base_global_version=base_global_version,
                 base_fragment_version=int(
                     (base_authority.get("fragment_versions") or {}).get(
@@ -1086,6 +1193,7 @@ def run_learner(config: Config, learner_id: str) -> None:
             )
             write_seconds = time.monotonic() - write_start
             last_update_id = update_id
+            local_update_index += 1
             elapsed = max(1e-6, time.monotonic() - interval_start_time)
             tokens_per_sec = interval_tokens / elapsed
             logger.event(
@@ -1095,6 +1203,9 @@ def run_learner(config: Config, learner_id: str) -> None:
                 local_step=local_step,
                 train_loss=mean_loss,
                 tokens=interval_tokens,
+                interval_digest=interval.interval_digest,
+                publication_request_id=publication.request_id,
+                publication_proposal_id=publication.proposal_id,
             )
             append_csv_row(
                 paths.metrics / "learner_metrics.csv",
@@ -1160,10 +1271,36 @@ def run_learner(config: Config, learner_id: str) -> None:
                         device=device,
                     )
                     last_authority = maybe_latest
-                    optimizer, scheduler = build_inner_optimizer_and_scheduler(model, config)
+                    optimizer, scheduler, reset_parameters = (
+                        apply_inner_optimizer_adoption_policy(
+                            model=model,
+                            optimizer=optimizer,
+                            scheduler=scheduler,
+                            config=config,
+                            changed_fragments={0},
+                            parameter_fragments={
+                                str(item["name"]): 0 for item in param_index["params"]
+                            },
+                        )
+                    )
                     tokens_since_global_load = 0
                     logger.event("global_adopted", version=last_loaded_global_version)
-                    logger.event("inner_optimizer_reset", version=last_loaded_global_version)
+                    logger.event(
+                        "inner_optimizer_adoption",
+                        policy=config.learner.inner_optimizer_adoption_policy,
+                        reset_parameter_count=len(reset_parameters),
+                        version=last_loaded_global_version,
+                    )
+                elif not paths.stop_json.exists():
+                    no_progress = True
+                    logger.event(
+                        "no_progress",
+                        outcome="terminal",
+                        interval_digest=interval.interval_digest,
+                        base_commit_seq=interval.base.commit_seq,
+                    )
+            if no_progress:
+                break
             maybe_crash(config.failure_sim)
     except Exception:
         had_error = True
