@@ -8,7 +8,7 @@ lease expiry or lease-file visibility.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from itertools import product
 from types import MappingProxyType
 from typing import Mapping

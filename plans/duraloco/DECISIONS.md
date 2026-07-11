@@ -368,3 +368,102 @@ P05+ 的规范性路线决策生效。
 - Rejected: aggregate timing cannot attribute root cause; immediate resubmission consumed resources without isolating the path.
 - Compatibility: deliberate operator termination remains a real failed attempt with exit status, committed-prefix evidence, and parent lineage.
 - Reversibility: telemetry fields may be extended, but stages and retry evidence may not be collapsed or discarded.
+
+## D-0501 — Conditional observational lease and head-committed epoch
+
+- Context: contenders need a bounded liveness mechanism without creating a second optimizer authority.
+- Candidates: lease file alone; head-only leader election; conditional lease object followed by a head-committed fencing fact.
+- Choice: acquire/renew/release use the storage backend's conditional object operation with stable request identities. Acquisition proposes `head.fencing_epoch + 1`; ownership becomes authoritative only when an `EPOCH_BUMP` control transition commits through the single optimizer head CAS. The lease sequence is monotonic for observation, while committed fencing epochs are the safety order; abandoned candidate epochs may be retried but cannot authorize a writer.
+- Rejected: a lease file alone has a head/lease TOCTOU gap; head-only election gives no bounded renewal/expiry signal for standby liveness.
+- Compatibility: the first P05 owner performs an epoch bump from the M00 epoch-zero genesis before any optimizer transition.
+- Reversibility: lease timing and record layout may change behind the same head-committed fencing contract.
+
+## D-0502 — Clock assumptions affect liveness only
+
+- Context: wall clocks can move and different hosts can disagree near expiry.
+- Candidates: trust wall-clock expiry for safety; require synchronized clocks for every commit; use time only to decide when takeover may be attempted.
+- Choice: TTL uses integer nanoseconds from a monotonic process clock for local renew scheduling and a declared maximum cross-host skew envelope for takeover delay. A standby waits until the recorded expiry plus the skew allowance before acquire. Clock disagreement may delay or cause competing attempts, but only the epoch/owner/session fact in the head chain authorizes commits.
+- Rejected: wall-clock-only fencing admits split brain; per-commit clock synchronization makes storage availability part of safety.
+- Compatibility: M00 has no lease and is treated as an unfenced epoch-zero prefix that cannot receive new P05 production commits.
+- Reversibility: the skew envelope and clock source may be tightened after measurement without changing committed history.
+
+## D-0503 — Exact owner token checked around the unique head CAS
+
+- Context: a paused leader may resume after standby takeover.
+- Candidates: check lease only; check epoch only; bind epoch, owner, and owner-session to both prepared transition and authoritative head.
+- Choice: every optimizer or control transition carries an `OwnerToken(epoch, owner_id, owner_session_id)`. Preparation starts from strict/replayed authority and requires an exact match. The audited commit API rechecks that the prepared parent carries the same token immediately before conditional head replacement. Any head change causes full replay and discard/reprepare; a stale token can create only unreachable immutable orphans.
+- Rejected: epoch-only permits accidental token sharing; lease-only has no causal connection to the optimizer head.
+- Compatibility: reference P04 transactions remain available as a correctness oracle, while the production P05 syncer path requires a token.
+- Reversibility: token fields may gain an implementation digest but cannot be weakened below exact equality.
+
+## D-0504 — Stop is a committed control transition
+
+- Context: M00 `stop.json` is derived and can be missing or stale after crash.
+- Candidates: mutable stop file; head metadata bit; immutable `STOP` control commit plus frontier projection.
+- Choice: the current fenced owner commits a `STOP` control transition containing request ID, reason, owner token, and parent. The successor frontier projects the stop fact. `stop.json` is regenerated after replay and learners treat the committed projection as final authority.
+- Rejected: a mutable file creates a second terminal authority; an unlogged head-only bit loses request ancestry and crash evidence.
+- Compatibility: an M00 prefix has no committed stop and is interpreted as running until P05 commits one.
+- Reversibility: new stop reasons may be added, but clearing or replacing a committed stop requires a new explicitly designed run generation.
+
+## D-0505 — P05 continues only a SQLite-free generation
+
+- Context: coordination must not become a compatibility gateway for historical DB-era runs.
+- Candidates: infer and migrate old ownership; allow a DB compatibility flag; require the M00 run manifest and namespace.
+- Choice: P05 opens only a Protocol-v2, production-codec, SQLite-free run generation whose committed run manifest matches the requested run/generation. Removed DB flags remain unknown-key errors. Historical tensors enter only through the already-defined new-generation warm bootstrap.
+- Rejected: ownership inference from historical local state cannot be replayed from the committed log; a compatibility flag restores dual authority.
+- Compatibility: M00 generations are valid prefixes; pre-M00 DB generations are not.
+- Reversibility: none within an active generation; another migration design requires a separate archival tool and approval.
+
+## D-0506 — Durable request identity for lease, optimizer, and stop mutations
+
+- Context: response loss must be distinguishable from a new identical operation.
+- Candidates: compare payload/effect; retain only process memory; bind canonical request identity into durable mutation evidence.
+- Choice: each mutation has a caller-stable request ID and canonical request digest. Lease mutation objects bind the ID/digest and publish immutable request evidence; optimizer and stop request IDs/digests are committed in their transition records. Same ID/same digest returns the original outcome, different ID/same content is an independent competing mutation, and same ID/different digest fails closed.
+- Rejected: payload equality repeats the P03 independent-CAS bug; process memory is lost at takeover.
+- Compatibility: deterministic M00 optimizer request IDs remain readable; new P05 transitions use explicit owner-scoped IDs.
+- Reversibility: retention may compact request results only when ancestry-preserving replay equivalence is proved.
+
+## D-0507 — Response-loss reconciliation walks committed ancestry
+
+- Context: a delayed retry can arrive after one or more successor heads.
+- Candidates: compare current head only; inspect observational lease/latest files; search the verified committed chain by request identity and transition digest.
+- Choice: commit and stop reconciliation performs strict authority replay after ambiguity and returns `already_committed` only when exactly one matching request ID/digest is present in committed ancestry. Prepared but unreachable objects remain orphans. Lease retry first validates immutable request evidence and the conditional lease record; ambiguity that cannot be uniquely proved is typed inconclusive/fail-closed.
+- Rejected: current-head equality loses successful ancestors; observational files can lag or be corrupted.
+- Compatibility: extends P04 prepared-transition ancestry resolution without weakening it.
+- Reversibility: a P07 snapshot index may accelerate lookup only if it is head-reachable and digest-equivalent.
+
+## D-0508 — Epoch bump is the only lease-to-authority bridge
+
+- Context: separately mutable lease and optimizer head cannot both be authoritative.
+- Candidates: copy the lease epoch into each commit without a control transition; atomically mutate lease and head with a coordinator; serialize an epoch bump in the existing head chain.
+- Choice: lease acquisition never directly authorizes optimizer work. `EPOCH_BUMP` is an immutable control commit and successor frontier installed by the existing single head CAS. It changes fencing epoch/owner/session but not tensors, fragment versions, scheduler cursor, consumption, or optimizer-transition count.
+- Rejected: copying an uncommitted lease epoch leaves a TOCTOU window; a coordinator adds another transactional authority.
+- Compatibility: existing replay gains a typed control-transition branch while keeping one causal chain.
+- Reversibility: control schema can be versioned in a new generation; the bridge may not bypass head CAS.
+
+## D-0509 — Log sequence and optimizer-transition count are distinct
+
+- Context: lease/stop control facts need ordering but must not change the 50×10 training meaning.
+- Candidates: do not sequence control events; count every head transition as an outer step; maintain one commit sequence and an explicit optimizer count.
+- Choice: `commit_seq` increments for every optimizer or control transition. `optimizer_transition_count` increments only for optimizer transitions and is projected in every frontier/RuntimeView. Scheduler cursor, fragment versions, selected proposals, and token totals change only on optimizer transitions. Terminal `10` means exactly ten optimizer transitions regardless of epoch bumps or stop.
+- Rejected: unsequenced control facts cannot be replayed; counting control as training corrupts stopping and metrics.
+- Compatibility: an optimizer-only M00 prefix derives `optimizer_transition_count == commit_seq`.
+- Reversibility: none within a generation because the counter is identity-bearing authority.
+
+## D-0510 — Ownership boundary forces empty-cache strict replay
+
+- Context: verified tensor memoization and selected candidates are valid only for the process/owner that established them.
+- Candidates: hand cache and selection to standby; retain cache but clear selection; construct a new owner-scoped production log and replay strictly.
+- Choice: acquisition/takeover creates a new owner session, discards every tentative selection/validated payload, constructs an empty production replay cache, and completes strict replay before preparing the epoch bump. Only after complete success may that owner build process-local memoization. CAS ambiguity, unexpected head jump, or corruption suspicion clears it again.
+- Rejected: cache handoff crosses the verification ownership boundary; retaining selection reuses validation against a stale epoch/base.
+- Compatibility: preserves D-M0010 and the M00 stale-cache/corrupt-successor counterexample.
+- Reversibility: none without new proof that ownership transfer preserves verification provenance.
+
+## D-0511 — Initial TTL and renewal budget are measured, not safety assumptions
+
+- Context: M00 observed strict replay at 6.177/6.875 seconds and steady post-CAS replay at 4.835–4.940 seconds, but current storage tail and clock skew still require P05 measurement.
+- Candidates: make TTL shorter than replay; use a very long fixed lease; start with a conservative bounded configuration and report its measured margin.
+- Choice: initial P05 defaults are a 45-second lease TTL, 10-second renewal interval, 15-second minimum renewal margin, and 2-second declared maximum clock-skew allowance. Takeover RTO is measured from expiry eligibility through empty-cache strict replay and epoch-bump CAS. The 1/2/9-node artifacts must report current lease CAS/storage tails and prove the observed margin; failure to renew stops new preparation. Safety remains exact-token/head-CAS based even if any timing target is missed.
+- Rejected: a sub-replay TTL guarantees churn; an unbounded lease defeats failover; treating M00 timings as a pass ignores current storage conditions.
+- Compatibility: values are new P05 configuration and do not change M00 evidence.
+- Reversibility: timing defaults are configuration and may be tuned with new measurements and Checker review.
