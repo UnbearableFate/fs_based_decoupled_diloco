@@ -6,7 +6,7 @@ current_loop: 5
 current_goal: "C1 to C2 to C9 central topology qualification"
 checks:
   login_static: pass
-  c1: not_run
+  c1: provisional_pass_before_final_same_commit_ladder
   c2: not_run
   c9: not_run
 focused_1node_attempt:
@@ -18,4 +18,11 @@ focused_1node_attempt:
   manifest: artifacts/duraloco/P06A/20260711_p06a_archive_723e64a_1node/manifest.json
   archive_oracle: artifacts/duraloco/P06A/20260711_p06a_archive_723e64a_1node/oracle_trace.json
 checker_verdict: not_run
-next_action: "run the full C1 real model/data gate"
+c1_provisional:
+  run_id: 20260711_p06a_c1_c834e57
+  pbs_job_id: 2362037.opbs
+  full_tests: "395 passed, 1 skipped"
+  finite_losses: 2
+  optimizer_transitions: 1
+  result: pass
+next_action: "rerun C1 and then C2/C9 on the final launcher-complete implementation candidate"

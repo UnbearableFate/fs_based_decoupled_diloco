@@ -18,6 +18,10 @@ PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
 : "${SHARED_ROOT:?SHARED_ROOT is required}"
 PARENT_RUN_ID="${PARENT_RUN_ID:-}"
 CONFIG="$PROJECT_ROOT/configs/duraloco_p06_tiny_2node_restart.yaml"
+MANIFEST_PHASE="${MANIFEST_PHASE:-P06}"
+VALIDATION_SHAPE="${VALIDATION_SHAPE:-p06-maker-2node-learner-syncer-warm-restart}"
+MANIFEST_CONFIG="${MANIFEST_CONFIG:-scripts/miyabi/run_duraloco_p06_2node.pbs}"
+TERMINATION_DETAIL="${TERMINATION_DETAIL:-P06 separate-node syncer/learner publication, learner SIGKILL, warm restart, boundary adoption, and stop}"
 
 cd "$PROJECT_ROOT"
 mapfile -t HOSTS < <(sort -u "$PBS_NODEFILE")
@@ -37,14 +41,14 @@ finish() {
   qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
   args=(
     --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json"
-    --phase P06 --purpose chaos --run-id "$RUN_ID" --schema-version 2
-    --validation-shape p06-maker-2node-learner-syncer-warm-restart
-    --backend lustre --config scripts/miyabi/run_duraloco_p06_2node.pbs
+    --phase "$MANIFEST_PHASE" --purpose chaos --run-id "$RUN_ID" --schema-version 2
+    --validation-shape "$VALIDATION_SHAPE"
+    --backend lustre --config "$MANIFEST_CONFIG"
     --commands-log commands.log --stdout stdout.log --stderr stderr.log
     --exit-code "$exit_code" --result "$result"
     --termination-kind "$([[ "$result" == pass ]] && echo success || echo test_failure)"
     --pbs-queue debug-g --requested-resources select=2:mpiprocs=1,walltime=00:10:00
-    --last-qstat-state R --termination-detail "P06 separate-node syncer/learner publication, learner SIGKILL, warm restart, boundary adoption, and stop"
+    --last-qstat-state R --termination-detail "$TERMINATION_DETAIL"
     --assertion "syncer and learner execute on distinct compute hosts"
     --assertion "learner is SIGKILLed after marker-last publication and restarts with a distinct immutable session"
     --assertion "two non-overlapping intervals commit, boundary adoption occurs, and authoritative stop wins"

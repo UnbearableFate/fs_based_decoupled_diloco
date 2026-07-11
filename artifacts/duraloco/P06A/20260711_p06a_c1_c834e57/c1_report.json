@@ -1,0 +1,12 @@
+{
+  "boundary_adoptions": 2,
+  "final_commit_id": "c-e8bf31cacf98bdddebd9cf8c285e9773caa01e0b138eda3b9ed6a58c72902b3f",
+  "finite_losses": [
+    4.437056303024292,
+    4.3936262130737305
+  ],
+  "local_steps": 4,
+  "optimizer_transitions": 1,
+  "status": "PASS",
+  "summary_stop_reason": "stop_after_outer_steps"
+}

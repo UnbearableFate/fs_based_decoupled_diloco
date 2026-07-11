@@ -1,0 +1,17 @@
+#!/bin/bash
+#PBS -N duraloco_p06a_c2
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=2:mpiprocs=1
+#PBS -l walltime=00:10:00
+#PBS -j oe
+#PBS -m ae
+
+set -eEuo pipefail
+PROJECT_ROOT="${PROJECT_ROOT:-${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}}"
+cd "$PROJECT_ROOT"
+export MANIFEST_PHASE=P06A
+export VALIDATION_SHAPE=p06a-c2-decomposed-crs-lease-takeover-regression
+export MANIFEST_CONFIG=scripts/miyabi/run_duraloco_p06a_c2.pbs
+export TERMINATION_DETAIL="P06A decomposed CRS C2 learner SIGKILL, warm restart, boundary adoption, and fenced authority regression"
+exec bash scripts/miyabi/run_duraloco_p06_2node.pbs

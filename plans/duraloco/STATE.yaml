@@ -56,7 +56,8 @@ artifacts:
   - artifacts/duraloco/P06A/20260711_p06a_kernel_93ea451_1node
   - artifacts/duraloco/P06A/20260711_p06a_kernel_6ac394d_1node
   - artifacts/duraloco/P06A/20260711_p06a_archive_723e64a_1node
-next_action: "run the full suite and real GPT-2/WikiText-2 C1 path on a clean commit"
+  - artifacts/duraloco/P06A/20260711_p06a_c1_c834e57
+next_action: "freeze one clean implementation candidate containing C1/C2/C9 launchers, then run the entire C1 to C2 to C9 ladder on that commit"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

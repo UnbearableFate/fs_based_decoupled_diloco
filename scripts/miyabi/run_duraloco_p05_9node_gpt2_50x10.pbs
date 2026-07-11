@@ -28,6 +28,7 @@ MANIFEST_PHASE="${MANIFEST_PHASE:-P05}"
 VALIDATION_SHAPE="${VALIDATION_SHAPE:-p05-maker-9node-gpt2-wikitext2-50x10-active-standby-takeover}"
 PROBE_MODULE="${PROBE_MODULE:-fs_diloco.coordination.terminal_probe}"
 LEARNER_ZERO_WRAPPER="${LEARNER_ZERO_WRAPPER:-}"
+TERMINATION_DETAIL="${TERMINATION_DETAIL:-P05 terminal 8-learner plus active/standby syncer topology with active SIGKILL and epoch-2 takeover}"
 QUALIFICATION_1NODE="${QUALIFICATION_1NODE:-}"
 QUALIFICATION_2NODE="${QUALIFICATION_2NODE:-}"
 SHARED_ROOT="${SHARED_ROOT:-$PROJECT_ROOT/runs/fs_diloco/$RUN_ID}"
@@ -89,13 +90,13 @@ finish() {
     --pbs-queue regular-g
     --requested-resources select=9:mpiprocs=1,walltime=00:15:00
     --last-qstat-state R
-    --termination-detail "P05 terminal 8-learner plus active/standby syncer topology with active SIGKILL and epoch-2 takeover"
+    --termination-detail "$TERMINATION_DETAIL"
     --assertion "real GPT-2 WikiText-2 ran 50 inner steps by eight learners and committed exactly 10 optimizer transitions"
     --assertion "active and standby ran on the ninth node; active was SIGKILLed after progress and standby took over"
     --assertion "final strict replay reports epoch 2, standby ownership, authoritative stop, zero split brain, and zero double inclusion"
     --assertion "control transitions do not inflate the 10 optimizer-transition terminal count"
   )
-  if [[ "$MANIFEST_PHASE" == P06 ]]; then
+  if [[ "$MANIFEST_PHASE" == P06 || "$MANIFEST_PHASE" == P06A ]]; then
     args+=(
       --assertion "one learner is SIGKILLed after immutable publication and warm-restarts with a distinct session"
       --assertion "interval bases remain frozen, adoption occurs only at boundaries, and no session/base overlaps"
