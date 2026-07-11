@@ -413,7 +413,39 @@ records:
       targeted_gate: "1-node unit plus D1-R2 and D2-R2 on one clean repair commit"
       qualification_ladder: ["login static", "targeted Miyabi 1-node", "Miyabi D1-R2", "Miyabi D2-R2", "one D8-R2 retry"]
     retry_decision:
-      authorized: false
-      rationale: "same-shape retry is forbidden until root-cause review and full repair qualification ladder pass"
+      authorized: true
+      rationale: "root-cause review plus targeted 2363213, unit 2363218, D1 2363228, and D2 2363235 passed on cba9f48 before the single D8 retry 2363242 passed"
       parent_run_id: 20260711_p06c_d8_r2_90cb9a9
-    artifacts: [artifacts/duraloco/P06C/20260711_p06c_d8_r2_90cb9a9, runs/P06C/20260711_p06c_d8_r2_90cb9a9, plans/duraloco/reviews/P06C_D8_R2_LEASE_EXPIRY_REVIEW.md]
+    artifacts: [artifacts/duraloco/P06C/20260711_p06c_d8_r2_90cb9a9, runs/P06C/20260711_p06c_d8_r2_90cb9a9, plans/duraloco/reviews/P06C_D8_R2_LEASE_EXPIRY_REVIEW.md, artifacts/duraloco/P06C/20260711_p06c_lease_guard_cba9f48, artifacts/duraloco/P06C/20260711_p06c_unit_cba9f48_1node, artifacts/duraloco/P06C/20260711_p06c_d1_r2_cba9f48, artifacts/duraloco/P06C/20260711_p06c_d2_r2_cba9f48, artifacts/duraloco/P06C/20260711_p06c_d8_r2_cba9f48]
+  - error_id: E-P06C-20260711-14
+    phase_and_gate: P06C/PERSIST-state-validation
+    observed_at_utc: "2026-07-11T14:17:41Z"
+    pbs_job_id: null
+    hosts: [miyabi-g1]
+    git_commit: cba9f487dcc697a6df7930b22280e4f0d512377b
+    classification: unexpected_failure
+    phenomenon:
+      exit_code: 1
+      exception: "check_phase_state: invalid check values using generic pass labels"
+      terminal_state: "checksums and static compilation passed; state persistence validation failed before commit"
+      log_excerpt: null
+    expected: "STATE.yaml uses the validator's exact typed check vocabulary and string job references"
+    impact:
+      acceptance_ids: [P06C-A23, P06C-A24]
+      invariants: ["persisted phase state must satisfy the legal transition schema"]
+      committed_prefix_safe: true
+    cause:
+      confirmed: ["state used pass instead of static_pass/miyabi_*_pass", "qualification job IDs also required quoted string references"]
+      unknown: []
+    repair:
+      change: "replace generic labels with exact CHECK_VALUES enums and quote all PBS job references"
+      rationale: "matches the repository's persisted-state contract without changing evidence semantics"
+    verification:
+      minimal_reproduction: "python scripts/agent/check_phase_state.py plans/duraloco/STATE.yaml --root ."
+      targeted_gate: "state validator, checksums, py_compile, and bash -n all pass before persistence commit"
+      qualification_ladder: ["login static"]
+    retry_decision:
+      authorized: true
+      rationale: "persistence-only schema correction caught before commit or Checker submission"
+      parent_run_id: null
+    artifacts: [plans/duraloco/STATE.yaml]

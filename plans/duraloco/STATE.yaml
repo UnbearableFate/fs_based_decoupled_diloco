@@ -1,5 +1,5 @@
 phase: P06C
-status: in_progress
+status: checking
 planning_basis_branch: codex/duraloco-p06b-learner-hosted-sync
 planning_basis_commit: 98c1b92d943f9aef290b6b549db5baf06c225428
 verified_dependency_implementation: d5e2901b75ef504a31a365790b7b9518c329dbe7
@@ -7,57 +7,60 @@ verified_dependency_checker_commit: b26046734af21eb51fc59b4689c6580ebe9d504a
 actual_base_branch: codex/duraloco-p06b-learner-hosted-sync
 actual_base_commit: 98c1b92d943f9aef290b6b549db5baf06c225428
 feature_branch: codex/duraloco-p06c-redundant-fragment-executors
-current_loop: 1
-current_goal: "factor-two ownership, mode identity, and duplicate-result RED/property gate"
+current_loop: 6
+current_goal: "independent P06C Checker audit of factor-two, failure, D8, and error evidence"
 attempts_for_current_failure: 0
-last_terminal_failure_review: null
-terminal_retry_authorized: false
+last_terminal_failure_review: plans/duraloco/reviews/P06C_D8_R2_LEASE_EXPIRY_REVIEW.md
+terminal_retry_authorized: true
 terminal_retry_qualification:
-  targeted_1node_benchmark: null
-  miyabi_1node: null
-  miyabi_2node: null
-last_verified_commit: null
+  targeted_1node_benchmark: "2363213.opbs"
+  miyabi_1node: "2363228.opbs"
+  miyabi_2node: "2363235.opbs"
+last_verified_commit: cba9f487dcc697a6df7930b22280e4f0d512377b
 checks:
-  local_static: not_run
-  local_runtime: not_run
-  miyabi_login_static: not_run
-  miyabi_d1_r2: not_run
-  miyabi_d2_r2: not_run
-  miyabi_d8_r2: not_run
+  local_static: static_pass
+  local_runtime: skipped_not_required
+  miyabi_login_static: static_pass
+  miyabi_d1_r2: miyabi_d1_r2_pass
+  miyabi_d2_r2: miyabi_d2_r2_pass
+  miyabi_d8_r2: miyabi_d8_r2_pass
 acceptance:
-  P06C-A01: {result: not_run, evidence: []}
-  P06C-A02: {result: not_run, evidence: []}
-  P06C-A03: {result: not_run, evidence: []}
-  P06C-A04: {result: not_run, evidence: []}
-  P06C-A05: {result: not_run, evidence: []}
-  P06C-A06: {result: not_run, evidence: []}
-  P06C-A07: {result: not_run, evidence: []}
-  P06C-A08: {result: not_run, evidence: []}
-  P06C-A09: {result: not_run, evidence: []}
-  P06C-A10: {result: not_run, evidence: []}
-  P06C-A11: {result: not_run, evidence: []}
-  P06C-A12: {result: not_run, evidence: []}
-  P06C-A13: {result: not_run, evidence: []}
-  P06C-A14: {result: not_run, evidence: []}
-  P06C-A15: {result: not_run, evidence: []}
-  P06C-A16: {result: not_run, evidence: []}
-  P06C-A17: {result: not_run, evidence: []}
-  P06C-A18: {result: not_run, evidence: []}
-  P06C-A19: {result: not_run, evidence: []}
-  P06C-A20: {result: not_run, evidence: []}
-  P06C-A21: {result: not_run, evidence: []}
-  P06C-A22: {result: not_run, evidence: []}
-  P06C-A23: {result: not_run, evidence: []}
-  P06C-A24: {result: not_run, evidence: []}
+  P06C-A01: {result: pass, evidence: ["2363218.opbs factor-two deterministic ownership tests"]}
+  P06C-A02: {result: pass, evidence: ["D1/D8 redundant FWO owner_member_ids and ownership digest"]}
+  P06C-A03: {result: pass, evidence: ["factor-two insufficient-members fail-closed tests and D2 liveness boundary"]}
+  P06C-A04: {result: pass, evidence: ["D1 exact duplicate PFR and final transition binding"]}
+  P06C-A05: {result: pass, evidence: ["unit same-FWO divergent-result expected fatal counterexample"]}
+  P06C-A06: {result: pass, evidence: ["different-FWO same-result identity unit counterexample"]}
+  P06C-A07: {result: pass, evidence: ["warm, active-active, and hedged policy unit tests plus D1/D8"]}
+  P06C-A08: {result: pass, evidence: ["D8 ten FWO v2 objects bind hedged 6000 ms policy"]}
+  P06C-A09: {result: pass, evidence: ["commit schema/replay FWO-PFR binding and D8 strict replay"]}
+  P06C-A10: {result: pass, evidence: ["failure evidence and false-suspicion authority tests"]}
+  P06C-A11: {result: pass, evidence: ["2363242.opbs committed membership revision one"]}
+  P06C-A12: {result: pass, evidence: ["D2 three fencing epochs and old-epoch attempt classification"]}
+  P06C-A13: {result: pass, evidence: ["D8 storage-only takeover and no_optimizer_state_transfer report"]}
+  P06C-A14: {result: pass, evidence: ["2363235.opbs primary, backup, committer, and whole-host matrix"]}
+  P06C-A15: {result: pass, evidence: ["D2 combined learner-host/committer loss with 21.97 s max recovery"]}
+  P06C-A16: {result: pass, evidence: ["false-suspicion test leaves committed ownership unchanged"]}
+  P06C-A17: {result: pass, evidence: ["2363242.opbs D8-R2 GPT-2/WikiText-2 50x10 in 528 s"]}
+  P06C-A18: {result: pass, evidence: ["D8 strict committed replay: zero duplicate consumption or mixed state"]}
+  P06C-A19: {result: pass, evidence: ["D8 factor-one/R2 latency, CPU, I/O, GPU, and goodput comparison"]}
+  P06C-A20: {result: pass, evidence: ["negative 528 s vs 470 s and 1.77x/1.90x I/O result preserved"]}
+  P06C-A21: {result: pass, evidence: ["D8 report freezes P07 lifecycle requirements"]}
+  P06C-A22: {result: pass, evidence: ["all qualification forbidden-surface scans PASS"]}
+  P06C-A23: {result: pass, evidence: ["bilingual report, detailed error ledger, manifests, checksums, clean runtime commit"]}
+  P06C-A24: {result: pass, evidence: ["automatic progression contract authorizes P07 only after Checker PASS"]}
 open_decisions: []
 open_blockers: []
 artifacts:
-  - plans/duraloco/phases/P06B_PHASE_REPORT.md
-  - plans/duraloco/checker_reports/P06B_FINAL_CHECKER_REPORT.md
-  - plans/duraloco/errors/P06B_ERROR_LEDGER.yaml
-  - plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/P06A_P06B_IMPLEMENTATION_LESSONS.md
-  - artifacts/duraloco/P06B/20260711_p06b_checker_b260467_1node
-next_action: "run the P06C RED gate, then implement the factor-two policy and duplicate decision kernels"
+  - plans/duraloco/phases/P06C_PHASE_REPORT.md
+  - plans/duraloco/errors/P06C_ERROR_LEDGER.yaml
+  - plans/duraloco/reviews/P06C_D8_R2_LEASE_EXPIRY_REVIEW.md
+  - plans/duraloco/evidence/P06C_MAKER_CHECKSUMS.sha256
+  - artifacts/duraloco/P06C/20260711_p06c_unit_cba9f48_1node
+  - artifacts/duraloco/P06C/20260711_p06c_d1_r2_cba9f48
+  - artifacts/duraloco/P06C/20260711_p06c_d2_r2_cba9f48
+  - artifacts/duraloco/P06C/20260711_p06c_d8_r2_cba9f48
+next_action: "run the independent P06C Checker; PASS authorizes completed and P07"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
