@@ -1,0 +1,92 @@
+#!/bin/bash
+#PBS -N duraloco_p06c_d1
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:30:00
+#PBS -j oe
+#PBS -m ae
+
+set -eEuo pipefail
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat WANDB_MODE=disabled
+PROJECT_ROOT="${PROJECT_ROOT:-${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}}"
+PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
+: "${EXPECTED_COMMIT:?EXPECTED_COMMIT is required}"
+: "${RUN_ID:?RUN_ID is required}"
+: "${ARTIFACT_ROOT:?ARTIFACT_ROOT is required}"
+: "${STORAGE_ROOT:?STORAGE_ROOT is required}"
+PARENT_RUN_ID="${PARENT_RUN_ID:-}"
+CONFIG="$PROJECT_ROOT/configs/fs_diloco_gpt2_wikitext2_1l_debug.yaml"
+TRAINING_ROOT="$STORAGE_ROOT/training"
+TRAIN_RUN="$RUN_ID-training"
+cd "$PROJECT_ROOT"
+mkdir -p "$ARTIFACT_ROOT" "$TRAINING_ROOT"
+touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log" "$ARTIFACT_ROOT/commands.log"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+
+result=fail
+exit_code=1
+pids=()
+finish() {
+  observed=$?
+  for pid in "${pids[@]}"; do kill "$pid" 2>/dev/null || true; done
+  if [[ "$result" == pass ]]; then exit_code=0; elif [[ "$observed" -ne 0 ]]; then exit_code=$observed; fi
+  qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
+  args=(
+    --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json"
+    --phase P06C --purpose contract --run-id "$RUN_ID" --schema-version 2
+    --validation-shape p06c-d1-r2-active-active-real-gpt2-same-host
+    --backend lustre --model-revision gpt2 --dataset-revision wikitext-2-raw-v1
+    --config scripts/miyabi/run_duraloco_p06c_d1_r2.pbs --commands-log commands.log
+    --stdout stdout.log --stderr stderr.log --exit-code "$exit_code" --result "$result"
+    --termination-kind "$([[ "$result" == pass ]] && echo success || echo test_failure)"
+    --pbs-queue debug-g --requested-resources select=1:mpiprocs=1,walltime=00:30:00
+    --last-qstat-state R --termination-detail "P06C D1-R2 two learner-hosted executors produce exact duplicate GPT-2 prepare results"
+    --assertion "factor-two active-active FWO binds two canonical owner roles on one learner host"
+    --assertion "both executors publish exact same PFR identity and one final transition binds it"
+    --assertion "strict replay, finite learner losses, and duplicate CPU/I/O telemetry pass"
+  )
+  if [[ -n "$PARENT_RUN_ID" ]]; then args+=(--parent-run-id "$PARENT_RUN_ID"); fi
+  [[ -f "$ARTIFACT_ROOT/d1_r2_report.json" ]] && args+=(--stage-metrics-path d1_r2_report.json)
+  "$PYTHON_BIN" scripts/agent/create_run_manifest.py "${args[@]}" || true
+}
+trap finish EXIT
+trap 'echo "[ERROR] P06C D1-R2 failed at line $LINENO" | tee -a "$ARTIFACT_ROOT/stderr.log"' ERR
+
+[[ "$(hostname)" == mg* ]]
+[[ "$(git rev-parse HEAD)" == "$EXPECTED_COMMIT" ]]
+[[ -z "$(git status --porcelain=v1)" ]]
+hostname | tee "$ARTIFACT_ROOT/hosts.log"
+git status --short --branch | tee "$ARTIFACT_ROOT/git_status.log"
+git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"
+"$PYTHON_BIN" --version 2>&1 | tee "$ARTIFACT_ROOT/python_version.log"
+module list 2>&1 | cat > "$ARTIFACT_ROOT/modules.log"
+"$PYTHON_BIN" scripts/agent/check_no_embedded_database.py --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/forbidden_surface.json"
+
+node_id=$(hostname)
+node_ids="$node_id,$node_id"
+committer=("$PYTHON_BIN" -m fs_diloco.distributed_syncer.cli committer --config "$CONFIG" --run-id "$TRAIN_RUN" --shared-root "$TRAINING_ROOT" --num-learners 2 --node-ids "$node_ids" --member-id member-000 --owner-session-id "$TRAIN_RUN-committer-session" --threads 8 --replication-factor 2 --execution-mode active_active)
+printf '%q ' "${committer[@]}" | tee -a "$ARTIFACT_ROOT/commands.log"
+printf '\n' | tee -a "$ARTIFACT_ROOT/commands.log"
+CUDA_VISIBLE_DEVICES="" "${committer[@]}" > "$ARTIFACT_ROOT/committer.log" 2>&1 & pids+=("$!")
+sleep 5
+for index in 0 1; do
+  member_id=$(printf 'member-%03d' "$index")
+  executor_id=$(printf 'executor-%03d' "$index")
+  learner_id=$(printf 'learner_%03d' "$index")
+  executor=("$PYTHON_BIN" -m fs_diloco.distributed_syncer.cli executor --config "$CONFIG" --run-id "$TRAIN_RUN" --shared-root "$TRAINING_ROOT" --num-learners 2 --member-id "$member_id" --executor-id "$executor_id" --executor-session-id "$TRAIN_RUN-$executor_id-session" --threads 8)
+  learner=("$PYTHON_BIN" -m fs_diloco.learner --config "$CONFIG" --run-id "$TRAIN_RUN" --shared-root "$TRAINING_ROOT" --learner-id "$learner_id" --num-learners 2 --session-id "$TRAIN_RUN-$learner_id-session")
+  printf '%q ' "${executor[@]}" | tee -a "$ARTIFACT_ROOT/commands.log"
+  printf '\n' | tee -a "$ARTIFACT_ROOT/commands.log"
+  printf '%q ' "${learner[@]}" | tee -a "$ARTIFACT_ROOT/commands.log"
+  printf '\n' | tee -a "$ARTIFACT_ROOT/commands.log"
+  CUDA_VISIBLE_DEVICES="" "${executor[@]}" > "$ARTIFACT_ROOT/${member_id}_executor.log" 2>&1 & pids+=("$!")
+  CUDA_VISIBLE_DEVICES=0 "${learner[@]}" > "$ARTIFACT_ROOT/${member_id}_learner.log" 2>&1 & pids+=("$!")
+done
+for pid in "${pids[@]}"; do wait "$pid"; done
+pids=()
+
+"$PYTHON_BIN" -m fs_diloco.analysis summary "$TRAINING_ROOT" --json | tee "$ARTIFACT_ROOT/training_summary.json"
+"$PYTHON_BIN" scripts/agent/create_p06c_runtime_report.py --root "$TRAINING_ROOT" --run-id "$TRAIN_RUN" --expected-mode active_active --expected-learners 2 --output "$ARTIFACT_ROOT/d1_r2_report.json" | tee -a "$ARTIFACT_ROOT/stdout.log"
+result=pass
+exit_code=0

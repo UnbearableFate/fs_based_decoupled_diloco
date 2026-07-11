@@ -193,3 +193,35 @@ records:
       rationale: "syntax-only regression caught before PBS submission"
       parent_run_id: null
     artifacts: []
+  - error_id: E-P06C-20260711-07
+    phase_and_gate: P06C/D1-R2-script-design
+    observed_at_utc: "2026-07-11T13:08:43Z"
+    pbs_job_id: null
+    hosts: [miyabi-g1]
+    git_commit: 167ba071cba4b5d9f122206627cbc342184638ce
+    classification: unexpected_failure
+    phenomenon:
+      exit_code: 2
+      exception: "sed: fs_diloco/storage.py did not exist"
+      terminal_state: "one guessed module path failed while the config and distributed layout reads succeeded"
+      log_excerpt: null
+    expected: "enumerate the storage package files before inspecting its implementation"
+    impact:
+      acceptance_ids: [P06C-A04, P06C-A23]
+      invariants: ["runtime evidence readers must use the repository's actual storage package boundary"]
+      committed_prefix_safe: true
+    cause:
+      confirmed: ["fs_diloco.storage is a package rooted at fs_diloco/storage/, not a storage.py module"]
+      unknown: []
+    repair:
+      change: "locate storage files with rg --files and import the public PosixStorageBackend API from fs_diloco.storage"
+      rationale: "uses the supported package surface without guessing implementation filenames"
+    verification:
+      minimal_reproduction: "rg --files fs_diloco | rg '(^|/)storage'"
+      targeted_gate: "storage package files enumerated and the runtime report uses its public import"
+      qualification_ladder: ["login-node read-only inspection", "D1-R2 report execution"]
+    retry_decision:
+      authorized: true
+      rationale: "read-only path correction before D1 submission"
+      parent_run_id: null
+    artifacts: []
