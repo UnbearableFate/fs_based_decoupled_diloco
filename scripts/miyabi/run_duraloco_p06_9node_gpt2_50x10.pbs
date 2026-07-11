@@ -1,0 +1,15 @@
+#!/bin/bash
+#PBS -N duraloco_p06_9n
+#PBS -q regular-g
+#PBS -W group_list=xg24i002
+#PBS -l select=9:mpiprocs=1
+#PBS -l walltime=00:15:00
+#PBS -j oe
+#PBS -m ae
+
+set -eEuo pipefail
+export MANIFEST_PHASE=P06
+export VALIDATION_SHAPE=p06-maker-9node-gpt2-wikitext2-50x10-learner-warm-restart
+export PROBE_MODULE=fs_diloco.learner_protocol.terminal_probe
+export LEARNER_ZERO_WRAPPER=scripts/chaos/run_p06_terminal_learner_restart.sh
+exec bash scripts/miyabi/run_duraloco_p05_9node_gpt2_50x10.pbs

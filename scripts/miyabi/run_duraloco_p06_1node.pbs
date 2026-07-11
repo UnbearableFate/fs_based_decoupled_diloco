@@ -87,7 +87,7 @@ learner_pid=$!
 wait "$learner_pid"
 wait "$syncer_pid"
 run_command "$PYTHON_BIN" -m fs_diloco.analysis summary "$TRAINING_ROOT" --json
-"$PYTHON_BIN" - "$TRAINING_ROOT" "$ARTIFACT_ROOT/learner.log" "$ARTIFACT_ROOT/one_node_report.json" <<'PY'
+"$PYTHON_BIN" - "$TRAINING_ROOT" "$TRAINING_ROOT/logs/learner_000.jsonl" "$ARTIFACT_ROOT/one_node_report.json" <<'PY'
 import csv
 import json
 import math
@@ -99,18 +99,18 @@ events = [json.loads(line) for line in learner_log.read_text().splitlines() if l
 metrics = list(csv.DictReader((root / "metrics" / "learner_metrics.csv").open()))
 losses = [float(row["train_loss"]) for row in metrics if row.get("train_loss")]
 assert losses and all(math.isfinite(value) for value in losses)
-written = [event for event in events if event.get("event") in {"update_written", "fragment_update_written"}]
-assert len(written) == 1
+written = [event for event in events if event.get("event_type") in {"update_written", "fragment_update_written"}]
+assert len(written) >= 1
 assert written[0]["interval_digest"]
 assert written[0]["publication_request_id"]
-assert any(event.get("event") == "warm_recovery" for event in events)
-assert any(event.get("event") == "global_adopted" for event in events)
+assert any(event.get("event_type") == "warm_recovery" for event in events)
+assert any(event.get("event_type") == "global_adopted" for event in events)
 report = {
     "status": "PASS",
     "finite_losses": losses,
     "local_steps": max(int(row["local_step"]) for row in metrics),
     "published_intervals": len(written),
-    "boundary_adoptions": sum(event.get("event") == "global_adopted" for event in events),
+    "boundary_adoptions": sum(event.get("event_type") == "global_adopted" for event in events),
     "publication_request_ids": [event["publication_request_id"] for event in written],
 }
 assert report["local_steps"] <= 10

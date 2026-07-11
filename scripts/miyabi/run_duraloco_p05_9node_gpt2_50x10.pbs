@@ -24,6 +24,10 @@ CONFIG="${CONFIG:-$PROJECT_ROOT/configs/duraloco_milestone_gpt2_9node_50x10.yaml
 : "${RUN_ID:?RUN_ID is required}"
 : "${ARTIFACT_ROOT:?ARTIFACT_ROOT is required}"
 PARENT_RUN_ID="${PARENT_RUN_ID:-}"
+MANIFEST_PHASE="${MANIFEST_PHASE:-P05}"
+VALIDATION_SHAPE="${VALIDATION_SHAPE:-p05-maker-9node-gpt2-wikitext2-50x10-active-standby-takeover}"
+PROBE_MODULE="${PROBE_MODULE:-fs_diloco.coordination.terminal_probe}"
+LEARNER_ZERO_WRAPPER="${LEARNER_ZERO_WRAPPER:-}"
 QUALIFICATION_1NODE="${QUALIFICATION_1NODE:-}"
 QUALIFICATION_2NODE="${QUALIFICATION_2NODE:-}"
 SHARED_ROOT="${SHARED_ROOT:-$PROJECT_ROOT/runs/fs_diloco/$RUN_ID}"
@@ -67,11 +71,11 @@ finish() {
   args=(
     --root "$PROJECT_ROOT"
     --output "$ARTIFACT_ROOT/manifest.json"
-    --phase P05
+    --phase "$MANIFEST_PHASE"
     --purpose experiment
     --run-id "$RUN_ID"
     --schema-version 2
-    --validation-shape p05-maker-9node-gpt2-wikitext2-50x10-active-standby-takeover
+    --validation-shape "$VALIDATION_SHAPE"
     --backend lustre
     --model-revision gpt2
     --dataset-revision wikitext-2-raw-v1
@@ -91,6 +95,13 @@ finish() {
     --assertion "final strict replay reports epoch 2, standby ownership, authoritative stop, zero split brain, and zero double inclusion"
     --assertion "control transitions do not inflate the 10 optimizer-transition terminal count"
   )
+  if [[ "$MANIFEST_PHASE" == P06 ]]; then
+    args+=(
+      --assertion "one learner is SIGKILLed after immutable publication and warm-restarts with a distinct session"
+      --assertion "interval bases remain frozen, adoption occurs only at boundaries, and no session/base overlaps"
+      --assertion "bfloat16 proposal transport and float32 aggregation/committed state remain unchanged"
+    )
+  fi
   if [[ -n "$PARENT_RUN_ID" ]]; then
     args+=(--parent-run-id "$PARENT_RUN_ID")
   fi
@@ -138,6 +149,7 @@ MPI_ENV_ARGS=(
   "NUM_LEARNERS=$NUM_LEARNERS"
   "OMP_NUM_THREADS=$OMP_NUM_THREADS"
   "TOKENIZERS_PARALLELISM=$TOKENIZERS_PARALLELISM"
+  "LEARNER_ZERO_WRAPPER=$LEARNER_ZERO_WRAPPER"
 )
 TRAIN_COMMAND=(
   mpirun
@@ -147,7 +159,7 @@ TRAIN_COMMAND=(
   -np 9
   /usr/bin/env "${MPI_ENV_ARGS[@]}"
   bash -lc
-  'set -eEuo pipefail; cd "$PROJECT_ROOT"; export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"; rank="${OMPI_COMM_WORLD_RANK:?missing rank}"; if [[ "$rank" -eq 0 ]]; then exec bash scripts/chaos/run_p05_syncer_pair.sh; else learner_id=$(printf "learner_%03d" $((rank - 1))); export CUDA_VISIBLE_DEVICES=0; exec "$PYTHON_BIN" -m fs_diloco.learner --config "$CONFIG" --run-id "$RUN_ID" --shared-root "$SHARED_ROOT" --learner-id "$learner_id" --num-learners "$NUM_LEARNERS"; fi'
+  'set -eEuo pipefail; cd "$PROJECT_ROOT"; export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"; rank="${OMPI_COMM_WORLD_RANK:?missing rank}"; if [[ "$rank" -eq 0 ]]; then exec bash scripts/chaos/run_p05_syncer_pair.sh; elif [[ "$rank" -eq 1 && -n "${LEARNER_ZERO_WRAPPER:-}" ]]; then exec bash "$LEARNER_ZERO_WRAPPER"; else learner_id=$(printf "learner_%03d" $((rank - 1))); export CUDA_VISIBLE_DEVICES=0; exec "$PYTHON_BIN" -m fs_diloco.learner --config "$CONFIG" --run-id "$RUN_ID" --shared-root "$SHARED_ROOT" --learner-id "$learner_id" --num-learners "$NUM_LEARNERS"; fi'
 )
 printf -v TRAIN_TEXT '%q ' "${TRAIN_COMMAND[@]}"
 printf '%s\n' "${TRAIN_TEXT% }" | tee "$ARTIFACT_ROOT/commands.log"
@@ -159,7 +171,7 @@ printf '%s\n' "${SUMMARY_TEXT% }" | tee -a "$ARTIFACT_ROOT/commands.log"
 "${SUMMARY[@]}" | tee "$ARTIFACT_ROOT/training_summary.json"
 
 PROBE=(
-  "$PYTHON_BIN" -m fs_diloco.coordination.terminal_probe
+  "$PYTHON_BIN" -m "$PROBE_MODULE"
   --training-root "$SHARED_ROOT"
   --config "$CONFIG"
   --run-id "$RUN_ID"

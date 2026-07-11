@@ -81,19 +81,19 @@ import sys
 
 root, artifacts = map(Path, sys.argv[1:])
 summary = json.loads((artifacts / "training_summary.json").read_text())
-events = [json.loads(line) for line in (artifacts / "learner_000.log").read_text().splitlines() if line.strip()]
+events = [json.loads(line) for line in (root / "logs" / "learner_000.jsonl").read_text().splitlines() if line.strip()]
 updates = [json.loads(path.read_text()) for path in root.glob("updates/pending/learner_000/update_*.meta.json")]
 assert (artifacts / "learner_kill.json").is_file()
 assert summary["optimizer_transition_count"] == 2
 assert summary["stop_reason"] == "stop_after_outer_steps"
-recoveries = [event for event in events if event.get("event") == "warm_recovery"]
+recoveries = [event for event in events if event.get("event_type") == "warm_recovery"]
 sessions = {event["new_session"]["learner_session_id"] for event in recoveries}
 assert len(recoveries) >= 2 and len(sessions) >= 2
 assert len(updates) >= 2
 intervals = {(item["learner_session_id"], item["proposal_sequence"]): (item["local_step_start"], item["local_step_end"]) for item in updates}
 assert len(intervals) == len(updates)
 assert all(start < end for start, end in intervals.values())
-assert any(event.get("event") == "global_adopted" for event in events)
+assert any(event.get("event_type") == "global_adopted" for event in events)
 report = {
     "status": "PASS",
     "optimizer_transitions": 2,

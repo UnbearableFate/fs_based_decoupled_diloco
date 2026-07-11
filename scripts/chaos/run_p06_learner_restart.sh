@@ -9,14 +9,15 @@ set -eEuo pipefail
 
 cd "$PROJECT_ROOT"
 export CUDA_VISIBLE_DEVICES=0
-learner_log="$ARTIFACT_ROOT/learner_000.log"
+learner_log="$SHARED_ROOT/logs/learner_000.jsonl"
+learner_stdout="$ARTIFACT_ROOT/learner_000_stdout.log"
 "$PYTHON_BIN" -m fs_diloco.learner \
   --config "$CONFIG" --run-id "$RUN_ID" --shared-root "$SHARED_ROOT" \
   --learner-id learner_000 --num-learners 1 \
-  >> "$learner_log" 2>&1 &
+  >> "$learner_stdout" 2>&1 &
 learner_pid=$!
 for _ in $(seq 1 600); do
-  if grep -q '"event": "update_written"' "$learner_log" 2>/dev/null; then
+  if grep -q '"event_type": "update_written"' "$learner_log" 2>/dev/null; then
     kill -9 "$learner_pid" 2>/dev/null || true
     wait "$learner_pid" 2>/dev/null || true
     printf '{"killed_pid":%s,"hostname":"%s","after_first_publication":true}\n' \
@@ -34,4 +35,4 @@ done
 "$PYTHON_BIN" -m fs_diloco.learner \
   --config "$CONFIG" --run-id "$RUN_ID" --shared-root "$SHARED_ROOT" \
   --learner-id learner_000 --num-learners 1 \
-  >> "$learner_log" 2>&1
+  >> "$learner_stdout" 2>&1
