@@ -1,5 +1,5 @@
 phase: P06A
-status: in_progress
+status: checking
 planning_basis_branch: codex/duraloco-p06-learner-protocol
 planning_basis_commit: 06e3ca2299d5eb1a720c1d8f9107af5223095525
 verified_dependency_implementation: 2581a4d6286c7d0666f76aa3cc9d8122e66f6d25
@@ -9,22 +9,22 @@ actual_base_commit: 06e3ca2299d5eb1a720c1d8f9107af5223095525
 feature_branch: codex/duraloco-p06a-syncer-kernel
 plan_handoff_commit: c4b34d961b7d3a82ece4f16324cf6a69c7b2f5b7
 current_loop: 5
-current_goal: "repair the C2 terminal cleanup race without weakening marker-last publication"
-attempts_for_current_failure: 1
+current_goal: "independent P06A decomposition, equivalence, and capability audit"
+attempts_for_current_failure: 0
 last_terminal_failure_review: plans/duraloco/reviews/P06A_C2_RETENTION_RACE_REVIEW.md
 terminal_retry_authorized: false
 terminal_retry_qualification:
-  targeted_1node_benchmark: null
-  miyabi_1node: null
-  miyabi_2node: null
-last_verified_commit: null
+  targeted_1node_benchmark: artifacts/duraloco/P06A/20260711_p06a_repair_5a71502_targeted1/manifest.json
+  miyabi_1node: artifacts/duraloco/P06A/20260711_p06a_repair_5a71502_c1/manifest.json
+  miyabi_2node: artifacts/duraloco/P06A/20260711_p06a_repair_5a71502_c2/manifest.json
+last_verified_commit: 5a7150220bf3cc6a4a46d2a563466335163d21ad
 checks:
   local_static: static_pass
   local_runtime: unit_pass
   miyabi_login_static: static_pass
-  miyabi_c1: not_run
-  miyabi_c2: not_run
-  miyabi_c9: not_run
+  miyabi_c1: miyabi_c1_pass
+  miyabi_c2: miyabi_c2_pass
+  miyabi_c9: miyabi_c9_pass
 acceptance:
   P06A-A01: {result: pass, evidence: [artifacts/duraloco/P06A/20260711_p06a_archive_723e64a_1node/oracle_trace.json]}
   P06A-A02: {result: pass, evidence: [fs_diloco/syncer_core/planning.py, tests/syncer_decomposition/test_kernel_purity.py]}
@@ -37,15 +37,15 @@ acceptance:
   P06A-A09: {result: pass, evidence: [fs_diloco/syncer_core/capabilities.py, tests/syncer_decomposition/test_capability_surface.py]}
   P06A-A10: {result: pass, evidence: [fs_diloco/protocol/work_order_v1.py, fs_diloco/protocol/prepared_transition_v1.py, tests/syncer_decomposition/test_fwo_pft_schema.py]}
   P06A-A11: {result: pass, evidence: [artifacts/duraloco/P06A/20260711_p06a_archive_723e64a_1node/junit.xml]}
-  P06A-A12: {result: not_run, evidence: []}
-  P06A-A13: {result: not_run, evidence: []}
-  P06A-A14: {result: not_run, evidence: []}
+  P06A-A12: {result: pass, evidence: [artifacts/duraloco/P06A/20260711_p06a_repair_5a71502_c1/c1_report.json, artifacts/duraloco/P06A/20260711_p06a_repair_5a71502_c1/junit.xml]}
+  P06A-A13: {result: pass, evidence: [artifacts/duraloco/P06A/20260711_p06a_repair_5a71502_c2/two_node_report.json]}
+  P06A-A14: {result: pass, evidence: [artifacts/duraloco/P06A/20260711_p06a_repair_5a71502_c1/manifest.json, artifacts/duraloco/P06A/20260711_p06a_repair_5a71502_c2/manifest.json, artifacts/duraloco/P06A/20260711_p06a_repair_5a71502_c9/terminal_gate_report.json]}
   P06A-A15: {result: pass, evidence: [artifacts/duraloco/P06A/20260711_p06a_archive_723e64a_1node/oracle_trace.json]}
   P06A-A16: {result: pass, evidence: [tests/log/test_production_runtime.py, artifacts/duraloco/P06A/20260711_p06a_archive_723e64a_1node/junit.xml]}
   P06A-A17: {result: pass, evidence: [tests/test_removed_config_keys.py, artifacts/duraloco/P06A/20260711_p06a_archive_723e64a_1node/manifest.json]}
   P06A-A18: {result: pass, evidence: [tests/syncer_decomposition/test_capability_surface.py]}
-  P06A-A19: {result: not_run, evidence: []}
-  P06A-A20: {result: not_run, evidence: []}
+  P06A-A19: {result: pass, evidence: [plans/duraloco/phases/P06A_PHASE_REPORT.md, scripts/agent/check_p06a_final.py, scripts/miyabi/run_duraloco_p06a_checker_1node.pbs]}
+  P06A-A20: {result: pass, evidence: [plans/duraloco/STATE.yaml, artifacts/duraloco/P06A/20260711_p06a_archive_723e64a_1node/oracle_trace.json]}
 open_decisions: []
 open_blockers: []
 artifacts:
@@ -59,7 +59,11 @@ artifacts:
   - artifacts/duraloco/P06A/20260711_p06a_c1_c834e57
   - artifacts/duraloco/P06A/20260711_p06a_final_fce378f_c1
   - artifacts/duraloco/P06A/20260711_p06a_final_fce378f_c2
-next_action: "run the focused retention/characterization suite, then rerun C1 and C2 on the repaired clean commit before C9"
+  - artifacts/duraloco/P06A/20260711_p06a_repair_5a71502_targeted1
+  - artifacts/duraloco/P06A/20260711_p06a_repair_5a71502_c1
+  - artifacts/duraloco/P06A/20260711_p06a_repair_5a71502_c2
+  - artifacts/duraloco/P06A/20260711_p06a_repair_5a71502_c9
+next_action: P06B
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

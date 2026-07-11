@@ -1,0 +1,214 @@
+{
+  "active_kill": {
+    "exit_code": 137,
+    "injected_at_unix_seconds": 1783761697.950963,
+    "observed_optimizer_transition_count": 2,
+    "pid": 786560,
+    "signal": "SIGKILL"
+  },
+  "assertions": {
+    "active_and_standby_share_ninth_node": true,
+    "active_sigkill_injected": true,
+    "adoption_occurs_at_boundaries": true,
+    "all_learners_at_least_50_local_steps": true,
+    "authoritative_stop_is_separate_control_transition": true,
+    "bfloat16_transport_float32_commit_preserved": true,
+    "checkpoints_complete": true,
+    "exactly_10_optimizer_transitions": true,
+    "exactly_10_optimizer_transitions_after_takeover": true,
+    "interval_bases_are_frozen_and_nonoverlapping": true,
+    "learner_sigkill_after_publication": true,
+    "losses_finite": true,
+    "marker_last_publication_is_immutable": true,
+    "nine_process_layout": true,
+    "no_forbidden_runtime_artifacts": true,
+    "params_outer_state_paired": true,
+    "production_log_is_authority": true,
+    "proposal_inclusion_exactly_once": true,
+    "real_gpt2_wikitext": true,
+    "standby_took_over_at_epoch_2": true,
+    "takeover_started_with_strict_replay": true,
+    "warm_restart_uses_distinct_session": true,
+    "warm_restart_waits_for_committed_successor": true,
+    "zero_split_brain_or_double_inclusion": true
+  },
+  "boundary_adoption_events": {
+    "learner_000": 11,
+    "learner_001": 12,
+    "learner_002": 12,
+    "learner_003": 12,
+    "learner_004": 12,
+    "learner_005": 12,
+    "learner_006": 12,
+    "learner_007": 12
+  },
+  "checkpoint_count": 11,
+  "checkpoints": [
+    {
+      "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c9/training/weights/global_v000003.safetensors",
+      "sha256": "4ea0bb49e6011554fa274b93a19f101cbaeff288637fdb8dac4e08e152aba6cd"
+    },
+    {
+      "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c9/training/weights/global_v000004.safetensors",
+      "sha256": "6f9a8d24d1b67e48287e07445b44b4d75a151951eea01e55a90c9c7dc608d8f2"
+    },
+    {
+      "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c9/training/weights/global_v000005.safetensors",
+      "sha256": "e63185423b55d7382acb72ebc16220716295f175eeb5f83d26500a51a979a415"
+    },
+    {
+      "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c9/training/weights/global_v000006.safetensors",
+      "sha256": "af209e4118df513bbb4ec6388cc2966d504ea25925d0c5a810fc507283365b10"
+    },
+    {
+      "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c9/training/weights/global_v000007.safetensors",
+      "sha256": "95bdfa3d42bb713a797f7f13868dbcc4efa32da9a04497b5cc88753b43133b3f"
+    },
+    {
+      "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c9/training/weights/global_v000008.safetensors",
+      "sha256": "fa60622b50fde6aabba661986783c8b70acfad87f59b5440e00eda77db43d4fa"
+    },
+    {
+      "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c9/training/weights/global_v000009.safetensors",
+      "sha256": "5d0c7aa20755db86fea6d63d0b7ac805fc7f1c72bfe867373f8b7d5bbc473dd9"
+    },
+    {
+      "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c9/training/weights/global_v000010.safetensors",
+      "sha256": "648a69c37422c76dafe0ec4548d8667671f0697c8db6e3508e728010615a5306"
+    },
+    {
+      "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c9/training/weights/global_v000011.safetensors",
+      "sha256": "184572ca3116951aaa8c5d6ab38ef3d884d0e88cbfc37a2a394a554071a14f1a"
+    },
+    {
+      "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c9/training/weights/global_v000012.safetensors",
+      "sha256": "2ccb52fa4d942f7f6da5e6145a15f951e8de7f77393a513ffb7f1287148c24e3"
+    },
+    {
+      "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c9/training/weights/global_v000013.safetensors",
+      "sha256": "2ccb52fa4d942f7f6da5e6145a15f951e8de7f77393a513ffb7f1287148c24e3"
+    }
+  ],
+  "committed_selection_counts": [
+    8,
+    8,
+    8,
+    8,
+    8,
+    8,
+    8,
+    8,
+    8,
+    8
+  ],
+  "committed_state_digest": "956e337859be795a2e0b027043e37e4103712ff7f86f9f74330ed72abd1c86c9",
+  "config": "/work/xg24i002/x10041/fs_based_decoupled_diloco/configs/duraloco_milestone_gpt2_9node_50x10.yaml",
+  "config_sha256": "bea7c7b32680370e3cc46864d90476d5d542aa4cde80081c80acf4ce3c87179d",
+  "consumed_proposal_count": 80,
+  "control_transition_count": 3,
+  "dataset": "wikitext-2-raw-v1",
+  "double_inclusions": 0,
+  "final_fencing_epoch": 2,
+  "final_owner_id": "terminal-standby",
+  "finite_loss_count": 96,
+  "forbidden_runtime_artifacts": [],
+  "global_outer_transitions": 10,
+  "head_commit_seq": 13,
+  "immutable_publication_marker_count": 96,
+  "inner_steps": 50,
+  "kind": "p06-terminal-real-gpt2-9node-50x10-learner-warm-restart",
+  "learner_kill": {
+    "after_first_publication": true,
+    "hostname": "mg0494",
+    "injected_at_unix_seconds": 1783761661.8292122,
+    "pid": 831957,
+    "signal": "SIGKILL"
+  },
+  "learner_local_steps": {
+    "learner_000": 550,
+    "learner_001": 600,
+    "learner_002": 600,
+    "learner_003": 600,
+    "learner_004": 600,
+    "learner_005": 600,
+    "learner_006": 600,
+    "learner_007": 600
+  },
+  "learner_sessions": {
+    "learner_000": [
+      "learner_000-30dfbf62a51c42c98f25fa3efd5466c0",
+      "learner_000-c9a28ad5dd774feaae51ef525f0f316d"
+    ],
+    "learner_001": [
+      "learner_001-1d06f648019a4be586e7dbbf69e386ee"
+    ],
+    "learner_002": [
+      "learner_002-04eb648e48264ceeb0ca433208c6f01f"
+    ],
+    "learner_003": [
+      "learner_003-6c10b52921ac42a2b602406ab2015dc0"
+    ],
+    "learner_004": [
+      "learner_004-59b726c0ed624f62a0f2a05e4236dc13"
+    ],
+    "learner_005": [
+      "learner_005-aac5a7339e5940f3b3077d56ace98bcb"
+    ],
+    "learner_006": [
+      "learner_006-84728a71e5b24e73af59701de1e70e76"
+    ],
+    "learner_007": [
+      "learner_007-460747ddbb1b4ed580bbb3932ed0d60c"
+    ]
+  },
+  "learners": 8,
+  "limitations": [
+    "learner recovery is warm until later capsule work"
+  ],
+  "loss_max": 4.55599953174591,
+  "loss_min": 3.4305977630615234,
+  "model": "gpt2",
+  "nonfinite_or_invalid_loss_count": 0,
+  "numeric_contract": "bfloat16-proposal-to-float32-aggregate-commit-v1",
+  "optimizer_adoption_policy": "reset_all",
+  "optimizer_transition_count": 10,
+  "prepared_orphan_count": 201,
+  "recovery_backpressure_events": {
+    "learner_000": 1,
+    "learner_001": 0,
+    "learner_002": 0,
+    "learner_003": 0,
+    "learner_004": 0,
+    "learner_005": 0,
+    "learner_006": 0,
+    "learner_007": 0
+  },
+  "recovery_committed_intervals": {
+    "learner_000": 0,
+    "learner_001": 0,
+    "learner_002": 0,
+    "learner_003": 0,
+    "learner_004": 0,
+    "learner_005": 0,
+    "learner_006": 0,
+    "learner_007": 0
+  },
+  "runtime_view_digest": "5ba63ce79dd4fc8eafa708be8411151fd0744657002552e3a034a6a160fe35b2",
+  "schema_version": 2,
+  "split_brain_commits": 0,
+  "standby_strict_replay_seconds": 22.285925622098148,
+  "status": "PASS",
+  "stop_reason": "stop_after_outer_steps",
+  "takeover_seconds": 69.17864060401917,
+  "training_root": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c9/training",
+  "warm_recovery_events": {
+    "learner_000": 2,
+    "learner_001": 1,
+    "learner_002": 1,
+    "learner_003": 1,
+    "learner_004": 1,
+    "learner_005": 1,
+    "learner_006": 1,
+    "learner_007": 1
+  }
+}

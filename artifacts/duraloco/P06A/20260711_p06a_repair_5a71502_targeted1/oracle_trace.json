@@ -1,0 +1,72 @@
+{
+  "archive_commit": "06e3ca2299d5eb1a720c1d8f9107af5223095525",
+  "archive_environment": {
+    "device": "cpu",
+    "dtype": "float32",
+    "python": "3.13.13",
+    "reduction_order": "proposal_id-ascending-left-fold-v1",
+    "threads": 72,
+    "torch": "2.13.0+cu132"
+  },
+  "archive_output": {
+    "aggregate_content_sha256": "4a4bbd2fc2254c1cc4850444f430d67cecc02ce27869d7908a0ab60300fad3ca",
+    "outer_state_content_sha256": "58532dc9a68ba1f24450d3cc59b97634be77082241235930c256955164e41669",
+    "params_content_sha256": "55e044c733143e3d02b3fbaaeb79a4d8cd6c7f676befed557be0f645fde43beb",
+    "source_module": "fs_diloco/outer_optim.py"
+  },
+  "created_at": "2026-07-11T09:17:01.051931+00:00",
+  "decomposed_environment": {
+    "device": "cpu",
+    "dtype": "float32",
+    "python": "3.13.13",
+    "reduction_order": "proposal_id-ascending-left-fold-v1",
+    "threads": 72,
+    "torch": "2.13.0+cu132"
+  },
+  "decomposed_output": {
+    "aggregate_content_sha256": "4a4bbd2fc2254c1cc4850444f430d67cecc02ce27869d7908a0ab60300fad3ca",
+    "aggregate_digest": "d94315166e818a7c59d55ddeeda9a2968c87aab3cff4161c885556d9fd5727b3",
+    "outer_state_content_sha256": "58532dc9a68ba1f24450d3cc59b97634be77082241235930c256955164e41669",
+    "params_content_sha256": "55e044c733143e3d02b3fbaaeb79a4d8cd6c7f676befed557be0f645fde43beb",
+    "selection_digest": "d3d4b127d333f65d8743238000f9644a5f6870df71381cee6a8cbc32f0d2fc78",
+    "state_semantic_digest": "bc1ddf83a88cef9976aee83d614cbb1ff632bf52022621e6ccdfb82248ea4855",
+    "transition_attempt_semantic_digest": "fda7ef285634bd62f884ade3c46bf14def7bd891784ebe1c3ece9fab3712d217"
+  },
+  "equivalence": {
+    "aggregate_bytes_exact": true,
+    "outer_state_bytes_exact": true,
+    "params_bytes_exact": true,
+    "selected_ids_exact": true,
+    "weights_exact": true
+  },
+  "input": {
+    "optimizer_identity": {
+      "betas": [
+        "0x1.ccccccccccccdp-1",
+        "0x1.ff7ced916872bp-1"
+      ],
+      "eps": "0x1.5798ee2308c3ap-27",
+      "lr": "0x1.999999999999ap-3",
+      "momentum": "0x1.6666666666666p-1",
+      "name": "nesterov",
+      "weight_decay": "0x0.0p+0"
+    },
+    "parent_commit_id": "commit-parent",
+    "parent_frontier_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "payload_sha256": [
+      "1111111111111111111111111111111111111111111111111111111111111111",
+      "2222222222222222222222222222222222222222222222222222222222222222"
+    ],
+    "selected_proposal_ids": [
+      "proposal-a",
+      "proposal-b"
+    ],
+    "weights_hex": [
+      "0x1.0000000000000p-2",
+      "0x1.8000000000000p-1"
+    ]
+  },
+  "schema": "duraloco-p06a-crs-characterization-v1",
+  "verified_dependency_checker_commit": "030129e045c4e5a2abb80eb100a0e28fb78d384d",
+  "verified_dependency_implementation": "2581a4d6286c7d0666f76aa3cc9d8122e66f6d25"
+}

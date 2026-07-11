@@ -1,0 +1,4 @@
+PBS_JOBID=2362123.opbs
+PBS_NODEFILE=/var/spool/pbs/aux/2362123.opbs
+RUN_ID=20260711_p06a_repair_5a71502_c9
+SHARED_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c9/training

@@ -1,0 +1,7 @@
+{
+  "exit_code": 137,
+  "injected_at_unix_seconds": 1783761697.950963,
+  "observed_optimizer_transition_count": 2,
+  "pid": 786560,
+  "signal": "SIGKILL"
+}

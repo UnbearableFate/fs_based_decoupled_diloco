@@ -1,0 +1,12 @@
+{
+  "authoritative_stop": "stop_after_outer_steps",
+  "optimizer_transitions": 2,
+  "published_intervals": 2,
+  "recovery_reconciled_before_new_work": true,
+  "session_ids": [
+    "learner_000-4085864d590342fc9251fd14bc7b50c4",
+    "learner_000-cb4a12c96dea446d8595771a056b5701"
+  ],
+  "status": "PASS",
+  "warm_not_exact": true
+}

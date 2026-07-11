@@ -1,0 +1,23 @@
+{
+  "aggregate_content_sha256": "4a4bbd2fc2254c1cc4850444f430d67cecc02ce27869d7908a0ab60300fad3ca",
+  "archive_commit": "06e3ca2299d5eb1a720c1d8f9107af5223095525",
+  "environment": {
+    "device": "cpu",
+    "dtype": "float32",
+    "python": "3.13.13",
+    "reduction_order": "proposal_id-ascending-left-fold-v1",
+    "threads": 72,
+    "torch": "2.13.0+cu132"
+  },
+  "module_path": "fs_diloco/outer_optim.py",
+  "outer_state_content_sha256": "58532dc9a68ba1f24450d3cc59b97634be77082241235930c256955164e41669",
+  "params_content_sha256": "55e044c733143e3d02b3fbaaeb79a4d8cd6c7f676befed557be0f645fde43beb",
+  "selected_proposal_ids": [
+    "proposal-a",
+    "proposal-b"
+  ],
+  "weights_hex": [
+    "0x1.0000000000000p-2",
+    "0x1.8000000000000p-1"
+  ]
+}

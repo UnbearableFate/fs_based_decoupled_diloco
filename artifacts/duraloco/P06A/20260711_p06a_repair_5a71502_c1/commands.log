@@ -1,0 +1,5 @@
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python scripts/agent/check_phase_state.py plans/duraloco/STATE.yaml --root /work/xg24i002/x10041/fs_based_decoupled_diloco 
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python scripts/agent/check_no_embedded_database.py --root /work/xg24i002/x10041/fs_based_decoupled_diloco --output /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P06A/20260711_p06a_repair_5a71502_c1/forbidden_surface.json 
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python -m fs_diloco.testing.reference_cli --count 1000 --steps 12 
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python -m pytest -q tests --junitxml /work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P06A/20260711_p06a_repair_5a71502_c1/junit.xml 
+/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python -m fs_diloco.analysis summary /work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c1/training --json 

@@ -1,0 +1,178 @@
+mg0035
+mg0042
+## codex/duraloco-p06a-syncer-kernel
+5a7150220bf3cc6a4a46d2a563466335163d21ad
+Python 3.13.13
+mpirun --bind-to none -np 2 --hostfile /var/spool/pbs/aux/2362117.opbs /usr/bin/env PROJECT_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco PYTHON_BIN=/work/xg24i002/x10041/fs_based_decoupled_diloco/.venv/bin/python CONFIG=/work/xg24i002/x10041/fs_based_decoupled_diloco/configs/duraloco_p06_tiny_2node_restart.yaml RUN_ID=20260711_p06a_repair_5a71502_c2-training SHARED_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c2/training ARTIFACT_ROOT=/work/xg24i002/x10041/fs_based_decoupled_diloco/artifacts/duraloco/P06A/20260711_p06a_repair_5a71502_c2 PYTHONPATH=/work/xg24i002/x10041/fs_based_decoupled_diloco WANDB_MODE=disabled bash -lc set\ -eEuo\ pipefail\;\ rank=\"\$\{OMPI_COMM_WORLD_RANK:\?\}\"\;\ cd\ \"\$PROJECT_ROOT\"\;\ if\ \[\[\ \"\$rank\"\ -eq\ 0\ \]\]\;\ then\ export\ CUDA_VISIBLE_DEVICES=0\;\ exec\ \"\$PYTHON_BIN\"\ -m\ fs_diloco.syncer\ --config\ \"\$CONFIG\"\ --run-id\ \"\$RUN_ID\"\ --shared-root\ \"\$SHARED_ROOT\"\ --num-learners\ 1\ --owner-id\ syncer-a\ --owner-session-id\ \"\$RUN_ID-owner\"\;\ else\ exec\ bash\ scripts/chaos/run_p06_learner_restart.sh\;\ fi 
+{"actor": "syncer", "authority_root": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c2/training/authority", "cuda_visible_devices": "0", "device": "cuda", "event_type": "process_start", "hostname": "mg0035", "owner_id": "syncer-a", "owner_session_id": "20260711_p06a_repair_5a71502_c2-training-owner", "run_generation": 0, "run_id": "20260711_p06a_repair_5a71502_c2-training", "shared_root": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c2/training", "standby": false, "timestamp": 1783761572.1397462}
+{"actor": "syncer", "event_type": "wandb_disabled", "hostname": "mg0035", "timestamp": 1783761572.1440425}
+{"actor": "syncer", "commit_seq": 0, "event_type": "generation_initialized", "hostname": "mg0035", "timestamp": 1783761572.3678384, "view_digest": "528502a5e59ab7594e0114b3f7e932cdf3ceb4b31c121634fb55425a4053ebda"}
+{"actor": "syncer", "event_type": "coordination_stage_completed", "hostname": "mg0035", "lease_sequence": 1, "owner_id": "syncer-a", "owner_session_id": "20260711_p06a_repair_5a71502_c2-training-owner", "proposed_fencing_epoch": 1, "seconds": 0.005293227965012193, "stage": "lease_acquire", "timestamp": 1783761572.3776758}
+{"actor": "syncer", "commit_seq": 1, "event_type": "coordination_stage_completed", "fencing_epoch": 1, "hostname": "mg0035", "optimizer_transition_count": 0, "owner_id": "syncer-a", "owner_session_id": "20260711_p06a_repair_5a71502_c2-training-owner", "seconds": 0.038197712041437626, "stage": "fence_commit_and_strict_replay", "timestamp": 1783761572.4171667}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0035", "quorum_min": 1, "timestamp": 1783761572.6444297}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0035", "quorum_min": 1, "timestamp": 1783761573.0463626}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0035", "quorum_min": 1, "timestamp": 1783761573.4573283}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0035", "quorum_min": 1, "timestamp": 1783761573.8592327}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0035", "quorum_min": 1, "timestamp": 1783761574.261208}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0035", "quorum_min": 1, "timestamp": 1783761574.6630523}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0035", "quorum_min": 1, "timestamp": 1783761575.06497}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0035", "quorum_min": 1, "timestamp": 1783761575.4668758}
+{"actor": "syncer", "commit_seq": 1, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0035", "quorum_min": 1, "timestamp": 1783761575.870515}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0035", "seconds": 0.20622138399630785, "selected_count": 1, "stage": "catalog", "target_commit_seq": 2, "timestamp": 1783761576.2797964}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0035", "seconds": 0.013845884008333087, "stage": "proposal_observation", "target_commit_seq": 2, "timestamp": 1783761576.2918878}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0035", "seconds": 0.04336399305611849, "stage": "aggregation", "target_commit_seq": 2, "timestamp": 1783761576.3352537}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0035", "seconds": 0.010486581944860518, "stage": "outer_step", "target_commit_seq": 2, "timestamp": 1783761576.3457384}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0035", "seconds": 0.027731128968298435, "stage": "successor_prepare", "target_commit_seq": 2, "timestamp": 1783761576.3749828}
+{"actor": "syncer", "commit_id": "c-bffa33a1c7f893a14eddb074d4ef94cd5dc008e8d48ad65c19d21a7c4e31408e", "commit_seq": 2, "event_type": "head_cas_completed", "hostname": "mg0035", "seconds": 0.0092793790390715, "timestamp": 1783761576.384262}
+{"actor": "syncer", "commit_id": "c-bffa33a1c7f893a14eddb074d4ef94cd5dc008e8d48ad65c19d21a7c4e31408e", "commit_seq": 2, "event_type": "post_cas_replay_completed", "hostname": "mg0035", "seconds": 0.012514362926594913, "timestamp": 1783761576.3978314}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0035", "seconds": 0.021432650974020362, "stage": "materialized_export", "target_commit_seq": 2, "timestamp": 1783761576.4202278}
+{"actor": "syncer", "commit_id": "c-bffa33a1c7f893a14eddb074d4ef94cd5dc008e8d48ad65c19d21a7c4e31408e", "commit_seq": 2, "event_type": "transition_committed", "fragment_id": 0, "hostname": "mg0035", "selected_proposal_ids": ["p-f037afac600e6a987da8ebf78d4d36283fc7fbd9eaebf4fccd321001f28f1c05"], "timestamp": 1783761576.4227548, "view_digest": "47168d89e87c60ce613493e741ed5fb422650b4ed50f9ab423897396f4d2b348"}
+{"actor": "syncer", "commit_seq": 2, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0035", "quorum_min": 1, "timestamp": 1783761576.631364}
+{"actor": "syncer", "commit_seq": 2, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0035", "quorum_min": 1, "timestamp": 1783761577.0387988}
+{"actor": "syncer", "commit_seq": 2, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0035", "quorum_min": 1, "timestamp": 1783761577.4458368}
+{"actor": "syncer", "commit_seq": 2, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0035", "quorum_min": 1, "timestamp": 1783761577.8532784}
+{"actor": "syncer", "commit_seq": 2, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0035", "quorum_min": 1, "timestamp": 1783761578.261319}
+{"actor": "syncer", "commit_seq": 2, "eligible": 0, "event_type": "quorum_wait", "fragment_id": 0, "hostname": "mg0035", "quorum_min": 1, "timestamp": 1783761578.672145}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0035", "seconds": 0.20628858404234052, "selected_count": 1, "stage": "catalog", "target_commit_seq": 3, "timestamp": 1783761579.0813503}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0035", "seconds": 0.010486612911336124, "stage": "proposal_observation", "target_commit_seq": 3, "timestamp": 1783761579.0900848}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0035", "seconds": 0.001295458059757948, "stage": "aggregation", "target_commit_seq": 3, "timestamp": 1783761579.09138}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0035", "seconds": 0.0020977009553462267, "stage": "outer_step", "target_commit_seq": 3, "timestamp": 1783761579.093477}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0035", "seconds": 0.030893984017893672, "stage": "successor_prepare", "target_commit_seq": 3, "timestamp": 1783761579.1257234}
+{"actor": "syncer", "commit_id": "c-97ae7515b9845513350a9c7b5587719c83757436aef2f1e1005ec79314091941", "commit_seq": 3, "event_type": "head_cas_completed", "hostname": "mg0035", "seconds": 0.008774898014962673, "timestamp": 1783761579.1344972}
+{"actor": "syncer", "commit_id": "c-97ae7515b9845513350a9c7b5587719c83757436aef2f1e1005ec79314091941", "commit_seq": 3, "event_type": "post_cas_replay_completed", "hostname": "mg0035", "seconds": 0.016453825985081494, "timestamp": 1783761579.1518238}
+{"actor": "syncer", "event_type": "transaction_stage_completed", "hostname": "mg0035", "seconds": 0.021778476075269282, "stage": "materialized_export", "target_commit_seq": 3, "timestamp": 1783761579.1745465}
+{"actor": "syncer", "commit_id": "c-97ae7515b9845513350a9c7b5587719c83757436aef2f1e1005ec79314091941", "commit_seq": 3, "event_type": "transition_committed", "fragment_id": 0, "hostname": "mg0035", "selected_proposal_ids": ["p-1398ae0fc1b5152b9f1010d0f0cf9753d3aa76bd4f73255ae0967d28a93a00df"], "timestamp": 1783761579.1768878, "view_digest": "876c74b78167a0c176a1ae0b8a6a5f1e89d3acf8fed461c0de8f1a5003e2d53f"}
+{"actor": "syncer", "commit_seq": 4, "event_type": "coordination_stage_completed", "hostname": "mg0035", "optimizer_transition_count": 2, "seconds": 0.05940847401507199, "stage": "authoritative_stop", "timestamp": 1783761579.2377474}
+{"actor": "syncer", "commit_id": "c-c8c5989facb1c0bcf50019fafa6aef61a9a21152e76fd085fd779a4b720ee20f", "commit_seq": 4, "event_type": "stop_published", "hostname": "mg0035", "reason": "stop_after_outer_steps", "timestamp": 1783761579.2619195}
+{"actor": "syncer", "deleted_files": 2, "event_type": "retention_cleanup", "hostname": "mg0035", "keep_last": 3, "role": "syncer", "timestamp": 1783761579.26496}
+{"actor": "syncer", "commit_seq": 4, "event_type": "process_exit", "hostname": "mg0035", "reason": "stop_after_outer_steps", "timestamp": 1783761579.2707677}
+{
+  "authority": "committed-transition-log",
+  "commit_id": "c-c8c5989facb1c0bcf50019fafa6aef61a9a21152e76fd085fd779a4b720ee20f",
+  "commit_seq": 4,
+  "committed_selected_counts_by_event": {
+    "1": 1,
+    "2": 1
+  },
+  "committed_state_digest": "3e8842b86207bb6d8cc5b0df9b751549b626f44a4ee79c20a1ebcd010719842a",
+  "consumed_proposal_count": 2,
+  "fragment_versions": {
+    "0": 2
+  },
+  "frontier_sha256": "a87fdc91de82450f2aebf6ec2a1623f0b1dd07d48cddf7d3f21baf2f66e16cf9",
+  "global_merge_event": 2,
+  "heartbeats": {
+    "learner_000": {
+      "format_version": 1,
+      "hostname": "mg0042",
+      "last_loaded_global_version": 4,
+      "last_local_step": 2,
+      "last_update_id": "learner_000_00000002_1b318f2d8594",
+      "learner_id": "learner_000",
+      "phase": "process_exit",
+      "pid": 2988829,
+      "run_id": "20260711_p06a_repair_5a71502_c2-training",
+      "status": "stopped",
+      "timestamp": 1783761579.3729057,
+      "tokens_per_sec": null
+    }
+  },
+  "latest": {
+    "authority": "committed-transition-log-and-head-fence",
+    "commit_id": "c-c8c5989facb1c0bcf50019fafa6aef61a9a21152e76fd085fd779a4b720ee20f",
+    "commit_seq": 4,
+    "committed_interval_identities": [
+      [
+        "learner_000",
+        "learner_000-4085864d590342fc9251fd14bc7b50c4",
+        0,
+        1
+      ],
+      [
+        "learner_000",
+        "learner_000-cb4a12c96dea446d8595771a056b5701",
+        0,
+        1
+      ]
+    ],
+    "committed_state_digest": "3e8842b86207bb6d8cc5b0df9b751549b626f44a4ee79c20a1ebcd010719842a",
+    "created_at": 1783761579.2560296,
+    "fencing_epoch": 1,
+    "format_version": 1,
+    "fragment_versions": {
+      "0": 2
+    },
+    "frontier_sha256": "a87fdc91de82450f2aebf6ec2a1623f0b1dd07d48cddf7d3f21baf2f66e16cf9",
+    "global_merge_event": 2,
+    "optim_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c2/training/optim/outer_v000004.safetensors",
+    "optimizer_transition_count": 2,
+    "owner_id": "syncer-a",
+    "owner_session_id": "20260711_p06a_repair_5a71502_c2-training-owner",
+    "param_index_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c2/training/control/param_index.json",
+    "run_generation": 0,
+    "run_id": "20260711_p06a_repair_5a71502_c2-training",
+    "runtime_view_digest": "74a42d31e45c1508bcd9862dbd9d05c8f8256f41428a19f3f8e778c4afa995c8",
+    "total_seen_tokens": 128,
+    "version": 4,
+    "weight_path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c2/training/weights/global_v000004.safetensors"
+  },
+  "latest_export_valid": true,
+  "latest_kind": "full",
+  "learner_fragment_adoption": {
+    "learner_000": {
+      "adoption_events": 0,
+      "has_adopted_after_initial": false
+    }
+  },
+  "learner_local_steps": {
+    "learner_000": 2
+  },
+  "learner_metrics": {
+    "exists": true,
+    "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c2/training/metrics/learner_metrics.csv",
+    "rows": 2
+  },
+  "loss_summary": {
+    "count": 2,
+    "invalid_or_nonfinite": 0,
+    "max": 5.105185508728027,
+    "min": 5.057528972625732,
+    "obvious_divergence": false
+  },
+  "materialized_weight_exists": true,
+  "optimizer_transition_count": 2,
+  "payload_codec": "safetensors-flat-v1",
+  "run_generation": 0,
+  "run_id": "20260711_p06a_repair_5a71502_c2-training",
+  "runtime_view_digest": "74a42d31e45c1508bcd9862dbd9d05c8f8256f41428a19f3f8e778c4afa995c8",
+  "shared_root": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c2/training",
+  "stop_reason": "stop_after_outer_steps",
+  "syncer_log_flags": {
+    "error": false,
+    "no_progress_timeout": false,
+    "uncaught_exception": false
+  },
+  "syncer_metrics": {
+    "exists": true,
+    "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c2/training/metrics/syncer_metrics.csv",
+    "rows": 2
+  },
+  "total_seen_tokens": 128,
+  "update_manifest": {
+    "exists": true,
+    "path": "/work/xg24i002/x10041/fs_based_decoupled_diloco/runs/duraloco/20260711_p06a_repair_5a71502_c2/training/metrics/update_manifest.csv",
+    "rows": 2
+  }
+}
+{
+  "authoritative_stop": "stop_after_outer_steps",
+  "optimizer_transitions": 2,
+  "published_intervals": 2,
+  "recovery_reconciled_before_new_work": true,
+  "session_ids": [
+    "learner_000-4085864d590342fc9251fd14bc7b50c4",
+    "learner_000-cb4a12c96dea446d8595771a056b5701"
+  ],
+  "status": "PASS",
+  "warm_not_exact": true
+}

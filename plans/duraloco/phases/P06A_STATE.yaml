@@ -1,14 +1,14 @@
 phase: P06A
-status: in_progress
+status: checking
 planning_basis_commit: 06e3ca2299d5eb1a720c1d8f9107af5223095525
 feature_branch: codex/duraloco-p06a-syncer-kernel
 current_loop: 5
-current_goal: "C1 to C2 to C9 central topology qualification"
+current_goal: "independent P06A decomposition, equivalence, and capability audit"
 checks:
   login_static: pass
-  c1: pass_on_fce378f
-  c2: failed_retention_race_on_fce378f
-  c9: not_run
+  c1: pass_on_5a71502
+  c2: pass_on_5a71502
+  c9: pass_on_5a71502
 focused_1node_attempt:
   run_id: 20260711_p06a_archive_723e64a_1node
   parent_run_id: 20260711_p06a_kernel_6ac394d_1node
@@ -25,4 +25,10 @@ c1_provisional:
   finite_losses: 2
   optimizer_transitions: 1
   result: pass
-next_action: "rerun C1 and then C2/C9 on the final launcher-complete implementation candidate"
+final_qualification:
+  implementation_commit: 5a7150220bf3cc6a4a46d2a563466335163d21ad
+  targeted_run_id: 20260711_p06a_repair_5a71502_targeted1
+  c1_run_id: 20260711_p06a_repair_5a71502_c1
+  c2_run_id: 20260711_p06a_repair_5a71502_c2
+  c9_run_id: 20260711_p06a_repair_5a71502_c9
+next_action: P06B
