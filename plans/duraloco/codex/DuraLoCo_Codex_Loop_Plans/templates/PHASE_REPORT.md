@@ -31,6 +31,11 @@ Include failed, inconclusive, queued-cancelled, pre-allocation-cancelled, and
 successful attempts. A retry must use a new run ID and link the previous
 attempt of the same validation shape through `parent_run_id`.
 
+For every non-transient 9-node terminal failure, include the authority timeline,
+stage timings, true exit/termination classification, workflow/root-cause review,
+targeted one-node benchmark, and same-clean-commit 1→2-node requalification
+that authorized the next and only next retry.
+
 ### Changed files and behavior
 
 ### Compatibility and migration
@@ -47,6 +52,12 @@ actual, confirmed reason or `unknown`, affected acceptance IDs/invariants,
 evidence, fix, retry lineage, and resolution. Never delete an earlier failure.
 
 ### Backend capabilities, supported claims, and non-claims
+
+### Replay, authority, and critical-path non-regression
+
+Record strict/memoized/snapshot replay modes, ownership/cache invalidation,
+head-CAS authority audit, proposal/committed dtypes, and stage-level observed
+timings. Keep M00 observed values as a baseline, not a target or reused PASS.
 
 ### Open follow-ups and next action
 
@@ -91,6 +102,11 @@ evidence, fix, retry lineage, and resolution. Never delete an earlier failure.
 成功尝试。重试必须使用新 run ID，并用 `parent_run_id` 指向同一
 validation shape 的前一尝试。
 
+每个非 transient 9-node terminal 失败必须记录 authority timeline、
+stage timings、真实 exit/termination 分类、workflow/root-cause review、
+targeted 1-node benchmark，以及授权下一次且仅下一次 retry 的
+同 clean commit 1→2-node 重验收。
+
 ### 改动文件与行为
 
 ### 兼容性与迁移
@@ -107,6 +123,12 @@ validation shape 的前一尝试。
 重试 lineage 和 resolution。不得删除早先失败记录。
 
 ### Backend capabilities、已支持主张与 non-claims
+
+### Replay、authority 与 critical-path 无回归
+
+记录 strict/memoized/snapshot replay mode、owner/cache invalidation、head-CAS
+authority audit、proposal/committed dtype 与分阶段 observed timing。M00 实测值只是
+baseline，不是 target，也不可直接复用为当前 PASS。
 
 ### Open follow-ups 与下一动作
 

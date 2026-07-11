@@ -1,13 +1,19 @@
-phase: PXX  # use M00 for the new milestone zero, otherwise the current PXX
+phase: P05
 status: planned  # planned | in_progress | blocked | checking | completed | ready_to_merge | merged
-planning_basis_branch: null
-planning_basis_commit: null  # resolve from the verified predecessor report
+planning_basis_branch: codex/duraloco-m00-sqlite-free-rebase
+planning_basis_commit: 89ae48aae5956b09fc6685074d3ea0eaea36b816
 actual_base_branch: null
 actual_base_commit: null
-feature_branch: null
+feature_branch: codex/duraloco-p05-syncer-failover
 current_loop: 0
-current_goal: null
+current_goal: "initialize P05"
 attempts_for_current_failure: 0
+last_terminal_failure_review: null
+terminal_retry_authorized: false
+terminal_retry_qualification:
+  targeted_1node_benchmark: null
+  miyabi_1node: null
+  miyabi_2node: null
 last_verified_commit: null
 checks:
   local_static: not_run
@@ -16,10 +22,32 @@ checks:
   miyabi_1node: not_run
   miyabi_2node: not_run
   miyabi_9node: not_run
+acceptance:
+  P05-A01: {result: not_run, evidence: []}
+  P05-A02: {result: not_run, evidence: []}
+  P05-A03: {result: not_run, evidence: []}
+  P05-A04: {result: not_run, evidence: []}
+  P05-A05: {result: not_run, evidence: []}
+  P05-A06: {result: not_run, evidence: []}
+  P05-A07: {result: not_run, evidence: []}
+  P05-A08: {result: not_run, evidence: []}
+  P05-A09: {result: not_run, evidence: []}
+  P05-A10: {result: not_run, evidence: []}
+  P05-A11: {result: not_run, evidence: []}
+  P05-A12: {result: not_run, evidence: []}
+  P05-A13: {result: not_run, evidence: []}
+  P05-A14: {result: not_run, evidence: []}
+  P05-A15: {result: not_run, evidence: []}
+  P05-A16: {result: not_run, evidence: []}
+  P05-A17: {result: not_run, evidence: []}
+  P05-A18: {result: not_run, evidence: []}
+  P05-A19: {result: not_run, evidence: []}
+  P05-A20: {result: not_run, evidence: []}
 open_decisions: []
 open_blockers: []
 artifacts: []
-next_action: "initialize phase"
+next_action: "orient P05 from the corrected M00 archival tip"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null  # only for external-risk actions, never for goal/phase transitions
+checker_report: null

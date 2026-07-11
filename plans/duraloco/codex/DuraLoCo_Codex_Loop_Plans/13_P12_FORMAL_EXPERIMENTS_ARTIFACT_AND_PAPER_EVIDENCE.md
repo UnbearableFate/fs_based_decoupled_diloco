@@ -29,7 +29,8 @@ human_approval_gates:
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
 > 6. `SQLITE_FREE_SYSTEM_DESIGN.md`；
-> 7. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 7. `M00_IMPLEMENTATION_LESSONS.md`；
+> 8. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
 > P12 必须以 P11 双语报告记录的 verified commit 为基线；执行时验证 commit 并对任何前进生成 drift report，不得强制 reset。
 
@@ -52,6 +53,7 @@ human_approval_gates:
 - [ ] resource/cost budget 已登记；范围内 Miyabi 作业由 agent 自主决定，超限作业已批准或安全 skip，公共云默认 skip（显式选中时才要求预算批准）；
 - [ ] 模型、数据集、revision、seeds、baselines 冻结；
 - [ ] 分析脚本在 synthetic fixture 上通过。
+- [ ] M00 7m24s terminal、strict/memoized replay timings 与八次失败历史被登记为 acceptance/engineering evidence，不是论文 performance baseline 或可排除 run。
 
 ## 3. 范围
 
@@ -71,6 +73,8 @@ human_approval_gates:
 - [ ] claim-evidence matrix；
 - [ ] artifact package/reproduction；
 - [ ] 更新论文结果章节，保留负面结果。
+- [ ] critical-path attribution 分开 catalog/rejection、read/SHA/validation、publication、coordination、CAS、strict/memoized/snapshot replay、export/adoption；
+- [ ] proposal transport dtype（M00 bfloat16）、aggregation/committed dtype（M00 float32）和 implementation digest 进入每个 experiment cell。
 
 ### 3.2 明确不做
 
@@ -311,6 +315,7 @@ artifact/
 - [ ] 每个论文 claim 有直接 evidence chain；
 - [ ] 负面结果保留。
 - [ ] experiment registry、raw manifests、JSONL/CSV 分析产物和图表 lineage 都是普通文件/不可变对象，不使用 SQLite 或其他数据库。
+- [ ] deliberate operator termination、有效部分 prefix 和 non-transient terminal failure 保留真实分类，不合并到 generic infrastructure failure。
 
 ### 7.2 必须覆盖的故障与反例
 
@@ -343,6 +348,10 @@ artifact/
 - [ ] P12-A14：从最终干净 analysis commit 重建核心图表与 claim matrix，并证明 simulator/runtime/policy 的 digest 与预注册版本一致。
 - [ ] P12-A15：clean reproduction 仅用 manifests/JSONL/CSV/immutable objects 重建结果，artifact bundle 不包含也不需要 `.db`/`.sqlite`/DB dump。
 - [ ] P12-A16：最终 9-node GPT-2/WikiText-2 milestone run 在 15 分钟内完成 1S+8L、50×10，并将 SQLite-free 断言、raw manifest 和 claim lineage 纳入可重建 artifact。
+- [ ] P12-A17：所有 performance/goodput 图表可分解到 M00 定义的 critical-path stages，不用 aggregate interval 替代 root-cause attribution；
+- [ ] P12-A18：experiment registry 冻结 proposal/aggregation/committed dtypes、validator route、strict/memoized/snapshot mode 和 implementation digests，不匹配 run fail closed；
+- [ ] P12-A19：M00 八次 terminal 失败、deliberate terminations 和 7m24s PASS 均保留为 engineering lineage，不被误当作正式 science sample、排除掉或抽象成无证据 infrastructure noise；
+- [ ] P12-A20：artifact reproduction 重放至少一个 M00 stale-cache/head-jump 反例和 terminal retry-review gate，证明性能工具没有削弱 authority/replay contract。
 
 ## 9. 验证矩阵
 
@@ -396,6 +405,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
 - 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点和 multi-seed）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
+- 非 transient 9-node terminal 失败后禁止立即同 shape 重提；必须先完成 workflow review、targeted 1-node benchmark 和同 clean commit 1→2-node 重验收，再只提交一次新 retry。
 
 ## 13. 阶段完成报告模板
 
@@ -412,6 +422,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/13_P12_FORMAL_EXPERIMENTS_ARTIFACT_AND_PAPER_EVIDENCE.md
 共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
 系统设计：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/SQLITE_FREE_SYSTEM_DESIGN.md
+M00 经验：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/M00_IMPLEMENTATION_LESSONS.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 

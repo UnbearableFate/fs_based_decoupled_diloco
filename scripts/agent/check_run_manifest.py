@@ -12,7 +12,7 @@ import sys
 from typing import Any
 
 
-REQUIRED = {
+REQUIRED_V1 = {
     "schema_version",
     "run_id",
     "parent_run_id",
@@ -42,6 +42,31 @@ REQUIRED = {
     "assertions",
     "manifest_sha256",
 }
+V2_FIELDS = {
+    "validation_shape",
+    "termination_kind",
+    "authority_head_before",
+    "authority_head_after",
+    "stage_metrics_path",
+    "workflow_review_path",
+    "same_commit_qualification",
+    "pbs_queue",
+    "requested_resources",
+    "last_qstat_state",
+    "termination_detail",
+}
+REQUIRED_V2 = REQUIRED_V1 | V2_FIELDS
+TERMINATION_KINDS = {
+    "success",
+    "test_failure",
+    "operator_terminated",
+    "scheduler_timeout",
+    "infrastructure",
+    "pre_allocation_cancelled",
+    "unknown",
+}
+QUALIFICATION_FIELDS = {"targeted_1node_benchmark", "miyabi_1node", "miyabi_2node"}
+V2_PHASES = {"P05", "P06", "P07", "P08", "P09", "P10", "P11", "P12"}
 
 
 class ManifestError(RuntimeError):
@@ -72,20 +97,96 @@ def validate(
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise ManifestError("manifest root must be an object")
-    missing = REQUIRED - payload.keys()
-    unknown = payload.keys() - REQUIRED
-    if missing or unknown:
-        raise ManifestError(f"schema fields differ: missing={sorted(missing)} extra={sorted(unknown)}")
-    if payload["schema_version"] != 1:
+    schema_version = payload.get("schema_version")
+    if schema_version == 1:
+        required = REQUIRED_V1
+    elif schema_version == 2:
+        required = REQUIRED_V2
+    else:
         raise ManifestError("unsupported schema_version")
+    missing = required - payload.keys()
+    unknown = payload.keys() - required
+    if missing or unknown:
+        raise ManifestError(
+            f"schema fields differ: missing={sorted(missing)} extra={sorted(unknown)}"
+        )
     if str(payload["phase"]) != "M00" and not re.fullmatch(
         r"P(0[0-9]|1[0-2])", str(payload["phase"])
     ):
         raise ManifestError("invalid phase")
+    if payload["phase"] in V2_PHASES and schema_version != 2:
+        raise ManifestError(f"{payload['phase']} requires schema_version 2")
     if not re.fullmatch(r"[0-9a-f]{40}", str(payload["git_commit"])):
         raise ManifestError("git_commit must be 40 lowercase hex")
     if payload["result"] not in {"pass", "fail", "inconclusive"}:
         raise ManifestError("invalid result")
+    if schema_version == 2:
+        validation_shape = payload["validation_shape"]
+        if not isinstance(validation_shape, str) or not validation_shape.strip():
+            raise ManifestError("validation_shape must be a non-empty stable identifier")
+        termination = payload["termination_kind"]
+        if termination not in TERMINATION_KINDS:
+            raise ManifestError("invalid termination_kind")
+        allowed_terminations = {
+            "pass": {"success"},
+            "fail": {
+                "test_failure",
+                "operator_terminated",
+                "scheduler_timeout",
+                "infrastructure",
+            },
+            "inconclusive": {
+                "operator_terminated",
+                "scheduler_timeout",
+                "infrastructure",
+                "pre_allocation_cancelled",
+                "unknown",
+            },
+        }
+        if termination not in allowed_terminations[payload["result"]]:
+            raise ManifestError(
+                f"termination_kind {termination!r} is inconsistent with "
+                f"result {payload['result']!r}"
+            )
+        for field in ("authority_head_before", "authority_head_after"):
+            value = payload[field]
+            if value is not None and (not isinstance(value, str) or not value):
+                raise ManifestError(f"{field} must be null or a non-empty identity")
+        for field in ("stage_metrics_path", "workflow_review_path"):
+            value = payload[field]
+            if value is not None and (not isinstance(value, str) or not value):
+                raise ManifestError(f"{field} must be null or a non-empty path")
+        for field in (
+            "pbs_queue",
+            "requested_resources",
+            "last_qstat_state",
+            "termination_detail",
+        ):
+            value = payload[field]
+            if value is not None and (not isinstance(value, str) or not value.strip()):
+                raise ManifestError(f"{field} must be null or a non-empty string")
+        if termination == "pre_allocation_cancelled":
+            cancelled_fields = (
+                "pbs_job_id",
+                "pbs_queue",
+                "requested_resources",
+                "last_qstat_state",
+                "termination_detail",
+            )
+            missing_cancelled = [field for field in cancelled_fields if not payload[field]]
+            if missing_cancelled:
+                raise ManifestError(
+                    "pre-allocation cancellation is missing scheduler evidence: "
+                    + ", ".join(missing_cancelled)
+                )
+        qualification = payload["same_commit_qualification"]
+        if not isinstance(qualification, dict) or set(qualification) != QUALIFICATION_FIELDS:
+            raise ManifestError("same_commit_qualification fields differ from schema")
+        for field, value in qualification.items():
+            if value is not None and (not isinstance(value, str) or not value):
+                raise ManifestError(
+                    f"same_commit_qualification.{field} must be null or a non-empty reference"
+                )
     if payload["result"] == "pass":
         if payload["exit_code"] != 0:
             raise ManifestError("pass result requires exit_code 0")

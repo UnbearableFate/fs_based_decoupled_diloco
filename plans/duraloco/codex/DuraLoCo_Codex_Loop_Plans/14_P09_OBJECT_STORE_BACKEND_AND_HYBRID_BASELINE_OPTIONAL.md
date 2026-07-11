@@ -31,7 +31,8 @@ human_approval_gates:
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
 > 6. `SQLITE_FREE_SYSTEM_DESIGN.md`；
-> 7. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 7. `M00_IMPLEMENTATION_LESSONS.md`；
+> 8. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
 > 若未来显式启动 P09，必须以 P12 双语报告记录的 verified commit 为基线；执行时验证 commit 并对任何前进生成 drift report，不得强制 reset。
 
@@ -70,6 +71,7 @@ DuraLoCo 是 storage-native abstraction，而不是 Lustre 特例；同一 commi
 - [ ] MinIO conformance/crash suite；
 - [ ] hybrid metadata coordinator + object payload baseline；
 - [ ] public cloud capability harness（默认不执行）。
+- [ ] 在 object backend 上重新证明 M00 marker-last immutable publication、typed validated result、strict/memoized replay 与 ownership-bound cache。
 
 ### 3.2 明确不做
 
@@ -113,6 +115,8 @@ tests/hybrid/
 - [ ] D-0904：provider capability matrix 和 fail-closed 策略；
 - [ ] D-0905：hybrid baseline 的 metadata API 最小范围；
 - [ ] D-0906：public cloud region/topology 与成本预算。
+- [ ] D-0907：ObjectRef `(key, sha256, size)` memoization 依赖的 provider immutability/versioning 能力，以及 ETag 不可代替 content SHA 的边界；
+- [ ] D-0908：object-store payload-before-marker/multipart-complete-before-marker 的 in-flight grace 和 listing omission 恢复。
 
 每项决策必须写入 `plans/duraloco/DECISIONS.md`，包含：上下文、候选方案、所选方案、拒绝方案、兼容性影响和可逆性。不得把未决语义隐藏在实现细节中。
 
@@ -299,6 +303,9 @@ tests/hybrid/
 - [ ] P09-A11：MinIO/云 probe 的 fail、inconclusive、queued-cancelled 和 retry 均保留 manifest lineage，最终 Checker 在最终干净 commit 重放 contract 和历史反例。
 - [ ] P09-A12：backend conformance 和 hybrid baseline 不包含 SQLite/embedded DB/metadata DB dependency，且空本地目录 replay digest 与 POSIX 基线一致。
 - [ ] P09-A13：若显式启动本可选 milestone，9-node 1S+8L、50×10、15 分钟 terminal run 必须在无数据库的 object/hybrid path 上通过；未启动 P09 时本 gate 不适用且不阻塞 P12。
+- [ ] P09-A14：provider capability evidence 证明 process-local memoization 的 ObjectRef immutability 前提，ETag 不被当作 SHA，fresh/takeover/head-jump 仍 empty-cache strict replay；
+- [ ] P09-A15：payload/multipart 完成后 marker 前 kill + listing omission 反例可恢复且不误提交/误删除，一次 attempt 不重复上传已验证 immutable object；
+- [ ] P09-A16：任何 non-transient 9-node/object terminal 失败后执行 M00 retry discipline：workflow review、targeted backend benchmark、同 commit 1→2-node requalification，再只提交一次新 retry。
 
 ## 9. 验证矩阵
 
@@ -345,6 +352,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
 - 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
+- 非 transient 9-node/object terminal 失败后禁止立即同 shape 重提；必须先完成 workflow review、targeted backend benchmark 和同 clean commit 1→2-node 重验收，再只提交一次新 retry。
 
 ## 13. 阶段完成报告模板
 
@@ -361,6 +369,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/14_P09_OBJECT_STORE_BACKEND_AND_HYBRID_BASELINE_OPTIONAL.md
 共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
 系统设计：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/SQLITE_FREE_SYSTEM_DESIGN.md
+M00 经验：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/M00_IMPLEMENTATION_LESSONS.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 

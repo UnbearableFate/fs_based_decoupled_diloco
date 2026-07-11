@@ -1,7 +1,7 @@
 ---
 plan_id: "M00"
 title: "无 SQLite 运行时重构与 P00–P04 再验收"
-status: "planned"
+status: "completed"
 date: "2026-07-11"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
 planning_basis_branch: "codex/duraloco-p04-transaction-log"
@@ -15,12 +15,17 @@ automatic_progression: true
 agent_decision_gates:
   - "无数据库 RuntimeView、production tensor ObjectRef codec 和 warm-start generation 格式由 agent 依据 P00–P04 contracts 冻结并经独立 Checker 复核。"
 human_approval_gates: []
+verified_implementation: "c052438a3cfe5e16c3b154fc842f32dcd61ec6ff"
+corrected_archival_tip: "89ae48aae5956b09fc6685074d3ea0eaea36b816"
+checker_verdict: "PASS; required_gate_followups: none"
 ---
 
 # M00 — 无 SQLite 运行时重构与 P00–P04 再验收
 
-> M00 是已完成 P00–P04 之后的新路线第 0 milestone。它取代原计划
-> “P05 内把 SQLite 降级为 cache”的方案。M00 未完成前不得启动 P05。
+> **完成声明（2026-07-11）：** M00-A01–A12、全部 41 个 P00–P04 重映射 gate、1/2/9-node ladder 和独立 Checker 均已通过。执行证据以 `plans/duraloco/phases/M00_PHASE_REPORT.md` 和 `M00_IMPLEMENTATION_LESSONS.md` 为准；本文保留为已完成 milestone 的原始执行契约，当前路线从 P05 开始。
+
+> M00 是 P00–P04 之后的新路线第 0 milestone，已取代原计划
+> “P05 内把 SQLite 降级为 cache”的方案并完成。P05 现已获得启动授权。
 
 执行前必须同时读取：
 

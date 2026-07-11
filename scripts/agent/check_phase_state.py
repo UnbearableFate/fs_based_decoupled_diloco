@@ -51,14 +51,14 @@ ACCEPTANCE_COUNTS = {
     "P02": 8,
     "P03": 8,
     "P04": 9,
-    "P05": 10,
-    "P06": 11,
-    "P07": 10,
-    "P08": 8,
-    "P09": 9,
-    "P10": 9,
-    "P11": 9,
-    "P12": 12,
+    "P05": 20,
+    "P06": 20,
+    "P07": 19,
+    "P08": 16,
+    "P09": 16,
+    "P10": 17,
+    "P11": 17,
+    "P12": 20,
 }
 REQUIRED = {
     "phase",
@@ -96,7 +96,39 @@ def _load(path: Path) -> dict[str, Any]:
     return payload
 
 
-PHASE_ORDER = ("P00", "P01", "P02", "P03", "P04", "M00", "P05", "P06", "P07", "P08", "P09", "P10", "P11", "P12")
+PHASE_ORDER = (
+    "P00",
+    "P01",
+    "P02",
+    "P03",
+    "P04",
+    "M00",
+    "P05",
+    "P06",
+    "P07",
+    "P08",
+    "P10",
+    "P11",
+    "P12",
+    "P09",
+)
+PHASE_DEPENDENCIES = {
+    "P00": set(),
+    "P01": {"P00"},
+    "P02": {"P01"},
+    "P03": {"P02"},
+    "P04": {"P03"},
+    "M00": {"P04"},
+    "P05": {"M00"},
+    "P06": {"P05"},
+    "P07": {"P06"},
+    "P08": {"P06"},
+    "P10": {"P07", "P08"},
+    "P11": {"P10"},
+    "P12": {"P11"},
+    "P09": {"P12"},
+}
+TERMINAL_RETRY_PHASES = {"P05", "P06", "P07", "P08", "P09", "P10", "P11", "P12"}
 
 
 def _phase_rank(value: Any) -> int:
@@ -112,7 +144,10 @@ def _checker_verdict(root: Path, relative: str) -> tuple[str, str]:
     if not path.is_file():
         raise StateError(f"checker report does not exist: {relative}")
     text = path.read_text(encoding="utf-8")
-    match = re.search(r"(?mi)^\s*(?:verdict|status)\s*:\s*(PASS(?:_WITH_FOLLOWUPS)?|BLOCKED)\s*$", text)
+    match = re.search(
+        r"(?mi)^\s*(?:verdict|status)\s*:\s*(PASS(?:_WITH_FOLLOWUPS)?|BLOCKED)\s*$",
+        text,
+    )
     if not match:
         raise StateError(f"checker report has no structured verdict: {relative}")
     followups = re.search(r"(?mi)^\s*required_gate_followups\s*:\s*(.+?)\s*$", text)
@@ -133,6 +168,50 @@ def validate(payload: dict[str, Any], *, root: Path) -> None:
         "attempts_for_current_failure"
     ] < 0:
         raise StateError("attempts_for_current_failure must be a non-negative integer")
+    if payload["phase"] in TERMINAL_RETRY_PHASES:
+        retry_fields = {
+            "last_terminal_failure_review",
+            "terminal_retry_authorized",
+            "terminal_retry_qualification",
+        }
+        missing_retry_fields = sorted(retry_fields - payload.keys())
+        if missing_retry_fields:
+            raise StateError(
+                "missing terminal retry fields: " + ", ".join(missing_retry_fields)
+            )
+        if not isinstance(payload["terminal_retry_authorized"], bool):
+            raise StateError("terminal_retry_authorized must be boolean")
+        review = payload["last_terminal_failure_review"]
+        if review is not None and (not isinstance(review, str) or not review):
+            raise StateError("last_terminal_failure_review must be null or a non-empty path")
+        if payload["terminal_retry_authorized"] and not review:
+            raise StateError(
+                "terminal_retry_authorized requires last_terminal_failure_review"
+            )
+        qualification = payload["terminal_retry_qualification"]
+        qualification_fields = {
+            "targeted_1node_benchmark",
+            "miyabi_1node",
+            "miyabi_2node",
+        }
+        if not isinstance(qualification, dict) or set(qualification) != qualification_fields:
+            raise StateError("terminal_retry_qualification fields differ from contract")
+        for field, reference in qualification.items():
+            if reference is not None and (
+                not isinstance(reference, str) or not reference.strip()
+            ):
+                raise StateError(
+                    f"terminal_retry_qualification.{field} must be null or a reference"
+                )
+        if payload["terminal_retry_authorized"]:
+            missing_qualification = [
+                field for field, reference in qualification.items() if not reference
+            ]
+            if missing_qualification:
+                raise StateError(
+                    "terminal_retry_authorized requires same-commit qualification: "
+                    + ", ".join(missing_qualification)
+                )
     checks = payload["checks"]
     if not isinstance(checks, dict) or not checks:
         raise StateError("checks must be a non-empty mapping")
@@ -188,27 +267,50 @@ def validate(payload: dict[str, Any], *, root: Path) -> None:
             raise StateError("completed phase cannot have open blockers")
         if any(value in {"not_run", "failed", "blocked"} for value in checks.values()):
             raise StateError("completed phase contains an unresolved check status")
-        if _phase_rank(payload["phase"]) >= _phase_rank("P04") and checks.get("miyabi_9node") != "miyabi_9node_pass":
+        requires_9node = _phase_rank(payload["phase"]) >= _phase_rank("P04")
+        if requires_9node and checks.get("miyabi_9node") != "miyabi_9node_pass":
             raise StateError("P04+ completion requires the terminal Miyabi 9-node GPT-2 gate")
     if payload["requires_human_approval"] and not payload["approval_reason"]:
         raise StateError("requires_human_approval needs approval_reason")
 
 
-def validate_transition(previous: dict[str, Any], current: dict[str, Any]) -> None:
-    previous_phase = _phase_rank(previous["phase"])
-    current_phase = _phase_rank(current["phase"])
-    if current_phase == previous_phase:
+def validate_transition(previous_states: list[dict[str, Any]], current: dict[str, Any]) -> None:
+    by_phase: dict[str, dict[str, Any]] = {}
+    for previous in previous_states:
+        phase = str(previous["phase"])
+        if phase in by_phase:
+            raise StateError(f"duplicate previous phase state: {phase}")
+        by_phase[phase] = previous
+
+    current_phase = str(current["phase"])
+    if current_phase in by_phase:
+        if len(by_phase) != 1:
+            raise StateError("same-phase transition accepts exactly one previous state")
+        previous = by_phase[current_phase]
         if current["status"] not in TRANSITIONS[previous["status"]]:
             raise StateError(
                 f"illegal status transition: {previous['status']} -> {current['status']}"
             )
         return
-    if current_phase != previous_phase + 1:
+
+    required = PHASE_DEPENDENCIES[current_phase]
+    missing = required - by_phase.keys()
+    if missing:
         raise StateError(
-            f"phase jump is not sequential: {previous['phase']} -> {current['phase']}"
+            f"missing completed phase dependencies for {current_phase}: {sorted(missing)}"
         )
-    if previous["status"] not in {"completed", "ready_to_merge", "merged"}:
-        raise StateError("next phase cannot start before previous phase completed")
+    unexpected = by_phase.keys() - required
+    if unexpected:
+        raise StateError(
+            f"unexpected phase dependencies for {current_phase}: {sorted(unexpected)}"
+        )
+    incomplete = sorted(
+        phase
+        for phase in required
+        if by_phase[phase]["status"] not in {"completed", "ready_to_merge", "merged"}
+    )
+    if incomplete:
+        raise StateError("phase dependencies are not completed: " + ", ".join(incomplete))
     if current["status"] not in {"planned", "in_progress"}:
         raise StateError("next phase must start as planned or in_progress")
 
@@ -216,7 +318,7 @@ def validate_transition(previous: dict[str, Any], current: dict[str, Any]) -> No
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("state", type=Path)
-    parser.add_argument("--previous", type=Path)
+    parser.add_argument("--previous", type=Path, action="append", default=[])
     parser.add_argument("--root", type=Path, default=Path.cwd())
     return parser.parse_args(argv)
 
@@ -227,9 +329,10 @@ def main(argv: list[str] | None = None) -> int:
         current = _load(args.state)
         validate(current, root=args.root.resolve())
         if args.previous:
-            previous = _load(args.previous)
-            validate(previous, root=args.root.resolve())
-            validate_transition(previous, current)
+            previous_states = [_load(path) for path in args.previous]
+            for previous in previous_states:
+                validate(previous, root=args.root.resolve())
+            validate_transition(previous_states, current)
         return 0
     except (OSError, yaml.YAMLError, StateError) as exc:
         print(f"check_phase_state: {exc}", file=sys.stderr)

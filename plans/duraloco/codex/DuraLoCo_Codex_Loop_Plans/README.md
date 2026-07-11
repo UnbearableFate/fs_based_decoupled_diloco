@@ -1,13 +1,13 @@
 ---
 title: "DuraLoCo Codex Loop-Engineering Implementation Plans"
-version: "2.0"
+version: "2.1"
 date: "2026-07-11"
-planning_basis: "P04 verified implementation a655413cea6ebe9bc368b5827318efd766683b5a"
+planning_basis: "M00 corrected archival tip 89ae48aae5956b09fc6685074d3ea0eaea36b816"
 ---
 
 # DuraLoCo Codex Loop-Engineering Implementation Plans
 
-本目录描述重建后的 SQLite-free 路线。P00–P04 是已经完成的历史基线；其中关于 SQLite 的实现和证据只用于解释旧系统，不再构成目标设计。新路线先执行第 0 里程碑 M00：在现有代码上删除 SQLite，以 P04 committed transition log 与单一 head CAS 作为唯一持久 authority，并重新通过 P00–P04 的全部审核标准。只有 M00 完成后才能进入 P05。
+本目录描述 SQLite-free 路线。P00–P04 是历史基线；M00 已完成并以 `PASS`/无 required follow-up 重新验收全部 41 个 P00–P04 acceptance IDs。当前执行起点是 P05，必须从 M00 corrected archival tip `89ae48aae5956b09fc6685074d3ea0eaea36b816` 或经 drift report 证明等价的后继 commit 开始。
 
 必需主线是 `M00 → P05 → P06 → (P07, P08) → P10 → P11 → P12`。P09 object-store backend 保留在整体计划最后，默认不实现、不验证、不阻塞主线。
 
@@ -18,9 +18,9 @@ planning_basis: "P04 verified implementation a655413cea6ebe9bc368b5827318efd7666
 - 本地查询状态是进程内、不可变的 `RuntimeView`，由 full replay 构建；P07 可增加经过 digest 等价验证的 snapshot+suffix replay，但不得新增数据库。
 - `latest.json`、JSONL、CSV、heartbeats、运行报告和监控指标都是派生或观测数据，不能驱动 correctness 决策。
 - 历史 SQLite run 保持只读；新系统不提供 SQLite reader、converter 或双写桥。若要复用 checkpoint，只能显式创建新 generation，语义是 warm-start，不是 exact continuation。
-- M00 必须以新实现重新产生 P00–P04 审核证据；旧 PASS 只能作为反例和基线，不能直接复用。
+- M00 的 strict/memoized production replay 契约已成为后续基线；fresh open、takeover、CAS ambiguity、head jump 和 corruption suspicion 必须 empty-cache strict replay，memoization 不得持久或跨 owner。
 
-详细设计见 [`SQLITE_FREE_SYSTEM_DESIGN.md`](SQLITE_FREE_SYSTEM_DESIGN.md)，共同执行约束见 [`00_CODEX_LOOP_OPERATING_CONTRACT.md`](00_CODEX_LOOP_OPERATING_CONTRACT.md)。
+详细设计见 [`SQLITE_FREE_SYSTEM_DESIGN.md`](SQLITE_FREE_SYSTEM_DESIGN.md)，M00 实际失败所得约束见 [`M00_IMPLEMENTATION_LESSONS.md`](M00_IMPLEMENTATION_LESSONS.md)，共同执行约束见 [`00_CODEX_LOOP_OPERATING_CONTRACT.md`](00_CODEX_LOOP_OPERATING_CONTRACT.md)。
 
 ## 2. 阶段索引
 
@@ -31,7 +31,7 @@ planning_basis: "P04 verified implementation a655413cea6ebe9bc368b5827318efd7666
 | [P02（历史）](03_P02_REFERENCE_SIMULATOR_AND_IN_MEMORY_BACKEND.md) | 确定性参考模拟器与 In-Memory Backend | P01 | 已归档 |
 | [P03（历史）](04_P03_STORAGE_ABSTRACTION_AND_POSIX_LUSTRE_CONTRACT.md) | 语义化 Storage API 与 POSIX/Lustre Contract | P02 | 已归档 |
 | [P04（历史）](05_P04_TRANSACTIONAL_FRAGMENT_LOG_AND_PREFIX_RECOVERY.md) | Transactional Fragment Log 与 Prefix Recovery | P03 | 已归档 |
-| [M00（新第 0 里程碑）](06_M00_SQLITE_FREE_RUNTIME_REBASE_AND_P00_P04_REQUALIFICATION.md) | 删除 SQLite、建立 log-only runtime、重验 P00–P04 | P04 | `codex/duraloco-m00-sqlite-free-rebase` |
+| [M00（已完成的第 0 里程碑）](06_M00_SQLITE_FREE_RUNTIME_REBASE_AND_P00_P04_REQUALIFICATION.md) | 删除 SQLite、建立 log-only runtime、重验 P00–P04 | P04 | `89ae48a` 已归档 |
 | [P05](07_P05_SYNCER_LEASE_FENCING_AND_FAILOVER.md) | 生产 Syncer、Lease/Fencing 与 Failover | M00 | `codex/duraloco-p05-syncer-failover` |
 | [P06](08_P06_LEARNER_INTERVALS_ADOPTION_AND_RECOVERY.md) | Learner Contribution Intervals、Adoption 与 Warm Recovery | P05 | `codex/duraloco-p06-learner-protocol` |
 | [P07](09_P07_COMPACTION_GC_ACKS_AND_LEARNER_CAPSULES.md) | Compaction、Reachability GC、Ack 与 Learner Capsules | P06 | `codex/duraloco-p07-lifecycle` |
@@ -75,21 +75,21 @@ P07 与 P08 可以在独立 worktree 开发，但 shared log/head/frontier/commi
 
 ### 5.1 每次恢复必读
 
-Codex 必须读取根 `AGENTS.md`、`miyabi-development` skill、共同契约、SQLite-free 设计、[`P00_P04_IMPLEMENTATION_LESSONS.md`](P00_P04_IMPLEMENTATION_LESSONS.md)、`plans/duraloco/{STATE.yaml,DECISIONS.md,BLOCKERS.md}`、当前 phase report 和当前阶段文件。真实 HEAD 若与计划基线不同，应保留现有改动并生成 drift report，不得强制 reset。
+Codex 必须读取根 `AGENTS.md`、`miyabi-development` skill、共同契约、SQLite-free 设计、[`P00_P04_IMPLEMENTATION_LESSONS.md`](P00_P04_IMPLEMENTATION_LESSONS.md)、[`M00_IMPLEMENTATION_LESSONS.md`](M00_IMPLEMENTATION_LESSONS.md)、`plans/duraloco/{STATE.yaml,DECISIONS.md,BLOCKERS.md}`、M00 最终报告和当前阶段文件。真实 HEAD 若与计划基线不同，应保留现有改动并生成 drift report，不得强制 reset。
 
 ### 5.2 当前启动点
 
 ```text
-使用 miyabi-development skill 执行 M00。读取共同契约、SQLITE_FREE_SYSTEM_DESIGN.md、P00_P04_IMPLEMENTATION_LESSONS.md、plans/duraloco 当前状态与 P04 报告，以及 06_M00_SQLITE_FREE_RUNTIME_REBASE_AND_P00_P04_REQUALIFICATION.md。基于现有代码删除 SQLite，不建立兼容 reader、converter、双写桥或替代数据库。按 1→2→9 节点阶梯重新产生 P00–P04 gate 证据；M00 未完成前不要启动 P05，不要自动 merge main。
+使用 miyabi-development skill 执行 P05。从 M00 corrected archival tip 89ae48aae5956b09fc6685074d3ea0eaea36b816 开始，读取共同契约、SQLITE_FREE_SYSTEM_DESIGN.md、P00_P04_IMPLEMENTATION_LESSONS.md、M00_IMPLEMENTATION_LESSONS.md、M00 最终报告/Checker 和 07_P05_SYNCER_LEASE_FENCING_AND_FAILOVER.md。保留 M00 的单 head-CAS、strict/memoized replay、marker-last publication 和分阶段 telemetry 契约，按 1→2→9 节点阶梯实现 lease/fencing/failover/authoritative stop；不要自动 merge main。
 ```
 
 ### 5.3 自动推进
 
-每个阶段只有在所有 acceptance IDs 有当前实现证据、独立 Checker 通过、双语 phase report 和 milestone commit 完成后才可自动推进。M00 必须从 P04 verified commit/当前等价基线开始；P05 必须从 M00 verified commit 开始。
+每个阶段只有在所有 acceptance IDs 有当前实现证据、独立 Checker 通过、双语 phase report 和 milestone commit 完成后才可自动推进。P05 从 M00 corrected archival tip 开始；任何非 transient 9-node terminal 失败后必须暂停同 shape 重提，先做 review、targeted benchmark 和同 commit 1→2-node 重验收。
 
 ### 5.4 English milestone summary
 
-P00–P04 are historical evidence, not an implementation mandate. M00 is the new milestone zero: remove SQLite completely, retain the committed transition log and one head CAS as the sole durable authority, rebuild volatile runtime views by replay, and requalify every P00–P04 acceptance gate. P05–P12 must remain database-free. P09 is an optional post-P12 extension and is not part of default completion.
+P00–P04 are historical evidence. M00 is complete: all 41 remapped gates passed on the SQLite-free runtime, with one committed-log/head authority and strict/memoized replay equivalence. P05 is the current start point. P05–P12 must preserve the M00 replay, publication, validation, telemetry, and no-database contracts. P09 remains an optional post-P12 extension.
 
 ## 6. 全局 Gate
 
@@ -101,10 +101,13 @@ P00–P04 are historical evidence, not an implementation mandate. M00 is the new
 4. 删除全部本地派生状态后只靠 committed log/head 恢复；
 5. full 与 fragment production tensor path 具有事务一致性；
 6. lease/fencing、learner interval、safe lifecycle 和 performance controller 各阶段 gate；
-7. 所有 mutation request identity、失败/取消/重试 manifest 与 `parent_run_id` lineage；
+7. 所有 mutation request identity；P05+ 的失败/取消/重试 manifest 使用 schema v2，
+   具有稳定 `validation_shape`、scheduler/termination evidence 与 `parent_run_id` lineage；
 8. Miyabi login 节点仅 control-plane，runtime 按 1→2→9 节点验证；
 9. 从 M00 起每个 milestone 的 9-node GPT-2/WikiText-2、50 inner steps × 10 outer transitions terminal gate；
 10. 最终干净 commit 上 tests、state、双语 report、checksums 与 Checker verdict 一致。
+11. M00 反例持续通过：head jump/corrupt successor 不污染 memoization，takeover empty-cache strict replay，same-base flood 在 payload I/O 前拒绝；
+12. 大对象一次验证结果在 transaction attempt 内复用，分阶段 telemetry 和 terminal retry review 齐全。
 
 任何 SQLite 读写、第二 authority、durable `selected/pending/applied` 状态、proposal listing 决定 correctness、或无法仅凭 log 恢复的行为都会阻塞后续阶段。
 
@@ -119,5 +122,6 @@ P00–P04 are historical evidence, not an implementation mandate. M00 is the new
 ## 9. 文件校验
 
 ```bash
-sha256sum -c SHA256SUMS.txt
+python scripts/agent/build_duraloco_master.py --check
+(cd plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans && sha256sum -c SHA256SUMS.txt)
 ```

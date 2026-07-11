@@ -49,6 +49,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--run-id")
     parser.add_argument("--parent-run-id")
+    parser.add_argument("--schema-version", type=int, choices=[1, 2])
+    parser.add_argument("--validation-shape")
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--backend", default="memory")
     parser.add_argument("--seed", type=int)
@@ -57,11 +59,36 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--hostname")
     parser.add_argument("--pbs-job-id")
     parser.add_argument("--pbs-nodefile-digest")
+    parser.add_argument("--pbs-queue")
+    parser.add_argument("--requested-resources")
+    parser.add_argument("--last-qstat-state")
+    parser.add_argument("--termination-detail")
     parser.add_argument("--commands-log", default="commands.log")
     parser.add_argument("--stdout", default="stdout.log")
     parser.add_argument("--stderr", default="stderr.log")
     parser.add_argument("--exit-code", type=int)
-    parser.add_argument("--result", choices=["pass", "fail", "inconclusive"], default="inconclusive")
+    parser.add_argument(
+        "--result", choices=["pass", "fail", "inconclusive"], default="inconclusive"
+    )
+    parser.add_argument(
+        "--termination-kind",
+        choices=[
+            "success",
+            "test_failure",
+            "operator_terminated",
+            "scheduler_timeout",
+            "infrastructure",
+            "pre_allocation_cancelled",
+            "unknown",
+        ],
+    )
+    parser.add_argument("--authority-head-before")
+    parser.add_argument("--authority-head-after")
+    parser.add_argument("--stage-metrics-path")
+    parser.add_argument("--workflow-review-path")
+    parser.add_argument("--qualification-targeted-1node-benchmark")
+    parser.add_argument("--qualification-miyabi-1node")
+    parser.add_argument("--qualification-miyabi-2node")
     parser.add_argument("--assertion", action="append", default=[])
     parser.add_argument("--started-at-utc")
     parser.add_argument("--ended-at-utc")
@@ -73,6 +100,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    v2_phases = {"P05", "P06", "P07", "P08", "P09", "P10", "P11", "P12"}
+    schema_version = args.schema_version
+    if schema_version is None:
+        schema_version = 2 if args.phase in v2_phases else 1
+    if args.phase in v2_phases and schema_version != 2:
+        print(f"{args.phase} requires schema version 2", file=sys.stderr)
+        return 2
     root = args.root.resolve()
     output = args.output if args.output.is_absolute() else root / args.output
     if output.exists():
@@ -94,10 +128,62 @@ def main(argv: list[str] | None = None) -> int:
     if not config.is_file():
         print(f"config does not exist: {config}", file=sys.stderr)
         return 2
-    config_path = config.relative_to(root).as_posix() if config.is_relative_to(root) else str(config)
+    config_path = (
+        config.relative_to(root).as_posix() if config.is_relative_to(root) else str(config)
+    )
     config_digest = _sha256(config)
+    if schema_version == 2 and not args.validation_shape:
+        print("schema version 2 requires --validation-shape", file=sys.stderr)
+        return 2
+    termination_kind = args.termination_kind
+    if schema_version == 2 and termination_kind is None:
+        termination_kind = {
+            "pass": "success",
+            "fail": "test_failure",
+            "inconclusive": "unknown",
+        }[args.result]
+    if schema_version == 2:
+        allowed_terminations = {
+            "pass": {"success"},
+            "fail": {
+                "test_failure",
+                "operator_terminated",
+                "scheduler_timeout",
+                "infrastructure",
+            },
+            "inconclusive": {
+                "operator_terminated",
+                "scheduler_timeout",
+                "infrastructure",
+                "pre_allocation_cancelled",
+                "unknown",
+            },
+        }
+        if termination_kind not in allowed_terminations[args.result]:
+            print(
+                f"termination kind {termination_kind!r} is inconsistent with "
+                f"result {args.result!r}",
+                file=sys.stderr,
+            )
+            return 2
+        if termination_kind == "pre_allocation_cancelled":
+            cancellation_evidence = {
+                "pbs_job_id": args.pbs_job_id or os.environ.get("PBS_JOBID"),
+                "pbs_queue": args.pbs_queue,
+                "requested_resources": args.requested_resources,
+                "last_qstat_state": args.last_qstat_state,
+                "termination_detail": args.termination_detail,
+            }
+            missing = [field for field, value in cancellation_evidence.items() if not value]
+            if missing:
+                print(
+                    "pre-allocation cancellation requires scheduler evidence: "
+                    + ", ".join(missing),
+                    file=sys.stderr,
+                )
+                return 2
     payload = {
-        "schema_version": 1,
+        "schema_version": schema_version,
         "run_id": args.run_id or str(uuid.uuid4()),
         "parent_run_id": args.parent_run_id,
         "purpose": args.purpose,
@@ -125,6 +211,26 @@ def main(argv: list[str] | None = None) -> int:
         "result": args.result,
         "assertions": args.assertion,
     }
+    if schema_version == 2:
+        payload.update(
+            {
+                "validation_shape": args.validation_shape,
+                "termination_kind": termination_kind,
+                "authority_head_before": args.authority_head_before,
+                "authority_head_after": args.authority_head_after,
+                "stage_metrics_path": args.stage_metrics_path,
+                "workflow_review_path": args.workflow_review_path,
+                "same_commit_qualification": {
+                    "targeted_1node_benchmark": args.qualification_targeted_1node_benchmark,
+                    "miyabi_1node": args.qualification_miyabi_1node,
+                    "miyabi_2node": args.qualification_miyabi_2node,
+                },
+                "pbs_queue": args.pbs_queue,
+                "requested_resources": args.requested_resources,
+                "last_qstat_state": args.last_qstat_state,
+                "termination_detail": args.termination_detail,
+            }
+        )
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
     payload["manifest_sha256"] = hashlib.sha256(encoded).hexdigest()
     output.parent.mkdir(parents=True, exist_ok=True)

@@ -28,13 +28,14 @@ human_approval_gates: []
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
 > 6. `SQLITE_FREE_SYSTEM_DESIGN.md`；
-> 7. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 7. `M00_IMPLEMENTATION_LESSONS.md`；
+> 8. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
 > P06 必须以 P05 双语报告记录的 verified commit 为基线。执行开始时验证真实 commit；若仓库已经前进，先产生 drift report，不得强制 reset 或丢弃用户改动。
 
 ## 1. 阶段使命
 
-让 learner 产生因果边界清晰、不可重叠、可幂等重发的 proposal；global fragment adoption 只能在 interval 边界发生。完成 session/sequence、base freeze、warm restart、全局 stop 和数据/RNG cursor hooks。
+在 M00 已验证的 marker-last immutable publication、committed-successor backpressure、bfloat16 proposal transport 和 P05 authoritative stop/fencing 上，完成 learner session/sequence、interval base freeze、boundary-only adoption、warm restart 与数据/RNG cursor hooks。不重建并行 `learner_v2` runtime。
 
 ### 1.1 本阶段支撑的研究主张
 
@@ -42,15 +43,16 @@ DuraLoCo 的 selected proposal 表示一段唯一 local work，而不是可能�
 
 ### 1.2 完成后的系统增量
 
-现有 learner 可在 protocol v2 模式发布 durable proposal、轮询 committed head、采用新 fragments，并与 v2 syncer 完成 end-to-end small run。
+现有 `fs_diloco.learner` 增量获得可重放 interval/session 语义、boundary adoption 和 warm recovery，并与 P05 production syncer 完成 end-to-end run；公共 entrypoint 和 authority path 保持单一。
 
 ## 2. 前置条件
 
-- [ ] v2 syncer transactional path 可运行；
+- [ ] P05 production syncer lease/fencing/authoritative-stop path 已通过；
 - [ ] proposal payload kind 已冻结；
 - [ ] fragment schedule 初版定义；
 - [ ] warm restart 的非精确性已在 research contract 中明确。
 - [ ] M00/P05 forbidden-surface gate 仍证明没有 SQLite 或替代嵌入式数据库。
+- [ ] M00 marker-last publication、learner no-head-CAS、same-base flood rejection、bfloat16 transport/float32 committed-state 反例仍通过。
 
 ## 3. 范围
 
@@ -68,6 +70,9 @@ DuraLoCo 的 selected proposal 表示一段唯一 local work，而不是可能�
 - [ ] global stop 优先级；
 - [ ] inner optimizer adoption policies 与实验标记；
 - [ ] RNG/data cursor 抽象 hooks。
+- [ ] publication 后持续等待 committed successor、authoritative stop 或明确 no-progress outcome，不以单次空 listing/短 timeout 开始重叠 interval；
+- [ ] absent optional identity field 使用 canonical omission，不写 `null`；
+- [ ] typed validated publication result 在当次 attempt 内复用，不重复 read/hash/finite-check/publish 大对象。
 
 ### 3.2 明确不做
 
@@ -80,18 +85,16 @@ DuraLoCo 的 selected proposal 表示一段唯一 local work，而不是可能�
 ## 4. 预期仓库变更
 
 ```text
-fs_diloco/learner_v2/
-  __init__.py
-  runtime.py
+fs_diloco/learner.py
+fs_diloco/learner_protocol/
   session.py
   interval.py
-  proposal.py
   publication.py
   adoption.py
   recovery.py
   data_cursor.py
   rng_state.py
-tests/learner_v2/
+tests/learner_protocol/
   test_interval_base_freeze.py
   test_sequence_idempotency.py
   test_boundary_adoption.py
@@ -100,7 +103,7 @@ tests/learner_v2/
   test_inner_optimizer_policy.py
 ```
 
-不得同时保留 `fs_diloco/learner.py` 和创建同名 `fs_diloco/learner/` package。公共 entrypoint 必须继续使用 M00/P05 确立的 SQLite-free authority，不得保留或恢复 DB-backed learner 路径。
+不得建立与现有 `fs_diloco.learner` 并行的 runtime/default path。可抽取无冲突的纯 policy/state modules，但公共 entrypoint、publication 和 adoption 路径必须唯一。
 
 ## 5. 需要先冻结的设计决策
 
@@ -112,6 +115,9 @@ tests/learner_v2/
 - [ ] D-0606：session sequence 在 immutable publication/request object 中的 durable identity，以及如何从 log/listing 恢复；不得使用数据库 counter。
 - [ ] D-0607：publication/adoption request identity 与 committed-ancestry reconciliation；
 - [ ] D-0608：reference、runtime 与 replay 共用的 interval/adoption policy kernel 边界。
+- [ ] D-0609：M00 bfloat16 proposal transport 与 float32 aggregation/committed params 的 implementation identity 如何在 interval/adoption manifest 中冻结；
+- [ ] D-0610：committed-successor/no-progress/authoritative-stop 等待状态机，以及 P05 epoch/owner 变更时如何重新绑定 base；
+- [ ] D-0611：optional predecessor identity 的 canonical omission 和 cross-session 边界。
 
 每项决策必须写入 `plans/duraloco/DECISIONS.md`，包含：上下文、候选方案、所选方案、拒绝方案、兼容性影响和可逆性。不得把未决语义隐藏在实现细节中。
 
@@ -158,13 +164,17 @@ tests/learner_v2/
 
 - [ ] 使用 storage API immutable puts；
 - [ ] 先 payload 后 manifest；
-- [ ] 保存 local publication state；
+- [ ] 用 immutable publication/request identity 恢复重试，不保存本地持久化 publication state；
 - [ ] 冲突 fail closed。
+- [ ] 复用 M00 marker-last publication 和 typed validated bytes/result；
+- [ ] publication 后进入 committed-successor/stop/no-progress 等待状态，新 epoch/head 到达前不开始重叠 interval。
 
 **本循环验证。**
 
 - [ ] 任意 publication crash 重启后最多一个 canonical proposal；
 - [ ] syncer 可验证/消费。
+- [ ] payload 发布后 marker 前 crash 留下的 orphan 不可见为 proposal，恢复可重用同 ObjectRef；
+- [ ] absent optional predecessor 不以 `null` 进入 identity，显式 `null`/conflict fail closed。
 
 **本循环持久化输出。**
 
@@ -252,6 +262,10 @@ tests/learner_v2/
 - [ ] global stop race；
 - [ ] same ID conflicting payload；
 - [ ] slow learner stale proposal。
+- [ ] 单次 listing omission/短 timeout 后的 committed-successor backpressure；
+- [ ] payload-before-marker crash 与 marker response loss；
+- [ ] epoch/owner 在 interval 中切换；
+- [ ] bfloat16 proposal 与 float32 committed state numeric/identity 回归。
 
 ## 8. 验收标准
 
@@ -266,20 +280,24 @@ tests/learner_v2/
 - [ ] P06-A07：warm restart 能继续训练且明确记录 lost/repeated work；
 - [ ] P06-A08：fragment_count=1 与 full/reference 在 numeric contract 内一致；
 - [ ] P06-A09：Miyabi 1-node real path ≤10 step finite；
-- [ ] P06-A10：2-node learner+syncer v2 E2E。
+- [ ] P06-A10：2-node learner + P05 production syncer E2E。
 - [ ] P06-A11：`fs-diloco-learner` 和 `python -m fs_diloco.learner` 一致使用 SQLite-free authority，旧 DB flags/config keys 明确 fail closed。
 - [ ] P06-A12：publication response-loss 以 request identity 辨识，并覆盖同 ID/同内容、不同 ID/同内容和同 ID/冲突内容；
 - [ ] P06-A13：reference/runtime/replay 在 adversarial proposal order、restart 与 cross-session boundary 上生成相同 adoption digest；
 - [ ] P06-A14：最终 1/2-node 证据包含失败/取消/重试 manifests 和 `parent_run_id` lineage，当前 state/report/tests 一致。
 - [ ] P06-A15：active source/config/CLI/scripts/tests/new artifacts 中没有 SQLite/embedded-DB 依赖，session/sequence 可在空本地目录下恢复且不重用。
 - [ ] P06-A16：9-node GPT-2/WikiText-2 terminal run 以 1 syncer + 8 learners、`inner_steps=50`、10 outer transitions 在 15 分钟 walltime 内通过，且 interval/adoption/warm-restart 断言全部成立。
+- [ ] P06-A17：重放 M00 same-base flood 反例，publication 后的空 listing/短 timeout 不产生重叠 interval，并在 payload read 前拒绝已消费 base；
+- [ ] P06-A18：marker-last publication 的 payload/marker crash-response-loss matrix 通过，learner 包含 immutable publication 能力但静态和 runtime audit 均证明无 head-CAS surface；
+- [ ] P06-A19：absent optional predecessor 采用 canonical omission，`null`/unknown/conflicting field 的 identity tests fail closed；
+- [ ] P06-A20：M00 bfloat16 proposal transport/float32 aggregation 与 committed state 在 full/fragment、restart、adoption 中的 numeric/implementation digest 不回归，且一次 attempt 不重复大对象 I/O/验证。
 
 ## 9. 验证矩阵
 
 | 层级 | 要求 |
 |---|---|
 | 本地 | interval/publication/restart tests；tiny synthetic E2E。 |
-| Miyabi 1-node | 必须：真实 model/data ≤10 optimizer steps，finite loss，至少一个 v2 commit/adoption。 |
+| Miyabi 1-node | 必须：真实 model/data ≤10 optimizer steps，finite loss，至少一个 production commit/boundary adoption。 |
 | Miyabi 2-node | 必须：syncer 与 learner 分节点，proposal→commit→adopt→stop。 |
 | 9-node | 必须：GPT-2/WikiText-2 1S+8L、50×10、15 分钟 terminal gate，包含 interval/adoption/warm-restart 断言。 |
 
@@ -318,6 +336,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
 - 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
+- 非 transient 9-node terminal 失败后禁止立即同 shape 重提；必须先完成 workflow review、targeted 1-node benchmark 和同 clean commit 1→2-node 重验收，再只提交一次新 retry。
 
 ## 13. 阶段完成报告模板
 
@@ -334,6 +353,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/08_P06_LEARNER_INTERVALS_ADOPTION_AND_RECOVERY.md
 共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
 系统设计：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/SQLITE_FREE_SYSTEM_DESIGN.md
+M00 经验：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/M00_IMPLEMENTATION_LESSONS.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 

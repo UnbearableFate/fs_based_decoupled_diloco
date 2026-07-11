@@ -1,9 +1,9 @@
 ---
 title: "DuraLoCo Codex Loop Operating Contract"
-version: "2.0"
+version: "2.1"
 date: "2026-07-11"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
-planning_basis: "codex/fs-diloco-miyabi @ afc50a1e179c64321645b278b2497ea3ab3fe24d"
+planning_basis: "M00 corrected archival tip 89ae48aae5956b09fc6685074d3ea0eaea36b816"
 ---
 
 # DuraLoCo Codex Loop Operating Contract
@@ -49,6 +49,7 @@ git log -5 --oneline
 - 当前阶段文件；
 - M00 及后续阶段的 `P00_P04_IMPLEMENTATION_LESSONS.md`；
 - M00 及后续阶段的 `SQLITE_FREE_SYSTEM_DESIGN.md`；
+- P05 及后续阶段的 `M00_IMPLEMENTATION_LESSONS.md`；
 - `plans/duraloco/STATE.yaml`；
 - 尚未关闭的 `DECISIONS.md`、`BLOCKERS.md`；
 - 上一阶段 `PHASE_REPORT.md`；
@@ -79,6 +80,8 @@ git log -5 --oneline
 - 保留迁移期兼容路径，除非阶段计划明确删除；SQLite 是 M00 明确要删除的例外，不得以兼容为由保留读路径；
 - 新增依赖必须有 ADR、版本约束和无依赖替代方案评估；
 - 权威状态只能有一个来源；运行时索引只能是进程内 `RuntimeView`，必须能从 log 重放，不得落盘为数据库；
+- fresh open、takeover、explicit verify、CAS ambiguity、head jump 和 corruption suspicion 从 empty-cache strict replay 开始；已验证 ObjectRef memoization 只能是当前 process/owner 的优化，不得序列化或跨 ownership 传递；
+- 大对象处理必须先做廉价 metadata/base/epoch rejection，然后进行 typed vectorized validation；一次 transaction attempt 中不得重复 read/hash/finite-check/publish 同一 ObjectRef；
 - 协议行为必须通过类型、schema 和显式错误表达，不能依靠目录名或隐含排序。
 
 ### 2.4 HARDEN
@@ -152,12 +155,13 @@ plans/duraloco/phases/PXX_PHASE_REPORT.md
 - 可逆且位于既定 research contract 内的协议、默认值和实现选择由 agent 决定，写入 `DECISIONS.md`，经独立 Checker 复核后生效。
 - 自动推进不授权 merge `main`、发布 artifact/公开数据、使用真实凭据或公共云/付费资源、超过 Miyabi 自主资源范围、删除共享数据或执行 destructive lifecycle 操作；这些外部风险动作仍按明确审批门处理，但不阻止不依赖该动作的后续工作。
 - 若下一 phase 有多个依赖，只有所有依赖 phase 都 `completed` 且集成 Checker 通过后才自动进入；P07/P08 等并行分支必须按依赖图汇合，不得以单分支完成冒充集成完成。可选 P09 不得阻塞 P10–P12 或主线完成，且不得被自动启动。
-- 历史 P04 完成后必须先完成 M00；M00 未通过全部 P00–P04 重验收 gate 和独立 Checker 时，P05 不得启动。
+- M00 已在 corrected archival tip `89ae48aae5956b09fc6685074d3ea0eaea36b816` 完成，verified implementation 为 `c052438a3cfe5e16c3b154fc842f32dcd61ec6ff`，最终 Checker 无 required follow-up。P05 必须从该 corrected archival tip 或经 drift report 证明等价的后继 commit 开始。
 
 ### 2.9 P00–P04 经验驱动的 M00 与后续必需 gate
 
 M00 及后续阶段必须读取并执行
-`P00_P04_IMPLEMENTATION_LESSONS.md` 和 `SQLITE_FREE_SYSTEM_DESIGN.md`。以下约束来自已经发生且由独立
+`P00_P04_IMPLEMENTATION_LESSONS.md` 和 `SQLITE_FREE_SYSTEM_DESIGN.md`。P05 及后续阶段还必须读取
+`M00_IMPLEMENTATION_LESSONS.md`。以下约束来自已经发生且由独立
 Checker 复现的失败：
 
 - 所有可重试 mutation 以持久化 request identity 区分原请求重试与
@@ -178,6 +182,11 @@ Checker 复现的失败：
   non-claim；queue/cancel/resubmit 必须绑定相同 commit/config/gates 并记录 lineage。
 - 活跃代码、配置、CLI、脚本、测试和新 artifact 不得导入、创建、备份或恢复 SQLite/DB；静态 forbidden-surface 扫描是每个后续 milestone 的必需 gate。
 - 历史 SQLite run 不得就地迁移；如需利用其 checkpoint，只能显式 bootstrap 到新 generation，并标记为 warm-start 而非 exact continuation。
+- object-type schema 必须区分 proposal floating dtype 与 optimizer-state integer scalar；identity-bearing optional field 缺失时必须 canonical omission，不得以 `null` 代替。
+- learner 可以 marker-last 方式发布 immutable content-addressed proposal，但不得拥有 head-CAS surface；publication 后必须等待 committed successor、authoritative stop 或明确 no-progress policy，不得从同一 base 产生 proposal flood。
+- M00 确立的 production replay contract 是：strict 与 memoized 结果对每个 prefix digest 等价；memoization key 是完整 `(key, sha256, size)` ObjectRef，且只在完整 replay 成功后更新。
+- transaction telemetry 不得只报一个 aggregate interval；至少分离 catalog/rejection、read/hash/validation、aggregation、outer step、immutable publication、coordination、head CAS、strict/memoized replay、export/adoption。
+- 任何非 transient 9-node terminal 失败后，必须先暂停同 shape 重提，保留 authority timeline/stage timings/qstat/manifest，完成 workflow/root-cause review 和最小 1-node benchmark，再在同一 clean commit 通过 1-node、2-node 资格验证后只提交一次新 9-node retry。
 
 ## 3. 分支与 Worktree 纪律
 
@@ -201,64 +210,45 @@ WIP commit 可以存在于 feature branch；提交合并候选前可在用户授
 
 ### 4.1 STATE.yaml 最小字段
 
-```yaml
-phase: P00
-status: in_progress  # planned | in_progress | blocked | checking | completed | ready_to_merge | merged
-base_branch: codex/fs-diloco-miyabi
-base_commit: <sha>
-feature_branch: codex/duraloco-p00-contract
-current_loop: 1
-current_goal: "..."
-attempts_for_current_failure: 0
-last_verified_commit: null
-checks:
-  local_static: not_run
-  local_runtime: not_run
-  miyabi_login_static: not_run
-  miyabi_1node: not_run
-  miyabi_2node: not_run
-  miyabi_9node: not_run
-open_decisions: []
-open_blockers: []
-artifacts: []
-next_action: "..."
-automatic_progression: true
-requires_human_approval: false
-approval_reason: null  # 仅用于外部风险动作，不用于 goal/phase 过渡
-```
+`templates/PHASE_STATE.yaml` 是可直接复制并通过当前 checker 的 P05
+literal initial state；不再使用 `PXX` 或省略 acceptance 的伪代码冒充可执行
+YAML。机器权威 schema 是 `scripts/agent/check_phase_state.py`，要求：
+
+- planning/actual base、feature branch、loop/goal 和 verified commit；
+- 与当前 phase plan 完全相等的 acceptance ID set；
+- checks、decisions、blockers、artifacts、next action、approval 和 checker report；
+- P05 及以后的 `last_terminal_failure_review` 和
+  `terminal_retry_authorized`，以及指向 targeted 1-node benchmark、同 clean
+  commit Miyabi 1-node/2-node manifests 的 `terminal_retry_qualification` map。
+  `terminal_retry_authorized: true` 时 review 和三项 qualification 不得为空。
+
+后续 phase 初始化时，从当前阶段计划生成完整 acceptance map，再用
+checker 验证；不得手工保留前一 phase 的数量或 ID。
 
 ### 4.2 Run manifest 最小字段
 
-每次验证或实验产生不可变 manifest：
+每次验证或实验产生不可变 manifest。历史 M00 及以前 artifact 保留
+schema v1；P05 及以后的新 manifest 必须使用 schema v2。机器权威定义是
+`scripts/agent/check_run_manifest.py`，完整 v2 shape 在
+`templates/RUN_MANIFEST.json`。必需字段包括：
 
-```json
-{
-  "run_id": "<uuid-or-content-id>",
-  "purpose": "unit|contract|smoke|chaos|benchmark|experiment",
-  "phase": "P00",
-  "git_commit": "<sha>",
-  "dirty_tree": false,
-  "hostname": "<host>",
-  "pbs_job_id": null,
-  "pbs_nodefile_digest": null,
-  "config_path": null,
-  "config_digest": null,
-  "dataset_revision": null,
-  "model_revision": null,
-  "backend": "memory|posix|lustre|minio|s3|hybrid",
-  "seed": null,
-  "commands_log": "commands.log",
-  "stdout": "stdout.log",
-  "stderr": "stderr.log",
-  "exit_code": 0,
-  "started_at_utc": "...",
-  "ended_at_utc": "...",
-  "result": "pass|fail|inconclusive",
-  "assertions": []
-}
-```
+- v1 的 run/parent ID、purpose/phase、git/dirty state、host/PBS/config/model/data/backend/seed、
+  commands/stdout/stderr、exit/result/assertions 和 self digest；
+- 稳定 `validation_shape` 和结构化 `termination_kind`；
+- PBS queue/requested resources/final qstat state/termination detail；
+- authority head before/after、stage metrics 和 workflow review references；
+- 授权 terminal retry 的同 commit targeted benchmark、1-node 和 2-node qualification references。
 
-禁止覆盖同一 run manifest。重试必须使用新的 run ID，并通过 `parent_run_id` 指向同一 validation shape 的前一次尝试。作业提交后即建立 manifest；即使作业在 allocation 前取消，也要记录 queue、job ID、请求资源、最后 qstat 状态、取消原因和 `result: inconclusive`（或等价的结构化状态）。
+使用 `create_run_manifest.py --validation-shape <stable-shape>` 生成；创建器会对
+P05 及以后默认选择 schema v2，也允许显式传入 `--schema-version 2`。不得手工
+混合 v1/v2 字段。
+
+禁止覆盖同一 run manifest。重试必须使用新的 run ID，并通过 `parent_run_id`
+指向同一 validation shape 的前一次尝试。提交时先建立 run 目录和 append-only
+submission record；terminal outcome 已知后只创建一次最终 immutable manifest，
+不得先写占位 manifest 再覆盖。即使作业在 allocation 前取消，也要写最终
+`result: inconclusive` / `termination_kind: pre_allocation_cancelled` manifest，并记录
+queue、job ID、请求资源、最后 qstat 状态和取消原因。
 
 ## 5. Miyabi 执行契约
 
@@ -371,6 +361,7 @@ mpirun ... /usr/bin/env "KEY=value" ... bash -lc '...'
 - 需要真实凭据、删除共享数据、运行 destructive GC；
 - 出现可能污染论文结果的数据/代码版本不一致；
 - 无法判断当前是否处于 Miyabi login 或 compute node。
+- 一次非 transient 9-node terminal 失败后，尚未完成 workflow/root-cause review、targeted 1-node benchmark 和同 clean commit 的 1→2-node 重验收，却准备再次提交同 shape 作业。
 
 停止时创建 `BLOCKER-<date>-<slug>.md`，包括最小复现、预期/实际、已尝试方案、证据、影响范围、候选决策和推荐下一步。不要用扩大重构来掩盖阻塞。
 
@@ -403,7 +394,9 @@ mpirun ... /usr/bin/env "KEY=value" ... bash -lc '...'
 6. 结果中没有未解释的 NaN、重复 apply、split-brain、live-object deletion 或状态漂移；
 7. 未自动 merge `main`；阶段推进使用 verified phase/integration commit，不等待 main merge。
 8. 从 P04 起，每个尚未归档的 milestone（包括 M00）必须以一次真实 Miyabi 9-node
-   GPT-2 + WikiText-2 训练作为 terminal gate：1 个 syncer、8 个 learner，
+   GPT-2 + WikiText-2 训练作为 terminal gate：8 个 learner node + 1 个 syncer node，
+   默认 syncer node 上运行一个 active syncer；P05/P11 failover gate 可在该节点
+   同时运行 active/standby 两个进程，但同一时刻只有当前 fenced owner 可写，
    `training.inner_steps=50`，并且恰好提交 10 个 global/outer optimizer
    transitions。synthetic、tiny model、少节点或仅 pytest 结果不得替代。
 9. 该 9-node 作业必须在相同 verified commit 上执行本阶段全部新增功能的
@@ -419,6 +412,7 @@ mpirun ... /usr/bin/env "KEY=value" ... bash -lc '...'
     已归档的历史阶段；P04 terminal run 必须以累计方式覆盖当前 harness 可见的
     P00–P04 功能；M00 必须用无 SQLite 实现重新覆盖这些功能，P05 及以后不得再使用该历史豁免。
 11. 从 M00 起，forbidden-surface 扫描必须证明活跃代码、配置、CLI、脚本、测试和新 artifacts 中没有 SQLite/嵌入式数据库依赖；历史报告和设计说明中的否定性文字除外。
+12. P05 及以后的新 run manifests 必须使用 schema v2，并通过当前 `check_run_manifest.py`；历史 v1 manifests 保持可验证但不得作为新 phase 的模板。
 
 ## 11. 共同启动指令
 
@@ -429,7 +423,7 @@ mpirun ... /usr/bin/env "KEY=value" ... bash -lc '...'
 ## 12. 参考
 
 - Miyabi Codex skill：https://github.com/UnbearableFate/miyabi-development
-- 当前 prototype：https://github.com/UnbearableFate/fs_based_decoupled_diloco/tree/codex/fs-diloco-miyabi
+- 当前 SQLite-free baseline：M00 corrected archival tip `89ae48aae5956b09fc6685074d3ea0eaea36b816`
 - OpenAI Codex skills：`https://developers.openai.com/codex/skills`
 - OpenAI Codex `AGENTS.md`：`https://developers.openai.com/codex/guides/agents-md`
 - OpenAI Codex worktrees：`https://developers.openai.com/codex/app/worktrees`

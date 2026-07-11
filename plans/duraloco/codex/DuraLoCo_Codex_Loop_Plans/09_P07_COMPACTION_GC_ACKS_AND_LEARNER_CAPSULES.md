@@ -28,7 +28,8 @@ human_approval_gates:
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
 > 6. `SQLITE_FREE_SYSTEM_DESIGN.md`；
-> 7. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 7. `M00_IMPLEMENTATION_LESSONS.md`；
+> 8. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
 > P07 必须以 P06 双语报告记录的 verified commit 为基线；执行时验证 commit 并对任何前进生成 drift report，不得强制 reset。
 
@@ -46,10 +47,11 @@ DuraLoCo 可以将 committed update log 用作全局 checkpoint，同时通过�
 
 ## 2. 前置条件
 
-- [ ] P04 committed log 稳定；
+- [ ] M00 strict/memoized production replay 与 P05 control/optimizer log 稳定；
 - [ ] P06 learner state/cursor hooks 存在；
 - [ ] storage prefix 完全隔离；
 - [ ] 定义 pinned experiments/replay policy。
+- [ ] M00 learner payload-before-marker publication 和 P06 interval/session semantics 已冻结；
 
 ## 3. 范围
 
@@ -65,6 +67,8 @@ DuraLoCo 可以将 committed update log 用作全局 checkpoint，同时通过�
 - [ ] concurrent restore/GC safety；
 - [ ] learner capsule：model local state、inner optimizer、scheduler/scaler、RNG、data cursor、interval state；
 - [ ] accelerated bounded-storage soak。
+- [ ] 对 payload 已发布但 marker 未发布的 in-flight object 建立 publication grace；
+- [ ] strict full、memoized full 和 snapshot+suffix 三种 replay 对每个 prefix digest 等价，corrupt snapshot 回退 empty-cache strict replay。
 
 ### 3.2 明确不做
 
@@ -83,7 +87,7 @@ fs_diloco/log/
   gc.py
   pins.py
   acknowledgements.py
-fs_diloco/learner_v2/
+fs_diloco/learner_protocol/
   capsule.py
   exact_recovery.py
 fs_diloco/duraloco_cli/
@@ -110,6 +114,9 @@ tests/lifecycle/
 - [ ] D-0704：orphan grace、quarantine retention 和 replay pin；
 - [ ] D-0705：capsule consistency point 与未决 proposal 的处理；
 - [ ] D-0706：GC 操作的二阶段 mark/apply 与审批 token。
+- [ ] D-0707：M00 payload-before-marker window、未完成 multipart/临时 publication 和 quarantine object 的 grace roots；
+- [ ] D-0708：snapshot+suffix 如何与 process-local verified ObjectRef memoization 组合，哪些情况必须 empty-cache strict fallback；
+- [ ] D-0709：P05 fencing/control transitions、authoritative stop 和 P06 session/interval facts 在 snapshot/reachability 中的完整性。
 
 每项决策必须写入 `plans/duraloco/DECISIONS.md`，包含：上下文、候选方案、所选方案、拒绝方案、兼容性影响和可逆性。不得把未决语义隐藏在实现细节中。
 
@@ -136,6 +143,8 @@ tests/lifecycle/
 - [ ] snapshot/no snapshot state digest 相同；
 - [ ] crash 后旧 snapshot 仍可用；
 - [ ] corrupt snapshot fallback。
+- [ ] snapshot+suffix、memoized full 与 empty-cache strict full 对每个 prefix digest 相同；
+- [ ] fallback 后不复用失败 snapshot/cache 产生的任何新 memoization。
 
 **本循环持久化输出。**
 
@@ -163,6 +172,7 @@ tests/lifecycle/
 
 - [ ] 每个 live object 有引用路径；
 - [ ] 每个 candidate delete 有原因和 grace。
+- [ ] payload-before-marker、marker response-loss、active lease/owner、未完成 capsule/snapshot 都有可解释 grace/root 分类。
 
 **本循环持久化输出。**
 
@@ -281,6 +291,9 @@ tests/lifecycle/
 - [ ] delete timeout after effect；
 - [ ] capsule partial/corrupt；
 - [ ] inactive/reactivated learner。
+- [ ] payload immutable put 成功后 marker 前 learner kill/list omission/GC race；
+- [ ] stale memoized process 与 corrupt/new snapshot head jump；
+- [ ] corruption fixture 必须使用 distinct successor ObjectRef，不原地改写已缓存 content identity。
 
 ## 8. 验收标准
 
@@ -301,6 +314,10 @@ tests/lifecycle/
 - [ ] P07-A13：最终 soak/1-node 与 Checker 证据包含完整 attempt lineage，当前 state/report/tests/checksums 一致。
 - [ ] P07-A14：snapshot+suffix 和 full replay 在空本地目录下 digest 等价，active surface 不含 SQLite/embedded DB。
 - [ ] P07-A15：9-node GPT-2/WikiText-2 terminal run 在 15 分钟内完成 1S+8L、50×10，并验证 snapshot/replay/capsule 与 GC dry-run 断言。
+- [ ] P07-A16：empty-cache strict full、memoized full、snapshot+suffix 对每个 control/optimizer prefix digest 一致，corrupt/missing/stale snapshot 会 fail closed 并回退 strict replay；
+- [ ] P07-A17：M00 marker-last publication 的 payload-before-marker kill + listing omission + concurrent GC 反例零 live deletion，grace 到期前 object 有可解释 root；
+- [ ] P07-A18：reachability snapshot 包含 P05 epoch/owner/control stop 和 P06 session/interval/capsule facts，GC 不把 control-only transition 误认为可删除或 outer transition；
+- [ ] P07-A19：corruption tests 使用 distinct content-addressed successor refs，并证明失败 replay/snapshot 不污染 process-local memoization。
 
 ## 9. 验证矩阵
 
@@ -346,6 +363,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
 - 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
+- 非 transient 9-node terminal 失败后禁止立即同 shape 重提；必须先完成 workflow review、targeted 1-node benchmark 和同 clean commit 1→2-node 重验收，再只提交一次新 retry。
 
 ## 13. 阶段完成报告模板
 
@@ -362,6 +380,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/09_P07_COMPACTION_GC_ACKS_AND_LEARNER_CAPSULES.md
 共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
 系统设计：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/SQLITE_FREE_SYSTEM_DESIGN.md
+M00 经验：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/M00_IMPLEMENTATION_LESSONS.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 

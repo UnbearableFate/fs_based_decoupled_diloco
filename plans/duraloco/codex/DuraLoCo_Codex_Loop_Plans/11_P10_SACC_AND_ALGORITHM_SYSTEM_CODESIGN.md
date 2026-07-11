@@ -28,7 +28,8 @@ human_approval_gates: []
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
 > 6. `SQLITE_FREE_SYSTEM_DESIGN.md`；
-> 7. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 7. `M00_IMPLEMENTATION_LESSONS.md`；
+> 8. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
 > P10 必须以 P07/P08 通过集成 Checker 的 verified commit 为基线；执行时验证 commit 并对任何前进生成 drift report，不得强制 reset。
 
@@ -50,6 +51,8 @@ DuraLoCo 不只是把已知日志协议接到持久存储；它针对 Decoupled 
 - [ ] P03 POSIX/Lustre backend 可测；
 - [ ] P07 lifecycle 可处理策略产生的对象；
 - [ ] 固定-policy baseline 已保存。
+- [ ] M00/P08 分阶段 telemetry 能区分 cheap rejection、payload I/O/validation、publication、coordination、CAS、strict/memoized/snapshot replay 和 export/adoption；
+- [ ] M00 7m24s terminal 与 replay timings 只作 observed fixed-policy baseline，不作 controller target。
 
 ## 3. 范围
 
@@ -68,6 +71,7 @@ DuraLoCo 不只是把已知日志协议接到持久存储；它针对 Decoupled 
 - [ ] controller decisions 进入 commit/replay；
 - [ ] simulator + small model ablation。
 - [ ] simulator/runtime/replay 调用同一 fairness/materialization/action policy kernel。
+- [ ] controller 不得通过延长 strict replay 间隔、跨 owner 复用 memoization、跳过 full validation 或削弱 committed-successor backpressure 来获得表面 goodput。
 
 ### 3.2 明确不做
 
@@ -110,6 +114,8 @@ tests/controller/
 - [ ] D-1006：cost function 单位和 provider normalization；
 - [ ] D-1007：controller state 是否成为 frontier 的一部分。
 - [ ] D-1008：policy kernel 的唯一性、版本 digest 与 simulator/runtime/replay 等价性边界。
+- [ ] D-1009：哪些 M00/P05/P08 stage metrics 是 controller observation，如何避免用 aggregate interval 误归因；
+- [ ] D-1010：controller action 在 owner/epoch/head jump、strict fallback 和 replay-cache invalidation 期间的冻结/回退语义。
 
 每项决策必须写入 `plans/duraloco/DECISIONS.md`，包含：上下文、候选方案、所选方案、拒绝方案、兼容性影响和可逆性。不得把未决语义隐藏在实现细节中。
 
@@ -282,7 +288,7 @@ tests/controller/
 
 以下条件是阶段 gate，不是建议。Maker 必须给出命令、退出码和 artifact 路径；Checker 必须逐项复核。
 
-- [ ] P10-A01：controller trace replay deterministic；
+- [ ] P10-A01：P07/P08 已汇合到同一 clean integration commit，独立 integration Checker 对两组 acceptance evidence 与共享 log/head/frontier/commit 契约给出 `PASS`；随后 controller trace replay deterministic；
 - [ ] P10-A02：shadow mode 对训练无行为影响；
 - [ ] P10-A03：adaptive grace 有 min/max/hysteresis；
 - [ ] P10-A04：fair selection 消除稳定 lexical bias且无长期饥饿；
@@ -296,6 +302,9 @@ tests/controller/
 - [ ] P10-A12：fixed/shadow/enforced 每个 run 的失败、取消与重试有 manifest lineage，最终 Checker 在最终干净 commit 重放当前套件。
 - [ ] P10-A13：删除进程派生状态后 controller replay 结果不变，active source/config/artifacts 不含 SQLite/embedded DB。
 - [ ] P10-A14：9-node GPT-2/WikiText-2 terminal run 在 15 分钟内完成 1S+8L、50×10，并验证经 shadow/guardrail 授权的 SACC 路径及 replay。
+- [ ] P10-A15：controller observation 仅使用结构化 stage metrics，能分辨 validation/I/O/publication/coordination/CAS/replay/export 瓶颈，不从单一 global interval 猜测 root cause；
+- [ ] P10-A16：enforced policy 不改变 M00 strict replay trigger、memoization ownership、typed validation、marker-last publication 或 committed-successor backpressure；回归 mutant 证明任一削弱会被拒绝；
+- [ ] P10-A17：owner/epoch/head jump 或 strict fallback 发生时，当前 action 废弃或按 committed decision 确定恢复，不复用旧 observation/cache。
 
 ## 9. 验证矩阵
 
@@ -342,6 +351,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
 - 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
+- 非 transient 9-node terminal 失败后禁止立即同 shape 重提；必须先完成 workflow review、targeted 1-node benchmark 和同 clean commit 1→2-node 重验收，再只提交一次新 retry。
 
 ## 13. 阶段完成报告模板
 
@@ -358,6 +368,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/11_P10_SACC_AND_ALGORITHM_SYSTEM_CODESIGN.md
 共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
 系统设计：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/SQLITE_FREE_SYSTEM_DESIGN.md
+M00 经验：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/M00_IMPLEMENTATION_LESSONS.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 

@@ -69,8 +69,13 @@ RuntimeView
   stop/fencing/controller state when available
 ```
 
-M00 先使用完整 prefix replay。P07 引入 snapshot + suffix replay 后可降低启动成本，
-但 snapshot 本身也必须是 head-reachable 的权威事实，不得引入本地数据库依赖。
+M00 已验证两种同一语义 replay：fresh open、takeover、explicit verify、CAS
+ambiguity、head jump 或 corruption suspicion 使用 empty-cache strict full replay；同一
+process/owner 的 steady-state replay 仍完整验证 head 和 manifest/causal chain，但可对该
+process 已成功验证的完整 ObjectRef `(key, sha256, size)` 跳过大 tensor
+重读。memoization 只在完整 replay 成功后更新，不序列化、不跨 owner、不是
+authority。P07 引入 snapshot + suffix replay 后可降低启动成本，但 snapshot 本身
+也必须是 head-reachable 权威事实，并与 strict/memoized full replay digest 等价。
 
 ### 3.2 运行时更新
 
@@ -83,15 +88,17 @@ M00 先使用完整 prefix replay。P07 引入 snapshot + suffix replay 后可�
 
 ## 4. Proposal discovery 与选择
 
-1. learner 先发布不可变 payload，再发布 Protocol v2 manifest；
+1. learner 先发布 content-addressed immutable payload，最后发布 discovery marker/Protocol v2 manifest；learner 可 immutable put，但不得拥有 head-CAS surface；
 2. scanner listing 只用于发现 candidate key，可以重复、漏项或重排；
 3. syncer 对每个 candidate 执行 P01 full validation 和 immutable-byte snapshot；
-4. 使用 `RuntimeView` 排除已消费、已 drop、错误 base、rollback 或超 staleness
-   proposal；
+4. 使用 `RuntimeView` 在 payload I/O 前排除已消费 interval/base、已 drop、错误 epoch、rollback 或超 staleness proposal，production tensor 使用 typed vectorized validation；
 5. 调用与 P02 reference/replay 共用的 deterministic selection kernel；
 6. CAS conflict 后丢弃内存 selection，对新 head 完整 replay/revalidate/reselect。
 
 scanner cursor 只能是内存 hint。重启时允许从头扫描；正确性不依赖 cursor 持久化。
+一次 transaction attempt 内 scan/load/publish 复用 typed validated result，不对同一 ObjectRef
+重复 read/hash/finite-check/fsync。候选可并发验证，但最终 selection order 和 quarantine
+结果必须确定。
 
 ## 5. 生产 tensor transition
 

@@ -27,7 +27,8 @@ human_approval_gates: []
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
 > 6. `SQLITE_FREE_SYSTEM_DESIGN.md`；
-> 7. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 7. `M00_IMPLEMENTATION_LESSONS.md`；
+> 8. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
 > P08 必须以 P06 双语报告记录的 verified commit 为基线；执行时验证 commit 并对任何前进生成 drift report，不得强制 reset。
 
@@ -49,6 +50,8 @@ Storage-native 协议的开销不是由低效 prototype 实现主导；fragment 
 - [ ] P02 numeric oracle 可比较；
 - [ ] 明确 whole-tensor fragmentation 初版保持不变；
 - [ ] 记录性能前基线。
+- [ ] 导入 M00 observed baseline：7m24s terminal、strict replay 6.177/6.875s、memoized 0.013s、steady post-CAS replay 4.835–4.940s，并将其标为 observed 而非 target；
+- [ ] M00 typed vectorized validation、ObjectRef memoization、learner-side immutable publication 和 bfloat16 transport/float32 committed-state 契约仍通过。
 
 ## 3. 范围
 
@@ -65,6 +68,9 @@ Storage-native 协议的开销不是由低效 prototype 实现主导；fragment 
 - [ ] memory/I/O/request benchmark harness；
 - [ ] legacy vs optimized 数值对照。
 - [ ] optimized/runtime/reference 共用选择与数值语义，不重复实现 policy。
+- [ ] typed validated result 在 scan/prefetch/reduce/publish 一次 attempt 内复用，对同 ObjectRef 不重复 read/SHA/finite-check/fsync；
+- [ ] cheap base/epoch/consumed rejection 先于 payload I/O，CAS conflict、P05 epoch change 或 head jump 后废弃 prefetch/selection 并严格重验；
+- [ ] strict/memoized/snapshot+suffix replay 的大对象读取计数、digest 和 fallback 可观测。
 
 ### 3.2 明确不做
 
@@ -105,6 +111,9 @@ tests/performance_core/
 - [ ] D-0803：CPU/GPU overlap 是否默认启用；
 - [ ] D-0804：scanner watermark 和 listing 仅 discovery 的实现；
 - [ ] D-0805：telemetry event schema 与 overhead sampling。
+- [ ] D-0806：M00 bfloat16 proposal transport、float32 accumulation/committed params 与 direct fragment codec 的 dtype/implementation identity；
+- [ ] D-0807：typed validated result 的 lifetime，prefetch cancellation 和 P05 owner/epoch 切换时的 invalidation；
+- [ ] D-0808：strict/memoized/snapshot+suffix replay 的 I/O counters 和 correctness fallback telemetry。
 
 每项决策必须写入 `plans/duraloco/DECISIONS.md`，包含：上下文、候选方案、所选方案、拒绝方案、兼容性影响和可逆性。不得把未决语义隐藏在实现细节中。
 
@@ -121,6 +130,7 @@ tests/performance_core/
 **实现任务。**
 
 - [ ] 测量 bytes copied、peak RSS/VRAM、read/write、object ops、latency；
+- [ ] 分离 cheap rejection、read、SHA、structural/finite validation、aggregation、outer step、immutable publication、coordination、head CAS、strict/memoized replay、export/adoption；
 - [ ] 记录 model-equivalent tensor sizes；
 - [ ] 生成 raw JSON。
 
@@ -179,6 +189,7 @@ tests/performance_core/
 - [ ] 校验每个输入后释放；
 - [ ] deterministic/reference mode；
 - [ ] bounded prefetch。
+- [ ] 输入进入 reducer 前必须持有 typed validation token，不在 reducer 里重读/重验证；
 
 **本循环验证。**
 
@@ -215,6 +226,8 @@ tests/performance_core/
 - [ ] restart 不漏 committed manifest；
 - [ ] 重复 discovery 幂等；
 - [ ] telemetry 可重建每个 commit timeline。
+- [ ] P05 owner/epoch/head 变化取消旧 prefetch 和 validated result，不把它们带入新 transaction attempt；
+- [ ] memoized replay 读取零历史大对象的优化不削弱 fresh strict replay 损坏检测。
 
 **本循环持久化输出。**
 
@@ -245,6 +258,9 @@ tests/performance_core/
 - [ ] telemetry file crash；
 - [ ] mixed dtype/shape；
 - [ ] q scaling。
+- [ ] epoch/head jump 取消 in-flight prefetch/reducer；
+- [ ] stale typed validation token 和 distinct corrupt successor ObjectRef；
+- [ ] bfloat16 proposal/float32 accumulation 的 overflow、NaN 和 tolerance 边界。
 
 ## 8. 验收标准
 
@@ -262,6 +278,10 @@ tests/performance_core/
 - [ ] P08-A10：profile/benchmark 的 fail、inconclusive、queued-cancelled 和 retry 都有 raw manifest lineage，最终 Checker 在最终干净 commit 重放当前等价套件。
 - [ ] P08-A11：scanner restart 在空本地目录下不丢失 correctness，active surface 与 telemetry artifacts 不含 SQLite/DB。
 - [ ] P08-A12：9-node GPT-2/WikiText-2 terminal run 在 15 分钟内完成 1S+8L、50×10，同时产生 direct-I/O/streaming/telemetry 断言和 raw profile。
+- [ ] P08-A13：每个 ObjectRef 在单次 transaction attempt 的 read/SHA/finite-check/publish 次数有上界断言，scan/prefetch/reduce/publish 复用 typed validated result；
+- [ ] P08-A14：M00 bfloat16 proposal/float32 accumulation 与 committed params 在 direct fragment/streaming path 中符合 numeric 合同，任何 dtype 改动都绑定新 implementation identity；
+- [ ] P08-A15：P05 epoch/head jump 会取消旧 prefetch/reduction/validated token 并 strict revalidate，distinct corrupt successor fail closed，失败不污染 memoization；
+- [ ] P08-A16：telemetry 可分别还原 M00 列出的所有 critical-path stages，并同时报告 strict/memoized/snapshot+suffix 的 digest、大对象读取数和 fallback reason。
 
 ## 9. 验证矩阵
 
@@ -308,6 +328,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
 - 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
+- 非 transient 9-node terminal 失败后禁止立即同 shape 重提；必须先完成 workflow review、targeted 1-node benchmark 和同 clean commit 1→2-node 重验收，再只提交一次新 retry。
 
 ## 13. 阶段完成报告模板
 
@@ -324,6 +345,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/10_P08_DIRECT_FRAGMENT_IO_STREAMING_REDUCER_AND_TELEMETRY.md
 共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
 系统设计：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/SQLITE_FREE_SYSTEM_DESIGN.md
+M00 经验：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/M00_IMPLEMENTATION_LESSONS.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 

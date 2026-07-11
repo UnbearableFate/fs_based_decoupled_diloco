@@ -29,7 +29,8 @@ human_approval_gates:
 > 4. 上一阶段的 `PHASE_REPORT.md`、`STATE.yaml` 和未关闭的决策记录；
 > 5. `P00_P04_IMPLEMENTATION_LESSONS.md`；
 > 6. `SQLITE_FREE_SYSTEM_DESIGN.md`；
-> 7. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
+> 7. `M00_IMPLEMENTATION_LESSONS.md`；
+> 8. `references/DuraLoCo_research_draft_zh.md` 中与本阶段对应的章节。
 >
 > P11 必须以 P10 双语报告记录的 verified commit 为基线；执行时验证 commit 并对任何前进生成 drift report，不得强制 reset。
 
@@ -66,7 +67,10 @@ DuraLoCo 在目标 Lustre/PBS/GPU 环境中不仅通过模拟，还能在 8 lear
 - [ ] logs/metrics/state digests packager；
 - [ ] 1-node 10-step real model/data；
 - [ ] 2-node failover；
-- [ ] 9-node 8L+1S acceptance；
+- [ ] 9-node 使用 8 个 learner node + 1 个 syncer node acceptance；
+- [ ] 第 9 个 syncer node 可同时运行 active/standby 两进程，在不增加节点的情况下重放 P05 takeover；
+- [ ] authority static audit 检查“所有 head mutation 经单一 audited API”，而不用脆弱的字面调用次数替代语义审计；
+- [ ] M00 strict/memoized replay、same-base flood、marker-last publication、distinct-corrupt-successor 反例纳入 fault tape/acceptance checker。
 - [ ] 运行后安全 cleanup/retention report。
 
 ### 3.2 明确不做
@@ -107,6 +111,8 @@ tests/test_acceptance_checker.py
 - [ ] D-1104：Lustre run root/stripe、进程临时目录与 model/dataset 缓存路径（不含协议状态或数据库）；
 - [ ] D-1105：9-node acceptance 的 commit/fragment/step 上限；
 - [ ] D-1106：acceptance 后保留哪些 artifacts。
+- [ ] D-1107：9-node 单 syncer node 上 active/standby process/GPU/CPU 映射、kill scope 和 takeover deadline；
+- [ ] D-1108：non-transient terminal 失败后 workflow review、targeted benchmark、1→2-node requalification 和唯一新 retry 的自动化 gate。
 
 每项决策必须写入 `plans/duraloco/DECISIONS.md`，包含：上下文、候选方案、所选方案、拒绝方案、兼容性影响和可逆性。不得把未决语义隐藏在实现细节中。
 
@@ -271,6 +277,8 @@ tests/test_acceptance_checker.py
 - [ ] acceptance checker 验证 protocol state 而非只看进程退出；
 - [ ] 所有角色日志可关联同 run ID。
 - [ ] PBS/config/preflight/artifact packager 禁止 SQLite flags、`.db`/`.sqlite` 路径和 DB dumps；恢复只依赖 committed log/head。
+- [ ] takeover/fresh open 必须 empty-cache strict replay，memoization 不跨 process/owner；
+- [ ] terminal 失败不得丢失有效 committed prefix，deliberate operator termination 记录真实 exit status、authority timeline 和 stage timings。
 
 ### 7.2 必须覆盖的故障与反例
 
@@ -291,7 +299,7 @@ tests/test_acceptance_checker.py
 - [ ] P11-A02：1-node real ≤10-step v2 run 完成且 finite；
 - [ ] P11-A03：2-node failover 无 split-brain/double inclusion；
 - [ ] P11-A04：fault tape 与 state verify artifact 完整；
-- [ ] P11-A05：agent 自主提交的 9-node GPT-2/WikiText-2 8L+1S acceptance 以 `inner_steps=50`、10 outer transitions 在 15 分钟 walltime 内通过；
+- [ ] P11-A05：agent 自主提交的 9-node GPT-2/WikiText-2 acceptance 使用 8 个 learner node + 1 个 syncer node，以 `inner_steps=50`、10 outer transitions 在 15 分钟 walltime 内通过；syncer node 的双进程拓扑由 P11-A15 定义；
 - [ ] P11-A06：9-node 每个角色 hostname/rank/GPU/run ID 可追踪；
 - [ ] P11-A07：所有 commits 可 replay/verify；
 - [ ] P11-A08：artifact packager 在缺证据时 fail closed；
@@ -299,6 +307,11 @@ tests/test_acceptance_checker.py
 - [ ] P11-A10：1/2/9-node 的 pass/fail/inconclusive/queued-cancelled 尝试都有 commit/config/queue/qstat 绑定的 manifest 和每个 validation shape 的 `parent_run_id` lineage；
 - [ ] P11-A11：最终 Checker 从最终干净 commit/bundle 重跑当前 persisted suite、至少一个历史反例和一个新反例，state/report/checksum 同步为绿。
 - [ ] P11-A12：集成 preflight 对 active source/config/CLI/PBS/tests/new artifacts 执行 forbidden-surface 扫描，证明无 SQLite/嵌入式数据库依赖和 DB dump。
+- [ ] P11-A13：authority audit 证明 syncer/control/optimizer 的所有 head mutation 通过唯一 audited transactional API，learner/standby-before-acquire 无 head-CAS surface；
+- [ ] P11-A14：fault tape 重放 M00 writer-kill+listing-omission 和 stale-cache+head-jump+distinct-corrupt-successor，以及 P05 active-kill/old-owner-resume；全部 fail closed、cache 不污染、零 double inclusion；
+- [ ] P11-A15：9-node syncer node 上 active/standby 两进程完成一次 takeover，8 learners 仍在 15 分钟内完成 50×10；
+- [ ] P11-A16：acceptance harness 在任何 non-transient terminal 失败后锁住同 shape resubmit，直到 review、targeted 1-node benchmark 和同 commit 1→2-node requalification 的 evidence references 完整；
+- [ ] P11-A17：deliberate termination/failure bundle 保留真实 exit status、已提交 prefix、authority timeline、stage timings、qstat 和 parent lineage，不把操作员终止冒充 infrastructure failure。
 
 ## 9. 验证矩阵
 
@@ -308,7 +321,7 @@ tests/test_acceptance_checker.py
 | Miyabi login | 必须：git/static/qsub/qstat/log only。 |
 | Miyabi 1-node | 必须。 |
 | Miyabi 2-node | 必须，最大 debug walltime 10 分钟。 |
-| Miyabi 9-node | agent 自主提交 1S+8L、50×10、15 分钟 terminal gate；不得以更长 walltime 替代失败。 |
+| Miyabi 9-node | agent 自主提交 8 learner nodes + 1 active/standby syncer node、50×10、15 分钟 terminal gate；不得以更长 walltime 替代失败。 |
 
 1/2/9-node runtime 每次尝试后必须检查 `qstat "$PBS_JOBID"`。9-node 不再设置 `READY_FOR_9NODE_APPROVAL` 状态；前置 gate 通过后由 agent 自主提交，未实际通过则不得标记 P11 完成。
 
@@ -347,6 +360,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 - 需要在 Miyabi 登录节点运行被禁止的 runtime 命令：停止，转为 PBS allocation。
 - 单个 Miyabi 作业可由 agent 自主决定并提交（`select<=16`、`walltime<=02:00:00`，包括 9 节点）；超出该范围或需要付费公共云资源时停止并取得明确批准。
 - 发现基础分支包含未合并的用户改动或基线漂移：保留改动，生成 drift report，不得覆盖。
+- 非 transient 9-node terminal 失败后 acceptance harness 必须禁止立即同 shape 重提，直到 workflow review、targeted 1-node benchmark 和同 clean commit 1→2-node 重验收证据完整。
 
 ## 13. 阶段完成报告模板
 
@@ -363,6 +377,7 @@ Checker 不得直接修改 Maker 的工作树。发现问题后，由 Maker 在�
 阶段计划：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/12_P11_MIYABI_INTEGRATION_CHAOS_AND_9NODE_ACCEPTANCE.md
 共同契约：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/00_CODEX_LOOP_OPERATING_CONTRACT.md
 系统设计：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/SQLITE_FREE_SYSTEM_DESIGN.md
+M00 经验：plans/duraloco/codex/DuraLoCo_Codex_Loop_Plans/M00_IMPLEMENTATION_LESSONS.md
 
 先执行 hostname、git status --short --branch、git rev-parse HEAD，并读取 AGENTS.md、共同契约、当前阶段文件、上一阶段报告和相关研究草稿。若基线漂移，先写 drift report；不要 reset 用户改动。
 

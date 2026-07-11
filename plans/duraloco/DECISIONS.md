@@ -335,3 +335,36 @@ run generation plus an explicit compatibility amendment.
 - Rejected: aliases retain operational ambiguity; an active legacy reader violates M00's deletion contract.
 - Compatibility: historical artifacts remain untouched and inspectable only with their archived code.
 - Reversibility: exact migration would require a separately approved archival design and cannot become an active runtime dependency.
+
+## M00 完成后的路线修订说明
+
+D-M0010–D-M0012 来自已归档 M00 evidence 的事后提炼，不追溯修改 M00 verdict。
+它们在 P05 独立 Checker 显式复核其 evidence attribution 和后续约束后，才作为
+P05+ 的规范性路线决策生效。
+
+## D-M0010 — Strict replay with ownership-bound verified-object memoization
+
+- Context: fresh production replay must detect corruption, while rereading every historical GPT-2 tensor after every CAS made the terminal path quadratic and repeatedly revalidated immutable bytes.
+- Candidates: always reread every tensor; persist a replay cache; create a second incremental replay state machine; keep one causal replay and memoize verified immutable ObjectRefs in process memory.
+- Choice: every replay reloads head and verifies the complete manifest/causal chain. Fresh open, takeover, explicit verify, CAS ambiguity, head jump, cache deletion, and corruption suspicion use an empty cache and strict tensor replay. A process may skip a large tensor read only for a complete `(key, sha256, size)` ObjectRef verified earlier by that process and reached through the freshly verified chain. Memoization updates only after complete replay success, is never serialized, and never crosses owner/session boundaries.
+- Rejected: always-reread failed the terminal budget; persisted cache violates M00; a second replay state machine risks semantic drift.
+- Compatibility: strict and memoized results are digest-equal for full and fragment prefixes; M00 observed strict CPU/GPU replay was 6.177/6.875s and memoized replay 0.013s.
+- Reversibility: P07 snapshot+suffix may accelerate startup only if it remains digest-equal and falls back to empty-cache strict replay.
+
+## D-M0011 — Marker-last learner publication and committed-successor backpressure
+
+- Context: centralized syncer publication serialized large fsyncs, while short post-publication waits allowed learners to flood same-base proposals during slow validation.
+- Candidates: syncer republishes payloads; learner publishes mutable latest; learner publishes content-addressed payload then marker and waits for committed successor.
+- Choice: learners may publish immutable content-addressed proposal payloads in parallel, then publish the discovery marker last. Learners have no head-CAS surface. After publication they wait for a committed successor, authoritative stop, or explicit no-progress outcome before opening another interval.
+- Rejected: syncer republication duplicated I/O; mutable latest creates authority ambiguity; one-scan waiting creates overlapping same-base work.
+- Compatibility: bfloat16 proposal transport with float32 aggregation/committed params passed M00 50×10; GC must protect payload-before-marker in-flight objects with grace.
+- Reversibility: transport dtype or wait policy changes require implementation identity, numeric evidence, and same-base flood regression.
+
+## D-M0012 — Stage-complete telemetry and terminal retry discipline
+
+- Context: aggregate interval timing hid successive bottlenecks and enabled repeated expensive 9-node guesses.
+- Candidates: retain aggregate timing; add complete stage events; automatically resubmit after each local fix.
+- Choice: record catalog/rejection, read/SHA/validation, aggregation, outer step, immutable publication, coordination, head CAS, strict/memoized replay, export/adoption, and stop stages. After any non-transient terminal failure, preserve the authority timeline and qstat, write a workflow/root-cause review, prove the repair with a targeted one-node benchmark, rerun 1-node then 2-node qualification on the same clean commit, and permit only one new terminal retry.
+- Rejected: aggregate timing cannot attribute root cause; immediate resubmission consumed resources without isolating the path.
+- Compatibility: deliberate operator termination remains a real failed attempt with exit status, committed-prefix evidence, and parent lineage.
+- Reversibility: telemetry fields may be extended, but stages and retry evidence may not be collapsed or discarded.
