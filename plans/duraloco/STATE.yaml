@@ -49,7 +49,8 @@ artifacts:
   - plans/duraloco/phases/P06_DRIFT_REPORT.md
   - artifacts/duraloco/P06/20260711_p06_red_0f88501_1node
   - artifacts/duraloco/P06/20260711_p06_green_7f9029a_1node
-next_action: "run the integrated unit suite and tiny one-node production path on a compute node"
+  - artifacts/duraloco/P06/20260711_p06_runtime_5d5b946_1node
+next_action: "run the full suite and real GPT-2/WikiText-2 one-node production path"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
