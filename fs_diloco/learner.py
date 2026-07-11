@@ -30,6 +30,7 @@ from .fragment_scheduler import select_fragment
 from .hf_data import Batch, build_batch_iterator
 from .hf_model import choose_device, load_causal_lm_and_tokenizer
 from .logging_utils import JsonlLogger, log_uncaught_exception
+from .log.layout import LogLayout
 from .metrics import LEARNER_METRIC_FIELDS, UPDATE_MANIFEST_FIELDS, append_csv_row
 from .param_index import (
     build_param_index,
@@ -40,9 +41,28 @@ from .param_index import (
 )
 from .paths import RunPaths, prepare_run_dirs
 from .retention import cleanup_learner_update_artifacts
+from .storage import PosixStorageBackend
 from .tensor_codec import dtype_from_name, load_global_weights_flat, save_update_vector
 
 _SUCCESSFUL_STOP_REASONS = {"completed", "stop_after_outer_steps", "stop_after_global_tokens"}
+
+
+def publish_proposal_payload(
+    *,
+    paths: RunPaths,
+    config: Config,
+    tensor_path: Path,
+    digest: str,
+) -> None:
+    """Publish proposal bytes once from the learner before its discovery marker."""
+
+    backend = PosixStorageBackend(paths.authority)
+    layout = LogLayout(config.run.run_id, config.init.run_generation)
+    backend.put_immutable(
+        layout.proposal_payload_key(digest),
+        tensor_path.read_bytes(),
+        sha256=digest,
+    )
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -354,6 +374,12 @@ def write_update(
     created_at = time.time()
     save_update_vector(tensor_path, flat, dtype=dtype_from_name(config.io.tensor_dtype))
     digest = sha256_file(tensor_path)
+    publish_proposal_payload(
+        paths=paths,
+        config=config,
+        tensor_path=tensor_path,
+        digest=digest,
+    )
     metadata = {
         "format_version": FORMAT_VERSION,
         "run_id": config.run.run_id,
@@ -421,6 +447,12 @@ def write_fragment_update(
     created_at = time.time()
     save_fragment_update(tensor_path, fragment_tensor, dtype_from_name(config.io.tensor_dtype))
     digest = sha256_file(tensor_path)
+    publish_proposal_payload(
+        paths=paths,
+        config=config,
+        tensor_path=tensor_path,
+        digest=digest,
+    )
     metadata = {
         "format_version": FORMAT_VERSION,
         "update_kind": "fragment",
