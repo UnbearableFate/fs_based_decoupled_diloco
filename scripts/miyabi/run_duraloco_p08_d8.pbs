@@ -83,6 +83,7 @@ printf '%q ' "${command[@]}" | tee "$ARTIFACT_ROOT/commands.log"; printf '\n' | 
 elapsed=$(($(date +%s) - started))
 "$PYTHON_BIN" scripts/agent/create_p06b_d8_report.py --root "$TRAINING_ROOT" \
   --artifacts "$ARTIFACT_ROOT" --run-id "$TRAIN_RUN" --elapsed-seconds "$elapsed" \
+  --max-elapsed-seconds 1500 \
   --output "$ARTIFACT_ROOT/factor_one_base_report.json" | tee -a "$ARTIFACT_ROOT/stdout.log"
 "$PYTHON_BIN" scripts/agent/create_p08_performance_report.py factor-one \
   --root "$TRAINING_ROOT" --artifacts "$ARTIFACT_ROOT" --run-id "$TRAIN_RUN" \

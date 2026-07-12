@@ -1,0 +1,46 @@
+#!/bin/bash
+#PBS -N duraloco_p08_report
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:10:00
+#PBS -j oe
+
+set -eEuo pipefail
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat CUDA_VISIBLE_DEVICES=""
+: "${EXPECTED_COMMIT:?}" "${RUN_ID:?}" "${ARTIFACT_ROOT:?}"
+: "${TRAINING_ROOT:?}" "${SOURCE_ARTIFACT_ROOT:?}" "${TRAIN_RUN_ID:?}"
+PROJECT_ROOT="${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}"
+PYTHON_BIN="$PROJECT_ROOT/.venv/bin/python"
+CONFIG="$PROJECT_ROOT/configs/duraloco_milestone_gpt2_9node_50x10.yaml"
+cd "$PROJECT_ROOT"
+mkdir "$ARTIFACT_ROOT"
+touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log" "$ARTIFACT_ROOT/commands.log"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+result=fail; exit_code=1
+finish() {
+  observed=$?; [[ "$result" == pass ]] && exit_code=0 || { [[ "$observed" -eq 0 ]] || exit_code=$observed; }
+  qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
+  args=(--root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json" --phase P08
+    --purpose benchmark --run-id "$RUN_ID" --schema-version 2
+    --validation-shape p08-d8-report-envelope-recovery-1node --backend lustre
+    --config scripts/miyabi/run_duraloco_p08_d8_report_recovery.pbs
+    --commands-log commands.log --stdout stdout.log --stderr stderr.log
+    --exit-code "$exit_code" --result "$result"
+    --termination-kind "$([[ "$result" == pass ]] && echo success || echo test_failure)"
+    --pbs-queue debug-g --requested-resources select=1:mpiprocs=1,walltime=00:10:00
+    --last-qstat-state R --termination-detail "P08-E024 preserved D8 report envelope proof"
+    --assertion "legacy P06B keeps its 900-second default while P08 binds its explicit 1500-second allocation envelope")
+  [[ -f "$ARTIFACT_ROOT/factor_one_base_report.json" ]] && args+=(--stage-metrics-path factor_one_base_report.json)
+  "$PYTHON_BIN" scripts/agent/create_run_manifest.py "${args[@]}" || true
+}
+trap finish EXIT
+trap 'echo "[ERROR] P08 report recovery failed at line $LINENO" | tee -a "$ARTIFACT_ROOT/stderr.log"' ERR
+[[ "$(git rev-parse HEAD)" == "$EXPECTED_COMMIT" ]]
+[[ -z "$(git status --porcelain=v1 --untracked-files=no)" ]]
+printf '%s\n' "$PYTHON_BIN scripts/agent/create_p06b_d8_report.py --max-elapsed-seconds 1500" > "$ARTIFACT_ROOT/commands.log"
+"$PYTHON_BIN" scripts/agent/create_p06b_d8_report.py --root "$TRAINING_ROOT" \
+  --artifacts "$SOURCE_ARTIFACT_ROOT" --run-id "$TRAIN_RUN_ID" --elapsed-seconds 1061 \
+  --max-elapsed-seconds 1500 --output "$ARTIFACT_ROOT/factor_one_base_report.json" \
+  2> >(tee -a "$ARTIFACT_ROOT/stderr.log" >&2) | tee -a "$ARTIFACT_ROOT/stdout.log"
+result=pass; exit_code=0

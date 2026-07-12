@@ -46,7 +46,14 @@ def _authority_inventory(root: Path) -> dict[str, int]:
     }
 
 
-def build(root: Path, artifacts: Path, run_id: str, elapsed: int) -> dict[str, object]:
+def build(
+    root: Path,
+    artifacts: Path,
+    run_id: str,
+    elapsed: int,
+    *,
+    max_elapsed_seconds: int = 900,
+) -> dict[str, object]:
     summary = json.loads((artifacts / "training_summary.json").read_text(encoding="utf-8"))
     log = ProductionTransactionalLog.open(PosixStorageBackend(root / "authority"), run_id, 0)
     view = build_runtime_view(log, force_full=True)
@@ -176,7 +183,7 @@ def build(root: Path, artifacts: Path, run_id: str, elapsed: int) -> dict[str, o
     assert report["optimizer_transitions"] == report["distributed_commits"] == 10
     assert report["prepared_markers"] == report["executor_prepare_events"] == 10
     assert report["executor_start_events"] == 8
-    assert losses and report["invalid_losses"] == 0 and elapsed <= 900
+    assert losses and report["invalid_losses"] == 0 and elapsed <= max_elapsed_seconds
     assert report["membership_revision"] == 0
     assert report["coordination_protocol"] == "distributed-head-fenced-v1"
     assert report["stop_reason"] == "stop_after_outer_steps"
@@ -193,9 +200,16 @@ def main() -> int:
     parser.add_argument("--artifacts", type=Path, required=True)
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--elapsed-seconds", type=int, required=True)
+    parser.add_argument("--max-elapsed-seconds", type=int, default=900)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    report = build(args.root, args.artifacts, args.run_id, args.elapsed_seconds)
+    report = build(
+        args.root,
+        args.artifacts,
+        args.run_id,
+        args.elapsed_seconds,
+        max_elapsed_seconds=args.max_elapsed_seconds,
+    )
     args.output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(report, sort_keys=True))
     return 0

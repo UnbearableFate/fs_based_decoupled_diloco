@@ -392,4 +392,23 @@ entries:
       - operator transcript immediately following tracejob 2370680.opbs
     correction: perform module-dependent diagnostics only in the dedicated compute benchmark; use rg and existing artifact JSON on login nodes
     retry_policy: no runtime retry; retain as an operator-control-plane violation and continue with compute-only validation
-last_updated: "2026-07-13T05:08:00+09:00"
+  - id: P08-E024
+    job: 2370782.opbs
+    shape: D8_factor_one_50x10
+    commit: 6cd515cc193b6a5d7dc3fd0efd8d6b67fa46565c
+    result: fail
+    failure_class: obsolete_postrun_elapsed_ceiling
+    expected: runtime and report pass within the P08 1500-second allocation envelope
+    actual: ten transitions and guarded normal terminal completed in 17:41 wall time; inherited P06B report asserted elapsed <= 900 seconds and failed before P08 stage reduction
+    authority_effect: complete normal terminal; no authority defect and no namespace reuse
+    runtime_started: true
+    evidence:
+      - plans/duraloco/phases/P08_9NODE_FAILURE_REVIEW_2370782.md
+      - artifacts/duraloco/P08/20260713_p08_d8_6cd515c_r2/manifest.json
+      - artifacts/duraloco/P08/20260713_p08_d8_6cd515c_r2/training_summary.json
+      - artifacts/duraloco/P08/20260713_p08_d8_6cd515c_r2_storage/training
+      - duraloco_p08_d8.o2370782
+      - tracejob 2370782.opbs
+    correction: parameterize the P06B reporter ceiling with a backward-compatible 900-second default and pass 1500 explicitly for P08
+    retry_policy: compute report proof plus clean 1-node and D2 qualification before one fresh D8 retry
+last_updated: "2026-07-13T05:48:00+09:00"

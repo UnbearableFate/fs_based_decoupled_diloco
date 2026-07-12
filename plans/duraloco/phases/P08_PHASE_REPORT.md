@@ -249,3 +249,11 @@ PBS `2370680` also overlapped that job under the same caller-supplied namespace;
 P08-E022 rejects the contaminated namespace and D-0818 adds atomic root claims.
 P08-E023 separately retains the immediately terminated login-node Python/torch
 diagnostic mistake. Neither incident supplies performance evidence.
+
+After clean requalification and matched C9 pass, PBS `2370782` completed ten
+guarded factor-one transitions and a normal terminal. The runtime stayed within
+its 25-minute P08 allocation, but the inherited P06B reporter rejected its
+17:41 wall time against an obsolete 900-second phase ceiling. P08-E024 and
+`P08_9NODE_FAILURE_REVIEW_2370782.md` preserve the successful runtime and
+post-run failure. The reporter now retains 900 seconds by default for P06B and
+accepts an explicit 1500-second P08 envelope.
