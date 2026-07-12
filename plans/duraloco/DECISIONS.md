@@ -884,3 +884,8 @@ P05+ 的规范性路线决策生效。
 
 - Choice: terminal stop uses the same separation as optimizer work: strict stop preparation is a non-authoritative heartbeat-guarded substage, the owner performs a final successful renewal, the caller thread executes the only head CAS, and post-CAS replay is read-only and heartbeat-guarded. A manifest-level pass without live-lease proof at stop CAS is inconclusive.
 - Rejected: using the convenience `commit_stop` when strict preparation can exceed TTL, treating a semantically correct but unfenced terminal as acceptance evidence, or extending TTL only for the shadow.
+
+## D-0817 — Distributed critical-path lease guard
+
+- Choice: executor-result wait, winner validation, immutable successor preparation, and post-CAS replay are non-authoritative substages and may run under the main-thread heartbeat helper. One final live renewal immediately precedes optimizer CAS. Distributed terminal stop follows D-0816, and lease-authority loss suppresses stop publication.
+- Rejected: guarding only executor wait, summing separately sub-TTL stages without renewal, or committing an error stop after the next-loop renewal proves expiry.

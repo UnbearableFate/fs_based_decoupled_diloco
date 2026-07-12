@@ -191,3 +191,20 @@ def test_committer_prepare_conflict_forces_strict_replay_and_result_wait_renews(
     assert "except (CommitConflict, InjectedTimeout)" in source
     assert "build_runtime_view(log, force_full=True)" in source
     assert 'substage="executor_result_wait"' in source
+
+
+def test_optimizer_and_stop_cas_have_long_stage_guards_and_final_renewals():
+    source = inspect.getsource(committer_module.run_committer)
+    prepare = source.index('substage="successor_prepare"')
+    renew = source.index('stage="optimizer_head_cas"', prepare)
+    cas = source.index("log.commit_prepared(prepared)", renew)
+    assert prepare < renew < cas
+    assert 'substage="post_cas_replay"' in source[cas:]
+    assert "stop_not_published_after_lease_authority_loss" in source
+
+    finalizer = inspect.getsource(committer_module._finalize_committer_stop)
+    stop_prepare = finalizer.index('substage="stop_prepare"')
+    stop_renew = finalizer.index('stage="stop_head_cas"', stop_prepare)
+    stop_cas = finalizer.index("log.commit_prepared(prepared)", stop_renew)
+    assert stop_prepare < stop_renew < stop_cas
+    assert 'substage="stop_post_cas_replay"' in finalizer[stop_cas:]

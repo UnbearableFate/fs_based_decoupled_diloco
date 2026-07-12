@@ -342,4 +342,23 @@ entries:
       - tracejob 2370521.opbs
     correction: split stop into guarded non-authoritative prepare, final lease renewal, caller-thread CAS, and guarded post-CAS replay
     retry_policy: rerun targeted compute, clean 1-node and 2-node qualification, then one fresh C9 attempt on the same clean commit
-last_updated: "2026-07-13T04:35:00+09:00"
+  - id: P08-E021
+    job: 2370677.opbs
+    shape: D8_factor_one_50x10
+    commit: a01b18bfe43049be700c21c05d6863821f5c42b9
+    result: fail
+    failure_class: distributed_committer_long_critical_path_lease_expiry
+    expected: ten factor-one optimizer transitions with complete stage timelines and normal terminal
+    actual: four transitions committed; publish-to-commit grew to 52.292 seconds while only executor wait was heartbeat-guarded, so the next renewal rejected the expired 45-second lease and the old finalizer committed an error stop
+    authority_effect: truthful error stop at commit_seq 6 and optimizer_transition_count 4; namespace is terminal
+    runtime_started: true
+    evidence:
+      - plans/duraloco/phases/P08_9NODE_FAILURE_REVIEW_2370677.md
+      - artifacts/duraloco/P08/20260713_p08_d8_a01b18b_r1/manifest.json
+      - artifacts/duraloco/P08/20260713_p08_d8_a01b18b_r1_storage/training
+      - artifacts/duraloco/P08/20260713_p08_d8_a01b18b_r1/member-001_committer.log
+      - duraloco_p08_d8.o2370677
+      - tracejob 2370677.opbs
+    correction: heartbeat winner validation, immutable prepare, and replay; renew immediately before optimizer CAS; guard distributed terminal stop and suppress stop after lease loss
+    retry_policy: targeted compute plus clean 1-node and 2-node qualification on one commit before one fresh D8 factor-one retry
+last_updated: "2026-07-13T05:04:00+09:00"

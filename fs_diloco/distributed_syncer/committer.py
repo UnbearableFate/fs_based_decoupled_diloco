@@ -11,6 +11,7 @@ from typing import Callable, TypeVar
 from fs_diloco.atomic_io import atomic_write_json
 from fs_diloco.atomic_io import safe_read_json
 from fs_diloco.config import Config
+from fs_diloco.coordination import CoordinationConflict
 from fs_diloco.distributed_syncer.bootstrap import distributed_run_spec_factory
 from fs_diloco.log.codec import verified_get
 from fs_diloco.log.codec import canonical_object
@@ -96,6 +97,8 @@ def _renew_for_authoritative_stage(
         "lifecycle_reachability_completed",
         "lifecycle_inventory_completed",
         "lifecycle_substage_heartbeat",
+        "optimizer_head_cas",
+        "stop_head_cas",
     }:
         raise ValueError("unknown authoritative lease-renewal stage")
     renewed = _renew_owner_lease(
@@ -265,6 +268,8 @@ def _finalize_committer_stop(
     member_id: str,
     owner_session_id: str,
     logger,
+    lease_manager=None,
+    loaded_lease=None,
 ):
     if view.authoritative_stop is None:
         request_id = "distributed-stop-" + canonical_digest(
@@ -276,8 +281,41 @@ def _finalize_committer_stop(
             }
         )
         try:
-            log.commit_stop(reason=reason, request_id=request_id)
-            view = build_runtime_view(log)
+            if lease_manager is None or loaded_lease is None:
+                log.commit_stop(reason=reason, request_id=request_id)
+                view = build_runtime_view(log)
+            else:
+                prepared, loaded_lease = _run_lifecycle_substage(
+                    lambda: log.prepare_control_transition(
+                        control_kind="stop",
+                        token=loaded_lease.record.owner_token,
+                        request_id=request_id,
+                        stop_reason=reason,
+                    ),
+                    substage="stop_prepare",
+                    lease_manager=lease_manager,
+                    loaded_lease=loaded_lease,
+                    config=config,
+                    logger=logger,
+                )
+                loaded_lease = _renew_for_authoritative_stage(
+                    lease_manager=lease_manager,
+                    loaded_lease=loaded_lease,
+                    config=config,
+                    logger=logger,
+                    stage="stop_head_cas",
+                )
+                result = log.commit_prepared(prepared)
+                view, loaded_lease = _run_lifecycle_substage(
+                    lambda: build_runtime_view(log),
+                    substage="stop_post_cas_replay",
+                    lease_manager=lease_manager,
+                    loaded_lease=loaded_lease,
+                    config=config,
+                    logger=logger,
+                )
+                if view.commit_id != result.commit_id or view.authoritative_stop is None:
+                    raise RuntimeError("guarded committer stop and replay-derived view differ")
         except CommitConflict as exc:
             logger.event(
                 "stale_owner_stop_rejected",
@@ -500,6 +538,7 @@ def run_committer(
     next_renew = time.monotonic() + config.coordination.renew_interval_seconds
     stop_reason = "completed"
     primary_error = False
+    lease_authority_lost = False
     try:
         while True:
             if config.sync.stop_after_outer_steps is not None and (
@@ -819,11 +858,18 @@ def run_committer(
             )
             next_renew = time.monotonic() + config.coordination.renew_interval_seconds
             validation_started_ns = time.monotonic_ns()
-            params_data, outer_data = _validate_result(
-                backend,
-                order=order,
-                result=result,
-                expected_aggregate_digest=plan.aggregate_digest,
+            (params_data, outer_data), loaded_lease = _run_lifecycle_substage(
+                lambda current_order=order, current_result=result, aggregate_digest=plan.aggregate_digest: _validate_result(
+                    backend,
+                    order=current_order,
+                    result=current_result,
+                    expected_aggregate_digest=aggregate_digest,
+                ),
+                substage="winner_validation",
+                lease_manager=lease_manager,
+                loaded_lease=loaded_lease,
+                config=config,
+                logger=logger,
             )
             stage_recorder.record(
                 "winner_validation",
@@ -851,16 +897,24 @@ def run_committer(
             )
             try:
                 successor_started_ns = time.monotonic_ns()
-                prepared = log.prepare_transition(
-                    fragment_id=fragment_id,
-                    selected_proposal_ids=plan.selected_proposal_ids,
-                    new_params=params_data,
-                    new_outer_state=outer_data,
-                    aggregate_digest=result.aggregate_digest,
-                    outer_optimizer_impl_digest=order.outer_optimizer_impl_digest,
-                    request_id=request_id,
-                    distributed_work_order_id=order.work_order_id,
-                    prepared_result_id=result.prepared_result_id,
+                prepare_kwargs = {
+                    "fragment_id": fragment_id,
+                    "selected_proposal_ids": plan.selected_proposal_ids,
+                    "new_params": params_data,
+                    "new_outer_state": outer_data,
+                    "aggregate_digest": result.aggregate_digest,
+                    "outer_optimizer_impl_digest": order.outer_optimizer_impl_digest,
+                    "request_id": request_id,
+                    "distributed_work_order_id": order.work_order_id,
+                    "prepared_result_id": result.prepared_result_id,
+                }
+                prepared, loaded_lease = _run_lifecycle_substage(
+                    lambda kwargs=prepare_kwargs: log.prepare_transition(**kwargs),
+                    substage="successor_prepare",
+                    lease_manager=lease_manager,
+                    loaded_lease=loaded_lease,
+                    config=config,
+                    logger=logger,
                 )
                 stage_recorder.record(
                     "successor_publication",
@@ -875,6 +929,16 @@ def run_committer(
                         "outer_state_bytes": len(outer_data),
                     },
                     attributes={"prepared_result_id": result.prepared_result_id},
+                )
+                loaded_lease = _renew_for_authoritative_stage(
+                    lease_manager=lease_manager,
+                    loaded_lease=loaded_lease,
+                    config=config,
+                    logger=logger,
+                    stage="optimizer_head_cas",
+                )
+                next_renew = (
+                    time.monotonic() + config.coordination.renew_interval_seconds
                 )
                 cas_started_ns = time.monotonic_ns()
                 log.commit_prepared(prepared)
@@ -915,7 +979,15 @@ def run_committer(
                     )
                 )
                 continue
-            view = build_runtime_view(log)
+            view, loaded_lease = _run_lifecycle_substage(
+                lambda: build_runtime_view(log),
+                substage="post_cas_replay",
+                lease_manager=lease_manager,
+                loaded_lease=loaded_lease,
+                config=config,
+                logger=logger,
+            )
+            next_renew = time.monotonic() + config.coordination.renew_interval_seconds
             fragments[fragment_id] = decode_production_params(params_data)
             states[fragment_id] = decode_production_outer_state(outer_data)
             if lifecycle_cadence and (
@@ -1122,6 +1194,12 @@ def run_committer(
                     "injected P08 committer error after committed transition"
                 )
             time.sleep(0.5)
+    except CoordinationConflict:
+        primary_error = True
+        lease_authority_lost = True
+        stop_reason = "lease_authority_lost"
+        logger.exception("lease_authority_lost", commit_seq=view.commit_seq)
+        raise
     except Exception:
         primary_error = True
         stop_reason = "error"
@@ -1129,17 +1207,25 @@ def run_committer(
         raise
     finally:
         try:
-            view = _finalize_committer_without_masking(
-                primary_error=primary_error,
-                logger=logger,
-                log=log,
-                view=view,
-                paths=paths,
-                config=config,
-                reason=stop_reason,
-                member_id=member_id,
-                owner_session_id=owner_session_id,
-            )
+            if lease_authority_lost:
+                logger.event(
+                    "stop_not_published_after_lease_authority_loss",
+                    commit_seq=view.commit_seq,
+                )
+            else:
+                view = _finalize_committer_without_masking(
+                    primary_error=primary_error,
+                    logger=logger,
+                    log=log,
+                    view=view,
+                    paths=paths,
+                    config=config,
+                    reason=stop_reason,
+                    member_id=member_id,
+                    owner_session_id=owner_session_id,
+                    lease_manager=lease_manager,
+                    loaded_lease=loaded_lease,
+                )
         finally:
             try:
                 active_path.unlink(missing_ok=True)

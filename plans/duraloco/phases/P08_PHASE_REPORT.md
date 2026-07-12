@@ -236,3 +236,12 @@ before its CAS. P08-E020 and `P08_9NODE_FAILURE_REVIEW_2370521.md` therefore
 classify the manifest-level pass as inconclusive. D-0816 splits terminal stop
 into guarded preparation, a final renewal, caller-thread CAS, and guarded
 post-CAS replay before one newly qualified C9 attempt.
+
+The final guarded C9 run, PBS `2370616`, passed ten transitions in 836 seconds;
+its 99.993-second terminal stage retained four stop-prepare and four post-CAS
+replay heartbeats with a final renewal before CAS. PBS `2370677` then exposed
+the same missing guard in the distributed factor-one path: publish-to-commit
+grew to 52.292 seconds by transition four because only executor wait, not
+winner validation, successor preparation, or replay, renewed the lease.
+P08-E021 and `P08_9NODE_FAILURE_REVIEW_2370677.md` preserve the error terminal,
+causal timings, repair, and mandatory requalification before one D8 retry.
