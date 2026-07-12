@@ -61,7 +61,11 @@ supervise() {
       committer_killed=1
       write_event committer_process_killed "$member_id"
       touch "$faults/${member_id}_committer_killed"
-      sleep 2
+      if [[ "${DETERMINISTIC_COMMITTER_FAILOVER:-0}" -eq 1 ]]; then
+        while [[ ! -f "$faults/${member_id}_release_committer" ]]; do sleep 0.1; done
+      else
+        sleep 2
+      fi
       standby_committer=("${committer[@]}")
       standby_committer+=(--standby)
       CUDA_VISIBLE_DEVICES="" "${standby_committer[@]}" >> "$ARTIFACT_ROOT/${member_id}_committer.log" 2>&1 & committer_pid=$!
@@ -158,6 +162,9 @@ PY
 
   printf '%s\n' member-001 > "$faults/kill_whole_member"
   while [[ ! -f "$faults/member-001_whole_killed" ]]; do [[ "$SECONDS" -lt "$deadline" ]]; sleep 0.1; done
+  if [[ "${DETERMINISTIC_COMMITTER_FAILOVER:-0}" -eq 1 ]]; then
+    touch "$faults/member-000_release_committer"
+  fi
   wait_for_new_order "$order2"
   mark_dispatch_failed member-001
   wait_for_count 4

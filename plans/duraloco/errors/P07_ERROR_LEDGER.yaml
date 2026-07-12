@@ -1,6 +1,38 @@
 schema: duraloco-error-ledger-v1
 phase: P07
 records:
+  - error_id: E-P07-20260712-03
+    phase_and_gate: P07.5/D2-R2
+    observed_at_utc: "2026-07-12T02:50:56Z"
+    pbs_job_id: 2365909.opbs
+    hosts: [mg0010, mg0011]
+    git_commit: 771ed9c15a146eae19e7cd91be94e211e5511cb0
+    classification: unexpected_failure
+    phenomenon:
+      exit_code: 1
+      exception: "create_p06c_d2_report: committer and combined failover did not advance fencing epochs"
+      terminal_state: "training, four optimizer transitions, four lifecycle snapshots, two-node faults, and strict replay completed; report gate rejected only two fencing epochs"
+      log_excerpt: duraloco_p07_d2.o2365909
+    expected: "active committer loss transfers epoch 2 to member-001; combined member-001 learner/committer loss transfers epoch 3 back to member-000"
+    impact:
+      acceptance_ids: [P07-A08, P07-A15, P07-A17]
+      invariants: ["D2 combined whole-host loss must actually include the active committer"]
+      committed_prefix_safe: true
+    cause:
+      confirmed: ["the killed member-000 committer restarted immediately and won the lease race, so later member-001 whole-host loss did not remove the active committer"]
+      unknown: []
+    repair:
+      change: "under the P07 deterministic fault-tape flag, hold member-000 committer restart until member-001 takes over and is then killed with its whole host"
+      rationale: "makes both intended ownership boundaries observable instead of relying on a lease race"
+    verification:
+      minimal_reproduction: "same D2-R2 four-transition fault tape"
+      targeted_gate: "three committed fencing epochs plus snapshot/capsule/reachability report"
+      qualification_ladder: ["Miyabi 1-node unit", "Miyabi 2-node D2-R2 rerun"]
+    retry_decision:
+      authorized: true
+      rationale: "2-node harness ordering repair after preserved safe-prefix evidence; not a 9-node terminal retry"
+      parent_run_id: 20260712_p07_d2_771ed9c
+    artifacts: [artifacts/duraloco/P07/20260712_p07_d2_771ed9c]
   - error_id: E-P07-20260712-01
     phase_and_gate: P07.1/snapshot-1node-preflight
     observed_at_utc: "2026-07-12T02:17:09Z"
