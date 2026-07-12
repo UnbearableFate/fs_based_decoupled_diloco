@@ -8,11 +8,12 @@ from typing import Any, Iterable, Mapping
 
 from fs_diloco.distributed_syncer.layout import DistributedLayout
 from fs_diloco.log.codec import canonical_object
-from fs_diloco.protocol.schemas import CommitManifest, ObjectRef
+from fs_diloco.protocol.schemas import CommitManifest, ObjectRef, ProposalManifest
 
 from .acknowledgements import LifecycleAcknowledgementV1
 from .pins import LifecyclePinV1
 from fs_diloco.learner_protocol.capsule import load_capsule
+from .replay import find_valid_snapshots
 
 
 @dataclass(frozen=True)
@@ -104,6 +105,11 @@ def _extract_refs(value: Any) -> tuple[ObjectRef, ...]:
 
 def _known_collectable(key: str, *, log_layout, distributed: DistributedLayout) -> bool:
     prefixes = (
+        f"{log_layout.immutable_prefix}commits/",
+        f"{log_layout.immutable_prefix}frontiers/",
+        f"{log_layout.immutable_prefix}fragments/",
+        log_layout.proposal_prefix,
+        f"{log_layout.immutable_prefix}distributed/memberships/",
         distributed.work_order_prefix,
         distributed.prepared_prefix,
         log_layout.learner_publication_prefix,
@@ -111,6 +117,9 @@ def _known_collectable(key: str, *, log_layout, distributed: DistributedLayout) 
         log_layout.acknowledgement_prefix,
         log_layout.pin_prefix,
         log_layout.capsule_prefix,
+        log_layout.mark_prefix,
+        log_layout.delete_request_prefix,
+        log_layout.delete_result_prefix,
     )
     return key.startswith(prefixes)
 
@@ -146,10 +155,81 @@ def build_reachability(
 
     root(layout.run_manifest_key, "run_manifest")
     root(layout.head_key, "current_global_head")
-    for key in replay.reachable_keys:
-        root(key, "committed_prefix")
+
+    # Keep two independently valid restore bases.  Only after a second base is
+    # available may physical objects covered by the older retained snapshot be
+    # reclaimed.  The snapshot embeds the verified logical prefix; the objects
+    # above it remain an ordinary, strictly validated committed suffix.
+    try:
+        snapshot_pins, _snapshot_failures = find_valid_snapshots(log.transactional, limit=2)
+    except AttributeError:
+        snapshot_pins, _snapshot_failures = find_valid_snapshots(log, limit=2)
+    compacted_base_seq: int | None = None
+    if len(snapshot_pins) >= 2:
+        compacted_base_seq = snapshot_pins[-1].snapshot.covered_head.commit_seq
+        for item in snapshot_pins:
+            root(item.snapshot_key, "retained_snapshot_restore_point")
+    else:
+        for key in replay.reachable_keys:
+            root(key, "committed_prefix_before_two_restore_points")
+
+    # Audit records are observational rather than optimizer authority.  Keep
+    # two observed generations in the active namespace; older records become
+    # compactable only after the two-snapshot grace gate above is established.
+    for prefix, reason in (
+        (layout.mark_prefix, "recent_gc_mark"),
+        (layout.delete_request_prefix, "recent_gc_delete_request"),
+        (layout.delete_result_prefix, "recent_gc_delete_result"),
+    ):
+        for key in sorted(item for item in inventory if item.startswith(prefix))[-2:]:
+            root(key, reason)
+
+    def in_live_suffix(commit_seq: int) -> bool:
+        return compacted_base_seq is None or commit_seq > compacted_base_seq
+
+    if compacted_base_seq is not None:
+        for frontier in replay.frontiers:
+            if in_live_suffix(frontier.commit_seq):
+                frontier_key = layout.frontier_key(
+                    frontier.commit_seq, frontier.frontier_sha256
+                )
+                root(frontier_key, "snapshot_suffix_frontier")
+                for fragment in frontier.fragments.values():
+                    edge(frontier_key, fragment.params_ref.key, "frontier_params")
+                    edge(frontier_key, fragment.outer_state_ref.key, "frontier_outer_state")
+                if frontier.membership is not None:
+                    edge(
+                        frontier_key,
+                        frontier.membership.membership_ref.key,
+                        "frontier_membership",
+                    )
+        for commit in replay.commits:
+            if not in_live_suffix(commit.commit_seq):
+                continue
+            commit_key = layout.commit_key(commit.commit_seq, commit.commit_id)
+            root(commit_key, "snapshot_suffix_commit")
+            if isinstance(commit, CommitManifest):
+                for selected in commit.selected_proposals:
+                    proposal = replay.proposals.get(selected.proposal_id)
+                    proposal_key = layout.proposal_key(selected.proposal_id)
+                    edge(commit_key, proposal_key, "selected_proposal")
+                    if isinstance(proposal, ProposalManifest):
+                        edge(proposal_key, proposal.payload_key, "proposal_payload")
+            elif getattr(commit, "membership", None) is not None:
+                edge(
+                    commit_key,
+                    commit.membership.membership_ref.key,
+                    "committed_membership",
+                )
+            if getattr(commit, "snapshot", None) is not None and any(
+                item.snapshot_key == commit.snapshot.snapshot_ref.key
+                for item in snapshot_pins
+            ):
+                edge(commit_key, commit.snapshot.snapshot_ref.key, "snapshot_pin")
 
     for commit in replay.commits:
+        if not in_live_suffix(commit.commit_seq):
+            continue
         commit_key = layout.commit_key(commit.commit_seq, commit.commit_id)
         if not isinstance(commit, CommitManifest):
             if getattr(commit, "snapshot", None) is not None:
@@ -240,6 +320,7 @@ def build_reachability(
             root(key, "invalid_pin_quarantine")
 
     released_refs: set[str] = set()
+    acknowledgements: list[tuple[str, LifecycleAcknowledgementV1]] = []
     for key in sorted(
         key for key in inventory if key.startswith(layout.acknowledgement_prefix)
     ):
@@ -247,16 +328,48 @@ def build_reachability(
             acknowledgement = LifecycleAcknowledgementV1.from_dict(
                 canonical_object(backend.get(key))
             )
-            root(key, f"ack:{acknowledgement.kind}")
-            if acknowledgement.kind != "no_longer_needs":
-                for ref in acknowledgement.object_refs:
-                    edge(key, ref.key, f"ack_ref:{acknowledgement.kind}")
-            else:
+            acknowledgements.append((key, acknowledgement))
+            if acknowledgement.kind == "no_longer_needs":
                 released_refs.update(ref.key for ref in acknowledgement.object_refs)
         except Exception:
             root(key, "invalid_ack_quarantine")
 
+    retained_ack_keys: set[str] = set()
+    acknowledgement_groups: dict[
+        tuple[str, str, str, int | None],
+        list[tuple[str, LifecycleAcknowledgementV1]],
+    ] = {}
+    for item in acknowledgements:
+        key, acknowledgement = item
+        group = (
+            acknowledgement.role,
+            acknowledgement.subject_id,
+            acknowledgement.kind,
+            acknowledgement.fragment_id,
+        )
+        acknowledgement_groups.setdefault(group, []).append(item)
+    for items in acknowledgement_groups.values():
+        retained_ack_keys.update(
+            key
+            for key, _ack in sorted(
+                items,
+                key=lambda item: (
+                    item[1].commit_seq,
+                    item[1].session_id,
+                    item[1].acknowledgement_id,
+                ),
+            )[-2:]
+        )
+    for key, acknowledgement in acknowledgements:
+        if key not in retained_ack_keys:
+            continue
+        root(key, f"ack:{acknowledgement.kind}")
+        if acknowledgement.kind != "no_longer_needs":
+            for ref in acknowledgement.object_refs:
+                edge(key, ref.key, f"ack_ref:{acknowledgement.kind}")
+
     capsule_marker_prefix = f"{layout.capsule_prefix}markers/"
+    capsules = []
     for key in sorted(
         key for key in inventory if key.startswith(capsule_marker_prefix)
     ):
@@ -264,14 +377,33 @@ def build_reachability(
             marker = canonical_object(backend.get(key))
             capsule = load_capsule(backend, key)
             manifest_ref = ObjectRef.from_dict(marker["manifest_ref"])
-            released = key in released_refs
-            if not released or key not in eligible:
-                root(key, "learner_capsule")
-                edge(key, manifest_ref.key, "capsule_manifest")
-                for kind, ref in capsule.components:
-                    edge(manifest_ref.key, ref.key, f"capsule_component:{kind}")
+            capsules.append((key, capsule, manifest_ref))
         except Exception:
             root(key, "invalid_capsule_quarantine")
+
+    retained_capsule_keys: set[str] = set()
+    capsule_groups: dict[str, list[tuple[str, Any, ObjectRef]]] = {}
+    for item in capsules:
+        capsule_groups.setdefault(item[1].learner_id, []).append(item)
+    for items in capsule_groups.values():
+        retained_capsule_keys.update(
+            key
+            for key, _capsule, _manifest_ref in sorted(
+                items,
+                key=lambda item: (
+                    item[1].frontier_commit_seq,
+                    item[1].sequence,
+                    item[1].capsule_id,
+                ),
+            )[-2:]
+        )
+    for key, capsule, manifest_ref in capsules:
+        released = key in released_refs and key in eligible
+        if key in retained_capsule_keys and not released:
+            root(key, "learner_capsule_restore_point")
+            edge(key, manifest_ref.key, "capsule_manifest")
+            for kind, ref in capsule.components:
+                edge(manifest_ref.key, ref.key, f"capsule_component:{kind}")
 
     adjacency: dict[str, set[str]] = {}
     for source, target, _reason in edges:
@@ -292,7 +424,24 @@ def build_reachability(
             continue
         if not _known_collectable(key, log_layout=layout, distributed=distributed):
             protected_unknown.append(key)
-        elif key in eligible:
+        elif key in eligible or (
+            compacted_base_seq is not None
+            and key.startswith(
+                (
+                    f"{layout.immutable_prefix}commits/",
+                    f"{layout.immutable_prefix}frontiers/",
+                    f"{layout.immutable_prefix}fragments/",
+                    layout.proposal_prefix,
+                    f"{layout.immutable_prefix}distributed/memberships/",
+                    layout.snapshot_prefix,
+                    layout.acknowledgement_prefix,
+                    layout.capsule_prefix,
+                    layout.mark_prefix,
+                    layout.delete_request_prefix,
+                    layout.delete_result_prefix,
+                )
+            )
+        ):
             candidates.append(key)
         else:
             root(key, "grace_not_elapsed")

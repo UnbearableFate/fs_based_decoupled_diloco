@@ -7,6 +7,7 @@ from fs_diloco.log.acknowledgements import (
 )
 from fs_diloco.log.pins import LifecyclePinV1, publish_pin
 from fs_diloco.log.reachability import build_reachability
+from fs_diloco.protocol.canonical_json import canonical_bytes
 from tests.distributed_syncer.test_distributed_transition_binding import (
     _initialize,
     _prepare,
@@ -130,3 +131,62 @@ def test_capsuled_ack_roots_every_bound_object_ref():
 
     assert component.key in report.reachable
     assert component.key not in report.candidates
+
+
+def test_same_digest_loser_grace_and_divergent_blocker_are_distinct():
+    log, prepared = _committed_log("prepared-retention")
+    distributed = DistributedLayout(log.layout)
+    work_order_id = prepared.commit.distributed_work_order_id
+    committed_result = log.backend.put_immutable(
+        distributed.result_key(prepared.commit.prepared_result_id), b"committed"
+    )
+
+    same_attempt = log.backend.put_immutable(
+        distributed.attempt_key("same-digest-loser"), b"same attempt"
+    )
+    same_marker = log.backend.put_immutable(
+        distributed.marker_key(work_order_id, "same-digest-loser"),
+        canonical_bytes(
+            {
+                "schema": "duraloco-prepared-attempt-marker-v1",
+                "work_order_id": work_order_id,
+                "prepared_result_ref": committed_result.to_ref().to_dict(),
+                "attempt_envelope_ref": same_attempt.to_ref().to_dict(),
+            }
+        ),
+    )
+    same_report = build_reachability(log)
+    same_reasons = dict(same_report.retention_reasons)
+    assert "same_digest_loser_grace" in same_reasons[same_marker.key]
+    assert "same_digest_loser_grace" in same_reasons[same_attempt.key]
+
+    divergent_result = log.backend.put_immutable(
+        distributed.result_key("pfr-divergent"), b"divergent"
+    )
+    divergent_attempt = log.backend.put_immutable(
+        distributed.attempt_key("divergent-attempt"), b"divergent attempt"
+    )
+    divergent_marker = log.backend.put_immutable(
+        distributed.marker_key(work_order_id, "divergent-attempt"),
+        canonical_bytes(
+            {
+                "schema": "duraloco-prepared-attempt-marker-v1",
+                "work_order_id": work_order_id,
+                "prepared_result_ref": divergent_result.to_ref().to_dict(),
+                "attempt_envelope_ref": divergent_attempt.to_ref().to_dict(),
+            }
+        ),
+    )
+    divergent_report = build_reachability(
+        log,
+        grace_eligible_keys={
+            same_marker.key,
+            same_attempt.key,
+            divergent_marker.key,
+            divergent_attempt.key,
+            divergent_result.key,
+        },
+    )
+    divergent_reasons = dict(divergent_report.retention_reasons)
+    assert "divergent_result_blocker" in divergent_reasons[divergent_marker.key]
+    assert divergent_marker.key not in divergent_report.candidates

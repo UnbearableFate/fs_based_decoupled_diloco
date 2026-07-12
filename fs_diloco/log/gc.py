@@ -161,13 +161,22 @@ def create_gc_mark(
     *,
     grace_eligible_keys: Iterable[str] = (),
 ) -> tuple[GcMarkV1, ReachabilityReport]:
-    replay = log.replay(force_full=True)
+    replay = _lifecycle_replay(log)
     report = build_reachability(
         log, replay=replay, grace_eligible_keys=grace_eligible_keys
     )
     mark = GcMarkV1.create(log, report)
     log.backend.put_immutable(log.layout.mark_key(mark.mark_id), mark.canonical_bytes())
     return mark, report
+
+
+def _lifecycle_replay(log):
+    """Replay safely both before and after prefix compaction."""
+
+    replay_from_snapshot = getattr(log, "replay_from_snapshot", None)
+    if replay_from_snapshot is not None:
+        return replay_from_snapshot().replay
+    return log.replay(force_full=True)
 
 
 def approval_token_for(mark: GcMarkV1, *, namespace: str) -> str:
@@ -227,7 +236,7 @@ def apply_gc(
             raise ValueError("GC request identity conflicts with another mark")
         return existing
     loaded = log.load_head()
-    replay = log.replay(force_full=True)
+    replay = _lifecycle_replay(log)
     membership = (
         replay.head_frontier.membership.revision
         if replay.head_frontier.membership is not None

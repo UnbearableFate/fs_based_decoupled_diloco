@@ -67,6 +67,16 @@ class ReplayModeResult:
 
 
 @dataclass(frozen=True)
+class ValidatedSnapshotPin:
+    """One ancestry-validated snapshot and the transition that pinned it."""
+
+    snapshot: Any
+    pin_commit_seq: int
+    snapshot_key: str
+    observed_head_commit_seq: int
+
+
+@dataclass(frozen=True)
 class OrphanReport:
     committed_reachable: tuple[str, ...]
     prepared_orphans: tuple[str, ...]
@@ -1264,8 +1274,18 @@ def _cache_from_snapshot(snapshot) -> ProductionReplayCache:
     )
 
 
-def _find_latest_valid_snapshot(log: TransactionalLog):
-    """Walk only the current suffix until a valid committed snapshot pin."""
+def find_valid_snapshots(
+    log: TransactionalLog, *, limit: int = 1
+) -> tuple[tuple[ValidatedSnapshotPin, ...], tuple[str, ...]]:
+    """Return newest valid ancestry-pinned snapshots without using listing.
+
+    The walk stops as soon as ``limit`` snapshots have been proven.  This is
+    important after compaction: the oldest retained snapshot is a complete
+    restore base, so no object below its pin has to remain in the live store.
+    """
+
+    if type(limit) is not int or limit < 1:
+        raise ValueError("snapshot discovery limit must be positive")
 
     from .snapshot import SnapshotManifestV1
 
@@ -1280,6 +1300,7 @@ def _find_latest_valid_snapshot(log: TransactionalLog):
     ):
         raise VerificationError("head and frontier identity differ", commit_seq=head.commit_seq)
     failures: list[str] = []
+    valid: list[ValidatedSnapshotPin] = []
     while current.commit_seq > 0:
         seq = current.commit_seq
         commit = _parse_commit(
@@ -1319,7 +1340,16 @@ def _find_latest_valid_snapshot(log: TransactionalLog):
                     commit=commit,
                     control_requests=requests,
                 )
-                return snapshot, head.commit_seq - snapshot.covered_head.commit_seq, failures
+                valid.append(
+                    ValidatedSnapshotPin(
+                        snapshot=snapshot,
+                        pin_commit_seq=seq,
+                        snapshot_key=commit.snapshot.snapshot_ref.key,
+                        observed_head_commit_seq=head.commit_seq,
+                    )
+                )
+                if len(valid) == limit:
+                    return tuple(valid), tuple(failures)
             except Exception as exc:
                 failures.append(f"{commit.snapshot.snapshot_id}:{type(exc).__name__}")
         parent_digest = current.parent_frontier_sha256
@@ -1334,13 +1364,26 @@ def _find_latest_valid_snapshot(log: TransactionalLog):
         if parent.frontier_sha256 != parent_digest:
             raise VerificationError("parent frontier digest mismatch", commit_seq=seq)
         current = parent
-    return None, 0, failures
+    return tuple(valid), tuple(failures)
+
+
+def _find_latest_valid_snapshot(log: TransactionalLog):
+    valid, failures = find_valid_snapshots(log, limit=1)
+    if not valid:
+        return None, 0, list(failures)
+    snapshot = valid[0].snapshot
+    return (
+        snapshot,
+        valid[0].observed_head_commit_seq - snapshot.covered_head.commit_seq,
+        list(failures),
+    )
 
 
 def replay_snapshot_suffix(
     log: TransactionalLog,
     *,
     production_validation_device: Any = None,
+    production_cache: ProductionReplayCache | None = None,
 ) -> ReplayModeResult:
     """Replay from the latest valid pinned snapshot, or strictly fall back."""
 
@@ -1354,9 +1397,10 @@ def replay_snapshot_suffix(
             }
             overlay = _SnapshotOverlayBackend(log.backend, objects)
             overlay_log = TransactionalLog(overlay, log.manifest)
+            verified_cache = _cache_from_snapshot(snapshot)
             result = replay_log(
                 overlay_log,
-                production_cache=_cache_from_snapshot(snapshot),
+                production_cache=verified_cache,
                 production_validation_device=production_validation_device,
             )
             if (
@@ -1365,6 +1409,12 @@ def replay_snapshot_suffix(
                 < snapshot.covered_head.commit_seq
             ):
                 raise VerificationError("snapshot replay result differs from current head")
+            if production_cache is not None:
+                production_cache.proposal_payloads = set(
+                    verified_cache.proposal_payloads
+                )
+                production_cache.params_numels = dict(verified_cache.params_numels)
+                production_cache.outer_numels = dict(verified_cache.outer_numels)
             return ReplayModeResult(
                 replay=result,
                 mode="snapshot_suffix",
@@ -1379,11 +1429,16 @@ def replay_snapshot_suffix(
         )
     except Exception as exc:
         fallback_reason = f"snapshot_discovery_failed:{type(exc).__name__}"
+    verified_cache = ProductionReplayCache.empty()
     result = replay_log(
         log,
-        production_cache=ProductionReplayCache.empty(),
+        production_cache=verified_cache,
         production_validation_device=production_validation_device,
     )
+    if production_cache is not None:
+        production_cache.proposal_payloads = set(verified_cache.proposal_payloads)
+        production_cache.params_numels = dict(verified_cache.params_numels)
+        production_cache.outer_numels = dict(verified_cache.outer_numels)
     return ReplayModeResult(
         replay=result,
         mode="strict_fallback",

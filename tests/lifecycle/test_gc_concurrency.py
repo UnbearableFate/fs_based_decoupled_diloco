@@ -133,6 +133,46 @@ def test_concurrent_pin_or_head_advance_invalidates_gc_mark():
         )
 
 
+def test_payload_before_marker_is_reprotected_during_apply_revalidation():
+    log = _synthetic_log("gc-payload-before-marker")
+    distributed = DistributedLayout(log.layout)
+    result = log.backend.put_immutable(
+        distributed.result_key("pfr-late-old-revision"), b"late result"
+    )
+    attempt = log.backend.put_immutable(
+        distributed.attempt_key("attempt-late-old-revision"),
+        canonical_bytes({"membership_revision": 0, "fencing_epoch": 1}),
+    )
+    eligible = {result.key, attempt.key}
+    mark, report = create_gc_mark(log, grace_eligible_keys=eligible)
+    assert result.key in report.candidates
+
+    marker = log.backend.put_immutable(
+        distributed.marker_key("fwo-late-old-revision", "attempt-late-old-revision"),
+        canonical_bytes(
+            {
+                "schema": "duraloco-prepared-attempt-marker-v1",
+                "work_order_id": "fwo-late-old-revision",
+                "prepared_result_ref": result.to_ref().to_dict(),
+                "attempt_envelope_ref": attempt.to_ref().to_dict(),
+            }
+        ),
+    )
+    with pytest.raises(RuntimeError, match="became reachable"):
+        apply_gc(
+            log,
+            mark,
+            approval_token=approval_token_for(mark, namespace="synthetic"),
+            namespace="synthetic",
+            grace_eligible_keys=eligible,
+            request_id="delete-before-late-marker",
+        )
+    current = create_gc_mark(log, grace_eligible_keys=eligible)[1]
+    reasons = dict(current.retention_reasons)
+    assert "abandoned_attempt_grace" in reasons[marker.key]
+    assert result.key in current.reachable
+
+
 def test_delete_response_loss_reconciles_by_request_and_object_identity():
     log = _synthetic_log("gc-response-loss")
     result, attempt, _marker = _orphans(log)

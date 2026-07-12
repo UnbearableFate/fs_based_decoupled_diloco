@@ -196,7 +196,9 @@ class RuntimeView:
 
 
 def build_runtime_view(log, *, force_full: bool = False) -> RuntimeView:
-    if hasattr(log, "replay"):
+    if not force_full and hasattr(log, "replay_from_snapshot"):
+        replay = log.replay_from_snapshot().replay
+    elif hasattr(log, "replay"):
         replay = log.replay(force_full=force_full)
     else:
         replay = replay_log(log.transactional if hasattr(log, "transactional") else log)

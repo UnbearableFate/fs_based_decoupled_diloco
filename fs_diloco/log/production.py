@@ -255,7 +255,13 @@ class ProductionTransactionalLog:
         return replay_snapshot_suffix(
             self.transactional,
             production_validation_device=self._replay_validation_device,
+            production_cache=self._replay_cache,
         )
+
+    def _authoritative_replay(self) -> ReplayResult:
+        """Verify current authority from a retained snapshot when available."""
+
+        return self.replay_from_snapshot().replay
 
     def clear_owner_state(self) -> None:
         """Discard every process/owner-scoped optimization and tentative fact."""
@@ -316,7 +322,10 @@ class ProductionTransactionalLog:
             raise ValueError(f"unsupported control transition: {control_kind}")
         if not isinstance(request_id, str) or not request_id:
             raise ValueError("control request_id must be non-empty")
-        replay = self.replay(force_full=True)
+        # A compacted run no longer has a physical genesis-to-head prefix.
+        # Snapshot replay still verifies the retained base and every suffix
+        # transition, and returns the same logical ReplayResult used below.
+        replay = self._authoritative_replay()
         previous = replay.head_frontier
         prior_coordination = previous.coordination
         if previous.coordination is not None and previous.coordination.stop is not None:
@@ -531,7 +540,7 @@ class ProductionTransactionalLog:
             crash_at=crash_at,
         )
         result = self.commit_prepared(prepared, crash_at=crash_at)
-        verified = self.replay(force_full=True)
+        verified = self._authoritative_replay()
         projection = verified.head_frontier.coordination
         if (
             projection is None
@@ -586,7 +595,7 @@ class ProductionTransactionalLog:
         """Strict-replay, publish an immutable snapshot, then pin it in ancestry."""
 
         token = self._require_owner_token()
-        replay = self.replay(force_full=True)
+        replay = self._authoritative_replay()
         embedded_objects: dict[str, bytes] = {}
         for frontier in replay.frontiers:
             key = self.layout.frontier_key(
@@ -723,7 +732,7 @@ class ProductionTransactionalLog:
         prepared_result_id: str | None = None,
         crash_at: str | None = None,
     ) -> PreparedLogTransition:
-        replay = self.replay()
+        replay = self._authoritative_replay()
         owner_token: OwnerToken | None = None
         if self.spec.coordination_protocol in {"head-fenced-v1", "distributed-head-fenced-v1"}:
             owner_token = self._require_owner_token()
@@ -1004,7 +1013,7 @@ class ProductionTransactionalLog:
         return self.transactional.resolve_prepared(prepared)
 
     def resolve_mutation(self, *, request_id: str, request_digest: str) -> CommitResult | None:
-        replay = self.replay(force_full=True)
+        replay = self._authoritative_replay()
         observed = replay.control_requests.get(request_id)
         if observed is None:
             return None
