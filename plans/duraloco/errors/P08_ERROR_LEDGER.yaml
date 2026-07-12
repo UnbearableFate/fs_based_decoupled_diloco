@@ -36,4 +36,21 @@ entries:
       - artifacts/duraloco/P08/20260713_p08_profile_052c2ac_1node_r1/qstat_final.log
     correction: StageEventV1.create now removes absent optional fields before computing event identity, matching from_dict/to_dict canonical omission
     retry_policy: rerun the same targeted one-node contract on the corrected clean commit
-last_updated: "2026-07-13T02:43:00+09:00"
+  - id: P08-E003
+    job: 2370055.opbs
+    shape: targeted_1node_profile
+    commit: 2df86d36a2e1abbca850645b56007031b0c9f0ab
+    result: fail
+    failure_class: benchmark_entrypoint
+    expected: telemetry contract tests pass and the materialized LFE baseline profile is persisted
+    actual: all four telemetry tests passed; direct execution of benchmarks/bench_lfe_pipeline.py set sys.path to benchmarks and could not import fs_diloco, so no baseline JSON was produced
+    authority_effect: none
+    runtime_started: true
+    benchmark_started: false
+    evidence:
+      - artifacts/duraloco/P08/20260713_p08_profile_2df86d3_1node_r2/manifest.json
+      - artifacts/duraloco/P08/20260713_p08_profile_2df86d3_1node_r2/stdout.log
+      - artifacts/duraloco/P08/20260713_p08_profile_2df86d3_1node_r2/stderr.log
+    correction: make benchmarks a package and invoke the harness with python -m from the project root
+    retry_policy: rerun the targeted one-node benchmark on the corrected clean commit
+last_updated: "2026-07-13T02:44:00+09:00"

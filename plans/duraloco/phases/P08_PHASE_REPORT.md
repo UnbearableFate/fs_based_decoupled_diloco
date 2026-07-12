@@ -55,6 +55,12 @@ the manifest/stdout/qstat evidence. The implementation now applies the frozen
 canonical-omission rule before computing observational event identity; no
 authority object or training run was created.
 
+PBS `2370055.opbs` then passed all four telemetry contract tests but failed
+before profiling because the benchmark was invoked by file path and therefore
+could not import the repository package. P08-E003 preserves the passing test
+output and failed manifest. The harness is now a module entry point
+(`python -m benchmarks.bench_lfe_pipeline`) from the project root.
+
 All later failed, inconclusive, cancelled, superseded, and passing runs will be
 preserved in `plans/duraloco/errors/P08_ERROR_LEDGER.yaml` and the phase report
 rather than replaced by the final result.

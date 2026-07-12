@@ -67,13 +67,13 @@ test -z "$(git status --porcelain=v1)"
 COMMANDS_LOG="$ARTIFACT_ROOT/commands.log"
 printf '%s\n' \
   "$PYTHON_BIN -m pytest tests/performance_core/test_stage_telemetry.py -q" \
-  "$PYTHON_BIN benchmarks/bench_lfe_pipeline.py --output $ARTIFACT_ROOT/lfe_materialized_baseline.json" \
+  "$PYTHON_BIN -m benchmarks.bench_lfe_pipeline --output $ARTIFACT_ROOT/lfe_materialized_baseline.json" \
   > "$COMMANDS_LOG"
 
 "$PYTHON_BIN" -m pytest tests/performance_core/test_stage_telemetry.py -q \
   > >(tee "$ARTIFACT_ROOT/stdout.log") \
   2> >(tee "$ARTIFACT_ROOT/stderr.log" >&2)
-"$PYTHON_BIN" benchmarks/bench_lfe_pipeline.py \
+"$PYTHON_BIN" -m benchmarks.bench_lfe_pipeline \
   --output "$ARTIFACT_ROOT/lfe_materialized_baseline.json" \
   >> "$ARTIFACT_ROOT/stdout.log" \
   2>> "$ARTIFACT_ROOT/stderr.log"
