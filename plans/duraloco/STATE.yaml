@@ -18,7 +18,7 @@ terminal_retry_qualification:
   miyabi_2node: null
 last_verified_commit: f167a07c49339ba42d14f8a5873fe2c8781884d4
 checks:
-  local_static: not_run
+  local_static: static_pass
   local_runtime: not_run
   targeted_1node: not_run
   miyabi_1node: not_run
@@ -60,6 +60,8 @@ artifacts:
   - plans/duraloco/phases/P08_STATE.yaml
   - plans/duraloco/phases/P08_PHASE_REPORT.md
   - plans/duraloco/errors/P08_ERROR_LEDGER.yaml
+  - scripts/miyabi/run_duraloco_p08_profile_1node.pbs
+  - benchmarks/bench_lfe_pipeline.py
 next_action: "implement Loop 1 RED telemetry/profile contracts and run the smallest targeted PBS benchmark"
 automatic_progression: true
 requires_human_approval: false

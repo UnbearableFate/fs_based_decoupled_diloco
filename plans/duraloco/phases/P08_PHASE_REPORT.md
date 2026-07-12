@@ -7,6 +7,8 @@
 - H0 runtime basis: `f167a07c49339ba42d14f8a5873fe2c8781884d4`
 - H0 Checker basis: `04e0a8634b0e9d7c4cd55c5593081a0ca969a060`
 - Actual branch base including the documentation rewrite: `8c12839a7b985e590378ac593c846f07b0637517`
+- Instrumentation commit: `fcbbfa17e91fc1eb9cdd90b3d3ea40aea3c79705`
+- Login-node static checks: PASS (`bash -n`, ruff, phase-state contract, diff check)
 - Runtime checks: not run; current shell is Miyabi login/control plane
 
 ## Orientation and frozen decisions
@@ -41,3 +43,7 @@ No P08 runtime experiment has been submitted yet. No failure is currently
 recorded. All later failed, inconclusive, cancelled, superseded, and passing
 runs will be preserved in `plans/duraloco/errors/P08_ERROR_LEDGER.yaml` and the
 phase report rather than replaced by the final result.
+
+The first compute action is the one-node targeted telemetry/materialized-LFE
+profile in `scripts/miyabi/run_duraloco_p08_profile_1node.pbs`; its test and
+benchmark have not been executed on the login node.
