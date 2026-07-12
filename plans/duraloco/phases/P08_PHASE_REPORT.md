@@ -47,6 +47,14 @@ as P08-E001. The wrapper now installs its immutable-manifest EXIT trap before
 the identity check, and the retry derives the exact hash from `git rev-parse`
 instead of retyping it.
 
+The corrected-wrapper attempt `2369961.opbs` entered the compute runtime. One
+recorder-failure isolation test passed and three RED event/summary tests failed
+before the benchmark: `StageEventV1.create` hashed optional fields encoded as
+`null`, while the canonical round trip omitted absent fields. P08-E002 retains
+the manifest/stdout/qstat evidence. The implementation now applies the frozen
+canonical-omission rule before computing observational event identity; no
+authority object or training run was created.
+
 All later failed, inconclusive, cancelled, superseded, and passing runs will be
 preserved in `plans/duraloco/errors/P08_ERROR_LEDGER.yaml` and the phase report
 rather than replaced by the final result.

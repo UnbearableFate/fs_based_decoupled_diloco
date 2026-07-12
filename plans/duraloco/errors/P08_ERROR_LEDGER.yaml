@@ -19,4 +19,21 @@ entries:
       - tracejob 2369958.opbs
     correction: derive EXPECTED_COMMIT directly from git rev-parse HEAD and install the EXIT manifest trap before the identity check
     retry_policy: one-node targeted rerun is allowed after the corrected clean commit; this is not a nine-node terminal failure
-last_updated: "2026-07-13T02:41:00+09:00"
+  - id: P08-E002
+    job: 2369961.opbs
+    shape: targeted_1node_profile
+    commit: 052c2ac3b5f3303b8ef8fdde0466d3205901b272
+    result: fail
+    failure_class: red_contract_bug
+    expected: four telemetry contract tests pass, then the materialized LFE baseline runs
+    actual: one recorder-failure test passed; three event/summary tests failed because create hashed optional null identity fields while the canonical round trip omitted them
+    authority_effect: none
+    runtime_started: true
+    benchmark_started: false
+    evidence:
+      - artifacts/duraloco/P08/20260713_p08_profile_052c2ac_1node_r1/manifest.json
+      - artifacts/duraloco/P08/20260713_p08_profile_052c2ac_1node_r1/stdout.log
+      - artifacts/duraloco/P08/20260713_p08_profile_052c2ac_1node_r1/qstat_final.log
+    correction: StageEventV1.create now removes absent optional fields before computing event identity, matching from_dict/to_dict canonical omission
+    retry_policy: rerun the same targeted one-node contract on the corrected clean commit
+last_updated: "2026-07-13T02:43:00+09:00"

@@ -62,7 +62,7 @@ class StageEventV1:
 
     @classmethod
     def create(cls, payload: Mapping[str, Any]) -> "StageEventV1":
-        body = dict(payload)
+        body = {key: value for key, value in payload.items() if value is not None}
         body.pop("event_id", None)
         body["schema"] = SCHEMA
         event_id = event_identity(body)
