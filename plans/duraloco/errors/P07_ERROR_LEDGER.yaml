@@ -1,0 +1,67 @@
+schema: duraloco-error-ledger-v1
+phase: P07
+records:
+  - error_id: E-P07-20260712-01
+    phase_and_gate: P07.1/snapshot-1node-preflight
+    observed_at_utc: "2026-07-12T02:17:09Z"
+    pbs_job_id: 2365794.opbs
+    hosts: [mg0048]
+    git_commit: f83f7fe91732872623b564604328138bb468195c
+    classification: unexpected_failure
+    phenomenon:
+      exit_code: 1
+      exception: "clean-commit preflight rejected a manually mistyped EXPECTED_COMMIT"
+      terminal_state: "pytest not started"
+      log_excerpt: artifacts/duraloco/P07/20260712_p07_snapshot_f83f7fe_1node/stderr.log
+    expected: "submitted commit exactly equals git rev-parse HEAD"
+    impact:
+      acceptance_ids: [P07-A01, P07-A02, P07-A03]
+      invariants: ["runtime evidence binds the exact clean commit"]
+      committed_prefix_safe: true
+    cause:
+      confirmed: ["EXPECTED_COMMIT was manually transcribed instead of read from git"]
+      unknown: []
+    repair:
+      change: "derive EXPECTED_COMMIT from git rev-parse HEAD in the qsub command"
+      rationale: "eliminates manual SHA transcription"
+    verification:
+      minimal_reproduction: "compare qsub environment with git rev-parse HEAD"
+      targeted_gate: "same 1-node snapshot gate reaches pytest"
+      qualification_ladder: ["Miyabi 1-node rerun"]
+    retry_decision:
+      authorized: true
+      rationale: "preflight-only failure; no runtime behavior executed"
+      parent_run_id: 20260712_p07_snapshot_f83f7fe_1node
+    artifacts: [artifacts/duraloco/P07/20260712_p07_snapshot_f83f7fe_1node]
+  - error_id: E-P07-20260712-02
+    phase_and_gate: P07.1/snapshot-1node
+    observed_at_utc: "2026-07-12T02:17:45Z"
+    pbs_job_id: 2365795.opbs
+    hosts: [mg0048]
+    git_commit: f83f7fe91732872623b564604328138bb468195c
+    classification: unexpected_failure
+    phenomenon:
+      exit_code: 1
+      exception: "ValueError: snapshot covered head/frontier differ"
+      terminal_state: "5 snapshot tests failed; 48 regressions passed"
+      log_excerpt: artifacts/duraloco/P07/20260712_p07_snapshot_f83f7fe_1node_r2/stdout.log
+    expected: "snapshot creation accepts the canonical committed head/frontier pair"
+    impact:
+      acceptance_ids: [P07-A01, P07-A02, P07-A03]
+      invariants: ["snapshot identity binds the exact committed state without conflating semantic and byte digests"]
+      committed_prefix_safe: true
+    cause:
+      confirmed: ["validation compared the frontier object byte SHA with FrontierManifest.frontier_sha256 semantic identity"]
+      unknown: []
+    repair:
+      change: "remove the invalid cross-domain digest comparison; retain run, sequence, commit, fencing, ObjectRef, and state-digest binding"
+      rationale: "object byte identity and frontier semantic identity are intentionally distinct"
+    verification:
+      minimal_reproduction: "test_snapshot_is_immutable_side_object_pinned_by_one_head_transition"
+      targeted_gate: "all snapshot tests and fencing/production regressions pass"
+      qualification_ladder: ["Miyabi 1-node focused rerun"]
+    retry_decision:
+      authorized: true
+      rationale: "smallest focused runtime gate after a local schema validation repair"
+      parent_run_id: 20260712_p07_snapshot_f83f7fe_1node_r2
+    artifacts: [artifacts/duraloco/P07/20260712_p07_snapshot_f83f7fe_1node_r2]

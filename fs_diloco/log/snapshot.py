@@ -170,7 +170,6 @@ class SnapshotManifestV1:
             or head.commit_seq != frontier.commit_seq
             or head.commit_id != frontier.commit_id
             or head.fencing_epoch != frontier.fencing_epoch
-            or head.frontier_ref.sha256 != frontier.frontier_sha256
         ):
             raise ValueError("snapshot covered head/frontier differ")
         expected_state = snapshot_state_digest(head, frontier)
