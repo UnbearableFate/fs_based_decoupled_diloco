@@ -1,0 +1,90 @@
+#!/bin/bash
+#PBS -N duraloco_p08_d2
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=2:mpiprocs=1
+#PBS -l walltime=00:15:00
+#PBS -j oe
+
+set -eEuo pipefail
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat WANDB_MODE=disabled
+: "${EXPECTED_COMMIT:?}" "${RUN_ID:?}" "${ARTIFACT_ROOT:?}" "${STORAGE_ROOT:?}"
+PROJECT_ROOT="${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}"
+PYTHON_BIN="$PROJECT_ROOT/.venv/bin/python"
+CONFIG="$PROJECT_ROOT/configs/duraloco_p06c_tiny_2node.yaml"
+TRAINING_ROOT="$STORAGE_ROOT/training"
+TRAIN_RUN="$RUN_ID-training"
+cd "$PROJECT_ROOT"
+mkdir -p "$ARTIFACT_ROOT" "$TRAINING_ROOT"
+touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log" "$ARTIFACT_ROOT/commands.log"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+
+result=fail
+exit_code=1
+finish() {
+  observed=$?
+  if [[ "$result" == pass ]]; then exit_code=0; elif [[ "$observed" -ne 0 ]]; then exit_code=$observed; fi
+  qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
+  args=(--root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json" --phase P08 --purpose chaos --run-id "$RUN_ID" --schema-version 2 --validation-shape p08-d2-r2-error-stop-fenced-resume --backend lustre --model-revision synthetic-tiny --dataset-revision synthetic-v1 --config scripts/miyabi/run_duraloco_p08_d2_resume_r2.pbs --commands-log commands.log --stdout stdout.log --stderr stderr.log --exit-code "$exit_code" --result "$result" --termination-kind "$([[ "$result" == pass ]] && echo success || echo test_failure)" --pbs-queue debug-g --requested-resources select=2:mpiprocs=1,walltime=00:15:00 --last-qstat-state R --termination-detail "P08 D2-R2 truthful error stop, cross-host fenced resume, exact duplicate attempts" --assertion "error stop remains in ancestry and a new owner resumes under a higher fence without optimizer-state change" --assertion "active-active same-FWO attempts are exact and every attempt has a joinable stage timeline" --assertion "two learner-hosted LFEs remain within audited resource budgets with zero dedicated syncer nodes")
+  [[ -f "$ARTIFACT_ROOT/d2_report.json" ]] && args+=(--stage-metrics-path d2_report.json)
+  "$PYTHON_BIN" scripts/agent/create_run_manifest.py "${args[@]}" || true
+}
+trap finish EXIT
+trap 'echo "[ERROR] P08 D2 failed at line $LINENO" | tee -a "$ARTIFACT_ROOT/stderr.log"' ERR
+
+[[ "$(hostname)" == mg* ]]
+[[ "$(git rev-parse HEAD)" == "$EXPECTED_COMMIT" ]]
+[[ -z "$(git status --porcelain=v1)" ]]
+sort -u "$PBS_NODEFILE" | tee "$ARTIFACT_ROOT/hosts.log"
+[[ "$(sort -u "$PBS_NODEFILE" | wc -l)" -eq 2 ]]
+git status --short --branch | tee "$ARTIFACT_ROOT/git_status.log"
+git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"
+"$PYTHON_BIN" --version 2>&1 | tee "$ARTIFACT_ROOT/python_version.log"
+module list 2>&1 | cat > "$ARTIFACT_ROOT/modules.log"
+"$PYTHON_BIN" scripts/agent/check_no_embedded_database.py --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/forbidden_surface.json"
+
+NODE_IDS=$(sort -u "$PBS_NODEFILE" | paste -sd, -)
+command=(mpirun --bind-to none -np 2 --hostfile "$PBS_NODEFILE" /usr/bin/env PROJECT_ROOT="$PROJECT_ROOT" PYTHON_BIN="$PYTHON_BIN" CONFIG="$CONFIG" RUN_ID="$TRAIN_RUN" SHARED_ROOT="$TRAINING_ROOT" ARTIFACT_ROOT="$ARTIFACT_ROOT" NODE_IDS="$NODE_IDS" PYTHONPATH="$PROJECT_ROOT" bash scripts/chaos/run_p08_d2_resume_host.sh)
+printf '%q ' "${command[@]}" | tee -a "$ARTIFACT_ROOT/commands.log"; printf '\n' | tee -a "$ARTIFACT_ROOT/commands.log"
+"${command[@]}" 2>&1 | tee -a "$ARTIFACT_ROOT/stdout.log"
+
+"$PYTHON_BIN" -m fs_diloco.analysis summary "$TRAINING_ROOT" --json | tee "$ARTIFACT_ROOT/training_summary.json"
+"$PYTHON_BIN" - "$TRAINING_ROOT" "$ARTIFACT_ROOT" "$TRAIN_RUN" <<'PY' | tee "$ARTIFACT_ROOT/d2_report.json"
+import json,sys
+from pathlib import Path
+from fs_diloco.log import ProductionTransactionalLog
+from fs_diloco.runtime_view import build_runtime_view
+from fs_diloco.telemetry.summaries import load_events,summarize_events
+
+root,artifacts=map(Path,sys.argv[1:3]); run_id=sys.argv[3]
+summary=json.loads((artifacts/'training_summary.json').read_text())
+log=ProductionTransactionalLog.open(__import__('fs_diloco.storage',fromlist=['PosixStorageBackend']).PosixStorageBackend(root/'authority'),run_id,1)
+replay=log.replay(force_full=True); view=build_runtime_view(log,force_full=True)
+controls=[item for item in replay.commits if getattr(item,'control_kind',None)]
+control_kinds=[item.control_kind for item in controls]
+events=load_events([
+    root/'logs/performance_committer_member-000.jsonl',
+    root/'logs/performance_committer_member-001.jsonl',
+    root/'logs/performance_executor_member-000.jsonl',
+    root/'logs/performance_executor_member-001.jsonl',
+])
+health=[json.loads(path.read_text()) for path in root.glob('logs/performance_*.health.json')]
+stages=summarize_events(events,recorder_health=health)
+attempt_counts=[len(item['attempts']) for item in stages['timelines']]
+report={
+    'status':'PASS','optimizer_transitions':view.optimizer_transition_count,
+    'commit_seq':view.commit_seq,'fencing_epoch':view.fencing_epoch,
+    'stop_reason':summary['stop_reason'],'control_kinds':control_kinds,
+    'error_stop':json.loads((artifacts/'error_stop.json').read_text()),
+    'stage_report':stages,'attempt_counts':attempt_counts,
+    'dedicated_syncer_nodes':0,'learner_nodes':2,
+}
+assert report['optimizer_transitions']==3 and report['stop_reason']=='stop_after_outer_steps'
+assert 'resume' in control_kinds and control_kinds.count('stop')==2
+assert report['error_stop']['reason']=='error' and report['fencing_epoch']>=2
+assert stages['work_order_count']==3 and attempt_counts==[2,2,2]
+assert all(item['outcome']=='pass' for timeline in stages['timelines'] for item in timeline['attempts'])
+print(json.dumps(report,indent=2,sort_keys=True))
+PY
+result=pass
+exit_code=0

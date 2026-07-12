@@ -145,3 +145,12 @@ were rejected. The v2 committer truthfully committed an `error` stop at
 sequence 2; no optimizer transition occurred. The repair separates canonical
 content identity from the optional observation version, while requiring any
 supplied version to equal a fresh authoritative `head` observation.
+
+The same-commit retry ladder passed. PBS `2370266.opbs` reran all 103 focused
+tests plus the flat-working-set benchmark at commit `b1ff147`. PBS
+`2370269.opbs` then passed real GPT-2/WikiText D1: one v2 optimizer transition,
+one complete joinable work-order timeline, one global head, learner
+publish/adopt lineage, no mailbox tensor copies, and zero forbidden database
+findings. The LFE was actually pinned to CPUs 64–71 with 8 Torch threads,
+NUMA allowance `0-1`, one in-flight proposal, and 6,339,821,568-byte peak RSS
+under the 16 GiB ceiling. The learner was pinned away from those eight CPUs.

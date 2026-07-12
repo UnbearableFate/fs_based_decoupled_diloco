@@ -390,6 +390,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     committer.add_argument("--hedge-delay-ms", type=int)
     committer.add_argument("--lifecycle-cadence", type=int, default=0)
     committer.add_argument("--error-resume", action="store_true")
+    committer.add_argument("--inject-error-after-transitions", type=int)
     return parser.parse_args(argv)
 
 
@@ -441,6 +442,7 @@ def main(argv: list[str] | None = None) -> int:
             redundancy_policy=redundancy_policy,
             lifecycle_cadence=args.lifecycle_cadence,
             error_resume=args.error_resume,
+            inject_error_after_transitions=args.inject_error_after_transitions,
         )
         return 0
     raise AssertionError(args.command)

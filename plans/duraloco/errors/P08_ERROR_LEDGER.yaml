@@ -188,4 +188,36 @@ entries:
       - tracejob 2370248.opbs
     correction: compare canonical ObjectRef key/size/SHA independent of optional version and separately verify any supplied version against authoritative head metadata
     retry_policy: rerun focused one-node tests, then real D1 on the corrected clean commit
-last_updated: "2026-07-13T03:33:00+09:00"
+  - id: P08-E012
+    job: 2370266.opbs
+    shape: optimized_targeted_1node_requalification
+    commit: b1ff147c672c649625a2f99efcc03d327ef675bf
+    result: pass
+    expected: focused qualification passes after the version-token repair
+    actual: 103 tests, zero forbidden findings, and flat 32 MiB streaming working-set profile passed
+    authority_effect: none
+    runtime_started: true
+    evidence:
+      - artifacts/duraloco/P08/20260713_p08_opt_b1ff147_1node_requal/manifest.json
+      - artifacts/duraloco/P08/20260713_p08_opt_b1ff147_1node_requal/focused-junit.xml
+      - artifacts/duraloco/P08/20260713_p08_opt_b1ff147_1node_requal/lfe_streaming_optimized.json
+    correction: null
+    retry_policy: no retry
+  - id: P08-E013
+    job: 2370269.opbs
+    shape: D1_real_gpt2_v2
+    commit: b1ff147c672c649625a2f99efcc03d327ef675bf
+    result: pass
+    expected: one real v2 distributed optimizer transition with joinable telemetry and audited resources
+    actual: one transition and stop_after_outer_steps terminal passed; one complete FWO timeline; LFE affinity 8 CPUs, Torch threads 8, RSS 6339821568; learner adopted successor and used no mailbox tensor copy
+    authority_effect: one optimizer transition and one normal terminal stop committed through the single head
+    runtime_started: true
+    evidence:
+      - artifacts/duraloco/P08/20260713_p08_d1_b1ff147_r1/manifest.json
+      - artifacts/duraloco/P08/20260713_p08_d1_b1ff147_r1/d1_report.json
+      - artifacts/duraloco/P08/20260713_p08_d1_b1ff147_r1/training_summary.json
+      - .duraloco_scratch/20260713_p08_d1_b1ff147_r1/training/logs/performance_committer_member-000.jsonl
+      - .duraloco_scratch/20260713_p08_d1_b1ff147_r1/training/logs/performance_executor_member-000.jsonl
+    correction: null
+    retry_policy: no retry; proceed to D2 controlled crash/resume
+last_updated: "2026-07-13T03:37:00+09:00"

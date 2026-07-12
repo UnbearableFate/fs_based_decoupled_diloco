@@ -339,6 +339,7 @@ def run_committer(
     redundancy_policy: RedundancyPolicyV1 | None = None,
     lifecycle_cadence: int = 0,
     error_resume: bool = False,
+    inject_error_after_transitions: int | None = None,
 ) -> None:
     if not membership.member(member_id).committer_eligible:
         raise ValueError("floating committer is not a committed candidate")
@@ -400,8 +401,18 @@ def run_committer(
         raise ValueError("factor-one committer cannot carry a redundancy policy")
     if type(lifecycle_cadence) is not int or lifecycle_cadence < 0:
         raise ValueError("lifecycle cadence must be a non-negative integer")
+    if inject_error_after_transitions is not None and (
+        type(inject_error_after_transitions) is not int
+        or inject_error_after_transitions < 1
+    ):
+        raise ValueError("injected error transition count must be positive")
     # An authoritative stop is terminal.  In particular, a standby must not
     # acquire a fresh fencing epoch after observing the stopped head.
+    resuming_error_stop = (
+        error_resume
+        and view.authoritative_stop is not None
+        and view.authoritative_stop.reason == "error"
+    )
     if view.authoritative_stop is not None and not (
         error_resume and view.authoritative_stop.reason == "error"
     ):
@@ -419,6 +430,15 @@ def run_committer(
     )
     if loaded_lease is None:
         return
+    if resuming_error_stop:
+        if view.authoritative_stop is not None:
+            raise RuntimeError("error resume returned a stopped authoritative view")
+        paths.stop_json.unlink(missing_ok=True)
+        logger.event(
+            "derived_error_stop_cleared_after_resume",
+            commit_seq=view.commit_seq,
+            fencing_epoch=view.fencing_epoch,
+        )
     if view.membership is None:
         raise RuntimeError("distributed head has no membership projection")
     membership = MembershipRevisionV1.from_dict(
@@ -1064,6 +1084,14 @@ def run_committer(
             )
             active_path.unlink(missing_ok=True)
             last_progress = time.monotonic()
+            if (
+                inject_error_after_transitions is not None
+                and view.optimizer_transition_count
+                == inject_error_after_transitions
+            ):
+                raise RuntimeError(
+                    "injected P08 committer error after committed transition"
+                )
             time.sleep(0.5)
     except Exception:
         primary_error = True
