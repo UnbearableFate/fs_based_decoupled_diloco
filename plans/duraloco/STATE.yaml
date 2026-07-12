@@ -16,7 +16,7 @@ terminal_retry_qualification:
   targeted_1node_benchmark: null
   miyabi_1node: null
   miyabi_2node: null
-last_verified_commit: 03ed1392cd626435d783caeeb915a3820f04c9d1
+last_verified_commit: 028ed099b3f37690f34673e52c6daea5225fa10d
 checks:
   local_static: static_pass
   local_runtime: not_run
@@ -24,22 +24,22 @@ checks:
   miyabi_2node: not_run
   miyabi_d8_r2: not_run
 acceptance:
-  P07-A01: {result: not_run, evidence: []}
+  P07-A01: {result: pass, evidence: ["2365809.opbs snapshot+suffix equals strict replay with lower covered-prefix storage reads"]}
   P07-A02: {result: pass, evidence: ["2365797.opbs missing/corrupt/stale snapshot strict-fallback tests"]}
   P07-A03: {result: pass, evidence: ["2365797.opbs snapshot_pin single-head authority tests"]}
   P07-A04: {result: not_run, evidence: []}
   P07-A05: {result: not_run, evidence: []}
-  P07-A06: {result: not_run, evidence: []}
-  P07-A07: {result: not_run, evidence: []}
+  P07-A06: {result: pass, evidence: ["2365820.opbs unknown future-schema inventory protected from delete candidacy"]}
+  P07-A07: {result: pass, evidence: ["2365833.opbs immutable dry-run mark plus synthetic namespace approval guard"]}
   P07-A08: {result: not_run, evidence: []}
-  P07-A09: {result: not_run, evidence: []}
+  P07-A09: {result: pass, evidence: ["2365833.opbs delete response-loss and partial apply request-identity recovery"]}
   P07-A10: {result: not_run, evidence: []}
   P07-A11: {result: not_run, evidence: []}
-  P07-A12: {result: not_run, evidence: []}
-  P07-A13: {result: not_run, evidence: []}
-  P07-A14: {result: not_run, evidence: []}
+  P07-A12: {result: pass, evidence: ["2365848.opbs restorable synthetic/WikiText sources and bitwise CPU tiny continuation"]}
+  P07-A13: {result: pass, evidence: ["2365848.opbs missing private/RNG/data component exact-claim rejection"]}
+  P07-A14: {result: pass, evidence: ["2365848.opbs marker-last capsule publication, ObjectRef validation, new-session sequencing"]}
   P07-A15: {result: not_run, evidence: []}
-  P07-A16: {result: not_run, evidence: []}
+  P07-A16: {result: pass, evidence: ["2365856.opbs distinct fs_diloco.lifecycle_cli default-dry-run contract"]}
   P07-A17: {result: not_run, evidence: []}
   P07-A18: {result: not_run, evidence: []}
   P07-A19: {result: not_run, evidence: []}
@@ -55,6 +55,11 @@ artifacts:
   - plans/duraloco/phases/P07_PHASE_REPORT.md
   - plans/duraloco/errors/P07_ERROR_LEDGER.yaml
   - artifacts/duraloco/P07/20260712_p07_snapshot_03ed139_1node
+  - artifacts/duraloco/P07/20260712_p07_snapshot_suffix_9d200ea_1node
+  - artifacts/duraloco/P07/20260712_p07_reachability_946f3c2_1node
+  - artifacts/duraloco/P07/20260712_p07_gc_025948b_1node
+  - artifacts/duraloco/P07/20260712_p07_capsule_238bc5b_1node
+  - artifacts/duraloco/P07/20260712_p07_cli_028ed09_1node
 next_action: "complete P07.1 RED/GREEN on a clean commit and run 1-node qualification"
 automatic_progression: true
 requires_human_approval: false
