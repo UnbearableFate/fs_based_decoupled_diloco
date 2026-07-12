@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 import os
 from pathlib import Path
 import socket
 import time
-from typing import Any
+from typing import Any, Callable, TypeVar
 import uuid
 
 import torch
@@ -62,6 +63,7 @@ from .log.run import ERROR_RESUME_COORDINATION_PROTOCOL
 
 
 _SUCCESSFUL_STOP_REASONS = {"completed", "stop_after_outer_steps", "stop_after_global_tokens"}
+_T = TypeVar("_T")
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -670,6 +672,43 @@ def _renew_owner_lease(
     return renewed
 
 
+def _run_non_authoritative_substage(
+    operation: Callable[[], _T],
+    *,
+    substage: str,
+    lease_manager: LeaseManager,
+    loaded_lease,
+    config: Config,
+    logger: JsonlLogger,
+) -> tuple[_T, object]:
+    """Keep the lease fresh while a worker performs no head-CAS operation.
+
+    The worker may read authority or write immutable/derived objects, but the
+    authoritative CAS remains on the caller thread after a final successful
+    renewal. If renewal fails, any completed prepare is only unreachable
+    immutable evidence and can never become authoritative.
+    """
+
+    interval = max(0.01, float(config.coordination.renew_interval_seconds))
+    with ThreadPoolExecutor(max_workers=1, thread_name_prefix="syncer-substage") as pool:
+        future = pool.submit(operation)
+        while True:
+            try:
+                return future.result(timeout=interval), loaded_lease
+            except FutureTimeout:
+                loaded_lease = _renew_owner_lease(
+                    lease_manager=lease_manager,
+                    loaded_lease=loaded_lease,
+                    config=config,
+                    logger=logger,
+                )
+                logger.event(
+                    "transaction_substage_heartbeat",
+                    substage=substage,
+                    lease_sequence=loaded_lease.record.lease_sequence,
+                )
+
+
 def _init_wandb(config: Config, paths: RunPaths, logger: JsonlLogger, device, hostname):
     if wandb_is_disabled(config):
         logger.event("wandb_disabled")
@@ -844,6 +883,7 @@ def run_syncer(
     last_progress = time.time()
     last_global = last_progress
     stop_reason = "completed"
+    lease_authority_lost = False
     next_renew_monotonic = time.monotonic() + config.coordination.renew_interval_seconds
     try:
         while True:
@@ -981,14 +1021,21 @@ def run_syncer(
                 outer_optimizer_impl_digest=optimizer_impl_digest,
             )
             prepare_start = time.monotonic()
-            prepared = log.prepare_transition(
-                fragment_id=attempt.fragment_id,
-                selected_proposal_ids=attempt.selected_proposal_ids,
-                new_params=attempt.new_params,
-                new_outer_state=attempt.new_outer_state,
-                aggregate_digest=attempt.aggregate_digest,
-                outer_optimizer_impl_digest=attempt.outer_optimizer_impl_digest,
-                request_id=attempt.request_id,
+            prepared, loaded_lease = _run_non_authoritative_substage(
+                lambda attempt=attempt: log.prepare_transition(
+                    fragment_id=attempt.fragment_id,
+                    selected_proposal_ids=attempt.selected_proposal_ids,
+                    new_params=attempt.new_params,
+                    new_outer_state=attempt.new_outer_state,
+                    aggregate_digest=attempt.aggregate_digest,
+                    outer_optimizer_impl_digest=attempt.outer_optimizer_impl_digest,
+                    request_id=attempt.request_id,
+                ),
+                substage="successor_prepare",
+                lease_manager=lease_manager,
+                loaded_lease=loaded_lease,
+                config=config,
+                logger=logger,
             )
             prepare_done = time.monotonic()
             logger.event(
@@ -997,7 +1044,16 @@ def run_syncer(
                 target_commit_seq=view.commit_seq + 1,
                 seconds=prepare_done - prepare_start,
             )
-            cas_start = prepare_done
+            loaded_lease = _renew_owner_lease(
+                lease_manager=lease_manager,
+                loaded_lease=loaded_lease,
+                config=config,
+                logger=logger,
+            )
+            next_renew_monotonic = (
+                time.monotonic() + config.coordination.renew_interval_seconds
+            )
+            cas_start = time.monotonic()
             try:
                 result = log.commit_prepared(prepared)
             except (CommitConflict, InjectedTimeout) as exc:
@@ -1014,7 +1070,17 @@ def run_syncer(
             )
             prior_view = view
             replay_start = time.monotonic()
-            view = build_runtime_view(log)
+            view, loaded_lease = _run_non_authoritative_substage(
+                lambda: build_runtime_view(log),
+                substage="post_cas_replay",
+                lease_manager=lease_manager,
+                loaded_lease=loaded_lease,
+                config=config,
+                logger=logger,
+            )
+            next_renew_monotonic = (
+                time.monotonic() + config.coordination.renew_interval_seconds
+            )
             replay_done = time.monotonic()
             logger.event(
                 "post_cas_replay_completed",
@@ -1108,13 +1174,18 @@ def run_syncer(
                 )
             last_progress = time.time()
             last_global = last_progress
+    except CoordinationConflict:
+        lease_authority_lost = True
+        stop_reason = "lease_authority_lost"
+        logger.exception("lease_authority_lost", commit_seq=view.commit_seq)
+        raise
     except Exception:
         stop_reason = "error"
         logger.exception("error", commit_seq=view.commit_seq)
         raise
     finally:
         try:
-            if view.authoritative_stop is None:
+            if not lease_authority_lost and view.authoritative_stop is None:
                 stop_request_id = "stop-" + canonical_digest(
                     {
                         "owner_id": owner_id,

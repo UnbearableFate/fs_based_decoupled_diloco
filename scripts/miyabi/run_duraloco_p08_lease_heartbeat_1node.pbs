@@ -1,0 +1,58 @@
+#!/bin/bash
+#PBS -N duraloco_p08_lease
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:10:00
+#PBS -j oe
+
+set -eEuo pipefail
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat CUDA_VISIBLE_DEVICES=""
+: "${EXPECTED_COMMIT:?}" "${RUN_ID:?}" "${ARTIFACT_ROOT:?}"
+PROJECT_ROOT="${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}"
+PYTHON_BIN="$PROJECT_ROOT/.venv/bin/python"
+cd "$PROJECT_ROOT"
+mkdir -p "$ARTIFACT_ROOT"
+touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log" "$ARTIFACT_ROOT/commands.log"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+result=fail; exit_code=1
+
+finish() {
+  observed=$?
+  [[ "$result" == pass ]] && exit_code=0 || { [[ "$observed" -eq 0 ]] || exit_code=$observed; }
+  qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
+  args=(--root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json" --phase P08
+    --purpose benchmark --run-id "$RUN_ID" --schema-version 2
+    --validation-shape p08-central-syncer-long-substage-lease-heartbeat-1node
+    --backend lustre --config scripts/miyabi/run_duraloco_p08_lease_heartbeat_1node.pbs
+    --commands-log commands.log --stdout stdout.log --stderr stderr.log
+    --exit-code "$exit_code" --result "$result"
+    --termination-kind "$([[ "$result" == pass ]] && echo success || echo test_failure)"
+    --pbs-queue debug-g --requested-resources select=1:mpiprocs=1,walltime=00:10:00
+    --last-qstat-state R --termination-detail "P08-E019 targeted long-stage lease-heartbeat repair proof"
+    --assertion "a non-authoritative stage exceeds its initial TTL while real conditional lease renewals remain live"
+    --assertion "a final renewal precedes head CAS and lease loss cannot publish an authoritative stop")
+  [[ -f "$ARTIFACT_ROOT/lease_heartbeat_benchmark.json" ]] && \
+    args+=(--stage-metrics-path lease_heartbeat_benchmark.json)
+  "$PYTHON_BIN" scripts/agent/create_run_manifest.py "${args[@]}" || true
+}
+trap finish EXIT
+trap 'echo "[ERROR] P08 lease heartbeat benchmark failed at line $LINENO" | tee -a "$ARTIFACT_ROOT/stderr.log"' ERR
+
+[[ "$(hostname)" == mg* ]]
+[[ "$(git rev-parse HEAD)" == "$EXPECTED_COMMIT" ]]
+[[ -z "$(git status --porcelain=v1 --untracked-files=no)" ]]
+git status --short --branch | tee "$ARTIFACT_ROOT/git_status.log"
+git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"
+"$PYTHON_BIN" --version 2>&1 | tee "$ARTIFACT_ROOT/python_version.log"
+printf '%q ' "$PYTHON_BIN" -m pytest -q tests/test_syncer_lease_stage_guard.py \
+  | tee "$ARTIFACT_ROOT/commands.log"; printf '\n' | tee -a "$ARTIFACT_ROOT/commands.log"
+"$PYTHON_BIN" -m pytest -q tests/test_syncer_lease_stage_guard.py \
+  2> >(tee -a "$ARTIFACT_ROOT/stderr.log" >&2) | tee -a "$ARTIFACT_ROOT/stdout.log"
+printf '%q ' "$PYTHON_BIN" -m benchmarks.bench_syncer_lease_heartbeat \
+  --output "$ARTIFACT_ROOT/lease_heartbeat_benchmark.json" \
+  | tee -a "$ARTIFACT_ROOT/commands.log"; printf '\n' | tee -a "$ARTIFACT_ROOT/commands.log"
+"$PYTHON_BIN" -m benchmarks.bench_syncer_lease_heartbeat \
+  --output "$ARTIFACT_ROOT/lease_heartbeat_benchmark.json" \
+  2> >(tee -a "$ARTIFACT_ROOT/stderr.log" >&2) | tee -a "$ARTIFACT_ROOT/stdout.log"
+result=pass; exit_code=0

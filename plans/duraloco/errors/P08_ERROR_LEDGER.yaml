@@ -304,4 +304,23 @@ entries:
       - tracejob 2370446.opbs
     correction: treat an absent optional RunSpec on non-production test adapters as a non-error-resume protocol while preserving exact protocol matching for production logs
     retry_policy: rerun targeted one-node, then full one-node, then D2 on the corrected clean commit before any nine-node job
-last_updated: "2026-07-13T04:01:00+09:00"
+  - id: P08-E019
+    job: 2370465.opbs
+    shape: C9_no_LFE_matched_50x10
+    commit: 0664a4f8ae28b8b5747af82ef9d31002e1d0985b
+    result: fail
+    failure_class: central_syncer_long_substage_lease_expiry
+    expected: ten no-LFE optimizer transitions and a normal terminal with matched raw GPU-step samples
+    actual: four transitions committed; successor prepare and strict replay grew until one loop occupied 49.023 seconds after renewal, exceeding the 45-second lease TTL; the next renewal rejected expiry and the v1 syncer committed an error stop
+    authority_effect: truthful error stop at commit_seq 6 and optimizer_transition_count 4; namespace is terminal and will not be reused
+    runtime_started: true
+    evidence:
+      - plans/duraloco/phases/P08_9NODE_FAILURE_REVIEW_2370465.md
+      - artifacts/duraloco/P08/20260713_p08_nolfe_0664a4f_r1/manifest.json
+      - artifacts/duraloco/P08/20260713_p08_nolfe_0664a4f_r1/stdout.log
+      - artifacts/duraloco/P08/20260713_p08_nolfe_0664a4f_r1_storage/training
+      - duraloco_p08_c9.o2370465
+      - tracejob 2370465.opbs
+    correction: heartbeat only non-authoritative prepare/replay substages, require one final live renewal before head CAS, and forbid an authority-lost process from committing stop
+    retry_policy: dedicated targeted compute proof plus clean 1-node and 2-node qualification on one commit before exactly one fresh 9-node C9 retry
+last_updated: "2026-07-13T04:12:00+09:00"

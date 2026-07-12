@@ -217,3 +217,13 @@ lookup in the new error-resume finalizer. P08-E018 records the unit-only
 failure. Production logs always carry a RunSpec; the repair keeps exact
 protocol matching there while treating an absent optional test-adapter spec as
 the legacy non-error-resume path.
+
+The corrected clean one-node targeted/full gates and D2 qualification passed
+as PBS `2370452`, `2370455`, and `2370461`. The first matched nine-node no-LFE
+shadow, PBS `2370465`, then exposed a non-transient centralized-syncer lease
+failure after four optimizer transitions. Successor preparation and post-CAS
+replay grew from 4.408/6.221 seconds to 19.073/21.130 seconds; the last complete
+loop occupied 49.023 seconds after renewal and exceeded the 45-second TTL.
+P08-E019 and `P08_9NODE_FAILURE_REVIEW_2370465.md` preserve the terminal error
+head, raw stages, root cause, repair, and mandatory targeted → one-node →
+two-node qualification before exactly one fresh C9 retry.

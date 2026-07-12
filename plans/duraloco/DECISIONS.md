@@ -874,3 +874,8 @@ P05+ 的规范性路线决策生效。
 
 - Choice: the per-transition wait fraction uses `prepared_visibility` divided by the sum of same-committer causal critical stages, avoiding cross-host clock subtraction. The optimistic two-FWO end-to-end bound overlaps half of the total measured wait while charging zero extra I/O/RSS; observed R2 GPU-step overhead relative to factor one is then subtracted as a measured penalty. Because this is an upper bound, a value below 15% conclusively retains single-FWO; a value above threshold only opens the schema gate.
 - Rejected: dividing committer wait by cross-host timestamps, excluding learner/job wall time from the E2E projection, or treating a synthetic projection as measured speedup.
+
+## D-0815 — Centralized-shadow long-stage lease guard
+
+- Choice: centralized successor preparation and post-CAS replay may run on a worker only because they cannot perform the global head CAS: prepare writes immutable unreachable evidence and replay is read-only. The owner thread renews the observational lease during those stages and performs one final successful renewal immediately before `commit_prepared`. Any renewal loss prevents CAS and prevents that process from committing a stop.
+- Rejected: increasing the matched workload TTL, allowing a worker thread to CAS, committing an error stop after lease authority is lost, or reusing the terminal failed namespace.
