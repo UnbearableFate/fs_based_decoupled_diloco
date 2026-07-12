@@ -302,3 +302,14 @@ audit now requires the ten optimizer-CAS and one stop-CAS renewals, exact
 one-to-one lifecycle renewal/heartbeat accounting, at least one observed long-
 substage renewal elsewhere in the run, and zero authority-loss events; it does
 not fabricate a heartbeat for a fast future.
+
+PBS `2371021` then passed the five corrected reporter tests and produced the
+complete R2, matched-interference, and D-0807 gate reports. Its final P07
+lifecycle report rejected a 72-object effective-live tail delta against P07's
+fixed 64-object default. The raw curve is linear and reclaimable, not leaking:
+effective live counts are 229/265/301 while candidates grow 120/182/244. P08's
+typed factor-two attempt/resource evidence adds eight live objects per cadence
+relative to P07, or sixteen across the three-point/two-interval tail. D-0820
+therefore preserves the P07 default and binds only P08 R2 to an explicit
+80-object budget. P08-E029 preserves this read-only failed proof; deletion
+remains dry-run and no authority semantics changed.

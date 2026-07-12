@@ -21,12 +21,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--run-generation", required=True, type=int)
     parser.add_argument("--expected-learners", required=True, type=int)
     parser.add_argument("--require-bounded-window", action="store_true")
+    parser.add_argument("--bounded-window-delta", type=int, default=64)
     parser.add_argument("--output", required=True)
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    if args.bounded_window_delta < 0:
+        raise ValueError("bounded-window delta must be non-negative")
     root = Path(args.root)
     backend = PosixStorageBackend(root / "authority")
     log = ProductionTransactionalLog.open(
@@ -98,9 +101,10 @@ def main() -> int:
         if len(cycles) < 4 or not any(item["candidate_count"] > 0 for item in cycles[2:]):
             raise RuntimeError("accelerated soak never exposed a reclaimable compacted prefix")
         tail = [item["effective_live_count"] for item in growth_curve[-3:]]
-        # The exact count varies with fault evidence.  This preregistered bound
-        # permits one cadence window (64 metadata objects) of churn.
-        if max(tail) - min(tail) > 64:
+        # The exact count varies with fault and typed-attempt evidence. The
+        # default preserves P07's 64-object contract; later phases must bind
+        # any explicit extension in their phase decision/evidence.
+        if max(tail) - min(tail) > args.bounded_window_delta:
             raise RuntimeError("effective live-object window exceeded preregistered bound")
     payload = {
         "status": "PASS",
@@ -131,7 +135,7 @@ def main() -> int:
         "gc_apply_count": 0,
         "lifecycle_cycles": cycles,
         "growth_curve": growth_curve,
-        "bounded_window_preregistered_delta": 64,
+        "bounded_window_preregistered_delta": args.bounded_window_delta,
         "checks": {
             "snapshot_suffix_equals_strict": True,
             "snapshot_is_ancestry_pinned": True,

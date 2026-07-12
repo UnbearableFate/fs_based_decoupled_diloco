@@ -477,4 +477,22 @@ entries:
       - tracejob 2370998.opbs
     correction: require exact CAS renewals, one-to-one lifecycle-renewal/heartbeat counts, at least one observed long-substage renewal, and zero authority loss; report zero per-substage heartbeats truthfully when the future completed before its renewal timeout
     retry_policy: rerun the preserved-run targeted compute proof, then continue the mandatory clean 1-node and 2-node ladder
-last_updated: "2026-07-13T06:45:00+09:00"
+  - id: P08-E029
+    job: 2371021.opbs
+    shape: D8_R2_preserved_report_recovery_1node
+    commit: c847f2b5379552cb37e0f7c5d0687d7bc118837e
+    result: fail
+    failure_class: p07_default_window_ignores_p08_typed_attempt_objects
+    expected: corrected R2, matched interference, bundle gate, and bounded lifecycle report all pass from preserved evidence
+    actual: the R2 report, 20/19/1 attempt lineage, interference, and bundle gate passed; the P07 lifecycle reporter then rejected tail delta 72 against its unparameterized 64-object default
+    authority_effect: none; read-only report recovery on one compute node
+    runtime_started: false
+    evidence:
+      - artifacts/duraloco/P08/20260713_p08_r2_report_c847f2b_r2/manifest.json
+      - artifacts/duraloco/P08/20260713_p08_r2_report_c847f2b_r2/p08_d8_r2_report.json
+      - artifacts/duraloco/P08/20260713_p08_r2_report_c847f2b_r2/bundle_gate_report.json
+      - p08_r2_report.o2371021
+      - tracejob 2371021.opbs
+    correction: retain P07's 64 default and bind P08 R2 explicitly to 80, accounting for eight additional typed attempt/resource objects per cadence and sixteen across the two-interval tail; keep the measured 72 delta and candidate growth in evidence
+    retry_policy: rerun the preserved-run targeted compute proof, then continue the mandatory clean 1-node and 2-node ladder
+last_updated: "2026-07-13T06:50:00+09:00"

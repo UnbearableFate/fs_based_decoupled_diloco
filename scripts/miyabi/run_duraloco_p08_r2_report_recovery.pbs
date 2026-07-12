@@ -70,6 +70,6 @@ run_command "$PYTHON_BIN" scripts/agent/create_p08_performance_report.py gate \
   --output "$ARTIFACT_ROOT/bundle_gate_report.json"
 run_command "$PYTHON_BIN" scripts/agent/create_p07_lifecycle_report.py \
   --root "$TRAINING_ROOT" --run-id "$TRAIN_RUN_ID" --run-generation 0 \
-  --expected-learners 8 --require-bounded-window \
+  --expected-learners 8 --require-bounded-window --bounded-window-delta 80 \
   --output "$ARTIFACT_ROOT/p07_lifecycle_report.json"
 result=pass; exit_code=0

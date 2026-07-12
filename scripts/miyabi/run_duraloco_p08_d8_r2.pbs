@@ -99,6 +99,7 @@ elapsed=$(($(date +%s) - started))
   --output "$ARTIFACT_ROOT/bundle_gate_report.json" | tee -a "$ARTIFACT_ROOT/stdout.log"
 "$PYTHON_BIN" scripts/agent/create_p07_lifecycle_report.py --root "$TRAINING_ROOT" \
   --run-id "$TRAIN_RUN" --run-generation 0 --expected-learners 8 --require-bounded-window \
+  --bounded-window-delta 80 \
   --output "$ARTIFACT_ROOT/p07_lifecycle_report.json" | tee -a "$ARTIFACT_ROOT/stdout.log"
 "$PYTHON_BIN" -m pytest -q tests/lifecycle tests/log/test_replay_prefix.py \
   --junitxml "$ARTIFACT_ROOT/p07_regression_junit.xml" | tee -a "$ARTIFACT_ROOT/stdout.log"

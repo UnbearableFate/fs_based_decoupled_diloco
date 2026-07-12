@@ -9,7 +9,7 @@ actual_base_commit: 8c12839a7b985e590378ac593c846f07b0637517
 feature_branch: codex/duraloco-p08-distributed-performance
 current_loop: 6
 current_goal: "repair the R2 report cardinality gate, requalify 1-node and 2-node, then run one fresh final R2"
-attempts_for_current_failure: 2
+attempts_for_current_failure: 3
 last_terminal_failure_review: plans/duraloco/phases/P08_9NODE_FAILURE_REVIEW_2370941.md
 terminal_retry_authorized: false
 terminal_retry_qualification:

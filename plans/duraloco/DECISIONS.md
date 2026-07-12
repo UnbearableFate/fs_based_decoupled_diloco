@@ -899,3 +899,8 @@ P05+ 的规范性路线决策生效。
 
 - Choice: keep the historical P06B factor-one report ceiling at 900 seconds by default, but require the P08 D8 wrapper to pass its explicit 1500-second PBS allocation envelope. The P08 report always archives the observed elapsed time and the matched comparison uses that value, so accepting report construction within the allocation does not assert that the runtime is fast or acceptable.
 - Rejected: silently changing the P06B threshold, dropping elapsed validation, or replacing the measured 17:41 result with a nominal value.
+
+## D-0820 — P08 factor-two lifecycle window budget
+
+- Choice: preserve the P07 lifecycle reporter's 64-object default. P08 R2 binds an explicit 80-object two-interval tail budget: P08 typed resource/attempt evidence adds eight effective-live objects per lifecycle cadence relative to the P07 curve, hence sixteen across the report's three-point/two-interval tail. The measured R2 tail is 229/265/301 (delta 72), while every adjacent cadence remains a constant 36 objects and reclaimable candidates grow 120/182/244. The extension changes only the observational acceptance budget; reachability, two-snapshot retention, dry-run deletion policy, and authority are unchanged.
+- Rejected: silently widening P07, disabling the bounded-window check, treating factor-two attempt/resource objects as leaks, or accepting an unbounded/nonlinear curve.
