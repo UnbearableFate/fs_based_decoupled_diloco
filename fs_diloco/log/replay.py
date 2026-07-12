@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import hashlib
-from typing import Any
+from typing import Any, Iterable
 
 from fs_diloco.optimizer.reference_adapter import transition
 from fs_diloco.protocol.canonical_json import canonical_bytes, canonical_digest
@@ -21,6 +21,7 @@ from fs_diloco.protocol.manifests import load_manifest_bytes
 from fs_diloco.protocol.schemas import ProposalManifest
 from fs_diloco.testing.deterministic_reference import normalized_weights
 from fs_diloco.testing.deterministic_reference import vector_identity
+from fs_diloco.storage.base import BytesLike, DeleteTarget, ObjectMetadata
 
 from .codec import (
     canonical_object,
@@ -55,6 +56,17 @@ class ReplayResult:
 
 
 @dataclass(frozen=True)
+class ReplayModeResult:
+    replay: ReplayResult
+    mode: str
+    snapshot_id: str | None
+    covered_commit_seq: int | None
+    suffix_length: int
+    fallback_reason: str | None
+    storage_get_count: int
+
+
+@dataclass(frozen=True)
 class OrphanReport:
     committed_reachable: tuple[str, ...]
     prepared_orphans: tuple[str, ...]
@@ -81,6 +93,79 @@ class ProductionReplayCache:
     @classmethod
     def empty(cls) -> "ProductionReplayCache":
         return cls(set(), {}, {})
+
+
+class _SnapshotOverlayBackend:
+    """Read immutable prefix objects from one validated snapshot."""
+
+    def __init__(self, backend, objects: dict[str, bytes]) -> None:
+        self._backend = backend
+        self._objects = dict(objects)
+
+    @property
+    def capabilities(self):
+        return self._backend.capabilities
+
+    @property
+    def history(self):
+        return self._backend.history
+
+    def get(self, key: str, *, expected_version: str | None = None) -> bytes:
+        if key in self._objects:
+            if expected_version is not None:
+                raise ValueError("snapshot immutable objects have no backend version token")
+            return self._objects[key]
+        return self._backend.get(key, expected_version=expected_version)
+
+    def head(self, key: str) -> ObjectMetadata:
+        if key in self._objects:
+            data = self._objects[key]
+            return ObjectMetadata(
+                key=key,
+                size=len(data),
+                sha256=hashlib.sha256(data).hexdigest(),
+                version="snapshot-overlay-v1",
+            )
+        return self._backend.head(key)
+
+    def range_get(self, key: str, start: int, end: int | None = None) -> bytes:
+        if key in self._objects:
+            return self._objects[key][start:end]
+        return self._backend.range_get(key, start, end)
+
+    def list_prefix(self, prefix: str) -> tuple[str, ...]:
+        return tuple(
+            sorted(
+                set(self._backend.list_prefix(prefix))
+                | {key for key in self._objects if key.startswith(prefix)}
+            )
+        )
+
+    def put_immutable(
+        self, key: str, data: BytesLike, *, sha256: str | None = None
+    ) -> ObjectMetadata:
+        return self._backend.put_immutable(key, data, sha256=sha256)
+
+    def put_if_absent(self, key: str, data: BytesLike) -> ObjectMetadata:
+        return self._backend.put_if_absent(key, data)
+
+    def conditional_replace(
+        self,
+        key: str,
+        *,
+        expected_version: str,
+        data: BytesLike,
+        request_id: str | None = None,
+    ) -> ObjectMetadata:
+        return self._backend.conditional_replace(
+            key,
+            expected_version=expected_version,
+            data=data,
+            request_id=request_id,
+        )
+
+    def delete_batch(self, keys: Iterable[DeleteTarget]) -> dict[str, str]:
+        return self._backend.delete_batch(keys)
 
 
 def _ref_identity(ref: ObjectRef) -> tuple[str, str, int]:
@@ -1156,6 +1241,158 @@ def replay_log(
             validation_device=production_validation_device,
         )
     raise VerificationError(f"unsupported replay payload codec: {log.spec.payload_codec}")
+
+
+def _history_get_count(backend) -> int:
+    try:
+        return sum(record.operation == "get" for record in backend.history)
+    except Exception:
+        return 0
+
+
+def _cache_from_snapshot(snapshot) -> ProductionReplayCache:
+    return ProductionReplayCache(
+        proposal_payloads=set(snapshot.proposal_payloads),
+        params_numels={
+            (key, digest, size): numel
+            for key, digest, size, numel in snapshot.params_numels
+        },
+        outer_numels={
+            (key, digest, size): frozenset(numels)
+            for key, digest, size, numels in snapshot.outer_numels
+        },
+    )
+
+
+def _find_latest_valid_snapshot(log: TransactionalLog):
+    """Walk only the current suffix until a valid committed snapshot pin."""
+
+    from .snapshot import SnapshotManifestV1
+
+    loaded_head = log.load_head()
+    head = loaded_head.manifest
+    current_data = verified_get(log.backend, head.frontier_ref, commit_seq=head.commit_seq)
+    current = _parse_frontier(current_data, commit_seq=head.commit_seq)
+    if (
+        current.commit_seq != head.commit_seq
+        or current.commit_id != head.commit_id
+        or current.fencing_epoch != head.fencing_epoch
+    ):
+        raise VerificationError("head and frontier identity differ", commit_seq=head.commit_seq)
+    failures: list[str] = []
+    while current.commit_seq > 0:
+        seq = current.commit_seq
+        commit = _parse_commit(
+            _direct_get(log, log.layout.commit_key(seq, current.commit_id), commit_seq=seq),
+            commit_seq=seq,
+        )
+        if isinstance(commit, ControlCommitManifest) and commit.snapshot is not None:
+            try:
+                snapshot_data = verified_get(
+                    log.backend, commit.snapshot.snapshot_ref, commit_seq=seq
+                )
+                snapshot = SnapshotManifestV1.from_dict(canonical_object(snapshot_data))
+                if (
+                    snapshot.run_id != log.spec.run_id
+                    or snapshot.run_generation != log.spec.run_generation
+                    or snapshot.snapshot_id != commit.snapshot.snapshot_id
+                    or snapshot.covered_state_digest
+                    != commit.snapshot.covered_state_digest
+                    or snapshot.covered_head.commit_seq
+                    != commit.snapshot.covered_commit_seq
+                    or snapshot.covered_head.commit_id
+                    != commit.snapshot.covered_commit_id
+                    or commit.parent_commit_id != snapshot.covered_head.commit_id
+                    or commit.parent_head_version
+                    != _logical_head_version(snapshot.covered_head)
+                    or current.parent_frontier_sha256
+                    != snapshot.covered_frontier.frontier_sha256
+                ):
+                    raise ValueError("snapshot pin identity differs from suffix")
+                requests = {
+                    request_id: (digest, commit_seq)
+                    for request_id, digest, commit_seq in snapshot.control_requests
+                }
+                _verify_control_transition(
+                    previous=snapshot.covered_frontier,
+                    frontier=current,
+                    commit=commit,
+                    control_requests=requests,
+                )
+                return snapshot, head.commit_seq - snapshot.covered_head.commit_seq, failures
+            except Exception as exc:
+                failures.append(f"{commit.snapshot.snapshot_id}:{type(exc).__name__}")
+        parent_digest = current.parent_frontier_sha256
+        if parent_digest is None:
+            raise VerificationError("non-genesis frontier has no parent", commit_seq=seq)
+        parent_data = _direct_get(
+            log,
+            log.layout.frontier_key(seq - 1, parent_digest),
+            commit_seq=seq - 1,
+        )
+        parent = _parse_frontier(parent_data, commit_seq=seq - 1)
+        if parent.frontier_sha256 != parent_digest:
+            raise VerificationError("parent frontier digest mismatch", commit_seq=seq)
+        current = parent
+    return None, 0, failures
+
+
+def replay_snapshot_suffix(
+    log: TransactionalLog,
+    *,
+    production_validation_device: Any = None,
+) -> ReplayModeResult:
+    """Replay from the latest valid pinned snapshot, or strictly fall back."""
+
+    before = _history_get_count(log.backend)
+    fallback_reason: str | None = None
+    try:
+        snapshot, suffix_length, failures = _find_latest_valid_snapshot(log)
+        if snapshot is not None:
+            objects = {
+                key: data for key, _digest, _size, data in snapshot.embedded_objects
+            }
+            overlay = _SnapshotOverlayBackend(log.backend, objects)
+            overlay_log = TransactionalLog(overlay, log.manifest)
+            result = replay_log(
+                overlay_log,
+                production_cache=_cache_from_snapshot(snapshot),
+                production_validation_device=production_validation_device,
+            )
+            if (
+                result.loaded_head.manifest != log.load_head().manifest
+                or result.head_frontier.commit_seq
+                < snapshot.covered_head.commit_seq
+            ):
+                raise VerificationError("snapshot replay result differs from current head")
+            return ReplayModeResult(
+                replay=result,
+                mode="snapshot_suffix",
+                snapshot_id=snapshot.snapshot_id,
+                covered_commit_seq=snapshot.covered_head.commit_seq,
+                suffix_length=suffix_length,
+                fallback_reason=None,
+                storage_get_count=_history_get_count(log.backend) - before,
+            )
+        fallback_reason = (
+            "no_valid_snapshot" if not failures else "invalid_snapshots:" + ",".join(failures)
+        )
+    except Exception as exc:
+        fallback_reason = f"snapshot_discovery_failed:{type(exc).__name__}"
+    result = replay_log(
+        log,
+        production_cache=ProductionReplayCache.empty(),
+        production_validation_device=production_validation_device,
+    )
+    return ReplayModeResult(
+        replay=result,
+        mode="strict_fallback",
+        snapshot_id=None,
+        covered_commit_seq=None,
+        suffix_length=result.head_frontier.commit_seq,
+        fallback_reason=fallback_reason,
+        storage_get_count=_history_get_count(log.backend) - before,
+    )
 
 
 def inspect_orphans(log: TransactionalLog) -> OrphanReport:

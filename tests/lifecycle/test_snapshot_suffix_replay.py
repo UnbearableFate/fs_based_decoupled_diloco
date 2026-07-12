@@ -103,3 +103,64 @@ def test_snapshot_identity_detects_partial_or_conflicting_content():
     control["snapshot"] = None
     with pytest.raises(Exception, match="snapshot"):
         ControlCommitManifest.from_dict(control)
+
+
+def test_snapshot_suffix_matches_strict_replay_and_avoids_covered_tensor_reads():
+    backend, log = _initialize("p07-snapshot-suffix")
+    _activate(log)
+    first = _proposal(log, learner="learner-before-snapshot")
+    log.commit_prepared(_prepare(log, first, "optimizer-before-snapshot"))
+    log.commit_snapshot(request_id="snapshot-a")
+    second = _proposal(log, learner="learner-after-snapshot")
+    log.commit_prepared(_prepare(log, second, "optimizer-after-snapshot"))
+
+    history_start = len(backend.history)
+    accelerated = log.replay_from_snapshot()
+    accelerated_records = backend.history[history_start:]
+    accelerated_reads = sum(
+        record.operation == "get" for record in accelerated_records
+    )
+    history_start = len(backend.history)
+    strict = log.replay(force_full=True)
+    strict_reads = sum(
+        record.operation == "get" for record in backend.history[history_start:]
+    )
+
+    assert accelerated.mode == "snapshot_suffix"
+    assert accelerated.covered_commit_seq == 2
+    assert accelerated.suffix_length == 2
+    assert accelerated.replay == strict
+    assert accelerated.storage_get_count == accelerated_reads
+    assert accelerated_reads < strict_reads
+    covered_large_keys = {
+        first.payload_key,
+        *(
+            ref.key
+            for fragment in accelerated.replay.frontiers[2].fragments.values()
+            for ref in (fragment.params_ref, fragment.outer_state_ref)
+        ),
+    }
+    assert not any(
+        record.operation == "get" and record.key in covered_large_keys
+        for record in accelerated_records
+    )
+
+
+def test_snapshot_mode_corruption_falls_back_to_equal_strict_replay():
+    backend, log = _initialize("p07-snapshot-mode-fallback")
+    _activate(log)
+    log.commit_snapshot(request_id="snapshot-a")
+    pin = log.replay(force_full=True).commits[-1]
+    assert isinstance(pin, ControlCommitManifest) and pin.snapshot is not None
+    original = backend._objects[pin.snapshot.snapshot_ref.key]
+    damaged = bytearray(original.data)
+    damaged[-1] ^= 1
+    backend._objects[pin.snapshot.snapshot_ref.key] = replace(
+        original, data=bytes(damaged)
+    )
+
+    replayed = log.replay_from_snapshot()
+    assert replayed.mode == "strict_fallback"
+    assert replayed.snapshot_id is None
+    assert replayed.fallback_reason is not None
+    assert replayed.replay == log.replay(force_full=True)

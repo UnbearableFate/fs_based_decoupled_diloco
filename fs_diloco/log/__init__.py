@@ -26,7 +26,14 @@ from .model import (
     prepare_transition,
     select_quorum,
 )
-from .replay import OrphanReport, ReplayResult, inspect_orphans, replay_log
+from .replay import (
+    OrphanReport,
+    ReplayModeResult,
+    ReplayResult,
+    inspect_orphans,
+    replay_log,
+    replay_snapshot_suffix,
+)
 from .production import ProductionTransactionalLog
 from .run import RunManifest, RunSpec
 
@@ -48,6 +55,7 @@ __all__ = [
     "ReferenceProposal",
     "ReferenceProtocolConfig",
     "ReplayResult",
+    "ReplayModeResult",
     "RunInitializationError",
     "RunManifest",
     "RunSpec",
@@ -61,5 +69,6 @@ __all__ = [
     "prepare_transition",
     "inspect_orphans",
     "replay_log",
+    "replay_snapshot_suffix",
     "select_quorum",
 ]

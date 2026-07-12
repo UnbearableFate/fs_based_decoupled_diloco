@@ -60,7 +60,3 @@ automatic_progression: true
 requires_human_approval: false
 approval_reason: null
 checker_report: null
-automatic_progression: true
-requires_human_approval: false
-approval_reason: null
-checker_report: plans/duraloco/checker_reports/P06C_FINAL_CHECKER_REPORT.md

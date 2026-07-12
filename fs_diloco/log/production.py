@@ -45,7 +45,13 @@ from .production_codec import (
     decode_production_params,
     validate_production_tensor_payload,
 )
-from .replay import ProductionReplayCache, ReplayResult, replay_log
+from .replay import (
+    ProductionReplayCache,
+    ReplayModeResult,
+    ReplayResult,
+    replay_log,
+    replay_snapshot_suffix,
+)
 from .run import RunManifest, RunSpec
 from .snapshot import SnapshotManifestV1
 from fs_diloco.coordination.state_machine import OwnerToken
@@ -242,6 +248,14 @@ class ProductionTransactionalLog:
         if force_full:
             self._replay_cache = cache
         return result
+
+    def replay_from_snapshot(self) -> ReplayModeResult:
+        """Use the newest valid ancestry-pinned snapshot with strict fallback."""
+
+        return replay_snapshot_suffix(
+            self.transactional,
+            production_validation_device=self._replay_validation_device,
+        )
 
     def clear_owner_state(self) -> None:
         """Discard every process/owner-scoped optimization and tentative fact."""
@@ -573,7 +587,35 @@ class ProductionTransactionalLog:
 
         token = self._require_owner_token()
         replay = self.replay(force_full=True)
-        snapshot = SnapshotManifestV1.create(replay)
+        embedded_objects: dict[str, bytes] = {}
+        for frontier in replay.frontiers:
+            key = self.layout.frontier_key(
+                frontier.commit_seq, frontier.frontier_sha256
+            )
+            embedded_objects[key] = canonical_bytes(frontier.to_dict())
+        for commit in replay.commits:
+            key = self.layout.commit_key(commit.commit_seq, commit.commit_id)
+            embedded_objects[key] = canonical_bytes(commit.to_dict())
+        for proposal_id, proposal in replay.proposals.items():
+            if not isinstance(proposal, ProposalManifest):
+                raise VerificationError("production snapshot contains a non-production proposal")
+            embedded_objects[self.layout.proposal_key(proposal_id)] = canonical_bytes(
+                proposal.to_dict()
+            )
+        membership_refs = {
+            frontier.membership.membership_ref
+            for frontier in replay.frontiers
+            if frontier.membership is not None
+        }
+        for ref in membership_refs:
+            embedded_objects[ref.key] = verified_get(
+                self.backend, ref, commit_seq=replay.head_frontier.commit_seq
+            )
+        snapshot = SnapshotManifestV1.create(
+            replay,
+            embedded_objects=embedded_objects,
+            replay_cache=self._replay_cache,
+        )
         snapshot_data = snapshot.canonical_bytes()
         snapshot_ref = content_ref(
             self.layout.snapshot_key(snapshot.snapshot_id), snapshot_data

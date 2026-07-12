@@ -8,6 +8,8 @@ object identity.  The global head and its ancestry remain the sole authority.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import base64
+import hashlib
 from typing import Any, Mapping
 
 from fs_diloco.protocol.canonical_json import canonical_bytes, canonical_digest
@@ -117,10 +119,20 @@ class SnapshotManifestV1:
     covered_state_digest: str
     causal_bases: tuple[CausalBaseSummary, ...]
     control_requests: tuple[tuple[str, str, int], ...]
+    embedded_objects: tuple[tuple[str, str, int, bytes], ...]
+    proposal_payloads: tuple[tuple[str, str, int], ...]
+    params_numels: tuple[tuple[str, str, int, int], ...]
+    outer_numels: tuple[tuple[str, str, int, tuple[int, ...]], ...]
     snapshot_id: str
 
     @classmethod
-    def create(cls, replay) -> "SnapshotManifestV1":
+    def create(
+        cls,
+        replay,
+        *,
+        embedded_objects: Mapping[str, bytes] | None = None,
+        replay_cache=None,
+    ) -> "SnapshotManifestV1":
         head = replay.loaded_head.manifest
         frontier = replay.head_frontier
         body = {
@@ -140,6 +152,37 @@ class SnapshotManifestV1:
                     replay.control_requests.items()
                 )
             ],
+            "embedded_objects": [
+                [
+                    key,
+                    hashlib.sha256(data).hexdigest(),
+                    len(data),
+                    base64.b64encode(data).decode("ascii"),
+                ]
+                for key, data in sorted((embedded_objects or {}).items())
+            ],
+            "proposal_payloads": [
+                list(item)
+                for item in sorted(
+                    replay_cache.proposal_payloads if replay_cache is not None else ()
+                )
+            ],
+            "params_numels": [
+                [*identity, numel]
+                for identity, numel in sorted(
+                    replay_cache.params_numels.items()
+                    if replay_cache is not None
+                    else ()
+                )
+            ],
+            "outer_numels": [
+                [*identity, sorted(numels)]
+                for identity, numels in sorted(
+                    replay_cache.outer_numels.items()
+                    if replay_cache is not None
+                    else ()
+                )
+            ],
         }
         return cls.from_dict(
             {**body, "snapshot_id": "snapshot-" + canonical_digest(body)}
@@ -156,6 +199,10 @@ class SnapshotManifestV1:
             "covered_state_digest",
             "causal_bases",
             "control_requests",
+            "embedded_objects",
+            "proposal_payloads",
+            "params_numels",
+            "outer_numels",
             "snapshot_id",
         }
         if not isinstance(payload, Mapping) or set(payload) != required:
@@ -206,6 +253,12 @@ class SnapshotManifestV1:
             requests.append((item[0], item[1], item[2]))
         if tuple(sorted(requests)) != tuple(requests):
             raise ValueError("snapshot control requests are not canonical")
+        embedded = cls._parse_embedded_objects(payload["embedded_objects"])
+        proposal_payloads = cls._parse_ref_identities(
+            payload["proposal_payloads"], field="proposal_payloads"
+        )
+        params_numels = cls._parse_numel_cache(payload["params_numels"])
+        outer_numels = cls._parse_outer_cache(payload["outer_numels"])
         body = dict(payload)
         snapshot_id = body.pop("snapshot_id")
         expected_id = "snapshot-" + canonical_digest(body)
@@ -219,8 +272,109 @@ class SnapshotManifestV1:
             covered_state_digest=expected_state,
             causal_bases=bases,
             control_requests=tuple(requests),
+            embedded_objects=embedded,
+            proposal_payloads=proposal_payloads,
+            params_numels=params_numels,
+            outer_numels=outer_numels,
             snapshot_id=snapshot_id,
         )
+
+    @staticmethod
+    def _parse_ref_identities(payload: object, *, field: str) -> tuple[tuple[str, str, int], ...]:
+        if not isinstance(payload, list):
+            raise ValueError(f"snapshot {field} must be a list")
+        result: list[tuple[str, str, int]] = []
+        for item in payload:
+            if (
+                not isinstance(item, list)
+                or len(item) != 3
+                or not isinstance(item[0], str)
+                or not item[0]
+                or not isinstance(item[1], str)
+                or len(item[1]) != 64
+                or type(item[2]) is not int
+                or item[2] < 1
+            ):
+                raise ValueError(f"invalid snapshot {field} entry")
+            result.append((item[0], item[1], item[2]))
+        if tuple(sorted(result)) != tuple(result) or len(set(result)) != len(result):
+            raise ValueError(f"snapshot {field} is not canonical")
+        return tuple(result)
+
+    @classmethod
+    def _parse_embedded_objects(
+        cls, payload: object
+    ) -> tuple[tuple[str, str, int, bytes], ...]:
+        if not isinstance(payload, list):
+            raise ValueError("snapshot embedded_objects must be a list")
+        result: list[tuple[str, str, int, bytes]] = []
+        for item in payload:
+            if not isinstance(item, list) or len(item) != 4:
+                raise ValueError("invalid snapshot embedded object entry")
+            key, digest, size, encoded = item
+            if (
+                not isinstance(key, str)
+                or not key
+                or not isinstance(digest, str)
+                or len(digest) != 64
+                or type(size) is not int
+                or size < 1
+                or not isinstance(encoded, str)
+            ):
+                raise ValueError("invalid snapshot embedded object identity")
+            try:
+                data = base64.b64decode(encoded, validate=True)
+            except Exception as exc:
+                raise ValueError("invalid snapshot embedded object encoding") from exc
+            if len(data) != size or hashlib.sha256(data).hexdigest() != digest:
+                raise ValueError("snapshot embedded object digest differs")
+            result.append((key, digest, size, data))
+        identities = tuple((key, digest, size) for key, digest, size, _ in result)
+        if identities != tuple(sorted(identities)) or len(set(identities)) != len(identities):
+            raise ValueError("snapshot embedded objects are not canonical")
+        return tuple(result)
+
+    @classmethod
+    def _parse_numel_cache(
+        cls, payload: object
+    ) -> tuple[tuple[str, str, int, int], ...]:
+        if not isinstance(payload, list):
+            raise ValueError("snapshot params_numels must be a list")
+        result: list[tuple[str, str, int, int]] = []
+        for item in payload:
+            if not isinstance(item, list) or len(item) != 4:
+                raise ValueError("invalid snapshot params_numels entry")
+            identity = cls._parse_ref_identities([item[:3]], field="params_numels")
+            if type(item[3]) is not int or item[3] < 1:
+                raise ValueError("invalid snapshot params numel")
+            result.append((*identity[0], item[3]))
+        if tuple(sorted(result)) != tuple(result):
+            raise ValueError("snapshot params_numels is not canonical")
+        return tuple(result)
+
+    @classmethod
+    def _parse_outer_cache(
+        cls, payload: object
+    ) -> tuple[tuple[str, str, int, tuple[int, ...]], ...]:
+        if not isinstance(payload, list):
+            raise ValueError("snapshot outer_numels must be a list")
+        result: list[tuple[str, str, int, tuple[int, ...]]] = []
+        for item in payload:
+            if not isinstance(item, list) or len(item) != 4:
+                raise ValueError("invalid snapshot outer_numels entry")
+            identity = cls._parse_ref_identities([item[:3]], field="outer_numels")
+            raw_numels = item[3]
+            if (
+                not isinstance(raw_numels, list)
+                or not raw_numels
+                or any(type(value) is not int or value < 1 for value in raw_numels)
+                or raw_numels != sorted(set(raw_numels))
+            ):
+                raise ValueError("invalid snapshot outer numels")
+            result.append((*identity[0], tuple(raw_numels)))
+        if tuple(sorted(result)) != tuple(result):
+            raise ValueError("snapshot outer_numels is not canonical")
+        return tuple(result)
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -232,6 +386,16 @@ class SnapshotManifestV1:
             "covered_state_digest": self.covered_state_digest,
             "causal_bases": [item.to_dict() for item in self.causal_bases],
             "control_requests": [list(item) for item in self.control_requests],
+            "embedded_objects": [
+                [key, digest, size, base64.b64encode(data).decode("ascii")]
+                for key, digest, size, data in self.embedded_objects
+            ],
+            "proposal_payloads": [list(item) for item in self.proposal_payloads],
+            "params_numels": [list(item) for item in self.params_numels],
+            "outer_numels": [
+                [key, digest, size, list(numels)]
+                for key, digest, size, numels in self.outer_numels
+            ],
             "snapshot_id": self.snapshot_id,
         }
 
