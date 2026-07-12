@@ -80,7 +80,7 @@ printf '\n' | tee -a "$ARTIFACT_ROOT/commands.log"
 "$PYTHON_BIN" -m fs_diloco.analysis summary "$TRAINING_ROOT" --json | tee "$ARTIFACT_ROOT/training_summary.json"
 elapsed=$(($(date +%s) - started))
 "$PYTHON_BIN" scripts/agent/create_p06c_runtime_report.py --root "$TRAINING_ROOT" --run-id "$TRAIN_RUN" --run-generation 0 --expected-mode hedged --expected-learners 8 --allow-degraded-attempts --output "$ARTIFACT_ROOT/d8_r2_runtime_report.json" | tee -a "$ARTIFACT_ROOT/stdout.log"
-"$PYTHON_BIN" scripts/agent/create_p06c_d8_report.py --root "$TRAINING_ROOT" --artifacts "$ARTIFACT_ROOT" --run-id "$TRAIN_RUN" --elapsed-seconds "$elapsed" --runtime-report "$ARTIFACT_ROOT/d8_r2_runtime_report.json" --factor-one-report "$FACTOR_ONE_REPORT" --output "$ARTIFACT_ROOT/d8_r2_report.json" | tee -a "$ARTIFACT_ROOT/stdout.log"
+"$PYTHON_BIN" scripts/agent/create_p06c_d8_report.py --root "$TRAINING_ROOT" --artifacts "$ARTIFACT_ROOT" --run-id "$TRAIN_RUN" --elapsed-seconds "$elapsed" --max-elapsed-seconds 1800 --runtime-report "$ARTIFACT_ROOT/d8_r2_runtime_report.json" --factor-one-report "$FACTOR_ONE_REPORT" --output "$ARTIFACT_ROOT/d8_r2_report.json" | tee -a "$ARTIFACT_ROOT/stdout.log"
 "$PYTHON_BIN" scripts/agent/create_p07_lifecycle_report.py --root "$TRAINING_ROOT" --run-id "$TRAIN_RUN" --run-generation 0 --expected-learners 8 --require-bounded-window --output "$ARTIFACT_ROOT/p07_d8_report.json" | tee -a "$ARTIFACT_ROOT/stdout.log"
 result=pass
 exit_code=0

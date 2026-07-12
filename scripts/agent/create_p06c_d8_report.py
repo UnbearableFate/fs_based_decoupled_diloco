@@ -30,6 +30,7 @@ def main() -> int:
     parser.add_argument("--artifacts", type=Path, required=True)
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--elapsed-seconds", type=int, required=True)
+    parser.add_argument("--max-elapsed-seconds", type=int, default=900)
     parser.add_argument("--runtime-report", type=Path, required=True)
     parser.add_argument("--factor-one-report", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
@@ -180,8 +181,8 @@ def main() -> int:
         ],
         "runtime_report": runtime,
     }
-    if report["elapsed_seconds"] > 900:
-        raise AssertionError("D8-R2 exceeded its 15-minute runtime envelope")
+    if report["elapsed_seconds"] > args.max_elapsed_seconds:
+        raise AssertionError("D8-R2 exceeded its configured runtime envelope")
     args.output.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(report, sort_keys=True))
     return 0

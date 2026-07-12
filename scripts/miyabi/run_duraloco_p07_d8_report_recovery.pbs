@@ -1,0 +1,62 @@
+#!/bin/bash
+#PBS -N p07_d8_report
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:15:00
+#PBS -j oe
+#PBS -m ae
+
+set -eEuo pipefail
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat CUDA_VISIBLE_DEVICES=""
+PROJECT_ROOT="${PROJECT_ROOT:-${PBS_O_WORKDIR:?}}"
+PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
+: "${EXPECTED_COMMIT:?}" "${RUN_ID:?}" "${ARTIFACT_ROOT:?}"
+: "${SOURCE_ARTIFACT:?}" "${TRAINING_ROOT:?}" "${TRAIN_RUN:?}"
+: "${FACTOR_ONE_REPORT:?}" "${ELAPSED_SECONDS:?}"
+cd "$PROJECT_ROOT"
+mkdir -p "$ARTIFACT_ROOT"
+touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log" "$ARTIFACT_ROOT/commands.log"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+
+result=fail
+exit_code=1
+finish() {
+  observed=$?
+  if [[ "$result" == pass ]]; then exit_code=0; elif [[ "$observed" -ne 0 ]]; then exit_code=$observed; fi
+  "$PYTHON_BIN" scripts/agent/create_run_manifest.py \
+    --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json" \
+    --phase P07 --purpose verification --run-id "$RUN_ID" --schema-version 2 \
+    --validation-shape p07-d8-r2-report-recovery-after-terminal-training \
+    --backend lustre --model-revision gpt2 --dataset-revision wikitext-2-raw-v1 \
+    --config scripts/miyabi/run_duraloco_p07_d8_report_recovery.pbs \
+    --commands-log commands.log --stdout stdout.log --stderr stderr.log \
+    --exit-code "$exit_code" --result "$result" \
+    --termination-kind "$([[ "$result" == pass ]] && echo success || echo test_failure)" \
+    --pbs-queue debug-g --requested-resources select=1:mpiprocs=1,walltime=00:15:00 \
+    --last-qstat-state R --parent-run-id 20260712_p07_heartbeat_2295467_d8 \
+    --termination-detail "Recovered P07 reports from completed ten-transition D8 authority" \
+    --stage-metrics-path p07_d8_report.json || true
+}
+trap finish EXIT
+trap 'echo "[ERROR] report recovery failed at line $LINENO" | tee -a "$ARTIFACT_ROOT/stderr.log"' ERR
+
+[[ "$(hostname)" == mg* ]]
+[[ "$(git rev-parse HEAD)" == "$EXPECTED_COMMIT" ]]
+[[ -z "$(git status --porcelain=v1 --untracked-files=no)" ]]
+[[ -f "$SOURCE_ARTIFACT/d8_r2_runtime_report.json" ]]
+[[ -f "$FACTOR_ONE_REPORT" ]]
+cp "$SOURCE_ARTIFACT/d8_r2_runtime_report.json" "$ARTIFACT_ROOT/d8_r2_runtime_report.json"
+
+"$PYTHON_BIN" scripts/agent/create_p06c_d8_report.py \
+  --root "$TRAINING_ROOT" --artifacts "$SOURCE_ARTIFACT" --run-id "$TRAIN_RUN" \
+  --elapsed-seconds "$ELAPSED_SECONDS" --max-elapsed-seconds 1800 \
+  --runtime-report "$ARTIFACT_ROOT/d8_r2_runtime_report.json" \
+  --factor-one-report "$FACTOR_ONE_REPORT" --output "$ARTIFACT_ROOT/d8_r2_report.json" \
+  | tee -a "$ARTIFACT_ROOT/stdout.log"
+"$PYTHON_BIN" scripts/agent/create_p07_lifecycle_report.py \
+  --root "$TRAINING_ROOT" --run-id "$TRAIN_RUN" --run-generation 0 \
+  --expected-learners 8 --require-bounded-window \
+  --output "$ARTIFACT_ROOT/p07_d8_report.json" | tee -a "$ARTIFACT_ROOT/stdout.log"
+result=pass
+exit_code=0
