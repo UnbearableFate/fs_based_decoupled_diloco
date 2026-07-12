@@ -7,16 +7,16 @@ verified_dependency_checker_commit: 04e0a8634b0e9d7c4cd55c5593081a0ca969a060
 actual_base_branch: codex/problem-fix-after-p07
 actual_base_commit: 8c12839a7b985e590378ac593c846f07b0637517
 feature_branch: codex/duraloco-p08-distributed-performance
-current_loop: 3
-current_goal: "qualify direct fragment I/O, streaming reduction, validation reuse, range I/O, bounded execution, and error resume"
-attempts_for_current_failure: 3
+current_loop: 6
+current_goal: "run the matched no-LFE, D8 factor-one, and D8-R2 final performance and lifecycle ladder"
+attempts_for_current_failure: 0
 last_terminal_failure_review: null
 terminal_retry_authorized: false
 terminal_retry_qualification:
   targeted_1node_benchmark: null
   miyabi_1node: null
   miyabi_2node: null
-last_verified_commit: b1ff147c672c649625a2f99efcc03d327ef675bf
+last_verified_commit: f3986b8538f1ce05e4d89871152fe18114ea7dc6
 checks:
   local_static: static_pass
   local_runtime: unit_pass
@@ -25,7 +25,7 @@ checks:
   miyabi_1node: not_run
   miyabi_2node: not_run
   miyabi_d1: miyabi_d1_pass
-  miyabi_d2_r2: failed
+  miyabi_d2_r2: miyabi_d2_pass
   miyabi_d8: not_run
   miyabi_d8_r2: not_run
   independent_checker: not_run
@@ -39,21 +39,21 @@ acceptance:
   P08-A07: {result: pass, evidence: [2370206.opbs, test_discovery_cursor_never_filters_inventory_and_restart_is_equivalent]}
   P08-A08: {result: pass, evidence: [2370206.opbs, test_head_or_epoch_jump_cancels_prefetch_and_forces_new_scope]}
   P08-A09: {result: pass, evidence: [2370269.opbs, d1_report.json complete work-order timeline plus publish/adopt lineage]}
-  P08-A10: {result: pass, evidence: [P08-E001 through P08-E013 preserved with pass/fail lineage]}
+  P08-A10: {result: pass, evidence: [P08-E001 through P08-E016 preserved with pass/fail lineage]}
   P08-A11: {result: pass, evidence: [2370269.opbs, actual affinity 8 CPUs, NUMA 0-1, Torch threads 8, RSS 6339821568 below 16 GiB]}
   P08-A12: {result: not_run, evidence: []}
   P08-A13: {result: pass, evidence: [2370206.opbs, ordered float32 streaming equivalence tests]}
-  P08-A14: {result: not_run, evidence: []}
+  P08-A14: {result: pass, evidence: [2370347.opbs, four factor-two work orders each with two exact implementation-identity attempts]}
   P08-A15: {result: not_run, evidence: []}
   P08-A16: {result: not_run, evidence: []}
   P08-A17: {result: not_run, evidence: []}
   P08-A18: {result: not_run, evidence: []}
   P08-A19: {result: pass, evidence: [2370206.opbs, single LogLayout and one head CAS source audit]}
-  P08-A20: {result: not_run, evidence: []}
+  P08-A20: {result: pass, evidence: [2370269.opbs D1, 2370347.opbs D2-R2]}
   P08-A21: {result: not_run, evidence: []}
   P08-A22: {result: not_run, evidence: []}
   P08-A23: {result: pass, evidence: [2370206.opbs, forbidden_surface.json finding_count=0]}
-  P08-A24: {result: not_run, evidence: []}
+  P08-A24: {result: pass, evidence: [2370347.opbs, error stop at fence 1 then cross-host resume at fence 2 without optimizer-count change]}
   P08-A25: {result: not_run, evidence: []}
 open_decisions: []
 open_blockers: []
@@ -63,7 +63,9 @@ artifacts:
   - plans/duraloco/errors/P08_ERROR_LEDGER.yaml
   - scripts/miyabi/run_duraloco_p08_profile_1node.pbs
   - benchmarks/bench_lfe_pipeline.py
-next_action: "qualify P08 D2 controlled error-stop crash, fenced resume, and factor-two identity"
+  - artifacts/duraloco/P08/20260713_p08_d2r2_f3986b8_r1/manifest.json
+  - artifacts/duraloco/P08/20260713_p08_d2r2_f3986b8_r1/d2_report.json
+next_action: "freeze the matched D8 interference and single-FWO evidence gate, then run the final 1-node, 2-node, and 9-node ladder"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

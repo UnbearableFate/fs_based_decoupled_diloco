@@ -197,6 +197,37 @@ def _executor(args: argparse.Namespace) -> int:
                 "executor_session_id": args.executor_session_id,
             }
         )
+        if args.inject_error_before_first_attempt:
+            injected_at = time.monotonic_ns()
+            stage_recorder.record(
+                "executor_input_read",
+                start_ns=injected_at,
+                outcome="fail",
+                work_order_id=order.work_order_id,
+                attempt_id=attempt_id,
+                head_commit_id=order.parent_commit_id,
+                fencing_epoch=order.committer_fencing_epoch,
+                membership_revision=order.membership_revision,
+                attributes={"error_type": "InjectedExecutorError"},
+            )
+            telemetry.event(
+                "executor_injected_failure",
+                member_id=args.member_id,
+                work_order_id=order.work_order_id,
+                attempt_id=attempt_id,
+            )
+            atomic_write_json(
+                heartbeat_path,
+                {
+                    "member_id": args.member_id,
+                    "status": "injected_failure",
+                    "work_order_id": order.work_order_id,
+                    "attempt_id": attempt_id,
+                    "timestamp": time.time(),
+                },
+            )
+            stage_recorder.close()
+            raise RuntimeError("injected executor failure before first attempt")
         input_started = time.monotonic_ns()
         try:
             bundle = load_input_bundle(facade, layout, work_order_id)
@@ -371,6 +402,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     executor.add_argument("--max-rss-bytes", type=int, default=16 * 1024**3)
     executor.add_argument("--max-prefetch-bytes", type=int, default=1024**3)
     executor.add_argument("--poll-seconds", type=float, default=0.1)
+    executor.add_argument("--inject-error-before-first-attempt", action="store_true")
     committer = sub.add_parser("committer")
     committer.add_argument("--config", required=True)
     committer.add_argument("--run-id", required=True)

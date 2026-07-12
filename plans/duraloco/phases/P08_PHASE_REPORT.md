@@ -180,3 +180,25 @@ required `STORAGE_ROOT` qsub variable. Strict wrapper validation rejected the
 job before artifact setup, runtime, or authority access. P08-E016 preserves the
 operator error and requires the next submission to name a unique shared Lustre
 root explicitly.
+
+The corrected clean ladder then passed. PBS `2370343.opbs` reran the 104-test
+focused one-node gate and flat-working-set benchmark at commit `f3986b8`. PBS
+`2370347.opbs` passed D2-R2: four optimizer transitions, four complete
+work-order timelines, and exactly two successful attempts per work order. The
+injected committer exception produced an error stop at fence 1; member 001
+resumed at fence 2 without an intervening optimizer transition, and the run
+ended normally at commit sequence 8. This closes P08-A14, P08-A20, and P08-A24.
+
+The final D8 ladder is now specified on one clean commit. A nine-node no-LFE
+shadow, nine-node allocation with eight factor-one learner/LFE hosts, and the
+matched D8-R2 run all bind the same GPT-2/WikiText-2 50x10 config and seed.
+Learners are isolated from the eight audited LFE CPUs on each host. D8-R2 uses
+the D-0813 controlled executor exception so the failed canonical attempt has a
+flushed terminal stage before the process restarts and the backup activates.
+The D-0814 report computes D-0807 only from same-committer causal durations and
+an optimistic E2E upper bound, then charges the measured R2 learner slowdown.
+No bundle schema or authority object is created by the gate evaluator.
+The final one-node gate also pairs real streaming reductions with and without
+the asynchronous recorder, includes recorder drain time, requires identical
+numeric output and complete health, and enforces D-0806's two-percent wall-time
+overhead ceiling before any matched nine-node submission.

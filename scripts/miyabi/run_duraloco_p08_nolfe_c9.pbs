@@ -1,0 +1,76 @@
+#!/bin/bash
+#PBS -N duraloco_p08_c9
+#PBS -q regular-g
+#PBS -W group_list=xg24i002
+#PBS -l select=9:mpiprocs=1
+#PBS -l walltime=00:20:00
+#PBS -j oe
+#PBS -m ae
+
+set -eEuo pipefail
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat WANDB_MODE=disabled
+: "${EXPECTED_COMMIT:?}" "${RUN_ID:?}" "${ARTIFACT_ROOT:?}" "${STORAGE_ROOT:?}"
+PROJECT_ROOT="${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}"
+PYTHON_BIN="$PROJECT_ROOT/.venv/bin/python"
+CONFIG="$PROJECT_ROOT/configs/duraloco_milestone_gpt2_9node_50x10.yaml"
+TRAINING_ROOT="$STORAGE_ROOT/training"
+TRAIN_RUN="$RUN_ID-training"
+cd "$PROJECT_ROOT"
+mkdir -p "$ARTIFACT_ROOT" "$TRAINING_ROOT"
+touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log" "$ARTIFACT_ROOT/commands.log"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+result=fail; exit_code=1; started=$(date +%s)
+
+finish() {
+  observed=$?
+  [[ "$result" == pass ]] && exit_code=0 || { [[ "$observed" -eq 0 ]] || exit_code=$observed; }
+  qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
+  args=(--root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json" --phase P08
+    --purpose experiment --run-id "$RUN_ID" --schema-version 2
+    --validation-shape p08-c9-no-lfe-gpt2-wikitext2-50x10-matched
+    --backend lustre --model-revision gpt2 --dataset-revision wikitext-2-raw-v1
+    --config scripts/miyabi/run_duraloco_p08_nolfe_c9.pbs --commands-log commands.log
+    --stdout stdout.log --stderr stderr.log --exit-code "$exit_code" --result "$result"
+    --termination-kind "$([[ "$result" == pass ]] && echo success || echo test_failure)"
+    --pbs-queue regular-g --requested-resources select=9:mpiprocs=1,walltime=00:20:00
+    --last-qstat-state R --termination-detail "P08 matched C9 no-LFE shadow, GPT-2/WikiText-2 50x10"
+    --assertion "same clean commit, config, seed, model, dataset, nine-node allocation, and eight learners as D8/R2"
+    --assertion "one dedicated centralized syncer and zero learner-hosted LFEs establish the GPU-step shadow"
+    --assertion "ten single-head transitions, finite training, and raw learner GPU-step samples pass")
+  [[ -f "$ARTIFACT_ROOT/p08_nolfe_report.json" ]] && args+=(--stage-metrics-path p08_nolfe_report.json)
+  "$PYTHON_BIN" scripts/agent/create_run_manifest.py "${args[@]}" || true
+}
+trap finish EXIT
+trap 'echo "[ERROR] P08 matched no-LFE C9 failed at line $LINENO" | tee -a "$ARTIFACT_ROOT/stderr.log"' ERR
+
+[[ "$(hostname)" == mg* ]]
+[[ "$(git rev-parse HEAD)" == "$EXPECTED_COMMIT" ]]
+[[ -z "$(git status --porcelain=v1 --untracked-files=no)" ]]
+mapfile -t HOSTS < <(sort -u "$PBS_NODEFILE")
+[[ "${#HOSTS[@]}" -eq 9 ]]
+printf '%s\n' "${HOSTS[@]}" | tee "$ARTIFACT_ROOT/hosts.log"
+git status --short --branch | tee "$ARTIFACT_ROOT/git_status.log"
+git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"
+"$PYTHON_BIN" --version 2>&1 | tee "$ARTIFACT_ROOT/python_version.log"
+module list 2>&1 | cat > "$ARTIFACT_ROOT/modules.log"
+findmnt -T "$TRAINING_ROOT" > "$ARTIFACT_ROOT/mount.log" 2>&1 || true
+lfs getstripe "$TRAINING_ROOT" > "$ARTIFACT_ROOT/stripe.log" 2>&1 || true
+"$PYTHON_BIN" scripts/agent/check_no_embedded_database.py --root "$PROJECT_ROOT" \
+  --output "$ARTIFACT_ROOT/forbidden_surface.json"
+
+command=(mpirun --bind-to none -np 9 --hostfile "$PBS_NODEFILE" /usr/bin/env
+  PROJECT_ROOT="$PROJECT_ROOT" PYTHON_BIN="$PYTHON_BIN" CONFIG="$CONFIG"
+  RUN_ID="$TRAIN_RUN" SHARED_ROOT="$TRAINING_ROOT" ARTIFACT_ROOT="$ARTIFACT_ROOT"
+  PYTHONPATH="$PROJECT_ROOT" WANDB_MODE=disabled bash -lc
+  'set -eEuo pipefail; cd "$PROJECT_ROOT"; rank="${OMPI_COMM_WORLD_RANK:?}"; if [[ "$rank" -eq 0 ]]; then CUDA_VISIBLE_DEVICES="" exec "$PYTHON_BIN" -m fs_diloco.syncer --config "$CONFIG" --run-id "$RUN_ID" --shared-root "$SHARED_ROOT" --num-learners 8; else learner_id=$(printf "learner_%03d" $((rank - 1))); CUDA_VISIBLE_DEVICES=0 exec "$PYTHON_BIN" -m fs_diloco.learner --config "$CONFIG" --run-id "$RUN_ID" --shared-root "$SHARED_ROOT" --learner-id "$learner_id" --num-learners 8 --session-id "$RUN_ID-$learner_id-session"; fi')
+printf '%q ' "${command[@]}" | tee "$ARTIFACT_ROOT/commands.log"; printf '\n' | tee -a "$ARTIFACT_ROOT/commands.log"
+"${command[@]}" 2>&1 | tee -a "$ARTIFACT_ROOT/stdout.log"
+
+"$PYTHON_BIN" -m fs_diloco.analysis summary "$TRAINING_ROOT" --json \
+  | tee "$ARTIFACT_ROOT/training_summary.json"
+elapsed=$(($(date +%s) - started))
+"$PYTHON_BIN" scripts/agent/create_p08_performance_report.py no-lfe \
+  --root "$TRAINING_ROOT" --artifacts "$ARTIFACT_ROOT" --run-id "$TRAIN_RUN" \
+  --config "$CONFIG" --elapsed-seconds "$elapsed" \
+  --output "$ARTIFACT_ROOT/p08_nolfe_report.json" | tee -a "$ARTIFACT_ROOT/stdout.log"
+result=pass; exit_code=0

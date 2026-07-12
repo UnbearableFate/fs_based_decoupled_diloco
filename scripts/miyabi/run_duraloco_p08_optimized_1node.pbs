@@ -73,5 +73,7 @@ run_command "$PYTHON_BIN" -m pytest -q \
   --junitxml "$ARTIFACT_ROOT/focused-junit.xml"
 run_command "$PYTHON_BIN" -m benchmarks.bench_streaming_reduce \
   --output "$ARTIFACT_ROOT/lfe_streaming_optimized.json"
+run_command "$PYTHON_BIN" -m benchmarks.bench_telemetry_overhead \
+  --output "$ARTIFACT_ROOT/telemetry_overhead.json"
 result=pass
 exit_code=0
