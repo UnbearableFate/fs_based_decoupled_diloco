@@ -13,7 +13,7 @@ attempts_for_current_failure: 1
 last_terminal_failure_review: plans/duraloco/phases/P08_9NODE_FAILURE_REVIEW_2370782.md
 terminal_retry_authorized: false
 terminal_retry_qualification:
-  targeted_1node_benchmark: null
+  targeted_1node_benchmark: 2370861.opbs
   miyabi_1node: null
   miyabi_2node: null
 last_verified_commit: f3986b8538f1ce05e4d89871152fe18114ea7dc6
@@ -65,7 +65,9 @@ artifacts:
   - benchmarks/bench_lfe_pipeline.py
   - artifacts/duraloco/P08/20260713_p08_d2r2_f3986b8_r1/manifest.json
   - artifacts/duraloco/P08/20260713_p08_d2r2_f3986b8_r1/d2_report.json
-next_action: "prove P08 report envelope, rerun clean 1-node and D2 qualification, then retry D8 factor one"
+  - artifacts/duraloco/P08/20260713_p08_d8_report_c76501f_r1/manifest.json
+  - artifacts/duraloco/P08/20260713_p08_d8_report_c76501f_r1/p08_d8_report.json
+next_action: "rerun clean 1-node and D2 qualification, then retry the matched final C9 and D8 ladder"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

@@ -260,3 +260,12 @@ accepts an explicit 1500-second P08 envelope. This changes report admission,
 not the measured 17:41 runtime or its interpretation. Duplicate PBS `2370787`
 was rejected by D-0818's atomic namespace claim before runtime or authority
 access and is preserved as P08-E025.
+
+The mandatory smallest recovery proof passed on PBS `2370861` at clean commit
+`c76501f`. On one compute node it replayed the preserved `2370782` authority
+read-only, accepted the measured 1061 seconds only under P08's explicit
+1500-second envelope, and generated both the legacy base report and the full
+P08 factor-one report. The latter independently confirmed ten transitions,
+all optimizer/terminal lease guards, complete raw stage timelines, and a 3.74%
+optimistic two-FWO end-to-end upper bound. This is repair evidence, not a
+replacement matched final run.

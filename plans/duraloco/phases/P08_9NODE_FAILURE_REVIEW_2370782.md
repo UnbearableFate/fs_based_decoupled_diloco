@@ -37,3 +37,11 @@ unchanged, and pass the P08 job's actual 1500-second allocation envelope. Prove
 the base and complete P08 factor-one reports against the preserved terminal
 artifact on a compute node, then rerun the clean one-node and D2 qualification
 before one fresh D8 attempt.
+
+## Targeted recovery result
+
+PBS `2370861` passed at clean commit `c76501f`: the preserved runtime produced
+`factor_one_base_report.json` and the complete `p08_d8_report.json` under the
+explicit 1500-second P08 envelope. It observed the original 1061-second runtime
+unchanged. The fresh one-node and two-node same-commit qualification gates
+remain required before a new nine-node submission.
