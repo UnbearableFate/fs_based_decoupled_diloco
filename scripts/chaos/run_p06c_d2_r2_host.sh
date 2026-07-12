@@ -9,6 +9,9 @@ faults="$SHARED_ROOT/distributed/faults"
 mkdir -p "$faults"
 
 committer=("$PYTHON_BIN" -m fs_diloco.distributed_syncer.cli committer --config "$CONFIG" --run-id "$RUN_ID" --shared-root "$SHARED_ROOT" --num-learners 2 --node-ids "$NODE_IDS" --member-id "$member_id" --owner-session-id "$RUN_ID-$member_id-committer-session" --threads 4 --replication-factor 2 --execution-mode active_active)
+if [[ "${LIFECYCLE_CADENCE:-0}" -gt 0 ]]; then
+  committer+=(--lifecycle-cadence "$LIFECYCLE_CADENCE")
+fi
 [[ "$rank" -eq 0 ]] || committer+=(--standby)
 executor=("$PYTHON_BIN" -m fs_diloco.distributed_syncer.cli executor --config "$CONFIG" --run-id "$RUN_ID" --shared-root "$SHARED_ROOT" --num-learners 2 --member-id "$member_id" --executor-id "$executor_id" --executor-session-id "$RUN_ID-$executor_id-session" --threads 4)
 learner=("$PYTHON_BIN" -m fs_diloco.learner --config "$CONFIG" --run-id "$RUN_ID" --shared-root "$SHARED_ROOT" --learner-id "$learner_id" --num-learners 2 --session-id "$RUN_ID-$learner_id-session")
