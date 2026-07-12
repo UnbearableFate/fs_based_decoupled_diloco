@@ -9,7 +9,7 @@ actual_base_commit: 8c12839a7b985e590378ac593c846f07b0637517
 feature_branch: codex/duraloco-p08-distributed-performance
 current_loop: 3
 current_goal: "complete direct fragment I/O, streaming reduction, validation reuse, range I/O, and bounded execution contracts"
-attempts_for_current_failure: 0
+attempts_for_current_failure: 1
 last_terminal_failure_review: null
 terminal_retry_authorized: false
 terminal_retry_qualification:
@@ -22,7 +22,7 @@ checks:
   telemetry_profile_1node: miyabi_1node_pass
   optimized_targeted_1node: miyabi_1node_pass
   optimized_full_1node: miyabi_1node_pass
-  miyabi_d1: not_run
+  miyabi_d1: failed
   miyabi_d2: not_run
   miyabi_d8: not_run
   miyabi_d8_r2: not_run

@@ -135,3 +135,13 @@ database references. While preparing D1, the stage instrumentation was also
 hardened so discovery/validation spans receive the derived work-order identity
 once the canonical order is built; this prevents real traces from being
 complete in aggregate but unjoinable per FWO.
+
+PBS `2370248.opbs`, the first real P08 D1 run, failed before FWO publication.
+The learner correctly wrote one authority payload whose sidecar carried the
+backend's immutable version token. `publish_validated_proposal_reference`
+compared that complete observed ObjectRef with a canonical manifest identity
+whose optional version is absent, so otherwise identical key/size/SHA fields
+were rejected. The v2 committer truthfully committed an `error` stop at
+sequence 2; no optimizer transition occurred. The repair separates canonical
+content identity from the optional observation version, while requiring any
+supplied version to equal a fresh authoritative `head` observation.

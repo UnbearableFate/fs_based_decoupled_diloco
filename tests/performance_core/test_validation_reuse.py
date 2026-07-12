@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 import json
 
 from fs_diloco.atomic_io import atomic_write_json
@@ -64,7 +65,11 @@ def test_authority_payload_ref_needs_no_mailbox_tensor_or_republication(tmp_path
     )
     legacy_entry = bootstrap_catalog.scan(metadata_paths=[marker], log=log, view=view)[0]
     metadata = json.loads(marker.read_text(encoding="utf-8"))
-    metadata["payload_ref"] = legacy_entry.payload_ref.to_dict()
+    versioned_ref = replace(
+        legacy_entry.payload_ref,
+        version=log.backend.head(legacy_entry.payload_ref.key).version,
+    )
+    metadata["payload_ref"] = versioned_ref.to_dict()
     tensor_path = legacy_entry.payload_path
     assert tensor_path is not None
     tensor_path.unlink()
@@ -76,7 +81,7 @@ def test_authority_payload_ref_needs_no_mailbox_tensor_or_republication(tmp_path
     )
     active = catalog.scan(metadata_paths=[marker], log=log, view=view)[0]
     assert active.payload_path is None
-    assert active.payload_ref == legacy_entry.payload_ref
+    assert active.payload_ref == versioned_ref
     assert catalog.load_payload(active, backend=log.backend)
     payload_puts_before = len(
         [

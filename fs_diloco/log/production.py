@@ -781,7 +781,11 @@ class ProductionTransactionalLog:
             sha256=proposal.payload_sha256,
             size=proposal.payload_size,
         )
-        if payload_ref != expected:
+        if (
+            payload_ref.key != expected.key
+            or payload_ref.sha256 != expected.sha256
+            or payload_ref.size != expected.size
+        ):
             raise CommitConflict("proposal payload ObjectRef differs from canonical identity")
         if (
             payload.sha256 != proposal.payload_sha256
@@ -795,6 +799,8 @@ class ProductionTransactionalLog:
         metadata = self.backend.head(payload_ref.key)
         if metadata.size != payload_ref.size or metadata.sha256 != payload_ref.sha256:
             raise CommitConflict("authoritative proposal payload observation differs")
+        if payload_ref.version is not None and payload_ref.version != metadata.version:
+            raise CommitConflict("authoritative proposal payload version differs")
         data = proposal.canonical_bytes()
         ref = content_ref(self.layout.proposal_key(proposal.proposal_id), data)
         self.backend.put_immutable(ref.key, data, sha256=ref.sha256)
