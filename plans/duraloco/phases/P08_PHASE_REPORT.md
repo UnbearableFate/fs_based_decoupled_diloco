@@ -292,3 +292,13 @@ nineteen successful prepared results, and one terminal loser. P08-E027 and
 recovery ladder. No fresh R2 may run until the corrected cardinality checker
 passes preserved-run compute recovery, one-node qualification, and two-node
 qualification on one clean commit.
+
+The first preserved-run proof, PBS `2370998`, passed all four new attempt-
+lineage tests but exposed a second report-only assumption: it required every
+named guarded substage to emit at least one timeout heartbeat. R2 successor and
+terminal preparation completed inside their renewal interval, so zero timeout
+heartbeats is the truthful result. P08-E028 retains the failed proof. The guard
+audit now requires the ten optimizer-CAS and one stop-CAS renewals, exact
+one-to-one lifecycle renewal/heartbeat accounting, at least one observed long-
+substage renewal elsewhere in the run, and zero authority-loss events; it does
+not fabricate a heartbeat for a fast future.

@@ -148,6 +148,9 @@ def _distributed_lease_guard(root: Path) -> dict[str, object]:
     report = {
         "optimizer_head_cas_renewals": stage_guards.count("optimizer_head_cas"),
         "stop_head_cas_renewals": stage_guards.count("stop_head_cas"),
+        "lifecycle_substage_renewals": stage_guards.count(
+            "lifecycle_substage_heartbeat"
+        ),
         "successor_prepare_heartbeats": substages.count("successor_prepare"),
         "post_cas_replay_heartbeats": substages.count("post_cas_replay"),
         "stop_prepare_heartbeats": substages.count("stop_prepare"),
@@ -160,10 +163,8 @@ def _distributed_lease_guard(root: Path) -> dict[str, object]:
     if (
         report["optimizer_head_cas_renewals"] != 10
         or report["stop_head_cas_renewals"] != 1
-        or report["successor_prepare_heartbeats"] < 1
-        or report["post_cas_replay_heartbeats"] < 1
-        or report["stop_prepare_heartbeats"] < 1
-        or report["stop_post_cas_replay_heartbeats"] < 1
+        or report["lifecycle_substage_renewals"] != len(substages)
+        or report["lifecycle_substage_renewals"] < 1
         or report["lease_authority_loss_events"]
     ):
         raise AssertionError("distributed D8 lacks complete long-stage lease guards")

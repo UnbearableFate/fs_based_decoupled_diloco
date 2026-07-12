@@ -460,4 +460,21 @@ entries:
       - tracejob 2370941.opbs
     correction: validate two attempts per timeline and derive nineteen prepared results as twenty total attempts minus the one pre-publication controlled loser
     retry_policy: preserved-run compute proof, clean 1-node qualification, and clean 2-node qualification on one commit before one fresh 9-node R2 attempt
-last_updated: "2026-07-13T06:40:00+09:00"
+  - id: P08-E028
+    job: 2370998.opbs
+    shape: D8_R2_preserved_report_recovery_1node
+    commit: b18277e501bea4eba964d03bfec0c59ae65bbfaf
+    result: fail
+    failure_class: fast_guarded_substage_requires_heartbeat
+    expected: preserved R2 report accepts ten optimizer-CAS renewals, one stop-CAS renewal, matched lifecycle renewals, and no authority loss
+    actual: the corrected 20/19/1 attempt test passed, then the report rejected zero successor/stop heartbeat events even though those guarded operations completed before the renewal interval and therefore correctly emitted no timeout heartbeat
+    authority_effect: none; read-only report recovery on one compute node
+    runtime_started: false
+    evidence:
+      - artifacts/duraloco/P08/20260713_p08_r2_report_b18277e_r1/manifest.json
+      - artifacts/duraloco/P08/20260713_p08_r2_report_b18277e_r1/stderr.log
+      - p08_r2_report.o2370998
+      - tracejob 2370998.opbs
+    correction: require exact CAS renewals, one-to-one lifecycle-renewal/heartbeat counts, at least one observed long-substage renewal, and zero authority loss; report zero per-substage heartbeats truthfully when the future completed before its renewal timeout
+    retry_policy: rerun the preserved-run targeted compute proof, then continue the mandatory clean 1-node and 2-node ladder
+last_updated: "2026-07-13T06:45:00+09:00"
