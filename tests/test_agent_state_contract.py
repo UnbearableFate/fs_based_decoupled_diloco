@@ -212,10 +212,10 @@ def test_updated_acceptance_counts_and_dependency_graph(tmp_path):
     p06c_completed = _phase_state("P06C", 24, status="completed")
     p07 = _phase_state("P07", 24, status="planned")
     assert _run(tmp_path, p07, previous=p06c_completed).returncode == 0
-    p07_completed = _phase_state("P07", 19, status="completed")
-    p08 = _phase_state("P08", 16, status="planned")
+    p07_completed = _phase_state("P07", 24, status="completed")
+    p08 = _phase_state("P08", 24, status="planned")
     assert _run(tmp_path, p08, previous=p07_completed).returncode == 0
-    p08_completed = _phase_state("P08", 16, status="completed")
+    p08_completed = _phase_state("P08", 24, status="completed")
     p10 = _phase_state("P10", 17, status="planned")
     assert _run(tmp_path, p10, previous=p08_completed).returncode == 0
     missing_dependency = _run(tmp_path, p10, previous=p07_completed)
