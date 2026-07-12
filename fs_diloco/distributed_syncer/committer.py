@@ -716,6 +716,7 @@ def run_committer(
                 view.optimizer_transition_count % lifecycle_cadence == 0
             ):
                 lifecycle_started = time.monotonic()
+                lifecycle_reads_started = backend.read_counters
                 loaded_lease = _renew_for_authoritative_stage(
                     lease_manager=lease_manager,
                     loaded_lease=loaded_lease,
@@ -799,6 +800,7 @@ def run_committer(
                     stage="lifecycle_reachability_completed",
                 )
                 view = build_runtime_view(log)
+                inventory_reads_started = backend.read_counters
                 inventory_bytes, loaded_lease = _run_lifecycle_substage(
                     lambda inventory=reachability.inventory: sum(
                         backend.head(key).size for key in inventory
@@ -816,6 +818,8 @@ def run_committer(
                     logger=logger,
                     stage="lifecycle_inventory_completed",
                 )
+                inventory_reads_finished = backend.read_counters
+                lifecycle_reads_finished = backend.read_counters
                 next_renew = (
                     time.monotonic() + config.coordination.renew_interval_seconds
                 )
@@ -838,6 +842,22 @@ def run_committer(
                     ),
                     "inventory_count": len(reachability.inventory),
                     "inventory_bytes": inventory_bytes,
+                    "inventory_header_bytes_read": (
+                        inventory_reads_finished["header_bytes"]
+                        - inventory_reads_started["header_bytes"]
+                    ),
+                    "inventory_payload_bytes_read": (
+                        inventory_reads_finished["payload_bytes"]
+                        - inventory_reads_started["payload_bytes"]
+                    ),
+                    "lifecycle_header_bytes_read": (
+                        lifecycle_reads_finished["header_bytes"]
+                        - lifecycle_reads_started["header_bytes"]
+                    ),
+                    "lifecycle_payload_bytes_read": (
+                        lifecycle_reads_finished["payload_bytes"]
+                        - lifecycle_reads_started["payload_bytes"]
+                    ),
                     "lifecycle_seconds": time.monotonic() - lifecycle_started,
                 }
                 report_path = (

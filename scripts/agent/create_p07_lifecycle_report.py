@@ -74,6 +74,18 @@ def main() -> int:
             "head_commit_seq": item["head_commit_seq"],
             "inventory_count": item["inventory_count"],
             "inventory_bytes": item["inventory_bytes"],
+            "inventory_header_bytes_read": item.get(
+                "inventory_header_bytes_read"
+            ),
+            "inventory_payload_bytes_read": item.get(
+                "inventory_payload_bytes_read"
+            ),
+            "lifecycle_header_bytes_read": item.get(
+                "lifecycle_header_bytes_read"
+            ),
+            "lifecycle_payload_bytes_read": item.get(
+                "lifecycle_payload_bytes_read"
+            ),
             "candidate_count": item["candidate_count"],
             "effective_live_count": item["inventory_count"]
             - item["candidate_count"],
