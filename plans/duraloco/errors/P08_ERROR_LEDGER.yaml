@@ -239,4 +239,22 @@ entries:
       - tracejob 2370306.opbs
     correction: export recoverable v2 errors separately from terminal stop.json and keep original learner/LFE sessions alive across the fenced outage; never reuse or rewrite an immutable session sequence
     retry_policy: rerun targeted one-node then D2-R2 on the corrected clean commit
-last_updated: "2026-07-13T03:42:00+09:00"
+  - id: P08-E015
+    job: 2370326.opbs
+    shape: D2_R2_error_stop_resume
+    commit: c5f1ffbb7abfecaa9c6d44f521492d1f713dd869
+    result: fail
+    failure_class: postrun_expected_transition_count
+    expected: runtime and report pass using the frozen four-transition tiny config
+    actual: error stop, cross-host resume, four factor-two transitions with two exact attempts each, and normal stop all completed; report asserted an outdated expected count of three and failed after training
+    authority_effect: complete successful four-transition run and normal terminal stop through the single head
+    runtime_started: true
+    evidence:
+      - artifacts/duraloco/P08/20260713_p08_d2r2_c5f1ffb_r1/manifest.json
+      - artifacts/duraloco/P08/20260713_p08_d2r2_c5f1ffb_r1/error_stop.json
+      - artifacts/duraloco/P08/20260713_p08_d2r2_c5f1ffb_r1/training_summary.json
+      - artifacts/duraloco/P08/20260713_p08_d2r2_c5f1ffb_r1/member-001_committer.log
+      - tracejob 2370326.opbs
+    correction: align report expectations with config stop_after_outer_steps=4 and require four two-attempt work-order timelines
+    retry_policy: rerun targeted one-node then D2 report/runtime on the corrected clean commit
+last_updated: "2026-07-13T03:46:00+09:00"

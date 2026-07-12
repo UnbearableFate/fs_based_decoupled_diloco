@@ -166,3 +166,11 @@ repair does not weaken identity. Recoverable v2 errors now use a distinct
 derived `recoverable_error.json` observation rather than terminal `stop.json`,
 so existing learner/LFE sessions stay alive across the fenced outage. Normal
 stops remain terminal and unchanged.
+
+PBS `2370326.opbs` validated that repair end to end: workers retained their
+immutable sessions, member 001 resumed under fence 2, and four factor-two
+transitions each produced two exact attempts before the normal terminal stop.
+The runtime completed correctly, but the post-run report asserted three
+transitions even though the frozen tiny config specifies four. P08-E015 records
+this analysis-harness failure; the expected work-order/attempt cardinalities
+are corrected to four without changing runtime semantics.
