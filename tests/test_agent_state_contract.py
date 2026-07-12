@@ -210,7 +210,7 @@ def test_updated_acceptance_counts_and_dependency_graph(tmp_path):
     assert _run(tmp_path, p06c, previous=p06b_completed).returncode == 0
 
     p06c_completed = _phase_state("P06C", 24, status="completed")
-    p07 = _phase_state("P07", 19, status="planned")
+    p07 = _phase_state("P07", 24, status="planned")
     assert _run(tmp_path, p07, previous=p06c_completed).returncode == 0
     p07_completed = _phase_state("P07", 19, status="completed")
     p08 = _phase_state("P08", 16, status="planned")
