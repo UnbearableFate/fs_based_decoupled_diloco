@@ -427,4 +427,37 @@ entries:
       - plans/duraloco/phases/P08_9NODE_FAILURE_REVIEW_2370782.md
     correction: D-0818 already supplies the fail-closed repair; allocate a fresh caller-unique namespace exactly once
     retry_policy: no runtime retry for this duplicate; retain it as proof that atomic namespace claiming works
-last_updated: "2026-07-13T05:55:00+09:00"
+  - id: P08-E026
+    job: null
+    shape: D8_R2_qsub_environment
+    commit: 067d33be79d9dbe63e4a31056e35e96ee525cb1f
+    result: operator_error
+    failure_class: qsub_unexported_environment
+    expected: qsub receives six explicit P08 R2 binding variables and returns one job ID
+    actual: the first command named shell-local variables with qsub -v instead of supplying values; qsub rejected it with "cannot send environment" and created no job
+    authority_effect: none; no allocation, artifact root, storage root, or runtime existed
+    runtime_started: false
+    evidence:
+      - operator transcript immediately before PBS 2370941
+    correction: pass each qsub variable as an explicit KEY=VALUE pair
+    retry_policy: no runtime retry gate applies because no job was created; preserve the operator failure and submit once with explicit values
+  - id: P08-E027
+    job: 2370941.opbs
+    shape: D8_R2_controlled_executor_fault_50x10
+    commit: 067d33be79d9dbe63e4a31056e35e96ee525cb1f
+    result: fail
+    failure_class: r2_postrun_factor_one_cardinality_assertion
+    expected: ten factor-two work orders, twenty terminal attempts, nineteen prepared results, one controlled loser, and a normal terminal
+    actual: runtime produced exactly that shape, but the reporter required ten prepared results and failed at wrapper line 91
+    authority_effect: complete normal terminal at ten optimizer transitions; namespace is preserved and will not be reused
+    runtime_started: true
+    evidence:
+      - plans/duraloco/phases/P08_9NODE_FAILURE_REVIEW_2370941.md
+      - artifacts/duraloco/P08/20260713_p08_r2_067d33b_r1/manifest.json
+      - artifacts/duraloco/P08/20260713_p08_r2_067d33b_r1/training_summary.json
+      - artifacts/duraloco/P08/20260713_p08_r2_067d33b_r1_storage/training
+      - duraloco_p08_r2.o2370941
+      - tracejob 2370941.opbs
+    correction: validate two attempts per timeline and derive nineteen prepared results as twenty total attempts minus the one pre-publication controlled loser
+    retry_policy: preserved-run compute proof, clean 1-node qualification, and clean 2-node qualification on one commit before one fresh 9-node R2 attempt
+last_updated: "2026-07-13T06:40:00+09:00"

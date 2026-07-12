@@ -8,12 +8,12 @@ actual_base_branch: codex/problem-fix-after-p07
 actual_base_commit: 8c12839a7b985e590378ac593c846f07b0637517
 feature_branch: codex/duraloco-p08-distributed-performance
 current_loop: 6
-current_goal: "run the matched no-LFE, D8 factor-one, and D8-R2 final performance and lifecycle ladder"
+current_goal: "repair the R2 report cardinality gate, requalify 1-node and 2-node, then run one fresh final R2"
 attempts_for_current_failure: 1
-last_terminal_failure_review: plans/duraloco/phases/P08_9NODE_FAILURE_REVIEW_2370782.md
+last_terminal_failure_review: plans/duraloco/phases/P08_9NODE_FAILURE_REVIEW_2370941.md
 terminal_retry_authorized: false
 terminal_retry_qualification:
-  targeted_1node_benchmark: 2370861.opbs
+  targeted_1node_benchmark: null
   miyabi_1node: null
   miyabi_2node: null
 last_verified_commit: f3986b8538f1ce05e4d89871152fe18114ea7dc6
@@ -24,8 +24,8 @@ checks:
   optimized_full_1node: miyabi_1node_pass
   miyabi_d1: miyabi_d1_pass
   miyabi_d2: miyabi_d2_pass
-  miyabi_d8: not_run
-  miyabi_d8_r2: not_run
+  miyabi_d8: miyabi_d8_pass
+  miyabi_d8_r2: failed
   p07_regression: not_run
   independent_checker: not_run
 acceptance:

@@ -170,6 +170,37 @@ def _distributed_lease_guard(root: Path) -> dict[str, object]:
     return report
 
 
+def _validate_r2_attempt_lineage(
+    *,
+    transition_count: int,
+    prepared_attempt_count: int,
+    timeline_attempt_counts: list[int],
+    terminal_loser_count: int,
+) -> dict[str, int]:
+    """Validate the frozen factor-two lineage, including the controlled loser.
+
+    Every R2 work order has two canonical attempts. The injected first attempt
+    fails before prepared-result publication, so a ten-transition run has
+    twenty terminal attempts but only nineteen ``fragment_prepared`` events.
+    """
+
+    if transition_count != 10 or timeline_attempt_counts != [2] * 10:
+        raise AssertionError("D8-R2 does not contain two attempts for each transition")
+    total_attempt_count = sum(timeline_attempt_counts)
+    if terminal_loser_count != 1:
+        raise AssertionError("D8-R2 requires exactly one controlled terminal loser")
+    expected_prepared_count = total_attempt_count - terminal_loser_count
+    if prepared_attempt_count != expected_prepared_count:
+        raise AssertionError(
+            "D8-R2 prepared-result count does not match the terminal attempt lineage"
+        )
+    return {
+        "total_attempts": total_attempt_count,
+        "successful_prepared_attempts": prepared_attempt_count,
+        "terminal_loser_attempts": terminal_loser_count,
+    }
+
+
 def _write(output: Path, payload: dict[str, object]) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -274,6 +305,14 @@ def _runtime(args: argparse.Namespace, mode: str) -> int:
             for attempt in timeline["attempts"]
             if attempt["outcome"] != "pass"
         ]
+        attempt_lineage = _validate_r2_attempt_lineage(
+            transition_count=len(commits),
+            prepared_attempt_count=len(prepared),
+            timeline_attempt_counts=[
+                len(timeline["attempts"]) for timeline in stage["timelines"]
+            ],
+            terminal_loser_count=len(failures),
+        )
         fault_health = sorted(
             (root / "logs").glob("performance_executor_*-fault.health.json")
         )
@@ -281,8 +320,6 @@ def _runtime(args: argparse.Namespace, mode: str) -> int:
             raise AssertionError("D8-R2 controlled executor-fault tape is incomplete")
         if len(fault_health) != 1:
             raise AssertionError("D8-R2 controlled fault lacks preserved recorder health")
-        if len(commits) != 10 or len(prepared) != 10 or len(failures) != 1:
-            raise AssertionError("D8-R2 transition, prepare, or loser-attempt lineage differs")
         successors = [
             item for item in commits if float(item["timestamp"]) > float(faults[0]["timestamp"])
         ]
@@ -303,6 +340,7 @@ def _runtime(args: argparse.Namespace, mode: str) -> int:
                 - float(faults[0]["timestamp"]),
                 "prepared_attempts": len(prepared),
                 "terminal_loser_attempts": failures,
+                "attempt_lineage": attempt_lineage,
                 "resource_telemetry": {
                     "rss_bytes": _summary([float(item["rss_bytes"]) for item in prepared]),
                     "cpu_affinity_by_member": {

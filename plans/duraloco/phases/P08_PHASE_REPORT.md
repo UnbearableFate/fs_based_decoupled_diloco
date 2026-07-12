@@ -269,3 +269,26 @@ P08 factor-one report. The latter independently confirmed ten transitions,
 all optimizer/terminal lease guards, complete raw stage timelines, and a 3.74%
 optimistic two-FWO end-to-end upper bound. This is repair evidence, not a
 replacement matched final run.
+
+The final same-commit C9 and factor-one reruns then passed at runtime commit
+`067d33be79d9dbe63e4a31056e35e96ee525cb1f`. PBS `2370890` completed the
+no-LFE shadow in 831 seconds with 440 GPU-step samples (mean 0.0259766 s) and
+five heartbeats in each terminal prepare/replay substage. PBS `2370892`
+completed factor one in 952 seconds with 440 samples (mean 0.0262335 s), ten
+optimizer-CAS renewals, one stop-CAS renewal, 23 successor-prepare and 25
+post-CAS-replay heartbeats, and zero lease-authority-loss events. Both bind the
+same config digest, model/dataset revisions, seed, nine-node allocation, and
+eight learner nodes.
+
+The first R2 submission command was rejected before allocation because its six
+shell-local bindings were named rather than passed as explicit `KEY=VALUE`
+pairs; P08-E026 records that zero-runtime operator error. The corrected command
+created PBS `2370941`. Its runtime reached ten factor-two transitions after one
+controlled pre-publication executor failure and ended normally. The post-run
+report then failed: it incorrectly required factor-one's ten prepared results,
+where the frozen R2 shape correctly contains twenty terminal attempts,
+nineteen successful prepared results, and one terminal loser. P08-E027 and
+`P08_9NODE_FAILURE_REVIEW_2370941.md` preserve the raw evidence and mandatory
+recovery ladder. No fresh R2 may run until the corrected cardinality checker
+passes preserved-run compute recovery, one-node qualification, and two-node
+qualification on one clean commit.
