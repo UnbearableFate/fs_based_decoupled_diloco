@@ -1,6 +1,8 @@
 #!/bin/bash
 set -eEuo pipefail
 : "${PROJECT_ROOT:?}" "${PYTHON_BIN:?}" "${CONFIG:?}" "${RUN_ID:?}" "${SHARED_ROOT:?}" "${ARTIFACT_ROOT:?}" "${NODE_IDS:?}"
+LIFECYCLE_CADENCE="${LIFECYCLE_CADENCE:-0}"
+REQUIRED_CAPSULES="${REQUIRED_CAPSULES:-0}"
 rank="${OMPI_COMM_WORLD_RANK:?}"
 member_id=$(printf 'member-%03d' "$rank")
 learner_id=$(printf 'learner_%03d' "$rank")
@@ -26,6 +28,9 @@ learner=("$PYTHON_BIN" -m fs_diloco.learner --config "$CONFIG" --run-id "$RUN_ID
 committer=()
 if [[ "$rank" -eq "$primary_rank" || "$rank" -eq "$backup_rank" ]]; then
   committer=("$PYTHON_BIN" -m fs_diloco.distributed_syncer.cli committer --config "$CONFIG" --run-id "$RUN_ID" --shared-root "$SHARED_ROOT" --num-learners 8 --node-ids "$NODE_IDS" --member-id "$member_id" --owner-session-id "$RUN_ID-$member_id-committer-session" --threads 8 --replication-factor 2 --execution-mode hedged --hedge-delay-ms 6000)
+  if [[ "$LIFECYCLE_CADENCE" -gt 0 ]]; then
+    committer+=(--lifecycle-cadence "$LIFECYCLE_CADENCE")
+  fi
   [[ "$rank" -eq "$primary_rank" ]] || committer+=(--standby)
 fi
 
@@ -134,6 +139,13 @@ PY
   }
 
   wait_for_count 1
+  if [[ "$REQUIRED_CAPSULES" -gt 0 ]]; then
+    capsule_dir="$SHARED_ROOT/authority/runs/$RUN_ID/generations/00000000/immutable/lifecycle/capsules/markers"
+    while [[ ! -d "$capsule_dir" ]] || [[ "$(find "$capsule_dir" -maxdepth 1 -type f | wc -l)" -lt "$REQUIRED_CAPSULES" ]]; do
+      [[ "$SECONDS" -lt "$deadline" ]]
+      sleep 0.2
+    done
+  fi
   previous_order=$("$PYTHON_BIN" - "$log" <<'PY'
 import json,sys
 events=[json.loads(line) for line in open(sys.argv[1],encoding='utf-8')]

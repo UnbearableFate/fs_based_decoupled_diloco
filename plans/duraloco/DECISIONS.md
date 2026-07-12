@@ -784,3 +784,16 @@ P05+ 的规范性路线决策生效。
 - Interval rule: boundary capsules carry no open or pending interval. Mid-interval capsules bind the complete interval state and report any old-session pending proposals as discarded/reconciled evidence; they are never silently reused under the new session.
 - Claim boundary: missing private, RNG, iterator, scheduler, or scaler state fails the exact path. The caller may separately choose warm recovery, but the report must not relabel it exact.
 - Rejected: seed-plus-draw counters, model-only checkpoints, or a nominal WikiText batch number without dataset/tokenizer identity cannot prove exact continuation.
+
+## D-0709 — Reachability extensions are typed ObjectRef edges
+
+- Choice: P08 bundle transitions extend lifecycle reachability by contributing canonical ObjectRefs and edge reasons from their committed transition schema. They may add roots only through the existing typed pin/ack contracts; bundle-local caches, directory conventions, or listing results cannot release an object. Unknown future bundle objects remain quarantined by default.
+- Compatibility: P07 freezes `ReachabilityReport`, root/edge reason reporting, two-snapshot retention, and marker-last deletion ordering as the integration surface. P08 must not change the single head, snapshot identity, GC mark, acknowledgement, capsule, FWO, or PFT identities.
+- Rejected: hard-coding P08 filenames into generic GC would couple deletion safety to one bundle layout and make schema evolution fail open.
+
+## D-0710 — Two-base active window and accelerated-soak bound
+
+- Choice: active compaction retains the newest two independently ancestry-validated snapshots, the committed suffix above the older base, the newest two exact capsules per learner, and two active audit records per lifecycle record class. Objects covered by the older retained snapshot receive immutable snapshot-age grace; unpublished/abandoned PFTs still require explicit grace, response-loss pins, or acknowledgements, and divergent results remain blocker roots.
+- Cadence: terminal D8-R2 uses a snapshot/GC dry-run every two optimizer transitions and one exact capsule per learner at sequence one (cadence one with an explicit maximum sequence of one), ensuring the member later selected for whole-host loss has durable recovery evidence without producing repeated GPT-2 optimizer capsules. The destructive companion remains synthetic-only. The preregistered effective-live-object tail bound is a maximum delta of 64 objects across the final three lifecycle samples; raw inventory, bytes, candidates, replay reads, lifecycle seconds, and capsule counts are persisted.
+- Claim boundary: snapshot manifests retain the compacted logical audit prefix and may grow with history; the bounded claim is for active non-snapshot tensor/metadata objects and the explainable effective-live window after eligible apply. Real D8 remains dry-run and must expose reclaimable candidates rather than deleting them.
+- Rejected: retaining one snapshot cannot survive corruption after prefix deletion; retaining every capsule/ack/audit object defeats bounded growth; applying GC automatically to a real training namespace violates the human approval gate.

@@ -83,7 +83,19 @@ def _maybe_publish_exact_capsule(
         raise ValueError("FS_DILOCO_CAPSULE_CADENCE must be an integer") from exc
     if cadence < 0:
         raise ValueError("FS_DILOCO_CAPSULE_CADENCE must be non-negative")
-    if cadence == 0 or sequence < 1 or sequence % cadence:
+    raw_max_sequence = os.environ.get("FS_DILOCO_CAPSULE_MAX_SEQUENCE", "0")
+    try:
+        max_sequence = int(raw_max_sequence)
+    except ValueError as exc:
+        raise ValueError("FS_DILOCO_CAPSULE_MAX_SEQUENCE must be an integer") from exc
+    if max_sequence < 0:
+        raise ValueError("FS_DILOCO_CAPSULE_MAX_SEQUENCE must be non-negative")
+    if (
+        cadence == 0
+        or sequence < 1
+        or sequence % cadence
+        or (max_sequence and sequence > max_sequence)
+    ):
         return
     commit_id = str(authority["commit_id"])
     commit_seq = int(authority["commit_seq"])

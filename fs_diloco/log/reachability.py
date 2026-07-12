@@ -187,6 +187,33 @@ def build_reachability(
     def in_live_suffix(commit_seq: int) -> bool:
         return compacted_base_seq is None or commit_seq > compacted_base_seq
 
+    snapshot_grace_keys: set[str] = set()
+    committed_result_sequences: dict[str, int] = {}
+    if compacted_base_seq is not None:
+        for commit in replay.commits:
+            if (
+                not isinstance(commit, CommitManifest)
+                or commit.commit_seq > compacted_base_seq
+                or commit.distributed_work_order_id is None
+                or commit.prepared_result_id is None
+            ):
+                continue
+            work_key = distributed.work_order_key(commit.distributed_work_order_id)
+            input_key = distributed.input_bundle_key(commit.distributed_work_order_id)
+            result_key = distributed.result_key(commit.prepared_result_id)
+            snapshot_grace_keys.update((work_key, input_key, result_key))
+            committed_result_sequences[result_key] = commit.commit_seq
+            for object_key in (input_key, result_key):
+                if object_key not in inventory_set:
+                    continue
+                try:
+                    snapshot_grace_keys.update(
+                        ref.key
+                        for ref in _extract_refs(canonical_object(backend.get(object_key)))
+                    )
+                except Exception:
+                    root(object_key, "invalid_covered_distributed_object_quarantine")
+
     if compacted_base_seq is not None:
         for frontier in replay.frontiers:
             if in_live_suffix(frontier.commit_seq):
@@ -301,10 +328,20 @@ def build_reachability(
                     root(attempt_key, "divergent_result_blocker")
                     root(result_key, "divergent_result_blocker")
                 elif committed_results.get(work_order_id) == result_key:
-                    if marker_key not in eligible:
+                    snapshot_grace = (
+                        committed_result_sequences.get(result_key, compacted_base_seq + 1)
+                        <= compacted_base_seq
+                        if compacted_base_seq is not None
+                        else False
+                    )
+                    if marker_key not in eligible and not snapshot_grace:
                         root(marker_key, "same_digest_loser_grace")
-                    if attempt_key not in eligible:
+                    if attempt_key not in eligible and not snapshot_grace:
                         root(attempt_key, "same_digest_loser_grace")
+                    if snapshot_grace:
+                        snapshot_grace_keys.update(
+                            (marker_key, attempt_key, result_key)
+                        )
                 elif marker_key not in eligible:
                     root(marker_key, "abandoned_attempt_grace")
                     root(attempt_key, "abandoned_attempt_grace")
@@ -424,7 +461,7 @@ def build_reachability(
             continue
         if not _known_collectable(key, log_layout=layout, distributed=distributed):
             protected_unknown.append(key)
-        elif key in eligible or (
+        elif key in eligible or key in snapshot_grace_keys or (
             compacted_base_seq is not None
             and key.startswith(
                 (
