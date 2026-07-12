@@ -17,6 +17,7 @@ from fs_diloco.log.production_codec import (
     decode_production_params,
     production_optimizer_digest,
 )
+from fs_diloco.log.gc import create_gc_mark
 from fs_diloco.logging_utils import JsonlLogger
 from fs_diloco.paths import RunPaths, prepare_run_dirs
 from fs_diloco.proposal_catalog import ProposalCatalog
@@ -74,7 +75,12 @@ def _committed_membership_candidates(selected, membership: MembershipRevisionV1)
 def _renew_for_authoritative_stage(
     *, lease_manager, loaded_lease, config, logger, stage: str
 ):
-    if stage not in {"post_activation", "membership_transition", "work_dispatch"}:
+    if stage not in {
+        "post_activation",
+        "membership_transition",
+        "work_dispatch",
+        "lifecycle_snapshot",
+    }:
         raise ValueError("unknown authoritative lease-renewal stage")
     renewed = _renew_owner_lease(
         lease_manager=lease_manager,
@@ -211,6 +217,7 @@ def run_committer(
     standby: bool = False,
     replication_factor: int = 1,
     redundancy_policy: RedundancyPolicyV1 | None = None,
+    lifecycle_cadence: int = 0,
 ) -> None:
     if not membership.member(member_id).committer_eligible:
         raise ValueError("floating committer is not a committed candidate")
@@ -256,6 +263,8 @@ def run_committer(
         raise ValueError("factor-two committer requires a redundancy policy")
     if replication_factor == 1 and redundancy_policy is not None:
         raise ValueError("factor-one committer cannot carry a redundancy policy")
+    if type(lifecycle_cadence) is not int or lifecycle_cadence < 0:
+        raise ValueError("lifecycle cadence must be a non-negative integer")
     # An authoritative stop is terminal.  In particular, a standby must not
     # acquire a fresh fencing epoch after observing the stopped head.
     if view.authoritative_stop is not None:
@@ -550,6 +559,66 @@ def run_committer(
             )
             log.commit_prepared(prepared)
             view = build_runtime_view(log)
+            if lifecycle_cadence and (
+                view.optimizer_transition_count % lifecycle_cadence == 0
+            ):
+                lifecycle_started = time.monotonic()
+                loaded_lease = _renew_for_authoritative_stage(
+                    lease_manager=lease_manager,
+                    loaded_lease=loaded_lease,
+                    config=config,
+                    logger=logger,
+                    stage="lifecycle_snapshot",
+                )
+                next_renew = (
+                    time.monotonic() + config.coordination.renew_interval_seconds
+                )
+                snapshot_request_id = "snapshot-" + canonical_digest(
+                    {
+                        "parent_commit_id": view.commit_id,
+                        "optimizer_transition_count": view.optimizer_transition_count,
+                        "owner_id": member_id,
+                        "owner_session_id": owner_session_id,
+                    }
+                )
+                log.commit_snapshot(request_id=snapshot_request_id)
+                accelerated = log.replay_from_snapshot()
+                strict = log.replay(force_full=True)
+                if accelerated.replay != strict:
+                    raise RuntimeError("snapshot+suffix replay differs from strict replay")
+                mark, reachability = create_gc_mark(log)
+                view = build_runtime_view(log)
+                inventory_bytes = sum(
+                    backend.head(key).size for key in reachability.inventory
+                )
+                lifecycle_report = {
+                    "schema": "duraloco-lifecycle-cycle-v1",
+                    "snapshot_id": accelerated.snapshot_id,
+                    "snapshot_mode": accelerated.mode,
+                    "covered_commit_seq": accelerated.covered_commit_seq,
+                    "suffix_length": accelerated.suffix_length,
+                    "snapshot_storage_get_count": accelerated.storage_get_count,
+                    "strict_state_digest": strict.committed_state_digest,
+                    "mark_id": mark.mark_id,
+                    "dry_run": True,
+                    "head_commit_id": reachability.head_commit_id,
+                    "head_commit_seq": reachability.head_commit_seq,
+                    "reachable_count": len(reachability.reachable),
+                    "candidate_count": len(reachability.candidates),
+                    "protected_unknown_count": len(
+                        reachability.protected_unknown
+                    ),
+                    "inventory_count": len(reachability.inventory),
+                    "inventory_bytes": inventory_bytes,
+                    "lifecycle_seconds": time.monotonic() - lifecycle_started,
+                }
+                report_path = (
+                    distributed_root
+                    / "lifecycle"
+                    / f"cycle-{view.optimizer_transition_count:08d}.json"
+                )
+                atomic_write_json(report_path, lifecycle_report)
+                logger.event("lifecycle_cycle_completed", **lifecycle_report)
             fragments, states = _load_committed_tensors(log, view, device="cpu")
             publish_materialized_view(
                 config=config,

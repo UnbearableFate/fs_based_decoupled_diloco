@@ -38,11 +38,14 @@ from .learner_protocol.adoption import (
     optimizer_reset_targets,
 )
 from .learner_protocol.data_cursor import DataCursor
+from .learner_protocol.capsule import publish_capsule
+from .learner_protocol.exact_recovery import capture_exact_components
 from .learner_protocol.interval import AuthorityFrontier, ContributionInterval
 from .learner_protocol.publication import LearnerPublisher, PublicationResult
 from .learner_protocol.recovery import recover_learner
 from .learner_protocol.rng_state import RngCursor
 from .learner_protocol.session import LearnerSession
+from .log.acknowledgements import LifecycleAcknowledgementV1, publish_acknowledgement
 from .metrics import LEARNER_METRIC_FIELDS, UPDATE_MANIFEST_FIELDS, append_csv_row
 from .param_index import (
     build_param_index,
@@ -57,6 +60,90 @@ from .storage import PosixStorageBackend
 from .tensor_codec import dtype_from_name, load_global_weights_flat, save_update_vector
 
 _SUCCESSFUL_STOP_REASONS = {"completed", "stop_after_outer_steps", "stop_after_global_tokens"}
+
+
+def _maybe_publish_exact_capsule(
+    *,
+    config: Config,
+    paths: RunPaths,
+    learner_session: LearnerSession,
+    sequence: int,
+    local_step: int,
+    model: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+    scheduler: torch.optim.lr_scheduler.LRScheduler | None,
+    batch_source: Any,
+    authority: dict[str, Any],
+    logger: JsonlLogger,
+) -> None:
+    raw_cadence = os.environ.get("FS_DILOCO_CAPSULE_CADENCE", "0")
+    try:
+        cadence = int(raw_cadence)
+    except ValueError as exc:
+        raise ValueError("FS_DILOCO_CAPSULE_CADENCE must be an integer") from exc
+    if cadence < 0:
+        raise ValueError("FS_DILOCO_CAPSULE_CADENCE must be non-negative")
+    if cadence == 0 or sequence < 1 or sequence % cadence:
+        return
+    commit_id = str(authority["commit_id"])
+    commit_seq = int(authority["commit_seq"])
+    components = capture_exact_components(
+        model=model,
+        optimizer=optimizer,
+        scheduler=scheduler,
+        scaler=None,
+        data_source=batch_source,
+        interval_state={"open": False, "local_step": local_step, "sequence": sequence},
+        frontier_state={"commit_id": commit_id, "commit_seq": commit_seq},
+    )
+    backend = PosixStorageBackend(paths.authority)
+    layout = LogLayout(config.run.run_id or "", config.init.run_generation)
+    publication = publish_capsule(
+        backend,
+        layout,
+        identity={
+            "run_id": config.run.run_id or "",
+            "run_generation": config.init.run_generation,
+            "learner_id": learner_session.learner_id,
+            "learner_session_id": learner_session.session_id,
+            "sequence": sequence,
+            "consistency_point": "interval_boundary",
+            "frontier_commit_seq": commit_seq,
+            "frontier_commit_id": commit_id,
+            "pending_proposal_ids": [],
+        },
+        components=components,
+    )
+    refs = tuple(
+        sorted(
+            (
+                publication.manifest_ref,
+                publication.marker_ref,
+                *publication.capsule.component_map.values(),
+            ),
+            key=lambda item: item.key,
+        )
+    )
+    acknowledgement = LifecycleAcknowledgementV1.create(
+        {
+            "role": "learner",
+            "subject_id": learner_session.learner_id,
+            "session_id": learner_session.session_id,
+            "kind": "capsuled",
+            "commit_seq": commit_seq,
+            "commit_id": commit_id,
+            "object_refs": [item.to_dict() for item in refs],
+        }
+    )
+    publish_acknowledgement(backend, layout, acknowledgement)
+    logger.event(
+        "exact_capsule_published",
+        capsule_id=publication.capsule.capsule_id,
+        sequence=sequence,
+        commit_seq=commit_seq,
+        marker_key=publication.marker_ref.key,
+        acknowledgement_id=acknowledgement.acknowledgement_id,
+    )
 
 
 def authority_frontier_from_latest(latest: dict[str, Any]) -> AuthorityFrontier:
@@ -967,6 +1054,19 @@ def run_fragment_learner(
                             fragment_versions=last_loaded_fragment_versions,
                             adoption_state_digest=adoption_kernel.state_digest,
                         )
+                        _maybe_publish_exact_capsule(
+                            config=config,
+                            paths=paths,
+                            learner_session=learner_session,
+                            sequence=local_update_index,
+                            local_step=local_step,
+                            model=model,
+                            optimizer=optimizer,
+                            scheduler=scheduler,
+                            batch_source=batch_iter,
+                            authority=last_authority,
+                            logger=logger,
+                        )
                 elif not paths.stop_json.exists():
                     adoption_kernel = adoption_kernel.declare_no_progress("deadline")
                     no_progress = True
@@ -1413,6 +1513,19 @@ def run_learner(config: Config, learner_id: str, *, session_id: str | None = Non
                         reset_parameter_count=len(reset_parameters),
                         version=last_loaded_global_version,
                         adoption_state_digest=adoption_kernel.state_digest,
+                    )
+                    _maybe_publish_exact_capsule(
+                        config=config,
+                        paths=paths,
+                        learner_session=learner_session,
+                        sequence=local_update_index,
+                        local_step=local_step,
+                        model=model,
+                        optimizer=optimizer,
+                        scheduler=scheduler,
+                        batch_source=batch_iter,
+                        authority=last_authority,
+                        logger=logger,
                     )
                 elif not paths.stop_json.exists():
                     adoption_kernel = adoption_kernel.declare_no_progress("deadline")

@@ -293,6 +293,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--execution-mode", choices=("warm_standby", "active_active", "hedged")
     )
     committer.add_argument("--hedge-delay-ms", type=int)
+    committer.add_argument("--lifecycle-cadence", type=int, default=0)
     return parser.parse_args(argv)
 
 
@@ -341,6 +342,7 @@ def main(argv: list[str] | None = None) -> int:
             standby=args.standby,
             replication_factor=args.replication_factor,
             redundancy_policy=redundancy_policy,
+            lifecycle_cadence=args.lifecycle_cadence,
         )
         return 0
     raise AssertionError(args.command)
