@@ -113,3 +113,12 @@ masked it. P08-E007 preserves the automatic manifest and raw traceback. The
 type-only `ReferenceProposal` dependency is now guarded by `TYPE_CHECKING`, and
 the optimizer package exports are consolidated before the exact same targeted
 retry.
+
+PBS `2370206.opbs` passed the corrected optimized one-node gate: 103 focused
+tests, zero forbidden active database findings, and the streaming profile all
+passed at clean commit `86b77d4`. For a 16 MiB fragment the hard peak working
+set was exactly 32 MiB for q=1/2/4/8, while process peak RSS stayed 537,919,488
+bytes across all four cases. At q=8 the minimum reduction time was 8.60 ms,
+versus 9.01 ms and 1,203,240,960-byte peak RSS in the earlier materialized
+baseline. This closes the focused equivalence/memory/cache/range/cancellation
+contracts, but is not D1/D2 or matched GPU-interference evidence.

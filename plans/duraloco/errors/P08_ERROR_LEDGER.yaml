@@ -123,4 +123,21 @@ entries:
       - tracejob 2370205.opbs
     correction: make ReferenceProposal a TYPE_CHECKING-only dependency and consolidate optimizer package exports
     retry_policy: rerun the same one-node qualification; test contract already passes but benchmark evidence is still required
-last_updated: "2026-07-13T03:16:00+09:00"
+  - id: P08-E008
+    job: 2370206.opbs
+    shape: optimized_targeted_1node
+    commit: 86b77d4aca26a8df07d827bbb65403770391d25a
+    result: pass
+    expected: focused tests, forbidden-surface scan, and optimized streaming profile pass
+    actual: 103 tests passed, zero forbidden findings, 32 MiB hard working set and 537919488-byte peak RSS were flat for q=1/2/4/8
+    authority_effect: none
+    runtime_started: true
+    benchmark_started: true
+    evidence:
+      - artifacts/duraloco/P08/20260713_p08_opt_86b77d4_1node_r2/manifest.json
+      - artifacts/duraloco/P08/20260713_p08_opt_86b77d4_1node_r2/focused-junit.xml
+      - artifacts/duraloco/P08/20260713_p08_opt_86b77d4_1node_r2/lfe_streaming_optimized.json
+      - artifacts/duraloco/P08/20260713_p08_opt_86b77d4_1node_r2/forbidden_surface.json
+    correction: null
+    retry_policy: no retry; proceed to full one-node and D1 qualification
+last_updated: "2026-07-13T03:19:00+09:00"

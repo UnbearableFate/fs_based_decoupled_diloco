@@ -9,18 +9,18 @@ actual_base_commit: 8c12839a7b985e590378ac593c846f07b0637517
 feature_branch: codex/duraloco-p08-distributed-performance
 current_loop: 3
 current_goal: "complete direct fragment I/O, streaming reduction, validation reuse, range I/O, and bounded execution contracts"
-attempts_for_current_failure: 2
+attempts_for_current_failure: 0
 last_terminal_failure_review: null
 terminal_retry_authorized: false
 terminal_retry_qualification:
   targeted_1node_benchmark: null
   miyabi_1node: null
   miyabi_2node: null
-last_verified_commit: d97d9142e70356468b79f954e87f69c163b687e2
+last_verified_commit: 86b77d4aca26a8df07d827bbb65403770391d25a
 checks:
   local_static: static_pass
   telemetry_profile_1node: miyabi_1node_pass
-  optimized_targeted_1node: failed
+  optimized_targeted_1node: miyabi_1node_pass
   optimized_full_1node: not_run
   miyabi_d1: not_run
   miyabi_d2: not_run
@@ -29,29 +29,29 @@ checks:
   p07_regression: not_run
   independent_checker: not_run
 acceptance:
-  P08-A01: {result: not_run, evidence: []}
+  P08-A01: {result: pass, evidence: [2370206.opbs, tests/performance_core/test_fragment_equivalence.py]}
   P08-A02: {result: not_run, evidence: []}
-  P08-A03: {result: not_run, evidence: []}
-  P08-A04: {result: not_run, evidence: []}
-  P08-A05: {result: not_run, evidence: []}
-  P08-A06: {result: not_run, evidence: []}
-  P08-A07: {result: not_run, evidence: []}
-  P08-A08: {result: not_run, evidence: []}
+  P08-A03: {result: pass, evidence: [2370206.opbs, tests/performance_core/test_streaming_memory_bound.py]}
+  P08-A04: {result: pass, evidence: [2370206.opbs, lfe_streaming_optimized.json peak_working_bytes=32000000 for q=1/2/4/8]}
+  P08-A05: {result: pass, evidence: [2370206.opbs, tests/performance_core/test_validation_reuse.py]}
+  P08-A06: {result: pass, evidence: [2370206.opbs, test_cheap_future_rejection_precedes_payload_io]}
+  P08-A07: {result: pass, evidence: [2370206.opbs, test_discovery_cursor_never_filters_inventory_and_restart_is_equivalent]}
+  P08-A08: {result: pass, evidence: [2370206.opbs, test_head_or_epoch_jump_cancels_prefetch_and_forces_new_scope]}
   P08-A09: {result: not_run, evidence: []}
   P08-A10: {result: not_run, evidence: []}
   P08-A11: {result: not_run, evidence: []}
   P08-A12: {result: not_run, evidence: []}
-  P08-A13: {result: not_run, evidence: []}
+  P08-A13: {result: pass, evidence: [2370206.opbs, ordered float32 streaming equivalence tests]}
   P08-A14: {result: not_run, evidence: []}
   P08-A15: {result: not_run, evidence: []}
   P08-A16: {result: not_run, evidence: []}
   P08-A17: {result: not_run, evidence: []}
   P08-A18: {result: not_run, evidence: []}
-  P08-A19: {result: not_run, evidence: []}
+  P08-A19: {result: pass, evidence: [2370206.opbs, single LogLayout and one head CAS source audit]}
   P08-A20: {result: not_run, evidence: []}
   P08-A21: {result: not_run, evidence: []}
   P08-A22: {result: not_run, evidence: []}
-  P08-A23: {result: not_run, evidence: []}
+  P08-A23: {result: pass, evidence: [2370206.opbs, forbidden_surface.json finding_count=0]}
   P08-A24: {result: not_run, evidence: []}
   P08-A25: {result: not_run, evidence: []}
 open_decisions: []
