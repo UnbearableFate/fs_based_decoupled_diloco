@@ -1,5 +1,5 @@
 phase: P07
-status: in_progress
+status: blocked
 planning_basis_branch: codex/duraloco-p06c-redundant-fragment-executors
 planning_basis_commit: 6a528cbe26a9209720325ce031937c30d970b977
 verified_dependency_implementation: cba9f487dcc697a6df7930b22280e4f0d512377b
@@ -7,10 +7,10 @@ verified_dependency_checker_commit: 6a528cbe26a9209720325ce031937c30d970b977
 actual_base_branch: codex/duraloco-p06c-redundant-fragment-executors
 actual_base_commit: 6a528cbe26a9209720325ce031937c30d970b977
 feature_branch: codex/duraloco-p07-distributed-lifecycle
-current_loop: 1
-current_goal: "P07.1 immutable ancestry-pinned snapshots and snapshot+suffix replay"
-attempts_for_current_failure: 0
-last_terminal_failure_review: null
+current_loop: 5
+current_goal: "P07.5 D8-R2 terminal lifecycle validation"
+attempts_for_current_failure: 4
+last_terminal_failure_review: plans/duraloco/reviews/P07_D8_2366167_WORKFLOW_REVIEW.md
 terminal_retry_authorized: false
 terminal_retry_qualification:
   targeted_1node_benchmark: null
@@ -22,7 +22,7 @@ checks:
   local_runtime: not_run
   miyabi_1node: miyabi_1node_pass
   miyabi_2node: not_run
-  miyabi_d8_r2: not_run
+  miyabi_d8_r2: failed
 acceptance:
   P07-A01: {result: pass, evidence: ["2365809.opbs snapshot+suffix equals strict replay with lower covered-prefix storage reads"]}
   P07-A02: {result: pass, evidence: ["2365797.opbs missing/corrupt/stale snapshot strict-fallback tests"]}
@@ -49,7 +49,7 @@ acceptance:
   P07-A23: {result: not_run, evidence: []}
   P07-A24: {result: not_run, evidence: []}
 open_decisions: [D-0702, D-0703, D-0704, D-0705, D-0706, D-0707, D-0709, D-0710]
-open_blockers: []
+open_blockers: [B-P07-20260712-01]
 artifacts:
   - plans/duraloco/phases/P07_STATE.yaml
   - plans/duraloco/phases/P07_PHASE_REPORT.md
@@ -60,7 +60,7 @@ artifacts:
   - artifacts/duraloco/P07/20260712_p07_gc_025948b_1node
   - artifacts/duraloco/P07/20260712_p07_capsule_238bc5b_1node
   - artifacts/duraloco/P07/20260712_p07_cli_028ed09_1node
-next_action: "complete P07.1 RED/GREEN on a clean commit and run 1-node qualification"
+next_action: "choose an authority-safe long-substage lease renewal design before another qualification cycle"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

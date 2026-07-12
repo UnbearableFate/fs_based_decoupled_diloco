@@ -1,7 +1,7 @@
 schema_version: 3
 project: duraloco
 phase: P07
-status: in_progress
+status: blocked
 branch: codex/duraloco-p07-distributed-lifecycle
 basis:
   phase: P06C
@@ -24,7 +24,7 @@ progress:
   next_smallest_gap: integrate snapshot/capsule/GC dry-run into D1 then D2-R2 lifecycle harness
   acceptance_total: 24
   acceptance_passed: 10
-  acceptance_blocked: 0
+  acceptance_blocked: 2
 validation:
   local: static_pass
   C1: not_applicable
@@ -33,7 +33,7 @@ validation:
   D1: not_run
   D2: not_run
   D8: not_applicable
-  D8_R2: not_run
+  D8_R2: failed
 checker:
   status: not_run
   verdict: null
@@ -45,7 +45,7 @@ artifacts:
   authority_audit: null
   topology_manifest: null
   checksums_verified: false
-blockers: []
+blockers: [B-P07-20260712-01]
 decisions_open: [D-0702, D-0703, D-0704, D-0705, D-0706, D-0707, D-0709, D-0710]
-next_action: integrate lifecycle cadence into D1 then D2-R2 qualification
+next_action: choose an authority-safe long-substage lease renewal design before another qualification cycle
 updated_at: "2026-07-12T00:00:00+09:00"
