@@ -155,4 +155,19 @@ entries:
       - qsub stderr: Job violates queue and/or server resource limits
     correction: reduce requested walltime and manifest declaration to the debug-g-supported 30 minutes
     retry_policy: resubmit the corrected full one-node gate on a clean commit
-last_updated: "2026-07-13T03:23:00+09:00"
+  - id: P08-E010
+    job: 2370232.opbs
+    shape: full_1node_regression
+    commit: c3d56666e0fbf74ceecc7d5f851d2b7a34825245
+    result: pass
+    expected: complete repository tests and static policy checks pass on one compute node
+    actual: 489 tests passed, 1 intentional skip, ruff/state/forbidden-surface checks passed
+    authority_effect: none
+    runtime_started: true
+    evidence:
+      - artifacts/duraloco/P08/20260713_p08_full_c3d5666_1node_r1/manifest.json
+      - artifacts/duraloco/P08/20260713_p08_full_c3d5666_1node_r1/full-junit.xml
+      - artifacts/duraloco/P08/20260713_p08_full_c3d5666_1node_r1/forbidden_surface.json
+    correction: null
+    retry_policy: no retry; proceed to D1 on the next clean implementation commit
+last_updated: "2026-07-13T03:28:00+09:00"

@@ -1,0 +1,129 @@
+#!/bin/bash
+#PBS -N duraloco_p08_d1
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:30:00
+#PBS -j oe
+
+set -eEuo pipefail
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat WANDB_MODE=disabled
+: "${EXPECTED_COMMIT:?EXPECTED_COMMIT is required}"
+: "${RUN_ID:?RUN_ID is required}"
+: "${ARTIFACT_ROOT:?ARTIFACT_ROOT is required}"
+: "${STORAGE_ROOT:?STORAGE_ROOT is required}"
+PROJECT_ROOT="${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}"
+PYTHON_BIN="$PROJECT_ROOT/.venv/bin/python"
+CONFIG="$PROJECT_ROOT/configs/fs_diloco_gpt2_wikitext2_1l_debug.yaml"
+TRAINING_ROOT="$STORAGE_ROOT/training"
+TRAIN_RUN="$RUN_ID-training"
+cd "$PROJECT_ROOT"
+mkdir -p "$ARTIFACT_ROOT" "$TRAINING_ROOT"
+touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log" "$ARTIFACT_ROOT/commands.log"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+
+result=fail
+exit_code=1
+pids=()
+finish() {
+  observed=$?
+  for pid in "${pids[@]}"; do kill "$pid" 2>/dev/null || true; done
+  if [[ "$result" == pass ]]; then exit_code=0; elif [[ "$observed" -ne 0 ]]; then exit_code=$observed; fi
+  qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
+  args=(
+    --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json"
+    --phase P08 --purpose contract --run-id "$RUN_ID" --schema-version 2
+    --validation-shape p08-d1-v2-direct-streaming-telemetry-real-gpt2
+    --backend lustre --model-revision gpt2 --dataset-revision wikitext-2-raw-v1
+    --config scripts/miyabi/run_duraloco_p08_d1.pbs --commands-log commands.log
+    --stdout stdout.log --stderr stderr.log --exit-code "$exit_code" --result "$result"
+    --termination-kind "$([[ "$result" == pass ]] && echo success || echo test_failure)"
+    --pbs-queue debug-g --requested-resources select=1:mpiprocs=1,walltime=00:30:00
+    --last-qstat-state R --termination-detail "P08 D1 real GPT-2 learner, bounded LFE, v2 committer and fail-closed stage reconstruction"
+    --assertion "fresh error-resume-v2 generation completes through one global head and one prepare-only LFE"
+    --assertion "full committer/executor work-order timeline and actual affinity/NUMA/thread/RSS evidence pass"
+    --assertion "learner uses one authoritative payload and adopts the committed successor"
+  )
+  [[ -f "$ARTIFACT_ROOT/d1_report.json" ]] && args+=(--stage-metrics-path d1_report.json)
+  "$PYTHON_BIN" scripts/agent/create_run_manifest.py "${args[@]}" || true
+}
+trap finish EXIT
+trap 'echo "[ERROR] P08 D1 failed at line $LINENO" | tee -a "$ARTIFACT_ROOT/stderr.log"' ERR
+
+[[ "$(hostname)" == mg* ]]
+[[ "$(git rev-parse HEAD)" == "$EXPECTED_COMMIT" ]]
+[[ -z "$(git status --porcelain=v1)" ]]
+hostname | tee "$ARTIFACT_ROOT/hosts.log"
+git status --short --branch | tee "$ARTIFACT_ROOT/git_status.log"
+git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"
+"$PYTHON_BIN" --version 2>&1 | tee "$ARTIFACT_ROOT/python_version.log"
+module list 2>&1 | cat > "$ARTIFACT_ROOT/modules.log"
+"$PYTHON_BIN" scripts/agent/check_no_embedded_database.py \
+  --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/forbidden_surface.json"
+
+node_id=$(hostname)
+committer=("$PYTHON_BIN" -m fs_diloco.distributed_syncer.cli committer --config "$CONFIG" --run-id "$TRAIN_RUN" --shared-root "$TRAINING_ROOT" --num-learners 1 --node-ids "$node_id" --member-id member-000 --owner-session-id "$TRAIN_RUN-committer-session" --threads 8 --max-prefetch-bytes 1073741824 --error-resume)
+executor=("$PYTHON_BIN" -m fs_diloco.distributed_syncer.cli executor --config "$CONFIG" --run-id "$TRAIN_RUN" --shared-root "$TRAINING_ROOT" --num-learners 1 --member-id member-000 --executor-id executor-000 --executor-session-id "$TRAIN_RUN-executor-000-session" --threads 8 --max-prefetch-bytes 1073741824)
+learner=("$PYTHON_BIN" -m fs_diloco.learner --config "$CONFIG" --run-id "$TRAIN_RUN" --shared-root "$TRAINING_ROOT" --learner-id learner_000 --num-learners 1 --session-id "$TRAIN_RUN-learner_000-session")
+for command in committer executor learner; do declare -n value="$command"; printf '%q ' "${value[@]}" | tee -a "$ARTIFACT_ROOT/commands.log"; printf '\n' | tee -a "$ARTIFACT_ROOT/commands.log"; done
+
+mapfile -t cpus < <("$PYTHON_BIN" -c 'import os; print(*sorted(os.sched_getaffinity(0)), sep="\n")')
+if (( ${#cpus[@]} <= 8 )); then echo "insufficient CPUs for learner/LFE isolation" >&2; exit 1; fi
+learner_cpu_list=$(IFS=,; echo "${cpus[*]:0:${#cpus[@]}-8}")
+printf 'learner_cpu_affinity=%s\n' "$learner_cpu_list" | tee "$ARTIFACT_ROOT/placement.log"
+
+CUDA_VISIBLE_DEVICES="" "${committer[@]}" > "$ARTIFACT_ROOT/committer.log" 2>&1 & pids+=("$!")
+sleep 5
+CUDA_VISIBLE_DEVICES="" "${executor[@]}" > "$ARTIFACT_ROOT/executor.log" 2>&1 & pids+=("$!")
+CUDA_VISIBLE_DEVICES=0 taskset -c "$learner_cpu_list" "${learner[@]}" > "$ARTIFACT_ROOT/learner.log" 2>&1 & pids+=("$!")
+wait "${pids[2]}"
+wait "${pids[0]}"
+wait "${pids[1]}"
+pids=()
+
+"$PYTHON_BIN" -m fs_diloco.analysis summary "$TRAINING_ROOT" --json | tee "$ARTIFACT_ROOT/training_summary.json"
+"$PYTHON_BIN" - "$TRAINING_ROOT" "$ARTIFACT_ROOT" <<'PY' | tee "$ARTIFACT_ROOT/d1_report.json"
+import csv, json, math, sys
+from pathlib import Path
+from fs_diloco.telemetry.summaries import load_events, summarize_events
+
+root, artifacts = map(Path, sys.argv[1:])
+summary = json.loads((artifacts / "training_summary.json").read_text())
+metrics = list(csv.DictReader((root / "metrics/learner_metrics.csv").open()))
+losses = [float(row["train_loss"]) for row in metrics if row.get("train_loss")]
+committer_events = root / "logs/performance_committer_member-000.jsonl"
+executor_events = root / "logs/performance_executor_member-000.jsonl"
+health_paths = [
+    root / "logs/performance_committer_member-000.health.json",
+    root / "logs/performance_executor_member-000.health.json",
+]
+health = [json.loads(path.read_text()) for path in health_paths]
+stage_report = summarize_events(load_events([committer_events, executor_events]), recorder_health=health)
+executor_rows = [json.loads(line) for line in (root / "logs/distributed_executor_member-000.jsonl").read_text().splitlines()]
+prepared = [row for row in executor_rows if row.get("event_type") == "fragment_prepared"]
+learner_rows = [json.loads(line) for line in (root / "logs/learner_000.jsonl").read_text().splitlines()]
+metadata = [json.loads(path.read_text()) for path in root.glob("updates/pending/learner_000/*.meta.json")]
+resource = prepared[-1]
+report = {
+    "status": "PASS",
+    "optimizer_transitions": summary["optimizer_transition_count"],
+    "stop_reason": summary["stop_reason"],
+    "finite_losses": losses,
+    "local_steps": max(int(row["local_step"]) for row in metrics),
+    "stage_report": stage_report,
+    "resource": resource,
+    "boundary_adoptions": sum(row.get("event_type") == "global_adopted" for row in learner_rows),
+    "single_copy_metadata_count": sum("payload_ref" in row for row in metadata),
+    "mailbox_tensor_count": len(list(root.glob("updates/pending/**/*.params.safetensors"))),
+}
+assert report["optimizer_transitions"] == 1 and report["stop_reason"] == "stop_after_outer_steps"
+assert losses and all(math.isfinite(value) for value in losses)
+assert stage_report["status"] == "PASS" and stage_report["work_order_count"] == 1
+assert resource["actual_torch_threads"] == 8 and len(resource["cpu_affinity"]) == 8
+assert resource["rss_bytes"] <= resource["max_rss_bytes"] and not resource["budget_violation"]
+assert report["boundary_adoptions"] >= 1
+assert report["single_copy_metadata_count"] >= 1 and report["mailbox_tensor_count"] == 0
+print(json.dumps(report, indent=2, sort_keys=True))
+PY
+result=pass
+exit_code=0

@@ -544,41 +544,6 @@ def run_committer(
                 time.sleep(config.sync.scan_interval_seconds)
                 continue
             catalog_counters = getattr(catalog, "last_scan_counters", {})
-            stage_recorder.record(
-                "catalog_discovery",
-                start_ns=catalog_started_ns,
-                end_ns=catalog_finished_ns,
-                commit_seq=view.commit_seq,
-                head_commit_id=view.commit_id,
-                fencing_epoch=view.fencing_epoch,
-                membership_revision=membership.revision,
-                counters={
-                    "selected_count": len(selected),
-                    "observed_count": int(catalog_counters.get("observed_count", len(selected))),
-                    "metadata_reads": int(catalog_counters.get("metadata_reads", 0)),
-                    "cheap_rejections": int(catalog_counters.get("cheap_rejections", 0)),
-                },
-            )
-            stage_recorder.record(
-                "proposal_validation",
-                start_ns=catalog_started_ns,
-                end_ns=catalog_finished_ns,
-                commit_seq=view.commit_seq,
-                head_commit_id=view.commit_id,
-                fencing_epoch=view.fencing_epoch,
-                membership_revision=membership.revision,
-                counters={
-                    "payload_reads": int(catalog_counters.get("payload_reads", len(selected))),
-                    "sha_checks": int(catalog_counters.get("sha_checks", len(selected))),
-                    "finite_checks": int(catalog_counters.get("finite_checks", len(selected))),
-                    "validation_token_hits": int(
-                        catalog_counters.get("validation_token_hits", 0)
-                    ),
-                },
-                attributes={
-                    "proposal_ids": [item.proposal_id for item in selected],
-                },
-            )
             for entry in selected:
                 catalog.publish_entry(log, entry)
             plan = build_fragment_plan(
@@ -656,6 +621,53 @@ def run_committer(
                 )
             else:
                 order = base_order
+            stage_recorder.record(
+                "catalog_discovery",
+                start_ns=catalog_started_ns,
+                end_ns=catalog_finished_ns,
+                work_order_id=order.work_order_id,
+                commit_seq=view.commit_seq,
+                head_commit_id=view.commit_id,
+                fencing_epoch=view.fencing_epoch,
+                membership_revision=membership.revision,
+                counters={
+                    "selected_count": len(selected),
+                    "observed_count": int(
+                        catalog_counters.get("observed_count", len(selected))
+                    ),
+                    "metadata_reads": int(catalog_counters.get("metadata_reads", 0)),
+                    "cheap_rejections": int(
+                        catalog_counters.get("cheap_rejections", 0)
+                    ),
+                },
+            )
+            stage_recorder.record(
+                "proposal_validation",
+                start_ns=catalog_started_ns,
+                end_ns=catalog_finished_ns,
+                work_order_id=order.work_order_id,
+                commit_seq=view.commit_seq,
+                head_commit_id=view.commit_id,
+                fencing_epoch=view.fencing_epoch,
+                membership_revision=membership.revision,
+                counters={
+                    "payload_reads": int(
+                        catalog_counters.get("payload_reads", len(selected))
+                    ),
+                    "sha_checks": int(
+                        catalog_counters.get("sha_checks", len(selected))
+                    ),
+                    "finite_checks": int(
+                        catalog_counters.get("finite_checks", len(selected))
+                    ),
+                    "validation_token_hits": int(
+                        catalog_counters.get("validation_token_hits", 0)
+                    ),
+                },
+                attributes={
+                    "proposal_ids": [item.proposal_id for item in selected],
+                },
+            )
             bundle = ExecutorInputBundleV1.create(
                 {
                     "schema": ExecutorInputBundleV1.SCHEMA,

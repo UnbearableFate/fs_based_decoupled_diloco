@@ -9,7 +9,7 @@ actual_base_commit: 8c12839a7b985e590378ac593c846f07b0637517
 feature_branch: codex/duraloco-p08-distributed-performance
 current_loop: 3
 current_goal: "complete direct fragment I/O, streaming reduction, validation reuse, range I/O, and bounded execution contracts"
-attempts_for_current_failure: 1
+attempts_for_current_failure: 0
 last_terminal_failure_review: null
 terminal_retry_authorized: false
 terminal_retry_qualification:
@@ -21,7 +21,7 @@ checks:
   local_static: static_pass
   telemetry_profile_1node: miyabi_1node_pass
   optimized_targeted_1node: miyabi_1node_pass
-  optimized_full_1node: not_run
+  optimized_full_1node: miyabi_1node_pass
   miyabi_d1: not_run
   miyabi_d2: not_run
   miyabi_d8: not_run
@@ -62,7 +62,7 @@ artifacts:
   - plans/duraloco/errors/P08_ERROR_LEDGER.yaml
   - artifacts/duraloco/P08/20260713_p08_profile_d97d914_1node_r3/manifest.json
   - artifacts/duraloco/P08/20260713_p08_profile_d97d914_1node_r3/lfe_materialized_baseline.json
-next_action: "finish Loops 2-4 implementation and run the optimized one-node compute qualification"
+next_action: "run the P08 D1 v2 direct/streaming/resource/telemetry qualification"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

@@ -127,3 +127,11 @@ The first full-regression submission was rejected before allocation because its
 35-minute request exceeded the `debug-g` queue limit. It received no PBS job
 ID, ran no command, and touched no authority. P08-E009 records the operator
 submission failure; the wrapper now requests the queue-supported 30 minutes.
+
+PBS `2370232.opbs` then passed the full one-node gate at clean commit
+`c3d5666`: 489 tests passed, one was intentionally skipped, ruff and both P08
+state contracts passed, and the forbidden-surface scan found zero active
+database references. While preparing D1, the stage instrumentation was also
+hardened so discovery/validation spans receive the derived work-order identity
+once the canonical order is built; this prevents real traces from being
+complete in aggregate but unjoinable per FWO.
