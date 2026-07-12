@@ -257,4 +257,19 @@ entries:
       - tracejob 2370326.opbs
     correction: align report expectations with config stop_after_outer_steps=4 and require four two-attempt work-order timelines
     retry_policy: rerun targeted one-node then D2 report/runtime on the corrected clean commit
-last_updated: "2026-07-13T03:46:00+09:00"
+  - id: P08-E016
+    job: 2370338.opbs
+    shape: D2_R2_error_stop_resume
+    commit: 929503b76d79d6889cb266fb5e7ce30c38094701
+    result: fail
+    failure_class: submission_environment_omission
+    expected: D2 wrapper receives an explicit shared STORAGE_ROOT and starts its immutable manifest trap
+    actual: the qsub environment omitted STORAGE_ROOT; strict parameter validation exited before artifact setup or runtime
+    authority_effect: none; no authority directory was selected or touched
+    runtime_started: false
+    evidence:
+      - duraloco_p08_d2.o2370338
+      - tracejob 2370338.opbs
+    correction: pass a unique shared Lustre STORAGE_ROOT explicitly in the qsub environment
+    retry_policy: rerun targeted one-node on the new clean persistence commit, then submit D2 with all four required environment values
+last_updated: "2026-07-13T03:36:00+09:00"

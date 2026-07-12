@@ -174,3 +174,9 @@ The runtime completed correctly, but the post-run report asserted three
 transitions even though the frozen tiny config specifies four. P08-E015 records
 this analysis-harness failure; the expected work-order/attempt cardinalities
 are corrected to four without changing runtime semantics.
+
+The first submission of that corrected commit, PBS `2370338.opbs`, omitted the
+required `STORAGE_ROOT` qsub variable. Strict wrapper validation rejected the
+job before artifact setup, runtime, or authority access. P08-E016 preserves the
+operator error and requires the next submission to name a unique shared Lustre
+root explicitly.
