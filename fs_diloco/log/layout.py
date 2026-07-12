@@ -131,6 +131,15 @@ class LogLayout:
             f"{revision:020d}-{membership_digest}.json"
         )
 
+    @property
+    def snapshot_prefix(self) -> str:
+        return f"{self.root}/immutable/lifecycle/snapshots/"
+
+    def snapshot_key(self, snapshot_id: str) -> str:
+        return normalize_key(
+            f"{self.snapshot_prefix}{_component(snapshot_id, 'snapshot_id')}.json"
+        )
+
     def _payload_key(
         self,
         kind: str,

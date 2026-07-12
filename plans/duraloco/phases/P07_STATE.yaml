@@ -1,0 +1,51 @@
+schema_version: 3
+project: duraloco
+phase: P07
+status: in_progress
+branch: codex/duraloco-p07-distributed-lifecycle
+basis:
+  phase: P06C
+  verified_commit: 6a528cbe26a9209720325ce031937c30d970b977
+  dependency_digest: cba9f487dcc697a6df7930b22280e4f0d512377b
+current_commit: null
+working_tree_clean: false
+architecture:
+  mode: distributed_r2
+  dedicated_syncer_nodes: 0
+  learner_nodes: 8
+  learner_processes: 8
+  executor_processes: 8
+  replication_factor: 2
+  controller_mode: fixed
+  global_head_mode: single
+  per_fragment_heads: false
+progress:
+  current_loop: 1
+  next_smallest_gap: implement validated snapshot+suffix replay without old tensor reads
+  acceptance_total: 24
+  acceptance_passed: 0
+  acceptance_blocked: 0
+validation:
+  local: static_pass
+  C1: not_applicable
+  C2: not_applicable
+  C9: not_applicable
+  D1: not_run
+  D2: not_run
+  D8: not_applicable
+  D8_R2: not_run
+checker:
+  status: not_run
+  verdict: null
+  report: null
+artifacts:
+  latest_run_id: null
+  phase_report: plans/duraloco/phases/P07_PHASE_REPORT.md
+  oracle_or_equivalence_report: null
+  authority_audit: null
+  topology_manifest: null
+  checksums_verified: false
+blockers: []
+decisions_open: [D-0702, D-0703, D-0704, D-0705, D-0706, D-0707, D-0709, D-0710]
+next_action: complete P07.1 RED/GREEN on a clean commit and run 1-node qualification
+updated_at: "2026-07-12T00:00:00+09:00"

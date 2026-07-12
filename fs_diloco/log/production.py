@@ -16,6 +16,7 @@ from fs_diloco.protocol.schemas import (
     ObjectRef,
     ProposalManifest,
     ProposalSelection,
+    SnapshotProjection,
     StopProjection,
 )
 from fs_diloco.distributed_syncer.ownership import derive_ownership
@@ -24,7 +25,7 @@ from fs_diloco.storage import ImmutableConflict, NotFound
 from fs_diloco.storage.base import StorageBackend
 from fs_diloco.testing.deterministic_reference import normalized_weights
 
-from .codec import content_ref, verified_get
+from .codec import canonical_object, content_ref, verified_get
 from .commit import (
     CommitResult,
     PreparedLogTransition,
@@ -46,6 +47,7 @@ from .production_codec import (
 )
 from .replay import ProductionReplayCache, ReplayResult, replay_log
 from .run import RunManifest, RunSpec
+from .snapshot import SnapshotManifestV1
 from fs_diloco.coordination.state_machine import OwnerToken
 
 
@@ -263,6 +265,7 @@ class ProductionTransactionalLog:
         parent_commit_id: str,
         stop_reason: str | None = None,
         membership: MembershipProjection | None = None,
+        snapshot: SnapshotProjection | None = None,
     ) -> dict[str, object]:
         body: dict[str, object] = {
             "operation": control_kind,
@@ -276,6 +279,8 @@ class ProductionTransactionalLog:
             body["stop_reason"] = stop_reason
         if membership is not None:
             body["membership"] = membership.to_dict()
+        if snapshot is not None:
+            body["snapshot"] = snapshot.to_dict()
         return body
 
     def prepare_control_transition(
@@ -286,13 +291,14 @@ class ProductionTransactionalLog:
         request_id: str,
         stop_reason: str | None = None,
         membership: MembershipRevisionV1 | None = None,
+        snapshot: SnapshotProjection | None = None,
         crash_at: str | None = None,
     ) -> PreparedLogTransition:
         """Prepare an epoch-bump or stop fact without changing optimizer state."""
 
         if self.spec.coordination_protocol not in {"head-fenced-v1", "distributed-head-fenced-v1"}:
             raise CommitConflict("run generation does not enable fenced coordination")
-        if control_kind not in {"epoch_bump", "stop", "membership"}:
+        if control_kind not in {"epoch_bump", "stop", "membership", "snapshot_pin"}:
             raise ValueError(f"unsupported control transition: {control_kind}")
         if not isinstance(request_id, str) or not request_id:
             raise ValueError("control request_id must be non-empty")
@@ -349,6 +355,31 @@ class ProductionTransactionalLog:
         elif membership is not None:
             raise ValueError("only membership control accepts membership content")
 
+        if control_kind == "snapshot_pin":
+            if snapshot is None:
+                raise ValueError("snapshot pin requires a snapshot projection")
+            if (
+                snapshot.covered_commit_seq != previous.commit_seq
+                or snapshot.covered_commit_id != previous.commit_id
+            ):
+                raise CommitConflict("snapshot does not cover the current parent")
+            snapshot_data = verified_get(
+                self.backend, snapshot.snapshot_ref, commit_seq=previous.commit_seq
+            )
+            parsed_snapshot = SnapshotManifestV1.from_dict(
+                canonical_object(snapshot_data)
+            )
+            if (
+                parsed_snapshot.snapshot_id != snapshot.snapshot_id
+                or parsed_snapshot.covered_state_digest
+                != snapshot.covered_state_digest
+                or parsed_snapshot.covered_head != replay.loaded_head.manifest
+                or parsed_snapshot.covered_frontier != previous
+            ):
+                raise CommitConflict("snapshot projection differs from strict replay")
+        elif snapshot is not None:
+            raise ValueError("only snapshot pin accepts a snapshot projection")
+
         request_body = self._control_request_body(
             control_kind=control_kind,
             request_id=request_id,
@@ -356,6 +387,7 @@ class ProductionTransactionalLog:
             parent_commit_id=previous.commit_id,
             stop_reason=stop_reason,
             membership=membership_projection,
+            snapshot=snapshot,
         )
         request_digest = canonical_digest(request_body)
         committed_request = replay.control_requests.get(request_id)
@@ -384,6 +416,8 @@ class ProductionTransactionalLog:
             commit_body["stop_reason"] = stop_reason
         if membership_projection is not None:
             commit_body["membership"] = membership_projection.to_dict()
+        if snapshot is not None:
+            commit_body["snapshot"] = snapshot.to_dict()
         commit_body["commit_id"] = "c-" + canonical_digest(commit_body)
         commit = ControlCommitManifest.from_dict(commit_body)
 
@@ -525,6 +559,40 @@ class ProductionTransactionalLog:
             token=token,
             request_id=request_id,
             membership=membership,
+            crash_at=crash_at,
+        )
+        return self.commit_prepared(prepared, crash_at=crash_at)
+
+    def commit_snapshot(
+        self,
+        *,
+        request_id: str,
+        crash_at: str | None = None,
+    ) -> CommitResult:
+        """Strict-replay, publish an immutable snapshot, then pin it in ancestry."""
+
+        token = self._require_owner_token()
+        replay = self.replay(force_full=True)
+        snapshot = SnapshotManifestV1.create(replay)
+        snapshot_data = snapshot.canonical_bytes()
+        snapshot_ref = content_ref(
+            self.layout.snapshot_key(snapshot.snapshot_id), snapshot_data
+        )
+        self.backend.put_immutable(
+            snapshot_ref.key, snapshot_data, sha256=snapshot_ref.sha256
+        )
+        projection = SnapshotProjection(
+            snapshot_ref=snapshot_ref,
+            snapshot_id=snapshot.snapshot_id,
+            covered_commit_seq=snapshot.covered_head.commit_seq,
+            covered_commit_id=snapshot.covered_head.commit_id,
+            covered_state_digest=snapshot.covered_state_digest,
+        )
+        prepared = self.prepare_control_transition(
+            control_kind="snapshot_pin",
+            token=token,
+            request_id=request_id,
+            snapshot=projection,
             crash_at=crash_at,
         )
         return self.commit_prepared(prepared, crash_at=crash_at)

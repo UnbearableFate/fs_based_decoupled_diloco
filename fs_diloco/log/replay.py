@@ -489,6 +489,8 @@ def _verify_control_transition(
         request_body["stop_reason"] = commit.stop_reason
     if commit.membership is not None:
         request_body["membership"] = commit.membership.to_dict()
+    if commit.snapshot is not None:
+        request_body["snapshot"] = commit.snapshot.to_dict()
     if commit.request_digest != canonical_digest(request_body):
         raise VerificationError(
             "control request digest differs from canonical content",
@@ -588,6 +590,21 @@ def _verify_control_transition(
         ):
             raise VerificationError(
                 "membership projection is not the next committed revision",
+                commit_seq=commit.commit_seq,
+            )
+    elif commit.control_kind == "snapshot_pin":
+        prior = previous.coordination
+        if (
+            prior is None
+            or prior.owner_id != commit.owner_id
+            or prior.owner_session_id != commit.owner_session_id
+            or commit.fencing_epoch != previous.fencing_epoch
+            or projection.stop is not None
+            or frontier.membership != previous.membership
+            or commit.snapshot is None
+        ):
+            raise VerificationError(
+                "snapshot pin was not issued by the current fenced owner",
                 commit_seq=commit.commit_seq,
             )
     control_requests[commit.request_id] = (
@@ -808,6 +825,35 @@ def _replay_production_log(
                         commit_seq=index,
                     )
                 reachable.add(commit.membership.membership_ref.key)
+            if commit.snapshot is not None:
+                from .snapshot import SnapshotManifestV1
+
+                reachable.add(commit.snapshot.snapshot_ref.key)
+                # A snapshot is a derived replay accelerator, never authority.
+                # Validate it when present so a later snapshot-mode replay may
+                # use it, but corruption/omission must not make strict ancestry
+                # replay unavailable.
+                try:
+                    snapshot_data = verified_get(
+                        log.backend, commit.snapshot.snapshot_ref, commit_seq=index
+                    )
+                    snapshot = SnapshotManifestV1.from_dict(
+                        canonical_object(snapshot_data)
+                    )
+                    if (
+                        snapshot.snapshot_id != commit.snapshot.snapshot_id
+                        or snapshot.covered_state_digest
+                        != commit.snapshot.covered_state_digest
+                        or snapshot.covered_head != prior_head
+                        or snapshot.covered_head.commit_seq
+                        != commit.snapshot.covered_commit_seq
+                        or snapshot.covered_head.commit_id
+                        != commit.snapshot.covered_commit_id
+                        or snapshot.covered_frontier != previous
+                    ):
+                        raise ValueError("snapshot pin/content mismatch")
+                except Exception:
+                    pass
             reachable.add(log.layout.commit_key(commit.commit_seq, commit.commit_id))
             frontier_by_commit[frontier.commit_id] = frontier
             prefix_head = HeadManifest(

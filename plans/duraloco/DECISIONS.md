@@ -740,3 +740,14 @@ P05+ 的规范性路线决策生效。
 
 - Choice: the terminal D8-R2 mode is `hedged` with `hedge_delay_ms=6000`, compared with the frozen P06B factor-one D8. D1/D2 also cover warm-standby and active-active modes. The six-second value is an observed-baseline experiment setting, not a universal optimum.
 - Rejected: adaptive delay before P10 would add an uncommitted controller decision and confound P06C correctness.
+
+## D-0701 — Snapshot is an immutable side object with an ancestry pin
+
+- Choice: a lifecycle snapshot is derived immutable state covering one exact committed head. It becomes eligible for accelerated replay only when the current fenced committer commits a `snapshot_pin` control transition that binds its complete ObjectRef, content-derived snapshot ID, covered commit identity, and covered state digest. The pin advances the one global head but does not change optimizer, scheduler, membership, or proposal-consumption state.
+- Safety: strict full replay never depends on snapshot availability or validity. A missing, corrupt, stale, or mismatched snapshot is ignored by strict replay and causes snapshot mode to fall back to empty-cache strict replay. An unpinned snapshot is an orphan, not a replay root.
+- Rejected: an independently mutable `latest-snapshot` pointer would be a second head; trusting an uncommitted snapshot would permit derived state to replace ancestry authority; embedding snapshot bytes in every frontier would bloat the authoritative control path.
+
+## D-0708 — Snapshot replay state is process-local and invalidated at ownership boundaries
+
+- Choice: a pinned snapshot may seed only a process-local replay attempt after its pin, covered head, state digest, and suffix have been strictly validated. Failed snapshot validation does not populate memoization. Fresh open, takeover, explicit verification, CAS ambiguity, head jump, epoch change, or corruption suspicion discards all prior replay acceleration and starts with empty-cache strict replay or a newly validated pinned snapshot.
+- Rejected: serializing verified-object caches or carrying them across committer ownership would violate the M00 recovery contract.

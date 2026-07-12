@@ -1,0 +1,105 @@
+from __future__ import annotations
+
+from dataclasses import replace
+import hashlib
+
+import pytest
+
+from fs_diloco.coordination import OwnerToken
+from fs_diloco.log import CommitConflict
+from fs_diloco.log.codec import content_ref
+from fs_diloco.log.snapshot import SnapshotManifestV1
+from fs_diloco.protocol.schemas import ControlCommitManifest, SnapshotProjection
+from tests.coordination.test_production_fencing import _initialize, _prepare, _proposal
+
+
+def _activate(log) -> OwnerToken:
+    token = OwnerToken("syncer-a", "session-a", 1)
+    log.activate_owner(token=token, request_id="activate-a")
+    return token
+
+
+def _published_snapshot(log):
+    replay = log.replay(force_full=True)
+    snapshot = SnapshotManifestV1.create(replay)
+    data = snapshot.canonical_bytes()
+    ref = content_ref(log.layout.snapshot_key(snapshot.snapshot_id), data)
+    log.backend.put_immutable(ref.key, data, sha256=ref.sha256)
+    projection = SnapshotProjection(
+        snapshot_ref=ref,
+        snapshot_id=snapshot.snapshot_id,
+        covered_commit_seq=snapshot.covered_head.commit_seq,
+        covered_commit_id=snapshot.covered_head.commit_id,
+        covered_state_digest=snapshot.covered_state_digest,
+    )
+    return snapshot, projection
+
+
+def test_snapshot_is_immutable_side_object_pinned_by_one_head_transition():
+    backend, log = _initialize("p07-snapshot-pin")
+    _activate(log)
+    covered = log.replay(force_full=True)
+
+    result = log.commit_snapshot(request_id="snapshot-a")
+    replay = log.replay(force_full=True)
+
+    assert result.status == "committed"
+    assert replay.head_frontier.commit_seq == covered.head_frontier.commit_seq + 1
+    pin = replay.commits[-1]
+    assert isinstance(pin, ControlCommitManifest)
+    assert pin.control_kind == "snapshot_pin"
+    assert pin.snapshot is not None
+    assert pin.snapshot.covered_commit_id == covered.head_frontier.commit_id
+    assert pin.snapshot.snapshot_ref.key in replay.reachable_keys
+    assert backend.get(log.layout.head_key) != backend.get(pin.snapshot.snapshot_ref.key)
+
+
+@pytest.mark.parametrize("failure", ["missing", "corrupt"])
+def test_bad_snapshot_never_blocks_empty_cache_strict_replay(failure):
+    backend, log = _initialize(f"p07-snapshot-fallback-{failure}")
+    _activate(log)
+    log.commit_snapshot(request_id="snapshot-a")
+    pin = log.replay(force_full=True).commits[-1]
+    assert isinstance(pin, ControlCommitManifest) and pin.snapshot is not None
+    key = pin.snapshot.snapshot_ref.key
+    if failure == "missing":
+        del backend._objects[key]
+    else:
+        original = backend._objects[key]
+        damaged = bytearray(original.data)
+        damaged[-1] ^= 1
+        backend._objects[key] = replace(original, data=bytes(damaged))
+
+    strict = log.replay(force_full=True)
+    assert strict.head_frontier.commit_id == pin.commit_id
+
+
+def test_stale_snapshot_cannot_be_pinned_after_parent_advance():
+    _backend, log = _initialize("p07-snapshot-stale")
+    token = _activate(log)
+    _snapshot, stale_projection = _published_snapshot(log)
+    proposal = _proposal(log)
+    log.commit_prepared(_prepare(log, proposal, "optimizer-a"))
+
+    with pytest.raises(CommitConflict, match="does not cover the current parent"):
+        log.prepare_control_transition(
+            control_kind="snapshot_pin",
+            token=token,
+            request_id="snapshot-stale",
+            snapshot=stale_projection,
+        )
+
+
+def test_snapshot_identity_detects_partial_or_conflicting_content():
+    _backend, log = _initialize("p07-snapshot-identity")
+    _activate(log)
+    snapshot = SnapshotManifestV1.create(log.replay(force_full=True))
+    payload = snapshot.to_dict()
+    payload["covered_state_digest"] = hashlib.sha256(b"different").hexdigest()
+    with pytest.raises(ValueError, match="state digest"):
+        SnapshotManifestV1.from_dict(payload)
+
+    control = log.replay(force_full=True).commits[-1].to_dict()
+    control["snapshot"] = None
+    with pytest.raises(Exception, match="snapshot"):
+        ControlCommitManifest.from_dict(control)

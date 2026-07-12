@@ -451,6 +451,50 @@ class MembershipProjection:
 
 
 @dataclass(frozen=True)
+class SnapshotProjection:
+    snapshot_ref: ObjectRef
+    snapshot_id: str
+    covered_commit_seq: int
+    covered_commit_id: str
+    covered_state_digest: str
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "SnapshotProjection":
+        _strict_fields(
+            payload,
+            {
+                "snapshot_ref",
+                "snapshot_id",
+                "covered_commit_seq",
+                "covered_commit_id",
+                "covered_state_digest",
+            },
+        )
+        return cls(
+            snapshot_ref=ObjectRef.from_dict(payload["snapshot_ref"]),
+            snapshot_id=_string(payload["snapshot_id"], "snapshot_id"),
+            covered_commit_seq=_integer(
+                payload["covered_commit_seq"], "covered_commit_seq"
+            ),
+            covered_commit_id=_string(
+                payload["covered_commit_id"], "covered_commit_id"
+            ),
+            covered_state_digest=_sha(
+                payload["covered_state_digest"], "covered_state_digest"
+            ),
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "snapshot_ref": self.snapshot_ref.to_dict(),
+            "snapshot_id": self.snapshot_id,
+            "covered_commit_seq": self.covered_commit_seq,
+            "covered_commit_id": self.covered_commit_id,
+            "covered_state_digest": self.covered_state_digest,
+        }
+
+
+@dataclass(frozen=True)
 class CommitManifest:
     MANIFEST_TYPE: ClassVar[str] = "commit"
     protocol_version: int
@@ -680,6 +724,7 @@ class ControlCommitManifest:
     optimizer_transition_count: int
     stop_reason: str | None = None
     membership: MembershipProjection | None = None
+    snapshot: SnapshotProjection | None = None
     created_at: str | None = None
 
     @classmethod
@@ -702,11 +747,15 @@ class ControlCommitManifest:
             "request_digest",
             "optimizer_transition_count",
         }
-        _strict_fields(payload, required, {"stop_reason", "membership", "created_at"})
+        _strict_fields(
+            payload,
+            required,
+            {"stop_reason", "membership", "snapshot", "created_at"},
+        )
         if payload["manifest_type"] != cls.MANIFEST_TYPE:
             raise _error("SCHEMA_ENUM", "manifest_type must be control_commit")
         kind = payload["control_kind"]
-        if kind not in {"epoch_bump", "stop", "membership"}:
+        if kind not in {"epoch_bump", "stop", "membership", "snapshot_pin"}:
             raise _error("SCHEMA_ENUM", f"unsupported control_kind: {kind!r}")
         stop_reason = payload.get("stop_reason")
         if stop_reason is None and "stop_reason" in payload:
@@ -724,6 +773,13 @@ class ControlCommitManifest:
             raise _error("SCHEMA_MISSING_FIELD", "membership control requires membership")
         if kind != "membership" and raw_membership is not None:
             raise _error("SCHEMA_UNKNOWN_FIELD", "only membership control carries membership")
+        raw_snapshot = payload.get("snapshot")
+        if raw_snapshot is None and "snapshot" in payload:
+            raise _error("SCHEMA_TYPE", "absent snapshot must be omitted rather than null")
+        if kind == "snapshot_pin" and raw_snapshot is None:
+            raise _error("SCHEMA_MISSING_FIELD", "snapshot pin requires snapshot")
+        if kind != "snapshot_pin" and raw_snapshot is not None:
+            raise _error("SCHEMA_UNKNOWN_FIELD", "only snapshot pin carries snapshot")
         created_at = payload.get("created_at")
         if created_at is not None:
             created_at = _string(created_at, "created_at")
@@ -759,6 +815,11 @@ class ControlCommitManifest:
                 if raw_membership is not None
                 else None
             ),
+            snapshot=(
+                SnapshotProjection.from_dict(raw_snapshot)
+                if raw_snapshot is not None
+                else None
+            ),
             created_at=created_at,
         )
         if kind == "epoch_bump" and instance.fencing_epoch <= instance.prior_fencing_epoch:
@@ -768,8 +829,12 @@ class ControlCommitManifest:
             )
         if kind == "stop" and instance.fencing_epoch != instance.prior_fencing_epoch:
             raise _error("FENCING_EPOCH", "stop cannot change the fencing epoch")
-        if kind == "membership" and instance.fencing_epoch != instance.prior_fencing_epoch:
-            raise _error("FENCING_EPOCH", "membership cannot change the fencing epoch")
+        if kind in {"membership", "snapshot_pin"} and (
+            instance.fencing_epoch != instance.prior_fencing_epoch
+        ):
+            raise _error(
+                "FENCING_EPOCH", f"{kind} cannot change the fencing epoch"
+            )
         if instance.commit_id != commit_id_for(instance.identity_body()):
             raise _error(
                 "COMMIT_ID_MISMATCH",
@@ -807,6 +872,8 @@ class ControlCommitManifest:
             payload["stop_reason"] = self.stop_reason
         if self.membership is not None:
             payload["membership"] = self.membership.to_dict()
+        if self.snapshot is not None:
+            payload["snapshot"] = self.snapshot.to_dict()
         if self.created_at is not None:
             payload["created_at"] = self.created_at
         return payload
