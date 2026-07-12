@@ -346,3 +346,11 @@ Maker evidence and fifteen primary artifacts are frozen in
 `plans/duraloco/evidence/P08_MAKER_CHECKSUMS.sha256`. The phase is now
 `checking`; P08-A25 and the conditional A16–A18 close only after the independent
 Checker returns PASS with no required gate follow-up.
+
+Independent Checker PBS `2371159` failed after all static checks, the active-
+database scan, and 503 tests passed: one state-contract test fixture still
+constructed completed P08 with the generic `miyabi_9node` key, while the
+production validator now correctly requires P08's actual terminal shape,
+`miyabi_d8_r2=miyabi_d8_r2_pass`. P08-E030 preserves the unit-only failure.
+The fixture is aligned with the production contract before a fresh independent
+Checker run; no maker evidence or authority changed.

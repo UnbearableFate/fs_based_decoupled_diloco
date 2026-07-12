@@ -495,4 +495,21 @@ entries:
       - tracejob 2371021.opbs
     correction: retain P07's 64 default and bind P08 R2 explicitly to 80, accounting for eight additional typed attempt/resource objects per cadence and sixteen across the two-interval tail; keep the measured 72 delta and candidate growth in evidence
     retry_policy: rerun the preserved-run targeted compute proof, then continue the mandatory clean 1-node and 2-node ladder
-last_updated: "2026-07-13T06:50:00+09:00"
+  - id: P08-E030
+    job: 2371159.opbs
+    shape: P08_independent_checker_full_1node
+    commit: 34b6f0d7b0d9483af469b874c01c5e9c781859c4
+    result: fail
+    failure_class: state_contract_fixture_missing_p08_terminal_shape
+    expected: independent checker full regression and evidence audit pass
+    actual: ruff, static contracts, database scan, and 503 tests passed; one state-contract fixture still synthesized completed P08 with the generic miyabi_9node key instead of the newly enforced miyabi_d8_r2 terminal key
+    authority_effect: none; independent one-node unit/static checker only
+    runtime_started: false
+    evidence:
+      - artifacts/duraloco/P08/20260713_p08_checker_34b6f0d_r1/manifest.json
+      - artifacts/duraloco/P08/20260713_p08_checker_34b6f0d_r1/junit.xml
+      - p08_checker.o2371159
+      - tracejob 2371159.opbs
+    correction: update the state-contract fixture to synthesize P08 completion with miyabi_d8_r2=miyabi_d8_r2_pass, matching the production validator and actual phase state
+    retry_policy: rerun the independent one-node checker on the corrected clean commit
+last_updated: "2026-07-13T07:40:00+09:00"

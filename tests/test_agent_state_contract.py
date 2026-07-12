@@ -185,6 +185,7 @@ def _phase_state(phase: str, acceptance_count: int, *, status: str) -> dict:
             "P06A": {"miyabi_c9": "miyabi_c9_pass"},
             "P06B": {"miyabi_d8": "miyabi_d8_pass"},
             "P06C": {"miyabi_d8_r2": "miyabi_d8_r2_pass"},
+            "P08": {"miyabi_d8_r2": "miyabi_d8_r2_pass"},
         }
         payload["checks"] = terminal_checks.get(
             phase, {"miyabi_9node": "miyabi_9node_pass"}

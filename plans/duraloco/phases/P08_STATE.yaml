@@ -9,7 +9,7 @@ actual_base_commit: 8c12839a7b985e590378ac593c846f07b0637517
 feature_branch: codex/duraloco-p08-distributed-performance
 current_loop: 6
 current_goal: "run the independent P08 checker over the persisted matched final evidence"
-attempts_for_current_failure: 0
+attempts_for_current_failure: 1
 last_terminal_failure_review: plans/duraloco/phases/P08_9NODE_FAILURE_REVIEW_2370941.md
 terminal_retry_authorized: false
 terminal_retry_qualification:
@@ -27,7 +27,7 @@ checks:
   miyabi_d8: miyabi_d8_pass
   miyabi_d8_r2: miyabi_d8_r2_pass
   p07_regression: unit_pass
-  independent_checker: not_run
+  independent_checker: failed
 acceptance:
   P08-A01: {result: pass, evidence: [2370206.opbs, tests/performance_core/test_fragment_equivalence.py]}
   P08-A02: {result: pass, evidence: [2370269.opbs, single_copy_metadata_count=2, mailbox_tensor_count=0, direct fragment equivalence]}
@@ -38,7 +38,7 @@ acceptance:
   P08-A07: {result: pass, evidence: [2370206.opbs, test_discovery_cursor_never_filters_inventory_and_restart_is_equivalent]}
   P08-A08: {result: pass, evidence: [2370206.opbs, test_head_or_epoch_jump_cancels_prefetch_and_forces_new_scope]}
   P08-A09: {result: pass, evidence: [2370269.opbs, d1_report.json complete work-order timeline plus publish/adopt lineage]}
-  P08-A10: {result: pass, evidence: [P08-E001 through P08-E029 preserved with pass/fail lineage]}
+  P08-A10: {result: pass, evidence: [P08-E001 through P08-E030 preserved with pass/fail lineage]}
   P08-A11: {result: pass, evidence: [2370269.opbs, actual affinity 8 CPUs, NUMA 0-1, Torch threads 8, RSS 6339821568 below 16 GiB]}
   P08-A12: {result: pass, evidence: [2371066.opbs no-LFE, 2371067.opbs factor-one, 2371105.opbs R2, interference_report.json]}
   P08-A13: {result: pass, evidence: [2370206.opbs, ordered float32 streaming equivalence tests]}
