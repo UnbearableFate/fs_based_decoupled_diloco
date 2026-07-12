@@ -1,0 +1,81 @@
+#!/bin/bash
+#PBS -N duraloco_h0_check
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:20:00
+#PBS -j oe
+#PBS -m ae
+
+set -eEuo pipefail
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat CUDA_VISIBLE_DEVICES=""
+PROJECT_ROOT="${PROJECT_ROOT:-${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}}"
+PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
+: "${EXPECTED_COMMIT:?EXPECTED_COMMIT is required}"
+: "${BASE_COMMIT:?BASE_COMMIT is required}"
+: "${RUNTIME_COMMIT:?RUNTIME_COMMIT is required}"
+: "${RUN_ID:?RUN_ID is required}"
+: "${ARTIFACT_ROOT:?ARTIFACT_ROOT is required}"
+: "${UNIT_ROOT:?UNIT_ROOT is required}"
+: "${D1_ROOT:?D1_ROOT is required}"
+: "${D2_ROOT:?D2_ROOT is required}"
+: "${LOCK_ROOT:?LOCK_ROOT is required}"
+: "${D8_ROOT:?D8_ROOT is required}"
+cd "$PROJECT_ROOT"
+mkdir -p "$ARTIFACT_ROOT"
+touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log" "$ARTIFACT_ROOT/commands.log"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+
+result=fail
+exit_code=1
+finish() {
+  observed=$?
+  if [[ "$result" == pass ]]; then exit_code=0; elif [[ "$observed" -ne 0 ]]; then exit_code=$observed; fi
+  qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
+  "$PYTHON_BIN" scripts/agent/create_run_manifest.py \
+    --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json" \
+    --phase H0 --purpose checker --run-id "$RUN_ID" --schema-version 2 \
+    --validation-shape h0-independent-red-green-identity-and-runtime-audit \
+    --backend lustre --config scripts/miyabi/run_duraloco_h0_checker_1node.pbs \
+    --commands-log commands.log --stdout stdout.log --stderr stderr.log \
+    --exit-code "$exit_code" --result "$result" \
+    --termination-kind "$([[ "$result" == pass ]] && echo success || echo test_failure)" \
+    --pbs-queue debug-g --requested-resources select=1:mpiprocs=1,walltime=00:20:00 \
+    --last-qstat-state R --termination-detail "H0 independent RED/GREEN, identity, and runtime evidence audit" \
+    --stage-metrics-path checker_report.json \
+    --assertion "every H0 acceptance regression fails on c099adc and passes on the runtime commit" \
+    --assertion "the deterministic committed-object identity tape is unchanged" \
+    --assertion "D1, D2, cross-node lock, and D8-R2 50x10 evidence pass" || true
+}
+trap finish EXIT
+trap 'echo "[ERROR] H0 checker failed at line $LINENO" | tee -a "$ARTIFACT_ROOT/stderr.log"' ERR
+
+[[ "$(hostname)" == mg* ]]
+[[ "$(git rev-parse HEAD)" == "$EXPECTED_COMMIT" ]]
+[[ -z "$(git status --porcelain=v1 --untracked-files=no)" ]]
+git status --short --branch | tee "$ARTIFACT_ROOT/git_status.log"
+git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"
+"$PYTHON_BIN" --version 2>&1 | tee "$ARTIFACT_ROOT/python_version.log"
+module list 2>&1 | cat > "$ARTIFACT_ROOT/modules.log"
+
+command=("$PYTHON_BIN" scripts/agent/check_h0_final.py
+  --root "$PROJECT_ROOT" --python "$PYTHON_BIN"
+  --base-commit "$BASE_COMMIT" --runtime-commit "$RUNTIME_COMMIT"
+  --unit-root "$UNIT_ROOT" --d1-root "$D1_ROOT" --d2-root "$D2_ROOT"
+  --lock-root "$LOCK_ROOT" --d8-root "$D8_ROOT"
+  --artifact-root "$ARTIFACT_ROOT" --output "$ARTIFACT_ROOT/checker_report.json")
+printf '%q ' "${command[@]}" | tee "$ARTIFACT_ROOT/commands.log"
+printf '\n' | tee -a "$ARTIFACT_ROOT/commands.log"
+"${command[@]}" 2>&1 | tee "$ARTIFACT_ROOT/stdout.log"
+sha256sum \
+  "$ARTIFACT_ROOT/checker_report.json" \
+  "$ARTIFACT_ROOT/identity-base.json" \
+  "$ARTIFACT_ROOT/identity-runtime.json" \
+  "$UNIT_ROOT/full-junit.xml" \
+  "$D1_ROOT/p07_d1_report.json" \
+  "$D2_ROOT/p07_d2_report.json" \
+  "$LOCK_ROOT/cross_node_lock_report.json" \
+  "$D8_ROOT/d8_r2_report.json" \
+  "$D8_ROOT/p07_d8_report.json" > "$ARTIFACT_ROOT/checksums.sha256"
+result=pass
+exit_code=0
