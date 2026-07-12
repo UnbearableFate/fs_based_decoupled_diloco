@@ -293,6 +293,32 @@ def _finalize_committer_stop(
             commit_seq=view.commit_seq,
         )
         return view
+    if (
+        log.spec.coordination_protocol == ERROR_RESUME_COORDINATION_PROTOCOL
+        and view.authoritative_stop.reason == "error"
+    ):
+        recoverable_path = paths.control / "recoverable_error.json"
+        atomic_write_json(
+            recoverable_path,
+            {
+                "run_id": view.run_id,
+                "run_generation": view.run_generation,
+                "commit_id": view.commit_id,
+                "commit_seq": view.commit_seq,
+                "fencing_epoch": view.fencing_epoch,
+                "reason": "error",
+                "request_id": view.authoritative_stop.request_id,
+                "request_digest": view.authoritative_stop.request_digest,
+                "recoverable": True,
+            },
+        )
+        logger.event(
+            "recoverable_error_published_without_terminal_stop_sidecar",
+            commit_seq=view.commit_seq,
+            commit_id=view.commit_id,
+            path=str(recoverable_path),
+        )
+        return view
     _publish_stop(
         paths,
         config=config,
@@ -433,6 +459,7 @@ def run_committer(
     if resuming_error_stop:
         if view.authoritative_stop is not None:
             raise RuntimeError("error resume returned a stopped authoritative view")
+        (paths.control / "recoverable_error.json").unlink(missing_ok=True)
         paths.stop_json.unlink(missing_ok=True)
         logger.event(
             "derived_error_stop_cleared_after_resume",

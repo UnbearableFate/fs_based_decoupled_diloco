@@ -859,3 +859,8 @@ P05+ 的规范性路线决策生效。
 
 - Choice: control-plane JSON/safetensors sidecars remain derived from the committed log, but every atomic rename is followed by a parent-directory fsync so a visible learner marker or `latest.json` is not intentionally left directory-volatile. Fragment exports reuse only an existing file whose version/path matches the prior derived view. Full-model materialization honors the positive `fragments.materialize_full_every_events` cadence by optimizer-transition count; single-fragment runs and missing prior materializations regenerate immediately. A skipped full export keeps the prior materialized path and records its producing commit sequence.
 - Rejected: treating sidecars as authority, trusting a missing/mismatched derived file, or reconstructing every unchanged fragment on every transition.
+
+## D-0812 — Recoverable error observation is not the terminal worker sidecar
+
+- Choice: in an error-resume-v2 generation, the committed error stop remains authoritative and is exported as `control/recoverable_error.json`; it does not create terminal `control/stop.json`. Learners/LFEs may finish or continue producing immutable work against their last adopted parent while no optimizer authority can advance. A successful fenced resume removes only the recoverable derived error observation. Normal completion/operator stops still publish terminal `stop.json` and remain irreversible.
+- Rejected: restarting a learner under the same immutable session/sequence, silently changing committed membership sessions, or letting an observational terminal sidecar force identity reuse during an otherwise recoverable authority outage.

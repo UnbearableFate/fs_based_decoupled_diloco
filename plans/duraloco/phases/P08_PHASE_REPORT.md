@@ -154,3 +154,15 @@ publish/adopt lineage, no mailbox tensor copies, and zero forbidden database
 findings. The LFE was actually pinned to CPUs 64–71 with 8 Torch threads,
 NUMA allowance `0-1`, one in-flight proposal, and 6,339,821,568-byte peak RSS
 under the 16 GiB ceiling. The learner was pinned away from those eight CPUs.
+
+PBS `2370306.opbs` proved the authoritative half of D-0800: factor-two exact
+duplicates committed transition 1, an injected committer exception committed a
+truthful error stop, member 001 waited out the observational lease, and a
+`resume` control transition advanced the fence from 1 to 2 without changing
+optimizer count. It then committed transition 2. The job failed when the host
+harness restarted learners under their old immutable session with sequence 1;
+marker-last publication correctly rejected the conflicting request key. The
+repair does not weaken identity. Recoverable v2 errors now use a distinct
+derived `recoverable_error.json` observation rather than terminal `stop.json`,
+so existing learner/LFE sessions stay alive across the fenced outage. Normal
+stops remain terminal and unchanged.

@@ -220,4 +220,23 @@ entries:
       - .duraloco_scratch/20260713_p08_d1_b1ff147_r1/training/logs/performance_executor_member-000.jsonl
     correction: null
     retry_policy: no retry; proceed to D2 controlled crash/resume
-last_updated: "2026-07-13T03:37:00+09:00"
+  - id: P08-E014
+    job: 2370306.opbs
+    shape: D2_R2_error_stop_resume
+    commit: 948c540b0882778229cfd8430a51f2fa613d2975
+    result: fail
+    failure_class: learner_session_sequence_reuse_in_harness
+    expected: transition 1, truthful error stop, cross-host resume, then transitions 2-3 and normal terminal
+    actual: transition 1, error stop, cross-host resume fence 1->2, and transition 2 succeeded; restarted learners reused old session sequence 1 and immutable publication correctly rejected conflicting request content
+    authority_effect: committed transition 1, error stop, resume, and transition 2 through the single head; no double inclusion or conflicting immutable publication
+    runtime_started: true
+    evidence:
+      - artifacts/duraloco/P08/20260713_p08_d2r2_948c540/manifest.json
+      - artifacts/duraloco/P08/20260713_p08_d2r2_948c540/error_stop.json
+      - artifacts/duraloco/P08/20260713_p08_d2r2_948c540/member-000_committer.log
+      - artifacts/duraloco/P08/20260713_p08_d2r2_948c540/member-001_committer.log
+      - artifacts/duraloco/P08/20260713_p08_d2r2_948c540/member-000_learner.log
+      - tracejob 2370306.opbs
+    correction: export recoverable v2 errors separately from terminal stop.json and keep original learner/LFE sessions alive across the fenced outage; never reuse or rewrite an immutable session sequence
+    retry_policy: rerun targeted one-node then D2-R2 on the corrected clean commit
+last_updated: "2026-07-13T03:42:00+09:00"
