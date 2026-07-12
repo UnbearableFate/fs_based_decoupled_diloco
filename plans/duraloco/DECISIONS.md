@@ -777,3 +777,10 @@ P05+ 的规范性路线决策生效。
 - Choice: mark records the exact head manifest/backend version, fencing epoch, membership revision, candidate ObjectRefs, and reachability/protected-unknown digests. Creating a mark is always dry-run. Apply is unavailable for real run namespaces without the separate human gate; the active API permits only `synthetic-*` runs with a mark-and-namespace-bound approval token. Apply strict-replays and rebuilds reachability, rejects any head/epoch/object change, writes an immutable delete request, deletes payload/result/attempt objects before publication markers, and writes an immutable result.
 - Response loss: retries use the same request ID and ObjectRefs; already-missing targets reconcile as an after-effect while changed identities fail closed. Partial batches resume idempotently and never broaden the original target set.
 - Rejected: list-and-delete in one pass, mutable GC cursors, or deleting a candidate after head advance cannot prove zero live deletion.
+
+## D-0706 — Exact capsule consistency is explicit and complete
+
+- Choice: an exact capsule marker is published last after immutable model, inner optimizer, scheduler, scaler, CPU/CUDA/Python RNG, restorable data-source, interval, and frontier components. Synthetic data stores the real `torch.Generator` state and batch index; WikiText stores a content-derived dataset/shard/tokenization identity and batch index. Restore requires every component, the exact covered frontier, matching backend/device RNG topology, and a new learner session with the next sequence.
+- Interval rule: boundary capsules carry no open or pending interval. Mid-interval capsules bind the complete interval state and report any old-session pending proposals as discarded/reconciled evidence; they are never silently reused under the new session.
+- Claim boundary: missing private, RNG, iterator, scheduler, or scaler state fails the exact path. The caller may separately choose warm recovery, but the report must not relabel it exact.
+- Rejected: seed-plus-draw counters, model-only checkpoints, or a nominal WikiText batch number without dataset/tokenizer identity cannot prove exact continuation.

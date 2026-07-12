@@ -12,6 +12,7 @@ from fs_diloco.protocol.schemas import CommitManifest, ObjectRef
 
 from .acknowledgements import LifecycleAcknowledgementV1
 from .pins import LifecyclePinV1
+from fs_diloco.learner_protocol.capsule import load_capsule
 
 
 @dataclass(frozen=True)
@@ -89,6 +90,7 @@ def _known_collectable(key: str, *, log_layout, distributed: DistributedLayout) 
         log_layout.snapshot_prefix,
         log_layout.acknowledgement_prefix,
         log_layout.pin_prefix,
+        log_layout.capsule_prefix,
     )
     return key.startswith(prefixes)
 
@@ -217,6 +219,7 @@ def build_reachability(
         except Exception:
             root(key, "invalid_pin_quarantine")
 
+    released_refs: set[str] = set()
     for key in sorted(
         key for key in inventory if key.startswith(layout.acknowledgement_prefix)
     ):
@@ -228,8 +231,27 @@ def build_reachability(
             if acknowledgement.kind != "no_longer_needs":
                 for ref in acknowledgement.object_refs:
                     edge(key, ref.key, f"ack_ref:{acknowledgement.kind}")
+            else:
+                released_refs.update(ref.key for ref in acknowledgement.object_refs)
         except Exception:
             root(key, "invalid_ack_quarantine")
+
+    capsule_marker_prefix = f"{layout.capsule_prefix}markers/"
+    for key in sorted(
+        key for key in inventory if key.startswith(capsule_marker_prefix)
+    ):
+        try:
+            marker = canonical_object(backend.get(key))
+            capsule = load_capsule(backend, key)
+            manifest_ref = ObjectRef.from_dict(marker["manifest_ref"])
+            released = key in released_refs
+            if not released or key not in eligible:
+                root(key, "learner_capsule")
+                edge(key, manifest_ref.key, "capsule_manifest")
+                for kind, ref in capsule.components:
+                    edge(manifest_ref.key, ref.key, f"capsule_component:{kind}")
+        except Exception:
+            root(key, "invalid_capsule_quarantine")
 
     adjacency: dict[str, set[str]] = {}
     for source, target, _reason in edges:

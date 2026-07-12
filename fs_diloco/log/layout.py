@@ -186,6 +186,25 @@ class LogLayout:
             f"{self.delete_result_prefix}{_component(request_id, 'request_id')}.json"
         )
 
+    @property
+    def capsule_prefix(self) -> str:
+        return f"{self.lifecycle_prefix}capsules/"
+
+    def capsule_component_key(self, sha256: str, suffix: str) -> str:
+        if suffix not in {"json", "pt"}:
+            raise ValueError("capsule component suffix must be json or pt")
+        return self._content_key("lifecycle/capsules/components", sha256, suffix)
+
+    def capsule_manifest_key(self, capsule_id: str) -> str:
+        return normalize_key(
+            f"{self.capsule_prefix}manifests/{_component(capsule_id, 'capsule_id')}.json"
+        )
+
+    def capsule_marker_key(self, capsule_id: str) -> str:
+        return normalize_key(
+            f"{self.capsule_prefix}markers/{_component(capsule_id, 'capsule_id')}.json"
+        )
+
     def _payload_key(
         self,
         kind: str,
