@@ -26,7 +26,7 @@ finish() {
   if [[ "$result" == pass ]]; then exit_code=0; elif [[ "$observed" -ne 0 ]]; then exit_code=$observed; fi
   "$PYTHON_BIN" scripts/agent/create_run_manifest.py \
     --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json" \
-    --phase P07 --purpose verification --run-id "$RUN_ID" --schema-version 2 \
+    --phase P07 --purpose contract --run-id "$RUN_ID" --schema-version 2 \
     --validation-shape p07-d8-r2-report-recovery-after-terminal-training \
     --backend lustre --model-revision gpt2 --dataset-revision wikitext-2-raw-v1 \
     --config scripts/miyabi/run_duraloco_p07_d8_report_recovery.pbs \
@@ -46,6 +46,7 @@ trap 'echo "[ERROR] report recovery failed at line $LINENO" | tee -a "$ARTIFACT_
 [[ -z "$(git status --porcelain=v1 --untracked-files=no)" ]]
 [[ -f "$SOURCE_ARTIFACT/d8_r2_runtime_report.json" ]]
 [[ -f "$FACTOR_ONE_REPORT" ]]
+jq -e 'has("lustre_io_telemetry") and has("resource_telemetry")' "$FACTOR_ONE_REPORT" >/dev/null
 cp "$SOURCE_ARTIFACT/d8_r2_runtime_report.json" "$ARTIFACT_ROOT/d8_r2_runtime_report.json"
 
 "$PYTHON_BIN" scripts/agent/create_p06c_d8_report.py \

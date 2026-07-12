@@ -59,6 +59,7 @@ trap 'echo "[ERROR] P07 D8-R2 failed at line $LINENO" | tee -a "$ARTIFACT_ROOT/s
 [[ -z "$(git status --porcelain=v1 --untracked-files=no)" ]]
 [[ "$STORAGE_ROOT" == "$PROJECT_ROOT"/* ]]
 [[ -f "$FACTOR_ONE_REPORT" ]]
+jq -e 'has("lustre_io_telemetry") and has("resource_telemetry")' "$FACTOR_ONE_REPORT" >/dev/null
 mapfile -t ALL_HOSTS < <(sort -u "$PBS_NODEFILE")
 [[ "${#ALL_HOSTS[@]}" -eq 9 ]]
 LEARNER_HOSTS=("${ALL_HOSTS[@]:0:8}")
