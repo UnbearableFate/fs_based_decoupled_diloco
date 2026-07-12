@@ -2,7 +2,6 @@
 
 from .reference_adapter import TransitionOutput, transition
 
-__all__ = ["TransitionOutput", "transition"]
 from .fragment_access import (
     FragmentAccessPlan,
     FragmentAccessPlanCache,
@@ -14,6 +13,8 @@ __all__ = [
     "FragmentAccessPlan",
     "FragmentAccessPlanCache",
     "StreamingReductionStats",
+    "TransitionOutput",
     "model_parameter_norm",
     "reduce_fragment_streaming",
+    "transition",
 ]

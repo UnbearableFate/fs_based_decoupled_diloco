@@ -104,3 +104,12 @@ its automatic manifest because the script used unsupported purpose
 with the supported `contract` purpose and the compute-node/job facts. The
 repair explicitly copies the logically flattened update back into the shaped
 non-contiguous parameter and fixes the manifest purpose before the retry.
+
+PBS `2370205.opbs` confirmed that repair: all 103 focused tests passed. It then
+failed before producing the optimized profile because importing the benchmark
+as the first package consumer exposed a circular runtime type import between
+`optimizer.reference_adapter` and `log.commit`. The package test order had
+masked it. P08-E007 preserves the automatic manifest and raw traceback. The
+type-only `ReferenceProposal` dependency is now guarded by `TYPE_CHECKING`, and
+the optimizer package exports are consolidated before the exact same targeted
+retry.

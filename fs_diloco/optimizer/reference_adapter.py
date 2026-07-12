@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Iterable
+from typing import TYPE_CHECKING, Iterable
 
-from fs_diloco.log.model import ReferenceProposal
 from fs_diloco.testing.deterministic_reference import (
     ReferenceOptimizerConfig,
     ReferenceOptimizerState,
@@ -16,6 +15,9 @@ from fs_diloco.testing.deterministic_reference import (
     outer_step,
     weighted_reduce,
 )
+
+if TYPE_CHECKING:
+    from fs_diloco.log.model import ReferenceProposal
 
 
 @dataclass(frozen=True)

@@ -104,4 +104,23 @@ entries:
       - tracejob 2370192.opbs
     correction: for non-contiguous parameters update a logical flat copy then copy the shaped value back to parameter storage; use supported manifest purpose contract
     retry_policy: rerun the same optimized one-node qualification on the corrected clean commit
-last_updated: "2026-07-13T03:13:00+09:00"
+  - id: P08-E007
+    job: 2370205.opbs
+    shape: optimized_targeted_1node
+    commit: 410b1e99259b534df33a9962071c96e599c969d4
+    result: fail
+    failure_class: benchmark_first_import_cycle
+    expected: 103 focused tests pass and the streaming optimized benchmark persists its report
+    actual: all 103 tests passed; benchmark-first import exposed optimizer.reference_adapter -> log.model -> log.commit -> partially initialized reference_adapter
+    authority_effect: none
+    runtime_started: true
+    benchmark_started: false
+    evidence:
+      - artifacts/duraloco/P08/20260713_p08_opt_410b1e9_1node_r1/manifest.json
+      - artifacts/duraloco/P08/20260713_p08_opt_410b1e9_1node_r1/focused-junit.xml
+      - artifacts/duraloco/P08/20260713_p08_opt_410b1e9_1node_r1/stderr.log
+      - duraloco_p08_opt1.o2370205
+      - tracejob 2370205.opbs
+    correction: make ReferenceProposal a TYPE_CHECKING-only dependency and consolidate optimizer package exports
+    retry_policy: rerun the same one-node qualification; test contract already passes but benchmark evidence is still required
+last_updated: "2026-07-13T03:16:00+09:00"
