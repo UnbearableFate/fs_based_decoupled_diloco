@@ -1,19 +1,19 @@
 ---
 title: "DuraLoCo Codex Loop-Engineering Implementation Plans"
-version: "3.1"
-date: "2026-07-11"
-planning_basis_branch: "main"
-planning_basis_commit: "06e3ca2299d5eb1a720c1d8f9107af5223095525"
-planning_basis_state: "P06 completed; P06A next"
+version: "3.2"
+date: "2026-07-12"
+planning_basis_branch: "codex/duraloco-p07-distributed-lifecycle"
+planning_basis_commit: "c099adc3c3a99127569a7d9bf38a58547022173c"
+planning_basis_state: "P07 completed; P08 ready"
 architecture_target: "learner-hosted distributed fragment syncer"
 ---
 
 # DuraLoCo Codex Loop-Engineering Implementation Plans
 
 本目录定义 DuraLoCo 的 SQLite-free、event-sourced、dedicated-syncer-free 主线。当前
-仓库已在`main` commit `06e3ca2`归档完成P06；verified implementation为`2581a4d`，
-Checker/persistence commit为`030129e`，权威验收范围是P06-A01–A20。计划包不得追溯追加
-P06 gates。下一阶段是P06A，由它建立CRS characterization traces并拆分当前central syncer。
+P00–P07（含 M00、P06A、P06B、P06C）均已完成；P07 verified implementation/Checker
+commit 为 `c099adc`，独立 Checker PBS `2369002` 对 P07-A01–A24 给出 `PASS`。下一阶段
+是 P08，必须从 P07 冻结的 lifecycle contract 顺序执行 profile-first performance work。
 
 新的必需主线是：
 
@@ -63,13 +63,13 @@ LFE 根据 committed membership/ownership epoch 承担若干 fragment work order
 | [P03（历史）](04_P03_STORAGE_ABSTRACTION_AND_POSIX_LUSTRE_CONTRACT.md) | 语义化 Storage API 与 POSIX/Lustre contract | P02 | 已归档 |
 | [P04（历史）](05_P04_TRANSACTIONAL_FRAGMENT_LOG_AND_PREFIX_RECOVERY.md) | Transactional fragment log 与 prefix recovery | P03 | 已归档 |
 | [M00（已完成）](06_M00_SQLITE_FREE_RUNTIME_REBASE_AND_P00_P04_REQUALIFICATION.md) | 删除 SQLite、建立 log-only runtime、重验 P00–P04 | P04 | 已归档 |
-| [P05（中心式参考）](07_P05_SYNCER_LEASE_FENCING_AND_FAILOVER.md) | Production syncer、lease/fencing 与 failover | M00 | `codex/duraloco-p05-syncer-failover` |
+| [P05（已完成中心式参考）](07_P05_SYNCER_LEASE_FENCING_AND_FAILOVER.md) | Production syncer、lease/fencing 与 failover | M00 | 已归档 |
 | [P06（已完成中心式生产阶段）](08_P06_LEARNER_INTERVALS_ADOPTION_AND_RECOVERY.md) | Learner interval、adoption、warm recovery；CRS characterization转交P06A | P05 | archive `06e3ca2` |
-| [P06A](08A_P06A_SYNCER_DECOMPOSITION_AND_REFERENCE_EQUIVALENCE.md) | 拆分 syncer kernel；冻结 CRS 数值/协议 oracle | P06 | `codex/duraloco-p06a-syncer-kernel` |
-| [P06B](08B_P06B_LEARNER_HOSTED_FRAGMENT_EXECUTORS_AND_DISTRIBUTED_PREPARE.md) | Learner-hosted executors、distributed prepare、floating commit；无专用 syncer | P06A | `codex/duraloco-p06b-learner-hosted-sync` |
-| [P06C](08C_P06C_REDUNDANT_FRAGMENT_OWNERSHIP_AND_FAILOVER.md) | 重叠 ownership、hedged execution、executor/committer failover | P06B | `codex/duraloco-p06c-redundant-fragment-executors` |
-| [P07R](09_P07_COMPACTION_GC_ACKS_AND_LEARNER_CAPSULES.md) | 分散拓扑下的 compaction、reachability GC、acks 与 capsules | P06C | `codex/duraloco-p07-distributed-lifecycle` |
-| [P08R](10_P08_DIRECT_FRAGMENT_IO_STREAMING_REDUCER_AND_TELEMETRY.md) | LFE direct fragment I/O、streaming reducer、conditional bundling 与 interference telemetry | P07R | `codex/duraloco-p08-distributed-performance` |
+| [P06A（已完成）](08A_P06A_SYNCER_DECOMPOSITION_AND_REFERENCE_EQUIVALENCE.md) | 拆分 syncer kernel；冻结 CRS 数值/协议 oracle | P06 | 已归档 |
+| [P06B（已完成）](08B_P06B_LEARNER_HOSTED_FRAGMENT_EXECUTORS_AND_DISTRIBUTED_PREPARE.md) | Learner-hosted executors、distributed prepare、floating commit；无专用 syncer | P06A | 已归档 |
+| [P06C（已完成）](08C_P06C_REDUNDANT_FRAGMENT_OWNERSHIP_AND_FAILOVER.md) | 重叠 ownership、hedged execution、executor/committer failover | P06B | 已归档 |
+| [P07R（已完成）](09_P07_COMPACTION_GC_ACKS_AND_LEARNER_CAPSULES.md) | 分散拓扑下的 compaction、reachability GC、acks 与 capsules | P06C | verified `c099adc` |
+| [P08R（就绪）](10_P08_DIRECT_FRAGMENT_IO_STREAMING_REDUCER_AND_TELEMETRY.md) | LFE direct fragment I/O、streaming reducer、conditional bundling 与 interference telemetry | P07R | `codex/duraloco-p08-distributed-performance` |
 | [P10R](11_P10_SACC_AND_ALGORITHM_SYSTEM_CODESIGN.md) | shadow-first、system-only-first Storage-Aware Controller | P08R | `codex/duraloco-p10-distributed-sacc` |
 | [P11R](12_P11_MIYABI_INTEGRATION_CHAOS_AND_9NODE_ACCEPTANCE.md) | Miyabi chaos 与 dedicated-syncer-free D8 acceptance | P10R | `codex/duraloco-p11-distributed-acceptance` |
 | [P12R](13_P12_FORMAL_EXPERIMENTS_ARTIFACT_AND_PAPER_EVIDENCE.md) | 正式实验、artifact、相关工作与 claim–evidence | P11R | `codex/duraloco-p12-distributed-evaluation` |
@@ -158,12 +158,15 @@ Codex 每次恢复必须读取：根 `AGENTS.md`、`miyabi-development` skill、
 当前仓库应使用：
 
 ```text
-P06已经在archive commit 06e3ca2完成，不追溯修改P06 verdict。从该archive tip创建P06A feature branch，读取CURRENT_REPOSITORY_ALIGNMENT_REVIEW.md，并按08A计划先建立只读CRS characterization bundle，再复用现有ProposalCatalog/ProductionTransactionalLog/outer_optim边界拆分syncer。不要直接启动P07/P08。
+P07 已完成且 Checker PASS。以 c099adc 为 verified planning basis 创建 P08 feature branch，
+先读取 P07 phase/checker report 与 D-0709/D-0710，冻结 matched baseline 和 telemetry schema，
+执行 targeted one-node profile，再按 D1→D2→D8/D8-R2 推进。不要在 profile gate 前实现 bundle，
+也不要改变 single global head、strict replay、reachability/GC/capsule identity。
 ```
 
-应用本计划包后，只同步live `STATE.yaml`的route字段：保留P06 completed、A01–A20、全部
-checks/artifacts和Checker report，把旧的“start P07 and P08 independently”改为“start P06A
-from archive commit 06e3ca2”。这不是新的P06 runtime verdict。
+应用本计划包后，live `STATE.yaml` 应保持 P07 `completed`、P07-A01–A24、全部
+checks/artifacts 与 Checker report，并把 `next_action` 指向从 verified P07 commit 启动 P08。
+这不是新的 P07 runtime verdict，也不授权自动合并 `main`。
 
 ## 9. Artifact 与审批
 

@@ -1,13 +1,13 @@
 schema_version: 3
 project: duraloco
 phase: P07
-status: blocked
+status: completed
 branch: codex/duraloco-p07-distributed-lifecycle
 basis:
   phase: P06C
   verified_commit: 6a528cbe26a9209720325ce031937c30d970b977
   dependency_digest: cba9f487dcc697a6df7930b22280e4f0d512377b
-current_commit: 028ed099b3f37690f34673e52c6daea5225fa10d
+current_commit: c099adc3c3a99127569a7d9bf38a58547022173c
 working_tree_clean: true
 architecture:
   mode: distributed_r2
@@ -21,31 +21,31 @@ architecture:
   per_fragment_heads: false
 progress:
   current_loop: 5
-  next_smallest_gap: integrate snapshot/capsule/GC dry-run into D1 then D2-R2 lifecycle harness
+  next_smallest_gap: orient P08 from the verified P07 lifecycle contract
   acceptance_total: 24
-  acceptance_passed: 10
-  acceptance_blocked: 2
+  acceptance_passed: 24
+  acceptance_blocked: 0
 validation:
   local: static_pass
   C1: not_applicable
   C2: not_applicable
   C9: not_applicable
-  D1: not_run
-  D2: not_run
+  D1: pass
+  D2: pass
   D8: not_applicable
-  D8_R2: failed
+  D8_R2: pass
 checker:
-  status: not_run
-  verdict: null
-  report: null
+  status: pass
+  verdict: PASS
+  report: plans/duraloco/phases/P07_CHECKER_REPORT.md
 artifacts:
-  latest_run_id: 20260712_p07_cli_028ed09_1node
+  latest_run_id: 20260712_p07_checker_c099adc
   phase_report: plans/duraloco/phases/P07_PHASE_REPORT.md
-  oracle_or_equivalence_report: null
-  authority_audit: null
-  topology_manifest: null
-  checksums_verified: false
-blockers: [B-P07-20260712-01]
-decisions_open: [D-0702, D-0703, D-0704, D-0705, D-0706, D-0707, D-0709, D-0710]
-next_action: choose an authority-safe long-substage lease renewal design before another qualification cycle
-updated_at: "2026-07-12T00:00:00+09:00"
+  oracle_or_equivalence_report: artifacts/duraloco/P07/20260712_p07_d8_report_9e674f5/p07_d8_report.json
+  authority_audit: artifacts/duraloco/P07/20260712_p07_d8_report_9e674f5/d8_r2_report.json
+  topology_manifest: artifacts/duraloco/P07/20260712_p07_heartbeat_2295467_d8/manifest.json
+  checksums_verified: true
+blockers: []
+decisions_open: []
+next_action: start P08 profile-first direct fragment I/O, streaming reducer, and telemetry work from the verified P07 implementation
+updated_at: "2026-07-12T23:45:00+09:00"

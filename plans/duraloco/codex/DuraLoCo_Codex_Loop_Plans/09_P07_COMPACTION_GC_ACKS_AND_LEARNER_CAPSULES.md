@@ -1,11 +1,14 @@
 ---
 plan_id: "P07"
 title: "Distributed Lifecycle：Compaction、Reachability GC、Acks 与 Learner Capsules"
-status: "planned"
-date: "2026-07-11"
+status: "completed"
+date: "2026-07-12"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
 planning_basis_branch: "codex/duraloco-p06c-redundant-fragment-executors"
-planning_basis_commit: "resolve_from_P06C_verified_report"
+planning_basis_commit: "6a528cbe26a9209720325ce031937c30d970b977"
+verified_dependency_implementation: "cba9f487dcc697a6df7930b22280e4f0d512377b"
+verified_implementation_commit: "c099adc3c3a99127569a7d9bf38a58547022173c"
+checker_job: "2369002.opbs"
 target_branch: "codex/duraloco-p07-distributed-lifecycle"
 depends_on:
   - "P06C"
@@ -20,6 +23,20 @@ human_approval_gates:
 ---
 
 # P07 — Distributed Lifecycle：Compaction、Reachability GC、Acks 与 Learner Capsules
+
+## 0. 2026-07-12 完成记录
+
+P07 已完成，P07-A01–A24 全部通过。qualified lifecycle runtime 为 `2295467`；
+targeted/one-node/D2-R2 qualification 分别为 PBS `2368753`、`2368758`、`2368760`。
+PBS `2368771` 完成有效的 D8-R2 50×10 authority；其旧 900 秒 report envelope 在
+1100 秒 lifecycle run 完成后失败，PBS `2368976` 已从保留 authority 恢复并验证 PASS
+报告。独立 Checker PBS `2369002` 在 `c099adc` 上返回 `PASS`，无 required follow-up。
+
+冻结交接给 P08 的接口包括：single global head、ancestry-pinned immutable snapshot、
+two-base retention 与 strict fallback、typed `ObjectRef` reachability、unknown-schema
+quarantine、immutable GC mark/guarded revalidated apply、marker-last deletion、exact capsule、
+typed acknowledgement，以及 long-substage owner lease heartbeat。详细 Maker/Checker 证据见
+`plans/duraloco/phases/P07_PHASE_REPORT.md` 与 `P07_CHECKER_REPORT.md`。
 
 ## 1. 阶段使命
 
@@ -39,27 +56,27 @@ human_approval_gates:
 
 ## 2. 前置条件
 
-- [ ] P06C-A01–A24通过；
-- [ ] PFT winner/loser、epoch和FWO lifecycle requirements冻结；
-- [ ] P06C verified commit与本worktree dependency digest一致；
-- [ ] P08尚未启动；P07先冻结shared object identity/reachability/capsule interfaces；
-- [ ] destructive apply使用独立approval token和namespace guard。
+- [x] P06C-A01–A24通过；
+- [x] PFT winner/loser、epoch和FWO lifecycle requirements冻结；
+- [x] P06C verified commit与本worktree dependency digest一致；
+- [x] P08尚未启动；P07先冻结shared object identity/reachability/capsule interfaces；
+- [x] destructive apply使用独立approval token和namespace guard。
 
 ## 3. 范围
 
 ### 3.1 必须完成
 
-- [ ] authoritative snapshot manifest和covered head；
-- [ ] snapshot+suffix replay与strict fallback；
-- [ ] distributed reachability graph；
-- [ ] learner/executor/committer ack semantics；
-- [ ] roots：head/prefix、snapshot、capsule、FWO、PFT winner/loser grace、membership/ownership、stop/control、response-loss、experiment pins；
-- [ ] immutable mark snapshot、head/epoch revalidation和default dry-run GC；
-- [ ] delete request identity/response-loss reconciliation；
-- [ ] exact learner capsule：model/frontier、inner optimizer、RNG、data cursor、interval state；
-- [ ] warm vs exact recovery reporting；
-- [ ] D8/D8-R2 accelerated bounded-growth soak；
-- [ ] restore-after-GC和owner-reassignment-after-GC tests。
+- [x] authoritative snapshot manifest和covered head；
+- [x] snapshot+suffix replay与strict fallback；
+- [x] distributed reachability graph；
+- [x] learner/executor/committer ack semantics；
+- [x] roots：head/prefix、snapshot、capsule、FWO、PFT winner/loser grace、membership/ownership、stop/control、response-loss、experiment pins；
+- [x] immutable mark snapshot、head/epoch revalidation和default dry-run GC；
+- [x] delete request identity/response-loss reconciliation；
+- [x] exact learner capsule：model/frontier、inner optimizer、RNG、data cursor、interval state；
+- [x] warm vs exact recovery reporting；
+- [x] D8/D8-R2 accelerated bounded-growth soak；
+- [x] restore-after-GC和owner-reassignment-after-GC tests。
 
 ### 3.2 明确不做
 
@@ -102,16 +119,16 @@ tests/lifecycle/
 
 ## 5. 先冻结的设计决策
 
-- [ ] D-0701：snapshot是committed control transition还是immutable side object+committed pin；
-- [ ] D-0702：ack区分observed、durably adopted、capsuled和no-longer-needs；
-- [ ] D-0703：inactive learner/executor是否阻止哪些对象回收；
-- [ ] D-0704：PFT winner、same-digest loser、divergent blocker evidence和orphan的不同retention；
-- [ ] D-0705：active FWO/epoch change/response-loss reconciliation roots；
-- [ ] D-0706：capsule consistency point与未决interval/proposal；
-- [ ] D-0707：GC mark/apply、approval token、namespace和head/epoch revalidation；
-- [ ] D-0708：snapshot+suffix与process-local memoization组合及strict fallback；
-- [ ] D-0709：bundle transition（若P08后集成）对reachability的扩展接口；
-- [ ] D-0710：bounded-growth target和accelerated soak映射。
+- [x] D-0701：snapshot是committed control transition还是immutable side object+committed pin；
+- [x] D-0702：ack区分observed、durably adopted、capsuled和no-longer-needs；
+- [x] D-0703：inactive learner/executor是否阻止哪些对象回收；
+- [x] D-0704：PFT winner、same-digest loser、divergent blocker evidence和orphan的不同retention；
+- [x] D-0705：active FWO/epoch change/response-loss reconciliation roots；
+- [x] D-0706：capsule consistency point与未决interval/proposal；
+- [x] D-0707：GC mark/apply、approval token、namespace和head/epoch revalidation；
+- [x] D-0708：snapshot+suffix与process-local memoization组合及strict fallback；
+- [x] D-0709：bundle transition（若P08后集成）对reachability的扩展接口；
+- [x] D-0710：bounded-growth target和accelerated soak映射。
 
 ## 6. Codex执行循环
 
@@ -206,42 +223,42 @@ point、restore validation、未决intervaldiscard/reconcile规则和new session
 
 ## 7. 不变量与失败注入
 
-- [ ] snapshot不是第二authority；
-- [ ] snapshot+suffix与strict replay等价；
-- [ ] FWO/PFT/epoch/control roots完整；
-- [ ] listing absence不证明不可达；
-- [ ] GC default dry-run，apply需要approval；
-- [ ] mark基于immutable root snapshot，apply前revalidate head/epoch；
-- [ ] exact capsule与warm restart标签分开；
-- [ ] owner change不需要被删除对象中的private state；
-- [ ] active source/artifacts无SQLite/embedded DB。
+- [x] snapshot不是第二authority；
+- [x] snapshot+suffix与strict replay等价；
+- [x] FWO/PFT/epoch/control roots完整；
+- [x] listing absence不证明不可达；
+- [x] GC default dry-run，apply需要approval；
+- [x] mark基于immutable root snapshot，apply前revalidate head/epoch；
+- [x] exact capsule与warm restart标签分开；
+- [x] owner change不需要被删除对象中的private state；
+- [x] active source/artifacts无SQLite/embedded DB。
 
 ## 8. 验收标准
 
-- [ ] P07-A01：strict full、memoized full、snapshot+suffix对每个prefix digest一致；
-- [ ] P07-A02：corrupt/missing/stale snapshot fail closed并回退strict；
-- [ ] P07-A03：snapshot不成为第二head/authority；
-- [ ] P07-A04：reachability可解释每个live/candidate object；
-- [ ] P07-A05：roots包含head/prefix、epoch/ownership、active FWO、PFT winner/loser grace、capsule、snapshot、response-loss和pins；
-- [ ] P07-A06：unknown/quarantine object不被listing omission误删；
-- [ ] P07-A07：GC默认dry-run，apply有namespace+approval token；
-- [ ] P07-A08：concurrent GC/commit/prepare/reconfigure/restore/capsule零live deletion；
-- [ ] P07-A09：delete response-loss和partial batch以request identity幂等恢复；
-- [ ] P07-A10：payload-before-marker与late old-membership-revision PFT有明确grace；
-- [ ] P07-A11：same-digest loser和divergent blocker evidence retention不同且可审计；
-- [ ] P07-A12：restorable iterator/RNG/optimizer/scheduler/scaler contract通过，synthetic learner capsule在同backend exact tiny continuation通过；
-- [ ] P07-A13：缺失inner/RNG/data state时不误称exact；
-- [ ] P07-A14：capsule publication/response-loss/session rules通过；
-- [ ] P07-A15：空local目录restore与owner reassignment成功；
-- [ ] P07-A16：lifecycle CLI不shadow现有`fs_diloco.cli`；
-- [ ] P07-A17：D1/D2 lifecycle fault tests通过；
-- [ ] P07-A18：按P07.1→P07.5子门完成后，D8-R2 50×10 terminal同时完成snapshot/replay/capsule/GC dry-run断言；
-- [ ] P07-A19：accelerated soak显示bounded steady-state或明确BLOCKED；
-- [ ] P07-A20：GC后从至少两个live restore points恢复并继续commit；
-- [ ] P07-A21：lifecycle overhead、object count、bytes、ops和GPU impact有raw data；
-- [ ] P07-A22：active surface无SQLite/embedded DB；
-- [ ] P07-A23：Checker独立审核roots并执行一个未列并发反例；
-- [ ] P07-A24：report/checksums/clean commit和P08 integration interface一致。
+- [x] P07-A01：strict full、memoized full、snapshot+suffix对每个prefix digest一致；
+- [x] P07-A02：corrupt/missing/stale snapshot fail closed并回退strict；
+- [x] P07-A03：snapshot不成为第二head/authority；
+- [x] P07-A04：reachability可解释每个live/candidate object；
+- [x] P07-A05：roots包含head/prefix、epoch/ownership、active FWO、PFT winner/loser grace、capsule、snapshot、response-loss和pins；
+- [x] P07-A06：unknown/quarantine object不被listing omission误删；
+- [x] P07-A07：GC默认dry-run，apply有namespace+approval token；
+- [x] P07-A08：concurrent GC/commit/prepare/reconfigure/restore/capsule零live deletion；
+- [x] P07-A09：delete response-loss和partial batch以request identity幂等恢复；
+- [x] P07-A10：payload-before-marker与late old-membership-revision PFT有明确grace；
+- [x] P07-A11：same-digest loser和divergent blocker evidence retention不同且可审计；
+- [x] P07-A12：restorable iterator/RNG/optimizer/scheduler/scaler contract通过，synthetic learner capsule在同backend exact tiny continuation通过；
+- [x] P07-A13：缺失inner/RNG/data state时不误称exact；
+- [x] P07-A14：capsule publication/response-loss/session rules通过；
+- [x] P07-A15：空local目录restore与owner reassignment成功；
+- [x] P07-A16：lifecycle CLI不shadow现有`fs_diloco.cli`；
+- [x] P07-A17：D1/D2 lifecycle fault tests通过；
+- [x] P07-A18：按P07.1→P07.5子门完成后，D8-R2 50×10 terminal同时完成snapshot/replay/capsule/GC dry-run断言；
+- [x] P07-A19：accelerated soak显示bounded steady-state或明确BLOCKED；
+- [x] P07-A20：GC后从至少两个live restore points恢复并继续commit；
+- [x] P07-A21：lifecycle overhead、object count、bytes、ops和GPU impact有raw data；
+- [x] P07-A22：active surface无SQLite/embedded DB；
+- [x] P07-A23：Checker独立审核roots并执行一个未列并发反例；
+- [x] P07-A24：report/checksums/clean commit和P08 integration interface一致。
 
 ## 9. 验证矩阵
 

@@ -1,19 +1,19 @@
 ---
 title: "DuraLoCo Codex Loop-Engineering Implementation Plans"
-version: "3.1"
-date: "2026-07-11"
-planning_basis_branch: "main"
-planning_basis_commit: "06e3ca2299d5eb1a720c1d8f9107af5223095525"
-planning_basis_state: "P06 completed; P06A next"
+version: "3.2"
+date: "2026-07-12"
+planning_basis_branch: "codex/duraloco-p07-distributed-lifecycle"
+planning_basis_commit: "c099adc3c3a99127569a7d9bf38a58547022173c"
+planning_basis_state: "P07 completed; P08 ready"
 architecture_target: "learner-hosted distributed fragment syncer"
 ---
 
 # DuraLoCo Codex Loop-Engineering Implementation Plans
 
 本目录定义 DuraLoCo 的 SQLite-free、event-sourced、dedicated-syncer-free 主线。当前
-仓库已在`main` commit `06e3ca2`归档完成P06；verified implementation为`2581a4d`，
-Checker/persistence commit为`030129e`，权威验收范围是P06-A01–A20。计划包不得追溯追加
-P06 gates。下一阶段是P06A，由它建立CRS characterization traces并拆分当前central syncer。
+P00–P07（含 M00、P06A、P06B、P06C）均已完成；P07 verified implementation/Checker
+commit 为 `c099adc`，独立 Checker PBS `2369002` 对 P07-A01–A24 给出 `PASS`。下一阶段
+是 P08，必须从 P07 冻结的 lifecycle contract 顺序执行 profile-first performance work。
 
 新的必需主线是：
 
@@ -63,13 +63,13 @@ LFE 根据 committed membership/ownership epoch 承担若干 fragment work order
 | [P03（历史）](04_P03_STORAGE_ABSTRACTION_AND_POSIX_LUSTRE_CONTRACT.md) | 语义化 Storage API 与 POSIX/Lustre contract | P02 | 已归档 |
 | [P04（历史）](05_P04_TRANSACTIONAL_FRAGMENT_LOG_AND_PREFIX_RECOVERY.md) | Transactional fragment log 与 prefix recovery | P03 | 已归档 |
 | [M00（已完成）](06_M00_SQLITE_FREE_RUNTIME_REBASE_AND_P00_P04_REQUALIFICATION.md) | 删除 SQLite、建立 log-only runtime、重验 P00–P04 | P04 | 已归档 |
-| [P05（中心式参考）](07_P05_SYNCER_LEASE_FENCING_AND_FAILOVER.md) | Production syncer、lease/fencing 与 failover | M00 | `codex/duraloco-p05-syncer-failover` |
+| [P05（已完成中心式参考）](07_P05_SYNCER_LEASE_FENCING_AND_FAILOVER.md) | Production syncer、lease/fencing 与 failover | M00 | 已归档 |
 | [P06（已完成中心式生产阶段）](08_P06_LEARNER_INTERVALS_ADOPTION_AND_RECOVERY.md) | Learner interval、adoption、warm recovery；CRS characterization转交P06A | P05 | archive `06e3ca2` |
-| [P06A](08A_P06A_SYNCER_DECOMPOSITION_AND_REFERENCE_EQUIVALENCE.md) | 拆分 syncer kernel；冻结 CRS 数值/协议 oracle | P06 | `codex/duraloco-p06a-syncer-kernel` |
-| [P06B](08B_P06B_LEARNER_HOSTED_FRAGMENT_EXECUTORS_AND_DISTRIBUTED_PREPARE.md) | Learner-hosted executors、distributed prepare、floating commit；无专用 syncer | P06A | `codex/duraloco-p06b-learner-hosted-sync` |
-| [P06C](08C_P06C_REDUNDANT_FRAGMENT_OWNERSHIP_AND_FAILOVER.md) | 重叠 ownership、hedged execution、executor/committer failover | P06B | `codex/duraloco-p06c-redundant-fragment-executors` |
-| [P07R](09_P07_COMPACTION_GC_ACKS_AND_LEARNER_CAPSULES.md) | 分散拓扑下的 compaction、reachability GC、acks 与 capsules | P06C | `codex/duraloco-p07-distributed-lifecycle` |
-| [P08R](10_P08_DIRECT_FRAGMENT_IO_STREAMING_REDUCER_AND_TELEMETRY.md) | LFE direct fragment I/O、streaming reducer、conditional bundling 与 interference telemetry | P07R | `codex/duraloco-p08-distributed-performance` |
+| [P06A（已完成）](08A_P06A_SYNCER_DECOMPOSITION_AND_REFERENCE_EQUIVALENCE.md) | 拆分 syncer kernel；冻结 CRS 数值/协议 oracle | P06 | 已归档 |
+| [P06B（已完成）](08B_P06B_LEARNER_HOSTED_FRAGMENT_EXECUTORS_AND_DISTRIBUTED_PREPARE.md) | Learner-hosted executors、distributed prepare、floating commit；无专用 syncer | P06A | 已归档 |
+| [P06C（已完成）](08C_P06C_REDUNDANT_FRAGMENT_OWNERSHIP_AND_FAILOVER.md) | 重叠 ownership、hedged execution、executor/committer failover | P06B | 已归档 |
+| [P07R（已完成）](09_P07_COMPACTION_GC_ACKS_AND_LEARNER_CAPSULES.md) | 分散拓扑下的 compaction、reachability GC、acks 与 capsules | P06C | verified `c099adc` |
+| [P08R（就绪）](10_P08_DIRECT_FRAGMENT_IO_STREAMING_REDUCER_AND_TELEMETRY.md) | LFE direct fragment I/O、streaming reducer、conditional bundling 与 interference telemetry | P07R | `codex/duraloco-p08-distributed-performance` |
 | [P10R](11_P10_SACC_AND_ALGORITHM_SYSTEM_CODESIGN.md) | shadow-first、system-only-first Storage-Aware Controller | P08R | `codex/duraloco-p10-distributed-sacc` |
 | [P11R](12_P11_MIYABI_INTEGRATION_CHAOS_AND_9NODE_ACCEPTANCE.md) | Miyabi chaos 与 dedicated-syncer-free D8 acceptance | P10R | `codex/duraloco-p11-distributed-acceptance` |
 | [P12R](13_P12_FORMAL_EXPERIMENTS_ARTIFACT_AND_PAPER_EVIDENCE.md) | 正式实验、artifact、相关工作与 claim–evidence | P11R | `codex/duraloco-p12-distributed-evaluation` |
@@ -158,12 +158,15 @@ Codex 每次恢复必须读取：根 `AGENTS.md`、`miyabi-development` skill、
 当前仓库应使用：
 
 ```text
-P06已经在archive commit 06e3ca2完成，不追溯修改P06 verdict。从该archive tip创建P06A feature branch，读取CURRENT_REPOSITORY_ALIGNMENT_REVIEW.md，并按08A计划先建立只读CRS characterization bundle，再复用现有ProposalCatalog/ProductionTransactionalLog/outer_optim边界拆分syncer。不要直接启动P07/P08。
+P07 已完成且 Checker PASS。以 c099adc 为 verified planning basis 创建 P08 feature branch，
+先读取 P07 phase/checker report 与 D-0709/D-0710，冻结 matched baseline 和 telemetry schema，
+执行 targeted one-node profile，再按 D1→D2→D8/D8-R2 推进。不要在 profile gate 前实现 bundle，
+也不要改变 single global head、strict replay、reachability/GC/capsule identity。
 ```
 
-应用本计划包后，只同步live `STATE.yaml`的route字段：保留P06 completed、A01–A20、全部
-checks/artifacts和Checker report，把旧的“start P07 and P08 independently”改为“start P06A
-from archive commit 06e3ca2”。这不是新的P06 runtime verdict。
+应用本计划包后，live `STATE.yaml` 应保持 P07 `completed`、P07-A01–A24、全部
+checks/artifacts 与 Checker report，并把 `next_action` 指向从 verified P07 commit 启动 P08。
+这不是新的 P07 runtime verdict，也不授权自动合并 `main`。
 
 ## 9. Artifact 与审批
 
@@ -902,16 +905,35 @@ P07R reachability roots 至少包括：current head/prefix、latest safe snapsho
 
 ---
 title: "DuraLoCo Distributed-Syncer Plans — Current Repository Alignment Review"
-version: "1.0"
-date: "2026-07-11"
-repository_head_at_review: "06e3ca2299d5eb1a720c1d8f9107af5223095525"
-review_scope: "08A and every required/optional successor plan"
+version: "1.1"
+date: "2026-07-12"
+repository_head_at_review: "c099adc3c3a99127569a7d9bf38a58547022173c"
+review_scope: "P07 completion and P08 plus every required/optional successor plan"
 status: "normative correction record"
 ---
 
 # 当前仓库适配审查与修订结论
 
-## 1. 审查基线
+## 0. 2026-07-12 状态更新（取代旧执行指令）
+
+下文第 1–4 节保留 2026-07-11 的历史 alignment 决策，用于解释为何路线从 P06A 顺序推进，
+但其“当前从 P06A 开始”指令已完成，不再是 active instruction。最新状态为：
+
+- P06A、P06B、P06C 与 P07 均已完成并由独立 Checker 验证；
+- P07 verified implementation/Checker commit：
+  `c099adc3c3a99127569a7d9bf38a58547022173c`；
+- P07 qualified runtime：`2295467fd25ae7969eb2b993ef4b193141239286`；
+- P07 report/Checker PBS：`2368976.opbs` / `2369002.opbs`；
+- live `STATE.yaml` 为 P07 `completed`，P07-A01–A24 全部通过；
+- 当前唯一 active instruction 是从 `c099adc` 顺序启动 P08 profile-first loop，保留 P07
+  single-head、strict replay、two-snapshot、typed reachability、guarded GC、exact capsule 与
+  lease-heartbeat regression contract。
+
+P08 的 bundling 仍是条件 scope。必须先用 matched C9/D8/D8-R2 profile 判断 single-FWO/head
+serialization 是否达到预注册 threshold；未触发时以 Checker 认可的 `not_applicable` 关闭，
+不能为了完成计划而引入新的 commit semantics。
+
+## 1. 2026-07-11 历史审查基线
 
 本次审查以当前仓库而不是计划包生成时的假设为准：
 
@@ -968,7 +990,7 @@ HARDEN → CHECK → PERSIST`，并从1节点开始，再到2节点，最后才�
 production orchestration、protocol generation、numeric backend或PBS launcher的阶段，
 不得复用旧 runtime pass 作为新实现 pass。
 
-## 4. 当前可直接开始的 P06A 最小切片
+## 4. 2026-07-11 历史 P06A 启动切片（已完成）
 
 1. 从 `06e3ca2` archive tip 建立新 feature branch，同时记录 verified implementation
    `2581a4d` 和 Checker evidence `030129e`；
@@ -982,13 +1004,13 @@ production orchestration、protocol generation、numeric backend或PBS launcher�
    implementation commit；
 6. 只有P06A Checker PASS后才冻结distributed generation schema并进入P06B。
 
-应用计划包时还必须做一次非运行时的route reconciliation：当前`STATE.yaml.next_action`
-仍写着“start P07 and P08 independently”。保留P06 `completed`、A01–A20、checks、artifacts和
-Checker report不变，只把`current_goal`/`next_action`更新为从`06e3ca2`启动P06A，并明确
-这是plan-route handoff，不是新的P06 pass。
+当时应用计划包还需要执行一次非运行时 route reconciliation：保留 P06 `completed`、
+A01–A20、checks、artifacts 与 Checker report，只把 `current_goal`/`next_action` 更新为从
+`06e3ca2` 启动 P06A，并明确这是 plan-route handoff，不是新的 P06 pass。该 reconciliation
+及后续 P06A→P07 路线现在都已完成；active instruction 以第 0 节为准。
 
-该切片不需要提前实现membership、LFE、FWO/PFT publication、redundancy、GC或controller，
-因此可以在当前代码基础上安全渐进，而不是一次重写整个syncer。
+该历史切片不要求提前实现 membership、LFE、FWO/PFT publication、redundancy、GC 或
+controller，因此当时能够渐进推进，而不是一次重写整个 syncer。
 
 ---
 
@@ -1156,6 +1178,17 @@ BatchWeave 说明：client-side producers 可以写 immutable objects，再通�
 ---
 
 # DuraLoCo Plan Rewrite Changelog
+
+## v3.2 P07 completion and P08 handoff
+
+2026-07-12 将计划基线从历史 P06/P06A handoff 更新为已验证 P07 completion。P07 plan
+状态改为 `completed`，记录 `2295467` runtime、PBS `2368976` report recovery 与 PBS
+`2369002` independent Checker。P08 状态改为 `ready`，planning basis 固定为 `c099adc`，
+并加入当前 factor-one/R2/lifecycle baseline、P07 冻结接口与 profile-first 第一 loop。
+
+bundle README、apply instruction、alignment review、generated master 与 checksum 同步更新。
+P08 multi-FWO/bundle 继续是 profile-triggered conditional scope；本次更新没有把它变成必需
+implementation，也没有修改 P07 runtime verdict 或授权合并 `main`。
 
 ## Purpose
 
@@ -5047,11 +5080,14 @@ human approval。
 ---
 plan_id: "P07"
 title: "Distributed Lifecycle：Compaction、Reachability GC、Acks 与 Learner Capsules"
-status: "planned"
-date: "2026-07-11"
+status: "completed"
+date: "2026-07-12"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
 planning_basis_branch: "codex/duraloco-p06c-redundant-fragment-executors"
-planning_basis_commit: "resolve_from_P06C_verified_report"
+planning_basis_commit: "6a528cbe26a9209720325ce031937c30d970b977"
+verified_dependency_implementation: "cba9f487dcc697a6df7930b22280e4f0d512377b"
+verified_implementation_commit: "c099adc3c3a99127569a7d9bf38a58547022173c"
+checker_job: "2369002.opbs"
 target_branch: "codex/duraloco-p07-distributed-lifecycle"
 depends_on:
   - "P06C"
@@ -5066,6 +5102,20 @@ human_approval_gates:
 ---
 
 # P07 — Distributed Lifecycle：Compaction、Reachability GC、Acks 与 Learner Capsules
+
+## 0. 2026-07-12 完成记录
+
+P07 已完成，P07-A01–A24 全部通过。qualified lifecycle runtime 为 `2295467`；
+targeted/one-node/D2-R2 qualification 分别为 PBS `2368753`、`2368758`、`2368760`。
+PBS `2368771` 完成有效的 D8-R2 50×10 authority；其旧 900 秒 report envelope 在
+1100 秒 lifecycle run 完成后失败，PBS `2368976` 已从保留 authority 恢复并验证 PASS
+报告。独立 Checker PBS `2369002` 在 `c099adc` 上返回 `PASS`，无 required follow-up。
+
+冻结交接给 P08 的接口包括：single global head、ancestry-pinned immutable snapshot、
+two-base retention 与 strict fallback、typed `ObjectRef` reachability、unknown-schema
+quarantine、immutable GC mark/guarded revalidated apply、marker-last deletion、exact capsule、
+typed acknowledgement，以及 long-substage owner lease heartbeat。详细 Maker/Checker 证据见
+`plans/duraloco/phases/P07_PHASE_REPORT.md` 与 `P07_CHECKER_REPORT.md`。
 
 ## 1. 阶段使命
 
@@ -5085,27 +5135,27 @@ human_approval_gates:
 
 ## 2. 前置条件
 
-- [ ] P06C-A01–A24通过；
-- [ ] PFT winner/loser、epoch和FWO lifecycle requirements冻结；
-- [ ] P06C verified commit与本worktree dependency digest一致；
-- [ ] P08尚未启动；P07先冻结shared object identity/reachability/capsule interfaces；
-- [ ] destructive apply使用独立approval token和namespace guard。
+- [x] P06C-A01–A24通过；
+- [x] PFT winner/loser、epoch和FWO lifecycle requirements冻结；
+- [x] P06C verified commit与本worktree dependency digest一致；
+- [x] P08尚未启动；P07先冻结shared object identity/reachability/capsule interfaces；
+- [x] destructive apply使用独立approval token和namespace guard。
 
 ## 3. 范围
 
 ### 3.1 必须完成
 
-- [ ] authoritative snapshot manifest和covered head；
-- [ ] snapshot+suffix replay与strict fallback；
-- [ ] distributed reachability graph；
-- [ ] learner/executor/committer ack semantics；
-- [ ] roots：head/prefix、snapshot、capsule、FWO、PFT winner/loser grace、membership/ownership、stop/control、response-loss、experiment pins；
-- [ ] immutable mark snapshot、head/epoch revalidation和default dry-run GC；
-- [ ] delete request identity/response-loss reconciliation；
-- [ ] exact learner capsule：model/frontier、inner optimizer、RNG、data cursor、interval state；
-- [ ] warm vs exact recovery reporting；
-- [ ] D8/D8-R2 accelerated bounded-growth soak；
-- [ ] restore-after-GC和owner-reassignment-after-GC tests。
+- [x] authoritative snapshot manifest和covered head；
+- [x] snapshot+suffix replay与strict fallback；
+- [x] distributed reachability graph；
+- [x] learner/executor/committer ack semantics；
+- [x] roots：head/prefix、snapshot、capsule、FWO、PFT winner/loser grace、membership/ownership、stop/control、response-loss、experiment pins；
+- [x] immutable mark snapshot、head/epoch revalidation和default dry-run GC；
+- [x] delete request identity/response-loss reconciliation；
+- [x] exact learner capsule：model/frontier、inner optimizer、RNG、data cursor、interval state；
+- [x] warm vs exact recovery reporting；
+- [x] D8/D8-R2 accelerated bounded-growth soak；
+- [x] restore-after-GC和owner-reassignment-after-GC tests。
 
 ### 3.2 明确不做
 
@@ -5148,16 +5198,16 @@ tests/lifecycle/
 
 ## 5. 先冻结的设计决策
 
-- [ ] D-0701：snapshot是committed control transition还是immutable side object+committed pin；
-- [ ] D-0702：ack区分observed、durably adopted、capsuled和no-longer-needs；
-- [ ] D-0703：inactive learner/executor是否阻止哪些对象回收；
-- [ ] D-0704：PFT winner、same-digest loser、divergent blocker evidence和orphan的不同retention；
-- [ ] D-0705：active FWO/epoch change/response-loss reconciliation roots；
-- [ ] D-0706：capsule consistency point与未决interval/proposal；
-- [ ] D-0707：GC mark/apply、approval token、namespace和head/epoch revalidation；
-- [ ] D-0708：snapshot+suffix与process-local memoization组合及strict fallback；
-- [ ] D-0709：bundle transition（若P08后集成）对reachability的扩展接口；
-- [ ] D-0710：bounded-growth target和accelerated soak映射。
+- [x] D-0701：snapshot是committed control transition还是immutable side object+committed pin；
+- [x] D-0702：ack区分observed、durably adopted、capsuled和no-longer-needs；
+- [x] D-0703：inactive learner/executor是否阻止哪些对象回收；
+- [x] D-0704：PFT winner、same-digest loser、divergent blocker evidence和orphan的不同retention；
+- [x] D-0705：active FWO/epoch change/response-loss reconciliation roots；
+- [x] D-0706：capsule consistency point与未决interval/proposal；
+- [x] D-0707：GC mark/apply、approval token、namespace和head/epoch revalidation；
+- [x] D-0708：snapshot+suffix与process-local memoization组合及strict fallback；
+- [x] D-0709：bundle transition（若P08后集成）对reachability的扩展接口；
+- [x] D-0710：bounded-growth target和accelerated soak映射。
 
 ## 6. Codex执行循环
 
@@ -5252,42 +5302,42 @@ point、restore validation、未决intervaldiscard/reconcile规则和new session
 
 ## 7. 不变量与失败注入
 
-- [ ] snapshot不是第二authority；
-- [ ] snapshot+suffix与strict replay等价；
-- [ ] FWO/PFT/epoch/control roots完整；
-- [ ] listing absence不证明不可达；
-- [ ] GC default dry-run，apply需要approval；
-- [ ] mark基于immutable root snapshot，apply前revalidate head/epoch；
-- [ ] exact capsule与warm restart标签分开；
-- [ ] owner change不需要被删除对象中的private state；
-- [ ] active source/artifacts无SQLite/embedded DB。
+- [x] snapshot不是第二authority；
+- [x] snapshot+suffix与strict replay等价；
+- [x] FWO/PFT/epoch/control roots完整；
+- [x] listing absence不证明不可达；
+- [x] GC default dry-run，apply需要approval；
+- [x] mark基于immutable root snapshot，apply前revalidate head/epoch；
+- [x] exact capsule与warm restart标签分开；
+- [x] owner change不需要被删除对象中的private state；
+- [x] active source/artifacts无SQLite/embedded DB。
 
 ## 8. 验收标准
 
-- [ ] P07-A01：strict full、memoized full、snapshot+suffix对每个prefix digest一致；
-- [ ] P07-A02：corrupt/missing/stale snapshot fail closed并回退strict；
-- [ ] P07-A03：snapshot不成为第二head/authority；
-- [ ] P07-A04：reachability可解释每个live/candidate object；
-- [ ] P07-A05：roots包含head/prefix、epoch/ownership、active FWO、PFT winner/loser grace、capsule、snapshot、response-loss和pins；
-- [ ] P07-A06：unknown/quarantine object不被listing omission误删；
-- [ ] P07-A07：GC默认dry-run，apply有namespace+approval token；
-- [ ] P07-A08：concurrent GC/commit/prepare/reconfigure/restore/capsule零live deletion；
-- [ ] P07-A09：delete response-loss和partial batch以request identity幂等恢复；
-- [ ] P07-A10：payload-before-marker与late old-membership-revision PFT有明确grace；
-- [ ] P07-A11：same-digest loser和divergent blocker evidence retention不同且可审计；
-- [ ] P07-A12：restorable iterator/RNG/optimizer/scheduler/scaler contract通过，synthetic learner capsule在同backend exact tiny continuation通过；
-- [ ] P07-A13：缺失inner/RNG/data state时不误称exact；
-- [ ] P07-A14：capsule publication/response-loss/session rules通过；
-- [ ] P07-A15：空local目录restore与owner reassignment成功；
-- [ ] P07-A16：lifecycle CLI不shadow现有`fs_diloco.cli`；
-- [ ] P07-A17：D1/D2 lifecycle fault tests通过；
-- [ ] P07-A18：按P07.1→P07.5子门完成后，D8-R2 50×10 terminal同时完成snapshot/replay/capsule/GC dry-run断言；
-- [ ] P07-A19：accelerated soak显示bounded steady-state或明确BLOCKED；
-- [ ] P07-A20：GC后从至少两个live restore points恢复并继续commit；
-- [ ] P07-A21：lifecycle overhead、object count、bytes、ops和GPU impact有raw data；
-- [ ] P07-A22：active surface无SQLite/embedded DB；
-- [ ] P07-A23：Checker独立审核roots并执行一个未列并发反例；
-- [ ] P07-A24：report/checksums/clean commit和P08 integration interface一致。
+- [x] P07-A01：strict full、memoized full、snapshot+suffix对每个prefix digest一致；
+- [x] P07-A02：corrupt/missing/stale snapshot fail closed并回退strict；
+- [x] P07-A03：snapshot不成为第二head/authority；
+- [x] P07-A04：reachability可解释每个live/candidate object；
+- [x] P07-A05：roots包含head/prefix、epoch/ownership、active FWO、PFT winner/loser grace、capsule、snapshot、response-loss和pins；
+- [x] P07-A06：unknown/quarantine object不被listing omission误删；
+- [x] P07-A07：GC默认dry-run，apply有namespace+approval token；
+- [x] P07-A08：concurrent GC/commit/prepare/reconfigure/restore/capsule零live deletion；
+- [x] P07-A09：delete response-loss和partial batch以request identity幂等恢复；
+- [x] P07-A10：payload-before-marker与late old-membership-revision PFT有明确grace；
+- [x] P07-A11：same-digest loser和divergent blocker evidence retention不同且可审计；
+- [x] P07-A12：restorable iterator/RNG/optimizer/scheduler/scaler contract通过，synthetic learner capsule在同backend exact tiny continuation通过；
+- [x] P07-A13：缺失inner/RNG/data state时不误称exact；
+- [x] P07-A14：capsule publication/response-loss/session rules通过；
+- [x] P07-A15：空local目录restore与owner reassignment成功；
+- [x] P07-A16：lifecycle CLI不shadow现有`fs_diloco.cli`；
+- [x] P07-A17：D1/D2 lifecycle fault tests通过；
+- [x] P07-A18：按P07.1→P07.5子门完成后，D8-R2 50×10 terminal同时完成snapshot/replay/capsule/GC dry-run断言；
+- [x] P07-A19：accelerated soak显示bounded steady-state或明确BLOCKED；
+- [x] P07-A20：GC后从至少两个live restore points恢复并继续commit；
+- [x] P07-A21：lifecycle overhead、object count、bytes、ops和GPU impact有raw data；
+- [x] P07-A22：active surface无SQLite/embedded DB；
+- [x] P07-A23：Checker独立审核roots并执行一个未列并发反例；
+- [x] P07-A24：report/checksums/clean commit和P08 integration interface一致。
 
 ## 9. 验证矩阵
 
@@ -5318,11 +5368,14 @@ regression的Checker证据。
 ---
 plan_id: "P08"
 title: "Distributed Performance Core：Direct Fragment I/O、Streaming Reducer、Bundling 与 Telemetry"
-status: "planned"
-date: "2026-07-11"
+status: "ready"
+date: "2026-07-12"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
 planning_basis_branch: "codex/duraloco-p07-distributed-lifecycle"
-planning_basis_commit: "resolve_from_P07_verified_report"
+planning_basis_commit: "c099adc3c3a99127569a7d9bf38a58547022173c"
+planning_basis_runtime_commit: "2295467fd25ae7969eb2b993ef4b193141239286"
+planning_basis_report_job: "2368976.opbs"
+planning_basis_checker_job: "2369002.opbs"
 target_branch: "codex/duraloco-p08-distributed-performance"
 depends_on:
   - "P07"
@@ -5337,6 +5390,28 @@ human_approval_gates: []
 ---
 
 # P08 — Distributed Performance Core：Direct Fragment I/O、Streaming Reducer、Bundling 与 Telemetry
+
+## 0. 2026-07-12 启动就绪更新
+
+P07 已由独立 Checker 验证完成，因此 P08 可从
+`c099adc3c3a99127569a7d9bf38a58547022173c` 顺序启动。当前 evidence baseline 为：
+
+- factor-one D8：P06B 470 秒；
+- hedged D8-R2：P06C 528 秒，input/output 分别为 factor-one 的 1.77×/1.90×；
+- lifecycle D8-R2：P07 1100 秒，后期单 cycle lifecycle latency 从 45.58 秒增长至
+  141.89 秒，effective-live tail delta 56（上限 64）；
+- P07 runtime/report/checker：`2295467`、PBS `2368976`、PBS `2369002`。
+
+P08 必须保留 P07 的 single-head authority、empty-cache strict fallback、two-snapshot
+retention、typed reachability、unknown quarantine、guarded GC、exact capsule、marker-last
+ordering 与 long-substage lease heartbeat。performance cache、scanner cursor、validation token、
+prefetch 与 telemetry 仍必须可删除，且不能成为 authority。
+
+第一个执行 loop 是 profile-first：先冻结 matched C9/D8/D8-R2 workload 与 stage schema，
+用 targeted one-node benchmark 建立 direct/legacy fragment access、copy bytes、read/SHA/
+finite-check count、peak RSS 和 lifecycle scan breakdown，再依次运行 D1 与 D2。只有 profile
+证明 single-FWO/head serialization 达到预注册 bottleneck threshold，才允许设计新 generation
+的 bundle；否则 P08-A16–A18 以 Checker 认可的 `not_applicable` 关闭。
 
 ## 1. 阶段使命
 
@@ -5358,10 +5433,10 @@ D8/D8-R2的性能不是由prototype whole-model copy、q×fragment驻留或无�
 
 ## 2. 前置条件
 
-- [ ] P07-A01–A24通过，P06C distributed correctness仍为其verified dependency；
-- [ ] factor1和R2 raw latency/resource baseline存在；
-- [ ] CRS/LFE numeric equivalence harness可重跑；
-- [ ] P07 verified commit的object identity/lifecycle接口冻结；
+- [x] P07-A01–A24通过，P06C distributed correctness仍为其verified dependency；
+- [x] factor1和R2 raw latency/resource baseline存在；
+- [x] CRS/LFE numeric equivalence harness可重跑；
+- [x] P07 verified commit的object identity/lifecycle接口冻结；
 - [ ] profiler不改变authority或timing-sensitive selection semantics。
 
 ## 3. 范围

@@ -1,9 +1,9 @@
 # DuraLoCo Distributed-Syncer Plan Rewrite Bundle
 
-Version: 3.1
-Date: 2026-07-11
-Basis commit: `main@06e3ca2299d5eb1a720c1d8f9107af5223095525`
-Planning transition: P06 completed → P06A/P06B/P06C distributed-syncer route
+Version: 3.2
+Date: 2026-07-12
+Basis commit: `codex/duraloco-p07-distributed-lifecycle@c099adc3c3a99127569a7d9bf38a58547022173c`
+Planning transition: P07 completed → P08 profile-first distributed performance route
 
 ## Contents
 
@@ -30,12 +30,10 @@ verify_package.sh
 PACKAGE_SHA256SUMS.txt
 ```
 
-Historical P00–P06 plans, reports and implementation lessons remain authoritative. P06 is already
-complete with A01–A20; this bundle does not retrofit A21–A25. P06A builds the missing Central
-Reference Syncer characterization bundle and decomposes the current syncer without changing
-topology. P06B establishes a new-generation no-dedicated-syncer D8 path with replication factor 1;
-P06C adds overlapping ownership, hedged execution and committed failover. P07→P08→P10 is
-sequential so shared schemas evolve under one verified baseline.
+Historical P00–P06 plans, reports, and implementation lessons remain authoritative. P06A, P06B,
+P06C, and P07 are now completed. P07-A01–A24 passed on the distributed R2 lifecycle path; its
+independent Checker ran as PBS `2369002.opbs` against `c099adc`. P08 is now ready and remains
+sequential so performance work preserves one verified lifecycle schema and authority baseline.
 
 ## Apply to a repository checkout
 
@@ -64,11 +62,12 @@ Do not overwrite the repository-level runtime files `plans/duraloco/STATE.yaml`,
 
 ## Current execution instruction
 
-P06 is complete in the current repository. Do not alter its verdict. Start P06A from archive commit
-`06e3ca2`, use `2581a4d` as the verified implementation reference and `030129e` as the Checker/
-persistence evidence, and create the CRS characterization traces in P06A Loop 1. After applying the
-bundle, update only the live `STATE.yaml` route fields so its stale P07/P08 next action points to P06A;
-preserve all P06 checks, acceptance IDs and evidence.
+P07 is complete in the current repository. Do not alter its verdict. Start P08 sequentially from
+`c099adc`, retain `2295467` as the qualified lifecycle runtime and PBS `2368976`/`2369002` as the
+report/Checker evidence, and execute P08 Loop 1 as a profile-first gate. Preserve the single global
+head, strict replay, two-snapshot retention, typed reachability, guarded GC, exact-capsule, and
+long-substage lease-heartbeat contracts. Do not implement bundling unless the preregistered profile
+gate triggers.
 
 ## Verify this package
 

@@ -1,15 +1,34 @@
 ---
 title: "DuraLoCo Distributed-Syncer Plans — Current Repository Alignment Review"
-version: "1.0"
-date: "2026-07-11"
-repository_head_at_review: "06e3ca2299d5eb1a720c1d8f9107af5223095525"
-review_scope: "08A and every required/optional successor plan"
+version: "1.1"
+date: "2026-07-12"
+repository_head_at_review: "c099adc3c3a99127569a7d9bf38a58547022173c"
+review_scope: "P07 completion and P08 plus every required/optional successor plan"
 status: "normative correction record"
 ---
 
 # 当前仓库适配审查与修订结论
 
-## 1. 审查基线
+## 0. 2026-07-12 状态更新（取代旧执行指令）
+
+下文第 1–4 节保留 2026-07-11 的历史 alignment 决策，用于解释为何路线从 P06A 顺序推进，
+但其“当前从 P06A 开始”指令已完成，不再是 active instruction。最新状态为：
+
+- P06A、P06B、P06C 与 P07 均已完成并由独立 Checker 验证；
+- P07 verified implementation/Checker commit：
+  `c099adc3c3a99127569a7d9bf38a58547022173c`；
+- P07 qualified runtime：`2295467fd25ae7969eb2b993ef4b193141239286`；
+- P07 report/Checker PBS：`2368976.opbs` / `2369002.opbs`；
+- live `STATE.yaml` 为 P07 `completed`，P07-A01–A24 全部通过；
+- 当前唯一 active instruction 是从 `c099adc` 顺序启动 P08 profile-first loop，保留 P07
+  single-head、strict replay、two-snapshot、typed reachability、guarded GC、exact capsule 与
+  lease-heartbeat regression contract。
+
+P08 的 bundling 仍是条件 scope。必须先用 matched C9/D8/D8-R2 profile 判断 single-FWO/head
+serialization 是否达到预注册 threshold；未触发时以 Checker 认可的 `not_applicable` 关闭，
+不能为了完成计划而引入新的 commit semantics。
+
+## 1. 2026-07-11 历史审查基线
 
 本次审查以当前仓库而不是计划包生成时的假设为准：
 
@@ -66,7 +85,7 @@ HARDEN → CHECK → PERSIST`，并从1节点开始，再到2节点，最后才�
 production orchestration、protocol generation、numeric backend或PBS launcher的阶段，
 不得复用旧 runtime pass 作为新实现 pass。
 
-## 4. 当前可直接开始的 P06A 最小切片
+## 4. 2026-07-11 历史 P06A 启动切片（已完成）
 
 1. 从 `06e3ca2` archive tip 建立新 feature branch，同时记录 verified implementation
    `2581a4d` 和 Checker evidence `030129e`；
@@ -80,10 +99,10 @@ production orchestration、protocol generation、numeric backend或PBS launcher�
    implementation commit；
 6. 只有P06A Checker PASS后才冻结distributed generation schema并进入P06B。
 
-应用计划包时还必须做一次非运行时的route reconciliation：当前`STATE.yaml.next_action`
-仍写着“start P07 and P08 independently”。保留P06 `completed`、A01–A20、checks、artifacts和
-Checker report不变，只把`current_goal`/`next_action`更新为从`06e3ca2`启动P06A，并明确
-这是plan-route handoff，不是新的P06 pass。
+当时应用计划包还需要执行一次非运行时 route reconciliation：保留 P06 `completed`、
+A01–A20、checks、artifacts 与 Checker report，只把 `current_goal`/`next_action` 更新为从
+`06e3ca2` 启动 P06A，并明确这是 plan-route handoff，不是新的 P06 pass。该 reconciliation
+及后续 P06A→P07 路线现在都已完成；active instruction 以第 0 节为准。
 
-该切片不需要提前实现membership、LFE、FWO/PFT publication、redundancy、GC或controller，
-因此可以在当前代码基础上安全渐进，而不是一次重写整个syncer。
+该历史切片不要求提前实现 membership、LFE、FWO/PFT publication、redundancy、GC 或
+controller，因此当时能够渐进推进，而不是一次重写整个 syncer。

@@ -1,5 +1,16 @@
 # DuraLoCo Plan Rewrite Changelog
 
+## v3.2 P07 completion and P08 handoff
+
+2026-07-12 将计划基线从历史 P06/P06A handoff 更新为已验证 P07 completion。P07 plan
+状态改为 `completed`，记录 `2295467` runtime、PBS `2368976` report recovery 与 PBS
+`2369002` independent Checker。P08 状态改为 `ready`，planning basis 固定为 `c099adc`，
+并加入当前 factor-one/R2/lifecycle baseline、P07 冻结接口与 profile-first 第一 loop。
+
+bundle README、apply instruction、alignment review、generated master 与 checksum 同步更新。
+P08 multi-FWO/bundle 继续是 profile-triggered conditional scope；本次更新没有把它变成必需
+implementation，也没有修改 P07 runtime verdict 或授权合并 `main`。
+
 ## Purpose
 
 本次改写把 P06 后的路线从“继续强化 dedicated central syncer”改为“先冻结中心式 reference semantics，再迁移到 learner-hosted distributed fragment syncer”。历史 P00–P06 verdict保留；P07–P12 和可选 P09 按分散式拓扑重写。

@@ -1,11 +1,14 @@
 ---
 plan_id: "P08"
 title: "Distributed Performance Core：Direct Fragment I/O、Streaming Reducer、Bundling 与 Telemetry"
-status: "planned"
-date: "2026-07-11"
+status: "ready"
+date: "2026-07-12"
 repository: "https://github.com/UnbearableFate/fs_based_decoupled_diloco"
 planning_basis_branch: "codex/duraloco-p07-distributed-lifecycle"
-planning_basis_commit: "resolve_from_P07_verified_report"
+planning_basis_commit: "c099adc3c3a99127569a7d9bf38a58547022173c"
+planning_basis_runtime_commit: "2295467fd25ae7969eb2b993ef4b193141239286"
+planning_basis_report_job: "2368976.opbs"
+planning_basis_checker_job: "2369002.opbs"
 target_branch: "codex/duraloco-p08-distributed-performance"
 depends_on:
   - "P07"
@@ -20,6 +23,28 @@ human_approval_gates: []
 ---
 
 # P08 — Distributed Performance Core：Direct Fragment I/O、Streaming Reducer、Bundling 与 Telemetry
+
+## 0. 2026-07-12 启动就绪更新
+
+P07 已由独立 Checker 验证完成，因此 P08 可从
+`c099adc3c3a99127569a7d9bf38a58547022173c` 顺序启动。当前 evidence baseline 为：
+
+- factor-one D8：P06B 470 秒；
+- hedged D8-R2：P06C 528 秒，input/output 分别为 factor-one 的 1.77×/1.90×；
+- lifecycle D8-R2：P07 1100 秒，后期单 cycle lifecycle latency 从 45.58 秒增长至
+  141.89 秒，effective-live tail delta 56（上限 64）；
+- P07 runtime/report/checker：`2295467`、PBS `2368976`、PBS `2369002`。
+
+P08 必须保留 P07 的 single-head authority、empty-cache strict fallback、two-snapshot
+retention、typed reachability、unknown quarantine、guarded GC、exact capsule、marker-last
+ordering 与 long-substage lease heartbeat。performance cache、scanner cursor、validation token、
+prefetch 与 telemetry 仍必须可删除，且不能成为 authority。
+
+第一个执行 loop 是 profile-first：先冻结 matched C9/D8/D8-R2 workload 与 stage schema，
+用 targeted one-node benchmark 建立 direct/legacy fragment access、copy bytes、read/SHA/
+finite-check count、peak RSS 和 lifecycle scan breakdown，再依次运行 D1 与 D2。只有 profile
+证明 single-FWO/head serialization 达到预注册 bottleneck threshold，才允许设计新 generation
+的 bundle；否则 P08-A16–A18 以 Checker 认可的 `not_applicable` 关闭。
 
 ## 1. 阶段使命
 
@@ -41,10 +66,10 @@ D8/D8-R2的性能不是由prototype whole-model copy、q×fragment驻留或无�
 
 ## 2. 前置条件
 
-- [ ] P07-A01–A24通过，P06C distributed correctness仍为其verified dependency；
-- [ ] factor1和R2 raw latency/resource baseline存在；
-- [ ] CRS/LFE numeric equivalence harness可重跑；
-- [ ] P07 verified commit的object identity/lifecycle接口冻结；
+- [x] P07-A01–A24通过，P06C distributed correctness仍为其verified dependency；
+- [x] factor1和R2 raw latency/resource baseline存在；
+- [x] CRS/LFE numeric equivalence harness可重跑；
+- [x] P07 verified commit的object identity/lifecycle接口冻结；
 - [ ] profiler不改变authority或timing-sensitive selection semantics。
 
 ## 3. 范围
