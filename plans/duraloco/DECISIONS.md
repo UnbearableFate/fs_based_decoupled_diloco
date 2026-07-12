@@ -797,3 +797,60 @@ P05+ 的规范性路线决策生效。
 - Cadence: terminal D8-R2 uses a snapshot/GC dry-run every two optimizer transitions and one exact capsule per learner at sequence one (cadence one with an explicit maximum sequence of one), ensuring the member later selected for whole-host loss has durable recovery evidence without producing repeated GPT-2 optimizer capsules. The destructive companion remains synthetic-only. The preregistered effective-live-object tail bound is a maximum delta of 64 objects across the final three lifecycle samples; raw inventory, bytes, candidates, replay reads, lifecycle seconds, and capsule counts are persisted.
 - Claim boundary: snapshot manifests retain the compacted logical audit prefix and may grow with history; the bounded claim is for active non-snapshot tensor/metadata objects and the explainable effective-live window after eligible apply. Real D8 remains dry-run and must expose reclaimable candidates rather than deleting them.
 - Rejected: retaining one snapshot cannot survive corruption after prefix deletion; retaining every capsule/ack/audit object defeats bounded growth; applying GC automatically to a real training namespace violates the human approval gate.
+
+## D-0800 — Fenced recovery from an authoritative error stop
+
+- Context: H0 correctly commits an `error` stop before a crashing committer exits, but D-0504 makes every committed stop terminal. P08 interference and failover experiments require a truthful crash fact and an explicit restart path rather than silently omitting the error.
+- Choice: P08 introduces `distributed-head-fenced-error-resume-v2` and a `resume` control transition. Only a new fenced owner after empty-cache strict replay may resume; the parent must project a stop whose reason is exactly `error`, and the transition binds that stopped commit ID plus the new owner token/request identity. Resume advances only commit sequence, clears the stop projection, and changes no optimizer count, tensor, scheduler, membership, consumption, or fragment version. Normal completion/operator stops remain irreversible.
+- Compatibility: v1 runs remain readable and cannot emit `resume`. A P08 run that may resume is a fresh generation whose RunSpec freezes the v2 coordination protocol. Old readers reject the new protocol/control kind instead of misreading it.
+- Rejected: not committing crash errors regresses H0 truthful-stop evidence; deleting or overwriting the stop creates a second terminal authority; resuming arbitrary stop reasons can violate experiment termination.
+
+## D-0801 — Process-local canonical fragment layout plan
+
+- Choice: direct access derives one immutable gather/scatter plan from the existing parameter and fragment indexes. Its identity is the existing parameter-index digest plus fragment-layout digest and canonical ordered tensor slices. The process-local cache is keyed by those digests, contains no tensor authority, is deletable, and is invalidated on layout identity change.
+- Rejected: a parallel layout format or durable plan cache would create another validation truth.
+
+## D-0802 — Ordered float32 streaming reduction
+
+- Choice: proposal transport remains the RunSpec dtype (qualified baseline bfloat16); each selected payload is converted and accumulated in float32, one proposal at a time, in canonical selected-proposal order using the already committed hexadecimal weights. Params and outer state remain float32 production objects. Same implementation/backend/thread identity must be exact.
+- Rejected: tree/arrival-order reduction, lower-precision accumulation, or resource-dependent order would change numeric identity.
+
+## D-0803 — Audited LFE resource budget
+
+- Choice: each LFE remains one process with one in-flight FWO, an explicit thread limit, RSS ceiling, maximum prefetch bytes of one input fragment, and CPU affinity taken from its actual schedulable set. The default remains eight threads and 16 GiB until matched P08 interference evidence selects a different value. Actual affinity, NUMA mask, peak RSS, thread count, input/output bytes, and budget violations are recorded; a violation rejects the attempt and triggers backpressure rather than memory overcommit.
+- Rejected: unbounded prefetch/in-flight work or declared-only placement cannot support interference claims.
+
+## D-0804 — Owner/head-scoped validation tokens
+
+- Choice: a validation token binds the complete ObjectRef, proposal identity, RunSpec/layout/optimizer digests, head commit ID, fencing epoch, membership revision, owner session, validation level, and a storage observation fingerprint. It contains no payload bytes and is process-local. Catalog rescans under the same scope may reuse it; selection/LFE loading still reads the selected payload once. Head/epoch/membership/owner change, CAS ambiguity, cache clear, changed observation, or corruption suspicion discards all tokens and forces strict revalidation.
+- Rejected: path-only/mtime-only keys, serialized tokens, payload retention across scans, or cross-owner reuse.
+
+## D-0805 — Reconstructible scanner and chunk-verified range reads
+
+- Choice: scanner cursors are process-local hints only; restart performs storage discovery and canonical deduplication. POSIX envelope v2 adds fixed-size payload chunk digests under the checksummed header. `range_get` verifies the header and every intersecting chunk while reading only those chunks; full `get` still verifies the complete payload digest. Legacy v1 envelopes use the existing full-read fallback. Range corruption outside the requested chunks is detected by later full access and never becomes a successful authoritative read.
+- Compatibility: envelope version is a backend detail; logical keys, ObjectRefs, payload bytes and head-CAS semantics do not change.
+- Rejected: unchecked seek reads violate correctness; rereading the full payload is not true range I/O.
+
+## D-0806 — Causal local-clock telemetry
+
+- Choice: stage events are append-only observational JSONL with schema/version, role/session, run/generation, causal transition/FWO/attempt IDs, head/epoch/membership facts, local monotonic start/end/duration, UTC observation time, outcome and typed counters. No cross-host exact span is fabricated. Recorder failure never changes training; the acceptance reducer fails closed if required events, topology, lineage or drop accounting are incomplete. The measurement overhead budget is 2% of matched one-node wall time.
+- Rejected: telemetry in canonical identities, blocking authority on the recorder, or timestamps without causal IDs.
+
+## D-0807 — Pre-registered bundle trigger
+
+- Choice: retain the single-FWO path unless matched D8 factor-one and R2 traces show, in at least 8 of 10 optimizer transitions, that non-overlapped FWO serialization wait is at least 25% of transition critical-path time and a two-FWO simulator projects at least 15% end-to-end improvement after measured extra I/O/RSS. The maximum speculative window would be two FWO and one parent. Failure to cross either threshold closes P08-A16–A18 as Checker-audited `not_applicable`.
+- Rejected: adding a protocol schema from synthetic-only timing or average-only evidence.
+
+## D-0808 — Conditional bundle serial semantics
+
+- Choice: only if D-0807 triggers, a new generation/schema canonically orders disjoint fragment FWO by fragment ID then work-order ID, binds one parent and the union of non-overlapping proposal consumption, and proves its final state digest equals sequential application in that exact order. It still has one final head CAS.
+- Rejected: same-fragment overlap, multiple heads, implicit arrival order, or transparent identity changes in the current generation.
+
+## D-0809 — Conditional bundle cancellation and lifecycle roots
+
+- Choice: a triggered bundle path treats every partial FWO/PFR as immutable prepared evidence, cancels the window on head/epoch/membership change, never rebases, and contributes typed ObjectRef edges through D-0709. Response loss reconciles the one bundle request through committed ancestry. If D-0807 does not trigger, no bundle object/schema is written and these obligations are `not_applicable`.
+
+## D-0810 — Matched performance attribution
+
+- Choice: every P08 performance claim binds clean commit/config/dataset/model/seed, learner and allocation topology, replication/mode/fault tape, LFE affinity/NUMA/thread/RSS/in-flight budget, storage mount/stripe, module/Python/Torch environment and raw stage events. C9/no-LFE, D8 factor one and D8-R2 comparisons must state every unmatched dimension and cannot combine historical timings as matched data.
+- Rejected: topology-declared-only, synthetic-only, or cross-commit comparisons as causal performance evidence.

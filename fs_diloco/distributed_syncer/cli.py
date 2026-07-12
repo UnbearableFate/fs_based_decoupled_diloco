@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import atexit
 import os
 from pathlib import Path
 import resource
@@ -21,6 +22,7 @@ from fs_diloco.protocol.canonical_json import canonical_digest
 from fs_diloco.protocol.work_order_v2 import RedundantFragmentWorkOrderV2
 from fs_diloco.storage import PosixStorageBackend
 from fs_diloco.syncer_core.capabilities import PrepareObjectFacade
+from fs_diloco.telemetry import StageRecorder
 
 from .executor import ExecutorBudget, execute_work_order
 from .bootstrap import revision_zero_membership
@@ -66,6 +68,17 @@ def _executor(args: argparse.Namespace) -> int:
         shared / "logs" / f"distributed_executor_{args.member_id}.jsonl",
         f"distributed_executor:{args.member_id}",
     )
+    stage_recorder = StageRecorder(
+        shared / "logs" / f"performance_executor_{args.member_id}.jsonl",
+        run_id=args.run_id,
+        run_generation=config.init.run_generation,
+        role="executor",
+        role_session_id=args.executor_session_id,
+        health_path=(
+            shared / "logs" / f"performance_executor_{args.member_id}.health.json"
+        ),
+    )
+    atexit.register(stage_recorder.close)
     telemetry.event(
         "executor_started",
         member_id=args.member_id,
@@ -169,18 +182,6 @@ def _executor(args: argparse.Namespace) -> int:
             if len(owner_member_ids) != 1:
                 raise ValueError("factor-one dispatch must name exactly one owner")
             owner_role = "primary"
-        bundle = load_input_bundle(facade, layout, work_order_id)
-        if bundle.parent_commit_id != order.parent_commit_id:
-            raise ValueError("input bundle parent differs from work order")
-        params = decode_production_params(verified_get(facade, bundle.params_ref, commit_seq=0))
-        outer = decode_production_outer_state(
-            verified_get(facade, bundle.outer_state_ref, commit_seq=0)
-        )
-        tensors = {}
-        for item in bundle.proposals:
-            data = verified_get(facade, item.payload_ref, commit_seq=0)
-            decoded = load_safetensors_bytes(data)
-            tensors[item.proposal_id] = decoded[item.tensor_key].float().reshape(-1)
         attempt_id = "attempt-" + canonical_digest(
             {
                 "work_order_id": order.work_order_id,
@@ -188,6 +189,54 @@ def _executor(args: argparse.Namespace) -> int:
                 "executor_session_id": args.executor_session_id,
             }
         )
+        input_started = time.monotonic_ns()
+        try:
+            bundle = load_input_bundle(facade, layout, work_order_id)
+            if bundle.parent_commit_id != order.parent_commit_id:
+                raise ValueError("input bundle parent differs from work order")
+            params = decode_production_params(
+                verified_get(facade, bundle.params_ref, commit_seq=0)
+            )
+            outer = decode_production_outer_state(
+                verified_get(facade, bundle.outer_state_ref, commit_seq=0)
+            )
+            tensors = {}
+            for item in bundle.proposals:
+                data = verified_get(facade, item.payload_ref, commit_seq=0)
+                decoded = load_safetensors_bytes(data)
+                tensors[item.proposal_id] = decoded[item.tensor_key].float().reshape(-1)
+        except BaseException as exc:
+            stage_recorder.record(
+                "executor_input_read",
+                start_ns=input_started,
+                outcome="fail",
+                work_order_id=order.work_order_id,
+                attempt_id=attempt_id,
+                head_commit_id=order.parent_commit_id,
+                fencing_epoch=order.committer_fencing_epoch,
+                membership_revision=order.membership_revision,
+                attributes={"error_type": type(exc).__name__},
+            )
+            raise
+        else:
+            stage_recorder.record(
+                "executor_input_read",
+                start_ns=input_started,
+                work_order_id=order.work_order_id,
+                attempt_id=attempt_id,
+                head_commit_id=order.parent_commit_id,
+                fencing_epoch=order.committer_fencing_epoch,
+                membership_revision=order.membership_revision,
+                counters={
+                    "object_reads": 2 + len(bundle.proposals),
+                    "input_bytes": (
+                        bundle.params_ref.size
+                        + bundle.outer_state_ref.size
+                        + sum(item.payload_ref.size for item in bundle.proposals)
+                    ),
+                    "proposal_count": len(bundle.proposals),
+                },
+            )
         resource_digest = canonical_digest(
             {"budget": budget.to_dict(), "hostname": socket.gethostname()}
         )
@@ -216,6 +265,7 @@ def _executor(args: argparse.Namespace) -> int:
             attempt_id=attempt_id,
             resource_evidence_digest=resource_digest,
             budget=budget,
+            telemetry=stage_recorder,
         )
         completed.add(order.work_order_id)
         prepare_seconds = time.monotonic() - prepare_started
@@ -258,6 +308,7 @@ def _executor(args: argparse.Namespace) -> int:
                 "timestamp": time.time(),
             },
         )
+    stage_recorder.close()
     return 0
 
 

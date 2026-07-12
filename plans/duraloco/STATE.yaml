@@ -1,94 +1,67 @@
-phase: P07
-status: completed
-planning_basis_branch: codex/duraloco-p06c-redundant-fragment-executors
-planning_basis_commit: 6a528cbe26a9209720325ce031937c30d970b977
-verified_dependency_implementation: cba9f487dcc697a6df7930b22280e4f0d512377b
-verified_dependency_checker_commit: 6a528cbe26a9209720325ce031937c30d970b977
-actual_base_branch: codex/duraloco-p06c-redundant-fragment-executors
-actual_base_commit: 6a528cbe26a9209720325ce031937c30d970b977
-feature_branch: codex/duraloco-p07-distributed-lifecycle
-current_loop: 6
-current_goal: "H0 completed; hand the hardened, identity-preserving runtime baseline to P08"
+phase: P08
+status: in_progress
+planning_basis_branch: codex/problem-fix-after-p07
+planning_basis_commit: f167a07c49339ba42d14f8a5873fe2c8781884d4
+verified_dependency_implementation: f167a07c49339ba42d14f8a5873fe2c8781884d4
+verified_dependency_checker_commit: 04e0a8634b0e9d7c4cd55c5593081a0ca969a060
+actual_base_branch: codex/problem-fix-after-p07
+actual_base_commit: 8c12839a7b985e590378ac593c846f07b0637517
+feature_branch: codex/duraloco-p08-distributed-performance
+current_loop: 1
+current_goal: "freeze P08 decisions and build an identity-preserving critical-path baseline"
 attempts_for_current_failure: 0
-last_terminal_failure_review: plans/duraloco/reviews/P07_D8_2366167_WORKFLOW_REVIEW.md
+last_terminal_failure_review: null
 terminal_retry_authorized: false
 terminal_retry_qualification:
-  targeted_1node_benchmark: 2368753.opbs
-  miyabi_1node: 2368758.opbs
-  miyabi_2node: 2368760.opbs
-last_verified_commit: 04e0a8634b0e9d7c4cd55c5593081a0ca969a060
-planning_basis_runtime_commit: f167a07c49339ba42d14f8a5873fe2c8781884d4
-h0_status: completed
-h0_checker_job: 2369726.opbs
+  targeted_1node_benchmark: null
+  miyabi_1node: null
+  miyabi_2node: null
+last_verified_commit: f167a07c49339ba42d14f8a5873fe2c8781884d4
 checks:
-  local_static: static_pass
-  local_runtime: unit_pass
-  miyabi_1node: miyabi_1node_pass
-  miyabi_2node: miyabi_2node_pass
-  miyabi_9node: miyabi_9node_pass
-  miyabi_d1: miyabi_d1_pass
-  miyabi_d2_r2: miyabi_d2_r2_pass
-  miyabi_d8_r2: miyabi_d8_r2_pass
+  local_static: not_run
+  local_runtime: not_run
+  targeted_1node: not_run
+  miyabi_1node: not_run
+  miyabi_2node: not_run
+  miyabi_d1: not_run
+  miyabi_d2_r2: not_run
+  miyabi_d8: not_run
+  miyabi_d8_r2: not_run
+  independent_checker: not_run
 acceptance:
-  P07-A01: {result: pass, evidence: ["2365809.opbs snapshot+suffix equals strict replay with fewer covered-prefix reads", "2368758.opbs 75 lifecycle regressions"]}
-  P07-A02: {result: pass, evidence: ["2365797.opbs missing/corrupt/stale snapshot strict fallback", "2369002.opbs corrupt-latest two-snapshot Checker counterexample"]}
-  P07-A03: {result: pass, evidence: ["2365797.opbs ancestry-pinned snapshot and single-head authority"]}
-  P07-A04: {result: pass, evidence: ["2365820.opbs explainable typed reachability", "2369002.opbs independent root audit"]}
-  P07-A05: {result: pass, evidence: ["2365820.opbs complete root classes", "artifacts/duraloco/P07/20260712_p07_d8_report_9e674f5/p07_d8_report.json"]}
-  P07-A06: {result: pass, evidence: ["2365820.opbs unknown future-schema quarantine"]}
-  P07-A07: {result: pass, evidence: ["2365833.opbs immutable mark, synthetic approval guard, and real dry-run"]}
-  P07-A08: {result: pass, evidence: ["2368758.opbs concurrent lifecycle regressions", "2368760.opbs D2-R2 lifecycle faults"]}
-  P07-A09: {result: pass, evidence: ["2365833.opbs delete response-loss and partial apply identity recovery"]}
-  P07-A10: {result: pass, evidence: ["2368758.opbs payload-before-marker and old-revision grace", "2369002.opbs apply-time reprotection counterexample"]}
-  P07-A11: {result: pass, evidence: ["2368758.opbs prepared evidence retention classes", "2369002.opbs same-digest loser versus divergent blocker counterexample"]}
-  P07-A12: {result: pass, evidence: ["2365848.opbs complete capsule state and bitwise synthetic continuation"]}
-  P07-A13: {result: pass, evidence: ["2365848.opbs incomplete exact-state claims fail closed"]}
-  P07-A14: {result: pass, evidence: ["2365848.opbs marker-last capsule publication, response loss, and session sequencing"]}
-  P07-A15: {result: pass, evidence: ["2368758.opbs restore-after-GC and reassignment regressions", "2368760.opbs D2-R2 owner reassignment"]}
-  P07-A16: {result: pass, evidence: ["2365856.opbs independent fs_diloco.lifecycle_cli default-dry-run contract"]}
-  P07-A17: {result: pass, evidence: ["2366149.opbs real D1-R2 lifecycle gate", "2368760.opbs D2-R2 lifecycle failover gate"]}
-  P07-A18: {result: pass, evidence: ["2368771.opbs completed ten-transition D8-R2 authority", "2368976.opbs recovered PASS runtime and lifecycle reports"]}
-  P07-A19: {result: pass, evidence: ["2368976.opbs effective-live tail delta 56 within preregistered limit 64", "2368758.opbs repeated-GC bounded-window regression"]}
-  P07-A20: {result: pass, evidence: ["2368758.opbs two-snapshot restore after GC", "2369002.opbs corrupt-newest fallback after GC and takeover"]}
-  P07-A21: {result: pass, evidence: ["artifacts/duraloco/P07/20260712_p07_d8_report_9e674f5/p07_d8_report.json", "artifacts/duraloco/P07/20260712_p07_d8_report_9e674f5/d8_r2_report.json"]}
-  P07-A22: {result: pass, evidence: ["2368758.opbs forbidden embedded-database scan", "2368760.opbs and 2368771.opbs active-surface audits"]}
-  P07-A23: {result: pass, evidence: ["2369002.opbs independent Checker PASS with four private counterexamples"]}
-  P07-A24: {result: pass, evidence: ["2368976.opbs report recovery and checksums", "artifacts/duraloco/P07/20260712_p07_checker_c099adc/checksums.sha256", "D-0709 P08 typed ObjectRef integration contract"]}
+  P08-A01: {result: not_run, evidence: []}
+  P08-A02: {result: not_run, evidence: []}
+  P08-A03: {result: not_run, evidence: []}
+  P08-A04: {result: not_run, evidence: []}
+  P08-A05: {result: not_run, evidence: []}
+  P08-A06: {result: not_run, evidence: []}
+  P08-A07: {result: not_run, evidence: []}
+  P08-A08: {result: not_run, evidence: []}
+  P08-A09: {result: not_run, evidence: []}
+  P08-A10: {result: not_run, evidence: []}
+  P08-A11: {result: not_run, evidence: []}
+  P08-A12: {result: not_run, evidence: []}
+  P08-A13: {result: not_run, evidence: []}
+  P08-A14: {result: not_run, evidence: []}
+  P08-A15: {result: not_run, evidence: []}
+  P08-A16: {result: not_run, evidence: []}
+  P08-A17: {result: not_run, evidence: []}
+  P08-A18: {result: not_run, evidence: []}
+  P08-A19: {result: not_run, evidence: []}
+  P08-A20: {result: not_run, evidence: []}
+  P08-A21: {result: not_run, evidence: []}
+  P08-A22: {result: not_run, evidence: []}
+  P08-A23: {result: not_run, evidence: []}
+  P08-A24: {result: not_run, evidence: []}
+  P08-A25: {result: not_run, evidence: []}
 open_decisions: []
 open_blockers: []
 artifacts:
-  - plans/duraloco/phases/P07_STATE.yaml
-  - plans/duraloco/phases/P07_PHASE_REPORT.md
-  - plans/duraloco/phases/P07_CHECKER_REPORT.md
-  - plans/duraloco/errors/P07_ERROR_LEDGER.yaml
-  - artifacts/duraloco/P07/20260712_p07_snapshot_03ed139_1node
-  - artifacts/duraloco/P07/20260712_p07_snapshot_suffix_9d200ea_1node
-  - artifacts/duraloco/P07/20260712_p07_reachability_946f3c2_1node
-  - artifacts/duraloco/P07/20260712_p07_gc_025948b_1node
-  - artifacts/duraloco/P07/20260712_p07_capsule_238bc5b_1node
-  - artifacts/duraloco/P07/20260712_p07_cli_028ed09_1node
-  - artifacts/duraloco/P07/20260712_p07_renew_f56b953_d1
-  - artifacts/duraloco/P07/20260712_p07_heartbeat_2295467
-  - artifacts/duraloco/P07/20260712_p07_unit_2295467
-  - artifacts/duraloco/P07/20260712_p07_heartbeat_2295467_d2
-  - artifacts/duraloco/P07/20260712_p07_heartbeat_2295467_d8
-  - artifacts/duraloco/P07/20260712_p07_d8_report_9e674f5
-  - artifacts/duraloco/P07/20260712_p07_checker_c099adc
-  - plans/duraloco/reviews/P07_D8_2366037_WORKFLOW_REVIEW.md
-  - plans/duraloco/reviews/P07_D8_2366101_WORKFLOW_REVIEW.md
-  - plans/duraloco/reviews/P07_D8_2366167_WORKFLOW_REVIEW.md
-  - plans/duraloco/phases/H0_STATE.yaml
-  - plans/duraloco/phases/H0_PHASE_REPORT.md
-  - plans/duraloco/phases/H0_RUN_LEDGER.md
-  - plans/duraloco/phases/H0_CHECKER_REPORT.md
-  - artifacts/duraloco/H0/20260713_011736_h0_unit_f167a07
-  - artifacts/duraloco/H0/20260713_011915_h0_d1_f167a07
-  - artifacts/duraloco/H0/20260713_012130_h0_lock_f167a07
-  - artifacts/duraloco/H0/20260713_012200_h0_d2_f167a07
-  - artifacts/duraloco/H0/20260713_012343_h0_d8r2_50x10_f167a07
-  - artifacts/duraloco/H0/20260713_014514_h0_checker_04e0a86
-next_action: "start P08 from H0 runtime commit f167a07c49339ba42d14f8a5873fe2c8781884d4 with profile-first orientation and preserve every P07/H0 regression"
+  - plans/duraloco/phases/P08_STATE.yaml
+  - plans/duraloco/phases/P08_PHASE_REPORT.md
+  - plans/duraloco/errors/P08_ERROR_LEDGER.yaml
+next_action: "implement Loop 1 RED telemetry/profile contracts and run the smallest targeted PBS benchmark"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
-checker_report: plans/duraloco/phases/H0_CHECKER_REPORT.md
+checker_report: null

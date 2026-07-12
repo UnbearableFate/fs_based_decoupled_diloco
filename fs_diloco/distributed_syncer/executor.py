@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import resource
+from contextlib import nullcontext
 
 import torch
 
@@ -16,6 +17,7 @@ from fs_diloco.protocol.prepared_transition_v1 import (
 from fs_diloco.protocol.work_order_v1 import FragmentWorkOrderV1
 from fs_diloco.syncer_core.aggregation import apply_outer_transition, reduce_fragment
 from fs_diloco.syncer_core.types import FragmentPlan
+from fs_diloco.telemetry import StageRecorder
 
 from .layout import DistributedLayout
 from .prepared_store import content_ref, publish_prepared_attempt
@@ -68,6 +70,7 @@ def execute_work_order(
     attempt_id: str,
     resource_evidence_digest: str,
     budget: ExecutorBudget,
+    telemetry: StageRecorder | None = None,
 ) -> tuple[PreparedFragmentResultV1, PreparedAttemptEnvelopeV1]:
     torch.set_num_threads(budget.threads)
     if canonical_digest(execution_backend_identity(threads=budget.threads)) != order.execution_backend_digest:
@@ -89,16 +92,47 @@ def execute_work_order(
         ),
         selection_digest=order.work_order_id.removeprefix("fwo-"),
     )
-    aggregate = reduce_fragment(
-        plan=plan, proposal_tensors=proposal_tensors, current_params=current_params
+    identity = {
+        "work_order_id": order.work_order_id,
+        "attempt_id": attempt_id,
+        "head_commit_id": order.parent_commit_id,
+        "fencing_epoch": order.committer_fencing_epoch,
+        "membership_revision": order.membership_revision,
+    }
+    reduction_span = (
+        telemetry.span(
+            "streaming_reduction",
+            counters={
+                "proposal_count": len(plan.selected_proposal_ids),
+                "fragment_numel": int(current_params.numel()),
+            },
+            attributes={"implementation": "materialized-left-fold-baseline"},
+            **identity,
+        )
+        if telemetry is not None
+        else nullcontext()
     )
-    computation = apply_outer_transition(
-        aggregate=aggregate,
-        current_params=current_params,
-        current_outer_state=current_outer_state,
-        optimizer_config=optimizer_config,
-        optimizer_implementation_digest=order.outer_optimizer_impl_digest,
+    with reduction_span:
+        aggregate = reduce_fragment(
+            plan=plan, proposal_tensors=proposal_tensors, current_params=current_params
+        )
+    outer_span = (
+        telemetry.span(
+            "outer_step",
+            counters={"fragment_numel": int(current_params.numel())},
+            **identity,
+        )
+        if telemetry is not None
+        else nullcontext()
     )
+    with outer_span:
+        computation = apply_outer_transition(
+            aggregate=aggregate,
+            current_params=current_params,
+            current_outer_state=current_outer_state,
+            optimizer_config=optimizer_config,
+            optimizer_implementation_digest=order.outer_optimizer_impl_digest,
+        )
     params_data = encode_production_params(computation.new_params)
     state_data = encode_production_outer_state(dict(computation.new_outer_state))
     params_ref = content_ref(
@@ -109,36 +143,51 @@ def execute_work_order(
         f"{layout.prepared_prefix}payloads/outer-{computation.outer_state_content_sha256}.safetensors",
         state_data,
     )
-    facade.put_immutable(params_ref.key, params_data, sha256=params_ref.sha256)
-    facade.put_immutable(state_ref.key, state_data, sha256=state_ref.sha256)
-    result = PreparedFragmentResultV1.with_computed_id(
-        {
-            "schema": PreparedFragmentResultV1.SCHEMA,
-            "work_order_id": order.work_order_id,
-            "parent_commit_id": order.parent_commit_id,
-            "validated_input_digests": sorted(item.payload_sha256 for item in order.proposals),
-            "aggregate_digest": plan.aggregate_digest,
-            "aggregate_content_sha256": computation.aggregate_content_sha256,
-            "params_ref": params_ref.to_dict(),
-            "outer_state_ref": state_ref.to_dict(),
-            "state_semantic_digest": computation.state_semantic_digest,
-            "numeric_implementation_digest": order.execution_backend_digest,
-        }
+    publication_span = (
+        telemetry.span(
+            "prepared_publication",
+            counters={
+                "params_bytes": len(params_data),
+                "outer_state_bytes": len(state_data),
+            },
+            **identity,
+        )
+        if telemetry is not None
+        else nullcontext()
     )
-    envelope = PreparedAttemptEnvelopeV1.with_computed_id(
-        {
-            "schema": PreparedAttemptEnvelopeV1.SCHEMA,
-            "prepared_result_id": result.prepared_result_id,
-            "work_order_id": order.work_order_id,
-            "executor_id": executor_id,
-            "executor_session_id": executor_session_id,
-            "attempt_id": attempt_id,
-            "membership_revision": order.membership_revision,
-            "resource_evidence_digest": resource_evidence_digest,
-        }
-    )
-    rss_bytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
-    if rss_bytes > budget.max_rss_bytes:
-        raise MemoryError("LFE exceeded its declared RSS budget")
-    publish_prepared_attempt(facade, layout, result=result, envelope=envelope)
+    with publication_span:
+        facade.put_immutable(params_ref.key, params_data, sha256=params_ref.sha256)
+        facade.put_immutable(state_ref.key, state_data, sha256=state_ref.sha256)
+        result = PreparedFragmentResultV1.with_computed_id(
+            {
+                "schema": PreparedFragmentResultV1.SCHEMA,
+                "work_order_id": order.work_order_id,
+                "parent_commit_id": order.parent_commit_id,
+                "validated_input_digests": sorted(
+                    item.payload_sha256 for item in order.proposals
+                ),
+                "aggregate_digest": plan.aggregate_digest,
+                "aggregate_content_sha256": computation.aggregate_content_sha256,
+                "params_ref": params_ref.to_dict(),
+                "outer_state_ref": state_ref.to_dict(),
+                "state_semantic_digest": computation.state_semantic_digest,
+                "numeric_implementation_digest": order.execution_backend_digest,
+            }
+        )
+        envelope = PreparedAttemptEnvelopeV1.with_computed_id(
+            {
+                "schema": PreparedAttemptEnvelopeV1.SCHEMA,
+                "prepared_result_id": result.prepared_result_id,
+                "work_order_id": order.work_order_id,
+                "executor_id": executor_id,
+                "executor_session_id": executor_session_id,
+                "attempt_id": attempt_id,
+                "membership_revision": order.membership_revision,
+                "resource_evidence_digest": resource_evidence_digest,
+            }
+        )
+        rss_bytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024
+        if rss_bytes > budget.max_rss_bytes:
+            raise MemoryError("LFE exceeded its declared RSS budget")
+        publish_prepared_attempt(facade, layout, result=result, envelope=envelope)
     return result, envelope

@@ -1,0 +1,81 @@
+#!/bin/bash
+#PBS -N duraloco_p08_profile
+#PBS -q debug-g
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:20:00
+#PBS -W group_list=xg24i002
+#PBS -j oe
+
+set -eEuo pipefail
+trap 'echo "[ERROR] line=$LINENO status=$?" >&2' ERR
+
+: "${EXPECTED_COMMIT:?set EXPECTED_COMMIT to the clean P08 instrumentation commit}"
+: "${RUN_ID:?set a unique P08 profile RUN_ID}"
+: "${ARTIFACT_ROOT:?set ARTIFACT_ROOT under artifacts/duraloco/P08}"
+
+PROJECT_ROOT="${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}"
+PYTHON_BIN="$PROJECT_ROOT/.venv/bin/python"
+mkdir -p "$ARTIFACT_ROOT"
+cd "$PROJECT_ROOT"
+
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat
+module list 2>&1 | tee "$ARTIFACT_ROOT/modules.log"
+hostname | tee "$ARTIFACT_ROOT/hostname.log"
+printf 'PBS_JOBID=%s\nPBS_NODEFILE=%s\n' "${PBS_JOBID:-}" "${PBS_NODEFILE:-}" \
+  | tee "$ARTIFACT_ROOT/pbs_context.log"
+
+ACTUAL_COMMIT="$(git rev-parse HEAD)"
+test "$ACTUAL_COMMIT" = "$EXPECTED_COMMIT"
+test -z "$(git status --porcelain=v1)"
+
+COMMANDS_LOG="$ARTIFACT_ROOT/commands.log"
+printf '%s\n' \
+  "$PYTHON_BIN -m pytest tests/performance_core/test_stage_telemetry.py -q" \
+  "$PYTHON_BIN benchmarks/bench_lfe_pipeline.py --output $ARTIFACT_ROOT/lfe_materialized_baseline.json" \
+  > "$COMMANDS_LOG"
+
+result=fail
+exit_code=1
+finish() {
+  observed=$?
+  if [[ "$result" == pass ]]; then
+    exit_code=0
+  elif [[ "$observed" -ne 0 ]]; then
+    exit_code=$observed
+  fi
+  qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
+  "$PYTHON_BIN" scripts/agent/create_run_manifest.py \
+    --root "$PROJECT_ROOT" \
+    --output "$ARTIFACT_ROOT/manifest.json" \
+    --phase P08 \
+    --purpose benchmark \
+    --run-id "$RUN_ID" \
+    --schema-version 2 \
+    --validation-shape p08-profile-telemetry-materialized-baseline-1node \
+    --backend lustre \
+    --config scripts/miyabi/run_duraloco_p08_profile_1node.pbs \
+    --commands-log commands.log \
+    --stdout stdout.log \
+    --stderr stderr.log \
+    --exit-code "$exit_code" \
+    --result "$result" \
+    --termination-kind "$([[ "$result" == pass ]] && echo success || echo test_failure)" \
+    --pbs-queue debug-g \
+    --requested-resources select=1:mpiprocs=1,walltime=00:20:00 \
+    --last-qstat-state R \
+    --termination-detail "P08 telemetry contract and pre-optimization LFE materialization profile" \
+    --assertion "telemetry is observational, fail-closed in analysis, and reconstructs causal local spans" \
+    --assertion "materialized q-times-fragment baseline preserves raw duration and RSS evidence" \
+    || true
+}
+trap finish EXIT
+
+"$PYTHON_BIN" -m pytest tests/performance_core/test_stage_telemetry.py -q \
+  > >(tee "$ARTIFACT_ROOT/stdout.log") \
+  2> >(tee "$ARTIFACT_ROOT/stderr.log" >&2)
+"$PYTHON_BIN" benchmarks/bench_lfe_pipeline.py \
+  --output "$ARTIFACT_ROOT/lfe_materialized_baseline.json" \
+  >> "$ARTIFACT_ROOT/stdout.log" \
+  2>> "$ARTIFACT_ROOT/stderr.log"
+
+result=pass

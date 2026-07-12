@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
+import atexit
 from pathlib import Path
 import time
 from typing import Callable, TypeVar
@@ -42,6 +43,7 @@ from fs_diloco.syncer import (
     publish_materialized_view,
     resume_generation,
 )
+from fs_diloco.telemetry import StageRecorder
 
 from .executor import ExecutorBudget
 from .duplicate_validation import (
@@ -344,6 +346,15 @@ def run_committer(
     active_path = distributed_root / "active_work_order.json"
     reconfigure_path = distributed_root / "reconfigure_membership.json"
     logger = JsonlLogger(paths.logs / "distributed_committer.jsonl", "floating_committer")
+    stage_recorder = StageRecorder(
+        paths.logs / f"performance_committer_{member_id}.jsonl",
+        run_id=config.run.run_id or "",
+        run_generation=config.init.run_generation,
+        role="committer",
+        role_session_id=owner_session_id,
+        health_path=paths.logs / f"performance_committer_{member_id}.health.json",
+    )
+    atexit.register(stage_recorder.close)
     backend = PosixStorageBackend(paths.authority)
     if config.init.resume or standby:
         deadline = time.monotonic() + config.liveness.no_progress_timeout_seconds
@@ -383,6 +394,7 @@ def run_committer(
     # acquire a fresh fencing epoch after observing the stopped head.
     if view.authoritative_stop is not None:
         _publish_stop(paths, config=config, view=view, reason=view.authoritative_stop.reason)
+        stage_recorder.close()
         return
     layout = DistributedLayout(log.layout)
     lease_manager, loaded_lease, view = _acquire_and_activate_owner(
@@ -502,6 +514,7 @@ def run_committer(
                     commit_seq=view.commit_seq,
                 )
             fragment_id = 0 if len(view.fragments) == 1 else view.scheduler_cursor
+            catalog_started_ns = time.monotonic_ns()
             selected = collect_candidates(
                 catalog=catalog,
                 log=log,
@@ -511,6 +524,7 @@ def run_committer(
                 fragment_id=fragment_id,
             )
             selected = _committed_membership_candidates(selected, membership)
+            catalog_finished_ns = time.monotonic_ns()
             terminal_drain = finite_local_training_complete(paths, config)
             if len(selected) < config.sync.quorum_min and not (terminal_drain and selected):
                 if time.monotonic() - last_progress > config.liveness.no_progress_timeout_seconds:
@@ -518,6 +532,39 @@ def run_committer(
                     break
                 time.sleep(config.sync.scan_interval_seconds)
                 continue
+            catalog_counters = getattr(catalog, "last_scan_counters", {})
+            stage_recorder.record(
+                "catalog_discovery",
+                start_ns=catalog_started_ns,
+                end_ns=catalog_finished_ns,
+                commit_seq=view.commit_seq,
+                head_commit_id=view.commit_id,
+                fencing_epoch=view.fencing_epoch,
+                membership_revision=membership.revision,
+                counters={
+                    "selected_count": len(selected),
+                    "observed_count": int(catalog_counters.get("observed_count", len(selected))),
+                    "metadata_reads": int(catalog_counters.get("metadata_reads", 0)),
+                    "cheap_rejections": int(catalog_counters.get("cheap_rejections", 0)),
+                },
+            )
+            stage_recorder.record(
+                "proposal_validation",
+                start_ns=catalog_started_ns,
+                end_ns=catalog_finished_ns,
+                commit_seq=view.commit_seq,
+                head_commit_id=view.commit_id,
+                fencing_epoch=view.fencing_epoch,
+                membership_revision=membership.revision,
+                counters={
+                    "payload_reads": int(catalog_counters.get("payload_reads", len(selected))),
+                    "sha_checks": int(catalog_counters.get("sha_checks", len(selected))),
+                    "finite_checks": int(catalog_counters.get("finite_checks", len(selected))),
+                    "validation_token_hits": int(
+                        catalog_counters.get("validation_token_hits", 0)
+                    ),
+                },
+            )
             for entry in selected:
                 log.publish_validated_proposal(entry.manifest, entry.payload)
             plan = build_fragment_plan(
@@ -620,6 +667,7 @@ def run_committer(
                 stage="work_dispatch",
             )
             next_renew = time.monotonic() + config.coordination.renew_interval_seconds
+            publication_started_ns = time.monotonic_ns()
             publish_work_order(backend, layout, order)
             publish_input_bundle(backend, layout, bundle)
             dispatch_started = time.monotonic()
@@ -635,9 +683,28 @@ def run_committer(
                     "failed_member_ids": [],
                 },
             )
+            stage_recorder.record(
+                "work_order_publication",
+                start_ns=publication_started_ns,
+                work_order_id=order.work_order_id,
+                commit_seq=view.commit_seq,
+                head_commit_id=view.commit_id,
+                fencing_epoch=view.fencing_epoch,
+                membership_revision=order.membership_revision,
+                counters={
+                    "proposal_count": len(order.proposals),
+                    "owner_count": len(owner_member_ids),
+                    "input_bytes": (
+                        bundle.params_ref.size
+                        + bundle.outer_state_ref.size
+                        + sum(item.payload_ref.size for item in bundle.proposals)
+                    ),
+                },
+            )
             allowed_executor_ids = tuple(
                 membership.member(owner_id).executor_id for owner_id in owner_member_ids
             )
+            visibility_started_ns = time.monotonic_ns()
             (result, envelopes, duplicate_decision), loaded_lease = (
                 _run_lifecycle_substage(
                     lambda current_order=order, executor_ids=allowed_executor_ids: _wait_for_result(
@@ -655,12 +722,44 @@ def run_committer(
                     logger=logger,
                 )
             )
+            stage_recorder.record(
+                "prepared_visibility",
+                start_ns=visibility_started_ns,
+                work_order_id=order.work_order_id,
+                commit_seq=view.commit_seq,
+                head_commit_id=view.commit_id,
+                fencing_epoch=view.fencing_epoch,
+                membership_revision=order.membership_revision,
+                counters={"observed_attempt_count": len(envelopes)},
+                attributes={
+                    "prepared_result_id": result.prepared_result_id,
+                    "attempt_envelope_ids": [
+                        item.attempt_envelope_id for item in envelopes
+                    ],
+                },
+            )
             next_renew = time.monotonic() + config.coordination.renew_interval_seconds
+            validation_started_ns = time.monotonic_ns()
             params_data, outer_data = _validate_result(
                 backend,
                 order=order,
                 result=result,
                 expected_aggregate_digest=plan.aggregate_digest,
+            )
+            stage_recorder.record(
+                "winner_validation",
+                start_ns=validation_started_ns,
+                work_order_id=order.work_order_id,
+                commit_seq=view.commit_seq,
+                head_commit_id=view.commit_id,
+                fencing_epoch=view.fencing_epoch,
+                membership_revision=order.membership_revision,
+                counters={
+                    "params_bytes": len(params_data),
+                    "outer_state_bytes": len(outer_data),
+                    "attempt_count": len(envelopes),
+                },
+                attributes={"prepared_result_id": result.prepared_result_id},
             )
             request_id = "distributed-optimizer-" + canonical_digest(
                 {
@@ -672,6 +771,7 @@ def run_committer(
                 }
             )
             try:
+                successor_started_ns = time.monotonic_ns()
                 prepared = log.prepare_transition(
                     fragment_id=fragment_id,
                     selected_proposal_ids=plan.selected_proposal_ids,
@@ -683,7 +783,32 @@ def run_committer(
                     distributed_work_order_id=order.work_order_id,
                     prepared_result_id=result.prepared_result_id,
                 )
+                stage_recorder.record(
+                    "successor_publication",
+                    start_ns=successor_started_ns,
+                    work_order_id=order.work_order_id,
+                    commit_seq=view.commit_seq,
+                    head_commit_id=view.commit_id,
+                    fencing_epoch=view.fencing_epoch,
+                    membership_revision=order.membership_revision,
+                    counters={
+                        "params_bytes": len(params_data),
+                        "outer_state_bytes": len(outer_data),
+                    },
+                    attributes={"prepared_result_id": result.prepared_result_id},
+                )
+                cas_started_ns = time.monotonic_ns()
                 log.commit_prepared(prepared)
+                stage_recorder.record(
+                    "head_cas",
+                    start_ns=cas_started_ns,
+                    work_order_id=order.work_order_id,
+                    transition_id=prepared.commit.commit_id,
+                    commit_seq=prepared.commit.commit_seq,
+                    head_commit_id=view.commit_id,
+                    fencing_epoch=view.fencing_epoch,
+                    membership_revision=order.membership_revision,
+                )
             except (CommitConflict, InjectedTimeout) as exc:
                 logger.event(
                     "head_conflict_replay",
@@ -867,6 +992,7 @@ def run_committer(
                 )
                 atomic_write_json(report_path, lifecycle_report)
                 logger.event("lifecycle_cycle_completed", **lifecycle_report)
+            materialization_started_ns = time.monotonic_ns()
             fragments, states = _load_committed_tensors(log, view, device="cpu")
             publish_materialized_view(
                 config=config,
@@ -876,6 +1002,17 @@ def run_committer(
                 fragment_index=fragment_index,
                 fragment_thetas=fragments,
                 outer_states=states,
+            )
+            stage_recorder.record(
+                "materialization",
+                start_ns=materialization_started_ns,
+                work_order_id=order.work_order_id,
+                transition_id=view.commit_id,
+                commit_seq=view.commit_seq,
+                head_commit_id=view.commit_id,
+                fencing_epoch=view.fencing_epoch,
+                membership_revision=(view.membership.revision if view.membership else None),
+                counters={"fragment_count": len(fragments)},
             )
             logger.event(
                 "distributed_transition_committed",
@@ -930,3 +1067,4 @@ def run_committer(
                         raise
                 if not primary_error:
                     raise
+            stage_recorder.close()

@@ -1,0 +1,45 @@
+schema_version: 3
+project: duraloco
+phase: P08
+status: in_progress
+branch: codex/duraloco-p08-distributed-performance
+basis:
+  phase: H0
+  runtime_commit: f167a07c49339ba42d14f8a5873fe2c8781884d4
+  checker_commit: 04e0a8634b0e9d7c4cd55c5593081a0ca969a060
+  documentation_commit: 8c12839a7b985e590378ac593c846f07b0637517
+current_commit: null
+working_tree_clean: false
+architecture:
+  mode: distributed_performance_core
+  dedicated_syncer_nodes: 0
+  learner_nodes: 8
+  executor_processes: 8
+  replication_factors: [1, 2]
+  global_head_mode: single
+  per_fragment_heads: false
+  bundle_gate: pending_profile
+progress:
+  current_loop: 1
+  next_smallest_gap: stage telemetry RED contract and H0 matched baseline
+  acceptance_total: 25
+  acceptance_passed: 0
+  acceptance_not_run: 25
+validation:
+  static: not_run
+  targeted_1node: not_run
+  D1: not_run
+  D2_R2: not_run
+  D8: not_run
+  D8_R2: not_run
+checker:
+  status: not_run
+  verdict: null
+  report: null
+artifacts:
+  phase_report: plans/duraloco/phases/P08_PHASE_REPORT.md
+  error_ledger: plans/duraloco/errors/P08_ERROR_LEDGER.yaml
+blockers: []
+decisions_open: []
+next_action: implement Loop 1 RED telemetry and profile contracts
+updated_at: "2026-07-13T00:00:00+09:00"
