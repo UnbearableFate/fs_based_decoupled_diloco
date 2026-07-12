@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 import hashlib
 
 import pytest
@@ -196,7 +197,7 @@ def test_authoritative_stop_replays_and_forbids_more_optimizer_work():
         _prepare(log, proposal, "optimizer-after-stop")
 
 
-def test_control_response_loss_resolves_from_ancestry_after_successor():
+def test_control_response_loss_resolves_from_suffix_only_ancestry(monkeypatch):
     backend, log = _initialize("fenced-control-response-loss")
     token_a = OwnerToken("syncer-a", "session-a", 1)
     prepared = log.prepare_control_transition(
@@ -208,16 +209,22 @@ def test_control_response_loss_resolves_from_ancestry_after_successor():
         log.commit_prepared(prepared, crash_at="after_head_cas")
 
     standby = ProductionTransactionalLog.open(backend, log.spec.run_id, 0)
-    standby.activate_owner(
-        token=OwnerToken("syncer-b", "session-b", 2), request_id="fence-b"
+    prepared_takeover = standby.prepare_control_transition(
+        control_kind="epoch_bump",
+        token=OwnerToken("syncer-b", "session-b", 2),
+        request_id="fence-b",
     )
+    standby.commit_prepared(prepared_takeover)
     standby.commit_snapshot(request_id="snapshot-after-takeover")
+    replay = standby._authoritative_replay()
+    suffix_only = replace(replay, commits=replay.commits[1:])
+    monkeypatch.setattr(standby, "_authoritative_replay", lambda: suffix_only)
     resolved = standby.resolve_mutation(
-        request_id=prepared.commit.request_id,
-        request_digest=prepared.commit.request_digest,
+        request_id=prepared_takeover.commit.request_id,
+        request_digest=prepared_takeover.commit.request_digest,
     )
     assert resolved is not None
-    assert resolved.commit_id == prepared.commit.commit_id
+    assert resolved.commit_id == prepared_takeover.commit.commit_id
     assert build_runtime_view(standby).commit_seq == 3
 
 

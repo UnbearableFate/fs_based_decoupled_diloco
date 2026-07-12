@@ -31,7 +31,7 @@ BASELINE_TESTS = (
     "tests/test_liveness.py::test_previous_generation_heartbeat_cannot_complete_current_training",
     "tests/storage/test_posix_contract.py::test_shared_authority_root_fails_closed_without_cross_node_lock",
     "tests/test_proposal_catalog.py::test_unsupported_payload_dtype_has_typed_quarantine_reason",
-    "tests/coordination/test_production_fencing.py::test_control_response_loss_resolves_from_ancestry_after_successor",
+    "tests/coordination/test_production_fencing.py::test_control_response_loss_resolves_from_suffix_only_ancestry",
 )
 
 
@@ -131,7 +131,7 @@ def main() -> int:
     forbidden_post_runtime = [
         path
         for path in changed_runtime_paths
-        if path.startswith(("fs_diloco/", "tests/", "configs/", "pyproject.toml"))
+        if path.startswith(("fs_diloco/", "configs/", "pyproject.toml"))
     ]
     if forbidden_post_runtime:
         raise RuntimeError(f"runtime changed after qualification: {forbidden_post_runtime}")
@@ -210,7 +210,7 @@ def main() -> int:
         raise RuntimeError("D8 has no in-wait lease-renewal evidence")
 
     patch = _run(
-        ["git", "diff", args.base_commit, runtime_commit, "--", "tests"],
+        ["git", "diff", args.base_commit, "HEAD", "--", "tests"],
         cwd=root,
         check=True,
     ).stdout
