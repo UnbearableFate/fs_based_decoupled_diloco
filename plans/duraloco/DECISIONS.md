@@ -889,3 +889,8 @@ P05+ 的规范性路线决策生效。
 
 - Choice: executor-result wait, winner validation, immutable successor preparation, and post-CAS replay are non-authoritative substages and may run under the main-thread heartbeat helper. One final live renewal immediately precedes optimizer CAS. Distributed terminal stop follows D-0816, and lease-authority loss suppresses stop publication.
 - Rejected: guarding only executor wait, summing separately sub-TTL stages without renewal, or committing an error stop after the next-loop renewal proves expiry.
+
+## D-0818 — Atomic P08 run-namespace claim
+
+- Choice: every matched nine-node wrapper atomically creates a previously absent `STORAGE_ROOT` and `ARTIFACT_ROOT` before runtime setup. Existing roots fail before authority access. A PBS job ID never shares a run ID, authority namespace, artifact manifest, or observational logs with another allocation.
+- Rejected: `mkdir -p` on caller-supplied experiment roots, treating a duplicate submission as resume, or allowing two allocations to race initialization and marker publication.

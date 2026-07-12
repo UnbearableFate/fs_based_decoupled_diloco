@@ -361,4 +361,35 @@ entries:
       - tracejob 2370677.opbs
     correction: heartbeat winner validation, immutable prepare, and replay; renew immediately before optimizer CAS; guard distributed terminal stop and suppress stop after lease loss
     retry_policy: targeted compute plus clean 1-node and 2-node qualification on one commit before one fresh D8 factor-one retry
-last_updated: "2026-07-13T05:04:00+09:00"
+  - id: P08-E022
+    job: 2370680.opbs
+    shape: D8_factor_one_duplicate_namespace
+    commit: a01b18bfe43049be700c21c05d6863821f5c42b9
+    result: fail
+    failure_class: duplicate_qsub_namespace_collision
+    expected: exactly one PBS job owns one fresh artifact/storage/run namespace
+    actual: a second submission reused the still-running 2370677 RUN_ID, ARTIFACT_ROOT, and STORAGE_ROOT; its active committer observed latest.json from the first job, processes overlapped for 43 seconds, and the second manifest could not overwrite the first immutable manifest
+    authority_effect: namespace is contaminated by two allocations and rejected wholesale; its eventual error stop belongs only to the already-failed audit lineage
+    runtime_started: true
+    evidence:
+      - plans/duraloco/phases/P08_9NODE_FAILURE_REVIEW_2370677.md
+      - duraloco_p08_d8.o2370680
+      - tracejob 2370680.opbs
+      - artifacts/duraloco/P08/20260713_p08_d8_a01b18b_r1/member-002_committer.log
+    correction: atomically claim fresh STORAGE_ROOT and ARTIFACT_ROOT with non-idempotent mkdir before any runtime or authority access
+    retry_policy: use a fresh unique namespace after the E021 targeted, 1-node, and 2-node qualification ladder
+  - id: P08-E023
+    job: null
+    shape: login_control_plane_diagnostic
+    commit: a01b18bfe43049be700c21c05d6863821f5c42b9
+    result: operator_error
+    failure_class: prohibited_login_node_torch_import
+    expected: login-node diagnosis uses source/text inspection only
+    actual: an ownership diagnostic invoked the repository Python environment on the login node and transitively imported torch before it was terminated; it printed only the deterministic owner member ID
+    authority_effect: none; no run path, model, CUDA operation, or external state was touched
+    runtime_started: false
+    evidence:
+      - operator transcript immediately following tracejob 2370680.opbs
+    correction: perform module-dependent diagnostics only in the dedicated compute benchmark; use rg and existing artifact JSON on login nodes
+    retry_policy: no runtime retry; retain as an operator-control-plane violation and continue with compute-only validation
+last_updated: "2026-07-13T05:08:00+09:00"

@@ -245,3 +245,7 @@ grew to 52.292 seconds by transition four because only executor wait, not
 winner validation, successor preparation, or replay, renewed the lease.
 P08-E021 and `P08_9NODE_FAILURE_REVIEW_2370677.md` preserve the error terminal,
 causal timings, repair, and mandatory requalification before one D8 retry.
+PBS `2370680` also overlapped that job under the same caller-supplied namespace;
+P08-E022 rejects the contaminated namespace and D-0818 adds atomic root claims.
+P08-E023 separately retains the immediately terminated login-node Python/torch
+diagnostic mistake. Neither incident supplies performance evidence.

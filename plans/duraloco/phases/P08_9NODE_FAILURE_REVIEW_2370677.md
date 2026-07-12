@@ -44,3 +44,19 @@ that loses lease authority cannot commit stop.
 Before one fresh D8 attempt, run the dedicated targeted guard benchmark/tests,
 the complete one-node gates, and D2 on one clean commit. Do not submit R2 until
 factor one passes and produces ten complete raw timelines.
+
+## Duplicate namespace incident
+
+PBS `2370680` was submitted with the same `RUN_ID`, `ARTIFACT_ROOT`, and
+`STORAGE_ROOT` while `2370677` was still active. The allocations overlapped for
+43 seconds. The second active committer correctly rejected an existing
+`latest.json`; its processes nevertheless shared observational paths, and its
+manifest could not replace the first immutable failure manifest. This makes
+the entire namespace unsuitable even for partial performance evidence.
+
+All final nine-node wrappers now use atomic, non-idempotent root creation as a
+run claim. A duplicate fails before runtime or authority access. P08-E022
+records this separate operator failure. P08-E023 also records that a subsequent
+login-node ownership diagnostic inadvertently imported torch; the command was
+terminated and had no run/model/CUDA side effect. Further module-dependent
+diagnostics are compute-only.
