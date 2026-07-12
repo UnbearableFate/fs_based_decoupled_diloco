@@ -7,6 +7,7 @@ import time
 import pytest
 
 import fs_diloco.distributed_syncer.committer as committer_module
+from fs_diloco.log import CommitConflict
 
 
 class _Logger:
@@ -99,3 +100,94 @@ def test_long_lifecycle_substage_renews_until_worker_finishes(monkeypatch):
     assert lease == renewals[-1][1]
     assert len(renewals) >= 3
     assert any(event == "lifecycle_substage_heartbeat" for event, _ in logger.events)
+
+
+def test_committer_conflict_finalization_publishes_only_authoritative_stop(monkeypatch):
+    logger = _Logger()
+    initial = SimpleNamespace(authoritative_stop=None, commit_seq=7, commit_id="c-before")
+    stopped = SimpleNamespace(
+        authoritative_stop=SimpleNamespace(reason="takeover"),
+        commit_seq=8,
+        commit_id="c-after",
+    )
+
+    class Log:
+        def commit_stop(self, **_kwargs):
+            raise CommitConflict("stale owner")
+
+    published = []
+    monkeypatch.setattr(committer_module, "build_runtime_view", lambda *_args, **_kwargs: stopped)
+    monkeypatch.setattr(
+        committer_module,
+        "_publish_stop",
+        lambda paths, **kwargs: published.append((paths, kwargs)),
+    )
+    result = committer_module._finalize_committer_stop(
+        log=Log(),
+        view=initial,
+        paths="paths",
+        config="config",
+        reason="error",
+        member_id="member-0",
+        owner_session_id="session-0",
+        logger=logger,
+    )
+    assert result is stopped
+    assert published[0][1]["reason"] == "takeover"
+
+    published.clear()
+    monkeypatch.setattr(committer_module, "build_runtime_view", lambda *_args, **_kwargs: initial)
+    result = committer_module._finalize_committer_stop(
+        log=Log(),
+        view=initial,
+        paths="paths",
+        config="config",
+        reason="error",
+        member_id="member-0",
+        owner_session_id="session-0",
+        logger=logger,
+    )
+    assert result is initial
+    assert published == []
+    assert any(event == "stop_not_published_without_authority" for event, _ in logger.events)
+
+
+def test_committer_finalization_never_masks_active_error(monkeypatch):
+    logger = _Logger()
+    view = object()
+
+    def fail(**_kwargs):
+        raise RuntimeError("cleanup failure")
+
+    monkeypatch.setattr(committer_module, "_finalize_committer_stop", fail)
+    assert (
+        committer_module._finalize_committer_without_masking(
+            primary_error=True,
+            logger=logger,
+            view=view,
+            reason="error",
+        )
+        is view
+    )
+    with pytest.raises(RuntimeError, match="cleanup failure"):
+        committer_module._finalize_committer_without_masking(
+            primary_error=False,
+            logger=logger,
+            view=view,
+            reason="completed",
+        )
+
+
+def test_committer_crash_marks_error_before_finalization():
+    source = inspect.getsource(committer_module.run_committer)
+    exception_offset = source.index("except Exception:")
+    finally_offset = source.index("finally:", exception_offset)
+    assert 'stop_reason = "error"' in source[exception_offset:finally_offset]
+    assert "raise" in source[exception_offset:finally_offset]
+
+
+def test_committer_prepare_conflict_forces_strict_replay_and_result_wait_renews():
+    source = inspect.getsource(committer_module.run_committer)
+    assert "except (CommitConflict, InjectedTimeout)" in source
+    assert "build_runtime_view(log, force_full=True)" in source
+    assert 'substage="executor_result_wait"' in source

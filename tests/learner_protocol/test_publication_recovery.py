@@ -11,7 +11,12 @@ from fs_diloco.learner_protocol.recovery import recover_learner
 from fs_diloco.learner_protocol.rng_state import RngCursor
 from fs_diloco.learner_protocol.session import LearnerSession
 from fs_diloco.log.layout import LogLayout
-from fs_diloco.storage import FailureRule, ImmutableConflict, InMemoryStorageBackend
+from fs_diloco.storage import (
+    FailureRule,
+    ImmutableConflict,
+    InMemoryStorageBackend,
+    StorageError,
+)
 
 
 def _interval(session: LearnerSession, *, sequence: int = 1) -> ContributionInterval:
@@ -68,7 +73,7 @@ def test_after_effect_timeout_retries_by_request_identity():
     session = LearnerSession.new("run-a", 0, "learner_000", session_id="session-a")
     publisher = LearnerPublisher(backend, layout)
     interval = _interval(session)
-    with pytest.raises(Exception):
+    with pytest.raises(StorageError):
         publisher.publish(interval, b"payload", tensor_key="fragment_params", shape=(1,))
     backend.clear_failures()
     recovered = publisher.publish(interval, b"payload", tensor_key="fragment_params", shape=(1,))
@@ -84,7 +89,7 @@ def test_publication_crash_response_loss_matrix_recovers(timing: str, occurrence
     session = LearnerSession.new("run-a", 0, "learner_000", session_id="session-a")
     publisher = LearnerPublisher(backend, layout)
     interval = _interval(session)
-    with pytest.raises(Exception):
+    with pytest.raises(StorageError):
         publisher.publish(interval, b"payload", tensor_key="fragment_params", shape=(1,))
     backend.clear_failures()
     result = publisher.publish(

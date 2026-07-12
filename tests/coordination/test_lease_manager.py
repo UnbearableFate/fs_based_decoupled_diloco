@@ -9,7 +9,7 @@ from fs_diloco.coordination import (
     MutationRequestConflict,
 )
 from fs_diloco.log.layout import LogLayout
-from fs_diloco.storage import FailureRule, InMemoryStorageBackend
+from fs_diloco.storage import FailureRule, ImmutableConflict, InMemoryStorageBackend
 
 
 def _manager():
@@ -98,7 +98,7 @@ def test_takeover_waits_for_expiry_plus_skew_and_advances_epoch():
 
 def test_renew_after_effect_timeout_is_idempotent_and_release_expires():
     backend, manager = _manager()
-    acquired = manager.acquire(_mutation("acquire", "acquire-a"))
+    manager.acquire(_mutation("acquire", "acquire-a"))
     backend.inject_failure(FailureRule("conditional_replace", "after"))
     renew = _mutation("renew", "renew-a", epoch=1, now=120, ttl=50)
     renewed = manager.renew(renew)
@@ -128,3 +128,35 @@ def test_wrong_owner_or_epoch_cannot_renew_or_release():
         )
     with pytest.raises(CoordinationConflict):
         manager.release(_mutation("release", "release-stale", epoch=2, now=120))
+
+
+def test_concurrent_bootstrap_loser_is_converted_to_coordination_conflict(monkeypatch):
+    backend, losing_manager = _manager()
+    winning_manager = LeaseManager(
+        backend,
+        LogLayout("run-lease", 0),
+        max_clock_skew_ns=5,
+    )
+    original_put = backend.put_if_absent
+
+    def lose_after_competitor_wins(key, data):
+        winner = _mutation(
+            "acquire",
+            "acquire-winner",
+            owner="syncer-b",
+            session="session-b",
+        )
+        record = winning_manager._record(
+            winner,
+            proposed_epoch=1,
+            lease_sequence=1,
+            expires_at_utc_ns=winner.requested_at_utc_ns + winner.ttl_ns,
+        )
+        original_put(key, record.canonical_bytes())
+        raise ImmutableConflict("injected concurrent create")
+
+    monkeypatch.setattr(backend, "put_if_absent", lose_after_competitor_wins)
+    with pytest.raises(CoordinationConflict, match="bootstrap creation lost"):
+        losing_manager.acquire(_mutation("acquire", "acquire-loser"))
+    monkeypatch.setattr(backend, "put_if_absent", original_put)
+    assert losing_manager.load().record.owner_id == "syncer-b"

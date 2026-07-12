@@ -1,0 +1,76 @@
+#!/bin/bash
+#PBS -N duraloco_h0_lock
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=2:mpiprocs=1
+#PBS -l walltime=00:10:00
+#PBS -j oe
+#PBS -m ae
+
+set -eEuo pipefail
+trap 'echo "[ERROR] H0 cross-node lock probe failed at line $LINENO" >&2' ERR
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat CUDA_VISIBLE_DEVICES=""
+PROJECT_ROOT="${PROJECT_ROOT:-${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}}"
+PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
+: "${EXPECTED_COMMIT:?EXPECTED_COMMIT is required}"
+: "${RUN_ID:?RUN_ID is required}"
+: "${ARTIFACT_ROOT:?ARTIFACT_ROOT is required}"
+: "${STORAGE_ROOT:?STORAGE_ROOT is required}"
+PROBE_ROOT="$STORAGE_ROOT/authority"
+cd "$PROJECT_ROOT"
+mkdir -p "$ARTIFACT_ROOT" "$PROBE_ROOT"
+touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log" "$ARTIFACT_ROOT/commands.log"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+
+result=fail
+exit_code=1
+finish() {
+  observed=$?
+  if [[ "$result" == pass ]]; then exit_code=0; elif [[ "$observed" -ne 0 ]]; then exit_code=$observed; fi
+  qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
+  "$PYTHON_BIN" scripts/agent/create_run_manifest.py \
+    --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json" \
+    --phase H0 --purpose contract --run-id "$RUN_ID" --schema-version 2 \
+    --validation-shape h0-two-node-lustre-flock-exclusion \
+    --backend lustre --config scripts/miyabi/run_duraloco_h0_lock_probe_2node.pbs \
+    --commands-log commands.log --stdout stdout.log --stderr stderr.log \
+    --exit-code "$exit_code" --result "$result" \
+    --termination-kind "$([[ "$result" == pass ]] && echo success || echo test_failure)" \
+    --pbs-queue debug-g --requested-resources select=2:mpiprocs=1,walltime=00:10:00 \
+    --last-qstat-state R --termination-detail "two-node Lustre flock exclusion and takeover probe" \
+    --stage-metrics-path cross_node_lock_report.json \
+    --assertion "a lock held on one compute host excludes a contender on another host" \
+    --assertion "the contender acquires the same lock after release" || true
+}
+trap finish EXIT
+
+[[ "$(hostname)" == mg* ]]
+[[ "$(git rev-parse HEAD)" == "$EXPECTED_COMMIT" ]]
+[[ -z "$(git status --porcelain=v1 --untracked-files=no)" ]]
+mapfile -t HOSTS < <(sort -u "$PBS_NODEFILE")
+[[ "${#HOSTS[@]}" -eq 2 ]]
+printf '%s\n' "${HOSTS[@]}" | tee "$ARTIFACT_ROOT/hosts.log"
+findmnt -T "$PROBE_ROOT" -o TARGET,FSTYPE,OPTIONS | tee "$ARTIFACT_ROOT/mount.log"
+git status --short --branch | tee "$ARTIFACT_ROOT/git_status.log"
+git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"
+"$PYTHON_BIN" --version 2>&1 | tee "$ARTIFACT_ROOT/python_version.log"
+module list 2>&1 | cat > "$ARTIFACT_ROOT/modules.log"
+
+command=(
+  mpirun --mca mpi_abort_print_stack 1 --report-bindings --bind-to none
+  --map-by ppr:1:node -np 2 --hostfile "$PBS_NODEFILE"
+  /usr/bin/env "PROJECT_ROOT=$PROJECT_ROOT" "PYTHON_BIN=$PYTHON_BIN"
+  "PROBE_ROOT=$PROBE_ROOT" "ARTIFACT_ROOT=$ARTIFACT_ROOT" "RUN_ID=$RUN_ID"
+  "PYTHONPATH=$PROJECT_ROOT" bash -lc
+  'rank="${OMPI_COMM_WORLD_RANK:?missing rank}"; cd "$PROJECT_ROOT"; exec "$PYTHON_BIN" -m fs_diloco.storage.capability_probe --root "$PROBE_ROOT" --prefix "$RUN_ID" --output "$ARTIFACT_ROOT/cross_node_lock_report.json" --cross-node-lock-rank "$rank" --cross-node-lock-world-size 2'
+)
+printf '%q ' "${command[@]}" | tee "$ARTIFACT_ROOT/commands.log"
+printf '\n' | tee -a "$ARTIFACT_ROOT/commands.log"
+"${command[@]}" 2>&1 | tee -a "$ARTIFACT_ROOT/stdout.log"
+
+"$PYTHON_BIN" -m fs_diloco.storage.capability_probe \
+  --root "$PROBE_ROOT" --prefix "runs/$RUN_ID/backend" \
+  --output "$ARTIFACT_ROOT/backend_capability_report.json" \
+  --require cross_node_advisory_lock | tee -a "$ARTIFACT_ROOT/stdout.log"
+result=pass
+exit_code=0

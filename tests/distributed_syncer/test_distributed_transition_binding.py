@@ -42,7 +42,7 @@ def _member(index: int) -> DistributedMemberV1:
     )
 
 
-def _initialize(*, distributed: bool):
+def _initialize(*, distributed: bool, backend=None):
     membership = MembershipRevisionV1.create(0, (_member(0), _member(1)))
     spec = RunSpec(
         run_id="distributed-result-binding" if distributed else "central-result-binding",
@@ -60,7 +60,7 @@ def _initialize(*, distributed: bool):
     )
     params = torch.tensor([0.0, 0.0])
     log = ProductionTransactionalLog.initialize(
-        InMemoryStorageBackend(),
+        backend or InMemoryStorageBackend(),
         spec,
         {
             0: (

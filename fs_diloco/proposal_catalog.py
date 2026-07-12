@@ -10,7 +10,6 @@ from threading import Lock
 from typing import Iterable
 
 from fs_diloco.atomic_io import atomic_write_json, safe_read_json
-from fs_diloco.protocol.canonical_json import canonical_digest
 from fs_diloco.protocol.errors import ErrorCategory, ProtocolError
 from fs_diloco.protocol.quarantine import QuarantineRegistry
 from fs_diloco.protocol.safetensors_validation import parse_safetensors
@@ -148,7 +147,13 @@ class ProposalCatalog:
         expected_key = "fragment_params" if metadata.get("update_kind") == "fragment" else "local_params"
         if tensor_key != expected_key:
             raise ProtocolError("PAYLOAD_TENSOR_KEY", f"expected {expected_key}, found {tensor_key}")
-        dtype = _SAFE_TO_PROTOCOL[header.dtype]
+        try:
+            dtype = _SAFE_TO_PROTOCOL[header.dtype]
+        except KeyError as exc:
+            raise ProtocolError(
+                "PAYLOAD_DTYPE",
+                f"unsupported proposal payload dtype: {header.dtype}",
+            ) from exc
         validated_payload = validate_production_tensor_payload(
             payload,
             tensor_key=tensor_key,

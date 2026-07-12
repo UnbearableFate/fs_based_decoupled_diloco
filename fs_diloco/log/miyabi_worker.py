@@ -249,10 +249,12 @@ def run_two_node(
         )
         try:
             log.commit_prepared(prepared, crash_at="after_head_cas")
-        except InjectedLogCrash:
+        except InjectedLogCrash as exc:
             recovered = log.resolve_prepared(prepared)
             if recovered is None or recovered.status != "already_committed":
-                raise AssertionError("lost CAS response was not recoverable from head")
+                raise AssertionError(
+                    "lost CAS response was not recoverable from head"
+                ) from exc
         else:
             raise AssertionError("after-head-CAS crash surrogate did not fire")
         backend.put_immutable(f"{barrier}/response-loss-committed", b"ready")

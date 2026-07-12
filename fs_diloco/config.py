@@ -311,6 +311,20 @@ def resolve_config(
         raise ValueError("coordination renew margin must be smaller than lease TTL")
     if config.coordination.renew_interval_seconds > config.coordination.renew_margin_seconds:
         raise ValueError("coordination renew interval must fit inside renew margin")
+    grace_seconds = min(
+        config.sync.grace_window.fixed_seconds,
+        config.sync.grace_window.max_seconds,
+    )
+    if grace_seconds < 0:
+        raise ValueError("sync.grace_window seconds must be non-negative")
+    lease_wait_budget = (
+        config.coordination.lease_ttl_seconds
+        - config.coordination.renew_margin_seconds
+    )
+    if grace_seconds >= lease_wait_budget:
+        raise ValueError(
+            "sync.grace_window must be smaller than lease TTL minus renew margin"
+        )
     if config.coordination.max_clock_skew_seconds < 0:
         raise ValueError("coordination.max_clock_skew_seconds must be non-negative")
     if config.coordination.standby_poll_seconds <= 0:

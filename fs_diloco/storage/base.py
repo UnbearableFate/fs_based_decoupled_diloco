@@ -48,6 +48,8 @@ class StorageCapabilities:
     listing: bool
     atomic_replace: bool
     advisory_lock: bool
+    cross_node_advisory_lock: bool
+    advisory_lock_evidence: str
     directory_fsync: bool
 
     def to_dict(self) -> dict[str, bool | str]:

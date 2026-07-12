@@ -17,9 +17,14 @@ def _error(code: str, message: str, *, fatal: bool = False) -> ProtocolError:
     return ProtocolError(code, message, category=category)
 
 
-def _strict_fields(payload: Mapping[str, Any], required: set[str], optional: set[str] = set()) -> None:
+def _strict_fields(
+    payload: Mapping[str, Any],
+    required: set[str],
+    optional: set[str] | None = None,
+) -> None:
     if not isinstance(payload, Mapping):
         raise _error("SCHEMA_TYPE", "protocol object must be a mapping")
+    optional = set() if optional is None else optional
     found = set(payload)
     missing = required - found
     unknown = found - required - optional

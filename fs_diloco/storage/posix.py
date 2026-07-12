@@ -10,9 +10,11 @@ import hashlib
 import json
 import os
 from pathlib import Path
+from pathlib import PurePosixPath
 import secrets
 import struct
 import tempfile
+from threading import Lock
 import time
 from typing import Callable, Iterable, Iterator
 
@@ -52,6 +54,60 @@ class _DecodedObject:
     request_id: str | None
 
 
+@dataclass(frozen=True)
+class _DecodedHeader:
+    metadata: ObjectMetadata
+    previous_version: str | None
+    request_id: str | None
+
+
+_SHARED_FILESYSTEM_TYPES = frozenset({"ceph", "gpfs", "lustre", "nfs", "nfs4", "panfs"})
+
+
+def _unescape_mount_field(value: str) -> str:
+    escapes = (("\\040", " "), ("\\011", "\t"), ("\\012", "\n"), ("\\134", "\\"))
+    for encoded, decoded in escapes:
+        value = value.replace(encoded, decoded)
+    return value
+
+
+def _mount_details(path: Path) -> tuple[str, frozenset[str]]:
+    """Return the filesystem type and mount options for the deepest mount."""
+
+    resolved = path.resolve(strict=False)
+    best: tuple[int, str, frozenset[str]] | None = None
+    try:
+        rows = Path("/proc/self/mountinfo").read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return "unknown", frozenset()
+    for row in rows:
+        fields = row.split()
+        try:
+            separator = fields.index("-")
+        except ValueError:
+            continue
+        if separator + 3 >= len(fields) or len(fields) < 6:
+            continue
+        mount_point = Path(_unescape_mount_field(fields[4])).resolve(strict=False)
+        try:
+            resolved.relative_to(mount_point)
+        except ValueError:
+            continue
+        filesystem_type = fields[separator + 1]
+        options = frozenset(
+            item
+            for field in (fields[5], fields[separator + 3])
+            for item in field.split(",")
+            if item
+        )
+        candidate = (len(mount_point.parts), filesystem_type, options)
+        if best is None or candidate[0] > best[0]:
+            best = candidate
+    if best is None:
+        return "unknown", frozenset()
+    return best[1], best[2]
+
+
 class PosixStorageBackend:
     """Semantic backend rooted at one isolated POSIX namespace.
 
@@ -65,6 +121,7 @@ class PosixStorageBackend:
         root: str | Path,
         *,
         require_directory_fsync: bool = True,
+        require_cross_node_lock: bool | None = None,
         lock_timeout_seconds: float = 30.0,
         stage_hook: Callable[[str], None] | None = None,
     ) -> None:
@@ -90,6 +147,26 @@ class PosixStorageBackend:
         self._stage_hook = stage_hook
         self._history: list[OperationRecord] = []
         self._operation_counter = 0
+        self._read_counter_lock = Lock()
+        self._header_bytes_read = 0
+        self._payload_bytes_read = 0
+        self._filesystem_type, self._mount_options = _mount_details(self.root)
+        self._cross_node_lock_supported, self._advisory_lock_evidence = (
+            self._detect_cross_node_lock_support()
+        )
+        if require_cross_node_lock is None:
+            require_cross_node_lock = self.root.name == "authority"
+        if (
+            require_cross_node_lock
+            and self._filesystem_type in _SHARED_FILESYSTEM_TYPES
+            and not self._cross_node_lock_supported
+        ):
+            raise CapabilityError(
+                "cross-node advisory locking is required on the shared authority root "
+                f"but was not demonstrated (filesystem={self._filesystem_type}, "
+                f"mount_options={sorted(self._mount_options)})"
+            )
+        self.require_cross_node_lock = bool(require_cross_node_lock)
         self._directory_fsync_supported = self._probe_directory_fsync()
         if require_directory_fsync and not self._directory_fsync_supported:
             raise CapabilityError("parent directory fsync is required but unsupported")
@@ -111,8 +188,34 @@ class PosixStorageBackend:
             listing=True,
             atomic_replace=True,
             advisory_lock=True,
+            cross_node_advisory_lock=self._cross_node_lock_supported,
+            advisory_lock_evidence=self._advisory_lock_evidence,
             directory_fsync=self._directory_fsync_supported,
         )
+
+    @property
+    def read_counters(self) -> dict[str, int]:
+        with self._read_counter_lock:
+            return {
+                "header_bytes": self._header_bytes_read,
+                "payload_bytes": self._payload_bytes_read,
+            }
+
+    def _count_read(self, *, header_bytes: int = 0, payload_bytes: int = 0) -> None:
+        with self._read_counter_lock:
+            self._header_bytes_read += header_bytes
+            self._payload_bytes_read += payload_bytes
+
+    def _detect_cross_node_lock_support(self) -> tuple[bool, str]:
+        if self._filesystem_type == "lustre":
+            if "localflock" in self._mount_options:
+                return False, "lustre-localflock"
+            if "flock" in self._mount_options:
+                return True, "lustre-mount-option-flock"
+            return False, "lustre-lock-scope-unknown"
+        if self._filesystem_type in _SHARED_FILESYSTEM_TYPES:
+            return False, f"{self._filesystem_type}-lock-scope-unverified"
+        return True, "single-node-or-local-filesystem"
 
     @staticmethod
     def _snapshot_bytes(data: BytesLike) -> bytes:
@@ -141,7 +244,9 @@ class PosixStorageBackend:
         except OSError as exc:
             if exc.errno in {errno.EINVAL, errno.ENOTSUP, errno.EOPNOTSUPP}:
                 return False
-            raise StorageIOError.from_oserror(exc, operation="probe_directory_fsync", key=".")
+            raise StorageIOError.from_oserror(
+                exc, operation="probe_directory_fsync", key="."
+            ) from exc
         return True
 
     def _fsync_directory(self, directory: Path) -> None:
@@ -181,7 +286,7 @@ class PosixStorageBackend:
                 if child.is_symlink() or not child.is_dir():
                     raise CapabilityError(
                         f"object parent raced with non-directory: {child}"
-                    )
+                    ) from None
             except StorageError:
                 raise
             except OSError as exc:
@@ -278,36 +383,31 @@ class PosixStorageBackend:
             + data
         )
 
-    def _read_path(self, path: Path, key: str) -> _DecodedObject:
-        try:
-            flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
-            descriptor = os.open(path, flags)
-            with os.fdopen(descriptor, "rb") as handle:
-                magic = handle.read(len(_MAGIC))
-                raw_length = handle.read(_HEADER_LENGTH.size)
-                if magic != _MAGIC or len(raw_length) != _HEADER_LENGTH.size:
-                    raise IntegrityError(f"invalid storage envelope prefix: {key}", key=key)
-                header_length = _HEADER_LENGTH.unpack(raw_length)[0]
-                if header_length < 2 or header_length > _MAX_HEADER_BYTES:
-                    raise IntegrityError(f"invalid storage envelope header size: {key}", key=key)
-                header_digest = handle.read(_HEADER_DIGEST_BYTES)
-                if len(header_digest) != _HEADER_DIGEST_BYTES:
-                    raise IntegrityError(f"short storage envelope header digest: {key}", key=key)
-                header_bytes = handle.read(header_length)
-                if len(header_bytes) != header_length:
-                    raise IntegrityError(f"short storage envelope header: {key}", key=key)
-                if hashlib.sha256(header_bytes).digest() != header_digest:
-                    raise IntegrityError(
-                        f"storage envelope header checksum mismatch: {key}",
-                        key=key,
-                    )
-                data = handle.read()
-        except FileNotFoundError as exc:
-            raise NotFound(key, operation="read", key=key, errno=exc.errno) from exc
-        except StorageError:
-            raise
-        except OSError as exc:
-            raise StorageIOError.from_oserror(exc, operation="read", key=key) from exc
+    def _read_header_from_handle(self, handle, key: str) -> _DecodedHeader:
+        magic = handle.read(len(_MAGIC))
+        raw_length = handle.read(_HEADER_LENGTH.size)
+        header_prefix_bytes = len(magic) + len(raw_length)
+        if magic != _MAGIC or len(raw_length) != _HEADER_LENGTH.size:
+            self._count_read(header_bytes=header_prefix_bytes)
+            raise IntegrityError(f"invalid storage envelope prefix: {key}", key=key)
+        header_length = _HEADER_LENGTH.unpack(raw_length)[0]
+        if header_length < 2 or header_length > _MAX_HEADER_BYTES:
+            self._count_read(header_bytes=header_prefix_bytes)
+            raise IntegrityError(f"invalid storage envelope header size: {key}", key=key)
+        header_digest = handle.read(_HEADER_DIGEST_BYTES)
+        header_bytes = handle.read(header_length)
+        self._count_read(
+            header_bytes=header_prefix_bytes + len(header_digest) + len(header_bytes)
+        )
+        if len(header_digest) != _HEADER_DIGEST_BYTES:
+            raise IntegrityError(f"short storage envelope header digest: {key}", key=key)
+        if len(header_bytes) != header_length:
+            raise IntegrityError(f"short storage envelope header: {key}", key=key)
+        if hashlib.sha256(header_bytes).digest() != header_digest:
+            raise IntegrityError(
+                f"storage envelope header checksum mismatch: {key}",
+                key=key,
+            )
         try:
             header = json.loads(header_bytes.decode("ascii"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -334,16 +434,51 @@ class PosixStorageBackend:
             or size < 0
             or not isinstance(digest, str)
             or len(digest) != 64
+            or any(character not in "0123456789abcdef" for character in digest)
         ):
             raise IntegrityError(f"invalid storage envelope metadata: {key}", key=key)
-        observed_digest = hashlib.sha256(data).hexdigest()
-        if len(data) != size or observed_digest != digest:
-            raise IntegrityError(f"storage object size/hash mismatch: {key}", key=key)
-        return _DecodedObject(
-            data=data,
+        return _DecodedHeader(
             metadata=ObjectMetadata(key, size, digest, version),
             previous_version=previous_version,
             request_id=request_id,
+        )
+
+    def _read_header_path(self, path: Path, key: str) -> _DecodedHeader:
+        try:
+            flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+            descriptor = os.open(path, flags)
+            with os.fdopen(descriptor, "rb") as handle:
+                return self._read_header_from_handle(handle, key)
+        except FileNotFoundError as exc:
+            raise NotFound(key, operation="read", key=key, errno=exc.errno) from exc
+        except StorageError:
+            raise
+        except OSError as exc:
+            raise StorageIOError.from_oserror(exc, operation="read", key=key) from exc
+
+    def _read_path(self, path: Path, key: str) -> _DecodedObject:
+        try:
+            flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+            descriptor = os.open(path, flags)
+            with os.fdopen(descriptor, "rb") as handle:
+                decoded_header = self._read_header_from_handle(handle, key)
+                data = handle.read()
+                self._count_read(payload_bytes=len(data))
+        except FileNotFoundError as exc:
+            raise NotFound(key, operation="read", key=key, errno=exc.errno) from exc
+        except StorageError:
+            raise
+        except OSError as exc:
+            raise StorageIOError.from_oserror(exc, operation="read", key=key) from exc
+        metadata = decoded_header.metadata
+        observed_digest = hashlib.sha256(data).hexdigest()
+        if len(data) != metadata.size or observed_digest != metadata.sha256:
+            raise IntegrityError(f"storage object size/hash mismatch: {key}", key=key)
+        return _DecodedObject(
+            data=data,
+            metadata=metadata,
+            previous_version=decoded_header.previous_version,
+            request_id=decoded_header.request_id,
         )
 
     def _read(self, key: str) -> _DecodedObject:
@@ -418,11 +553,11 @@ class PosixStorageBackend:
         path = contained_path(self.root, key)
         with self._locked(key):
             try:
-                existing = self._read_path(path, key)
+                existing = self._read_header_path(path, key)
             except NotFound:
                 existing = None
             if existing is not None:
-                if existing.data != data:
+                if existing.metadata.sha256 != digest or existing.metadata.size != len(data):
                     self._record(operation, key, "immutable_conflict", existing.metadata.version)
                     raise ImmutableConflict(
                         f"immutable key already contains different bytes: {key}",
@@ -441,8 +576,8 @@ class PosixStorageBackend:
                 self._publish(path, envelope, replace=False)
             except StorageIOError as exc:
                 if exc.errno == errno.EEXIST:
-                    observed = self._read_path(path, key)
-                    if observed.data == data:
+                    observed = self._read_header_path(path, key)
+                    if observed.metadata.sha256 == digest and observed.metadata.size == len(data):
                         self._record(operation, key, "idempotent_race", observed.metadata.version)
                         return observed.metadata
                     raise ImmutableConflict(
@@ -526,7 +661,7 @@ class PosixStorageBackend:
     def head(self, key: str) -> ObjectMetadata:
         operation = "head"
         key = normalize_key(key)
-        metadata = self._read(key).metadata
+        metadata = self._read_header_path(contained_path(self.root, key), key).metadata
         self._record(operation, key, "read", metadata.version)
         return metadata
 
@@ -573,7 +708,20 @@ class PosixStorageBackend:
     def list_prefix(self, prefix: str) -> tuple[str, ...]:
         prefix = normalize_prefix(prefix)
         keys: list[str] = []
-        for path in self.root.rglob("*"):
+        if prefix == "":
+            subtree = self.root
+        elif prefix.endswith("/"):
+            subtree = contained_path(self.root, prefix[:-1])
+        else:
+            parent = PurePosixPath(prefix).parent
+            subtree = (
+                self.root
+                if str(parent) == "."
+                else contained_path(self.root, parent.as_posix())
+            )
+        if not subtree.exists() or not subtree.is_dir():
+            return ()
+        for path in subtree.rglob("*"):
             if not path.is_file() or self._lock_root in path.parents:
                 continue
             if path.name.endswith(".duraloco-tmp"):
@@ -582,7 +730,7 @@ class PosixStorageBackend:
             if not key.startswith(prefix):
                 continue
             try:
-                self._read_path(path, key)
+                self._read_header_path(path, key)
             except (NotFound, IntegrityError, StorageIOError):
                 continue
             keys.append(key)

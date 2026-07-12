@@ -164,8 +164,8 @@ TERMINAL_RETRY_PHASES = {
 def _phase_rank(value: Any) -> int:
     try:
         return PHASE_ORDER.index(str(value))
-    except ValueError:
-        raise StateError(f"invalid phase: {value!r}")
+    except ValueError as exc:
+        raise StateError(f"invalid phase: {value!r}") from exc
 
 
 def _checker_verdict(root: Path, relative: str) -> tuple[str, str]:

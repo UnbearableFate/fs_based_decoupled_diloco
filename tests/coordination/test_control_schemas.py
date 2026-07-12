@@ -92,12 +92,12 @@ def test_control_commit_and_frontier_round_trip_canonically(kind):
 def test_control_commit_rejects_unknown_and_null_identity_fields():
     payload = _control_dict()
     payload["unknown"] = "value"
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         ControlCommitManifest.from_dict(payload)
 
     payload = _control_dict()
     payload["stop_reason"] = None
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         ControlCommitManifest.from_dict(payload)
 
 
@@ -109,7 +109,7 @@ def test_frontier_requires_canonical_omission_for_absent_stop():
     payload["frontier_sha256"] = frontier_digest_for(
         {key: value for key, value in payload.items() if key != "frontier_sha256"}
     )
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         FrontierManifest.from_dict(payload)
 
 

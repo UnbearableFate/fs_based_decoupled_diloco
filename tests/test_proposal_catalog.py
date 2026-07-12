@@ -50,12 +50,21 @@ def _log(*, max_global_staleness=64):
     )
 
 
-def _candidate(root, view, *, suffix, sequence, values, learner="learner_000"):
+def _candidate(
+    root,
+    view,
+    *,
+    suffix,
+    sequence,
+    values,
+    learner="learner_000",
+    tensor_dtype=torch.float32,
+):
     directory = root / "updates" / "pending" / learner
     directory.mkdir(parents=True, exist_ok=True)
     tensor = directory / f"update_{suffix}.params.safetensors"
     marker = directory / f"update_{suffix}.meta.json"
-    save_file({"local_params": torch.tensor(values, dtype=torch.float32)}, str(tensor))
+    save_file({"local_params": torch.tensor(values, dtype=tensor_dtype)}, str(tensor))
     atomic_write_json(
         marker,
         {
@@ -116,6 +125,27 @@ def test_future_candidate_is_quarantined_without_affecting_authority(tmp_path):
     assert catalog.scan(metadata_paths=[marker], log=log, view=view) == ()
     assert list((tmp_path / "quarantine").glob("q-*.json"))
     assert build_runtime_view(log).view_digest == view.view_digest
+
+
+def test_unsupported_payload_dtype_has_typed_quarantine_reason(tmp_path):
+    log = _log()
+    view = build_runtime_view(log)
+    marker = _candidate(
+        tmp_path,
+        view,
+        suffix="i64",
+        sequence=1,
+        values=[1, 2],
+        tensor_dtype=torch.int64,
+    )
+    catalog = ProposalCatalog(
+        namespace_root=tmp_path,
+        quarantine_root=tmp_path / "quarantine",
+    )
+    assert catalog.scan(metadata_paths=[marker], log=log, view=view) == ()
+    records = list((tmp_path / "quarantine").glob("q-*.json"))
+    assert len(records) == 1
+    assert json.loads(records[0].read_text(encoding="utf-8"))["error_code"] == "PAYLOAD_DTYPE"
 
 
 def test_malformed_future_and_stale_flood_cannot_hide_current_valid_candidate(tmp_path):

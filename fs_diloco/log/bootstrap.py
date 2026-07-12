@@ -12,7 +12,7 @@ import torch
 
 from fs_diloco.atomic_io import atomic_write_json
 from fs_diloco.config import resolve_config, write_resolved_config
-from fs_diloco.fragment_codec import extract_fragment, load_fragment_weight
+from fs_diloco.fragment_codec import load_fragment_weight
 from fs_diloco.fragment_index import fragment_layout_digest, load_fragment_index
 from fs_diloco.outer_optim import init_outer_state
 from fs_diloco.param_index import load_param_index, param_index_digest

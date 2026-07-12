@@ -11,7 +11,6 @@ from fs_diloco.protocol.canonical_json import canonical_digest
 from fs_diloco.protocol.schemas import (
     CommitManifest,
     FragmentState,
-    FrontierManifest,
     MembershipProjection,
     StopProjection,
 )
@@ -113,7 +112,7 @@ class RuntimeView:
         for proposal in replay.proposals.values():
             session = getattr(proposal, "learner_session_id", None)
             if session is None:
-                session = getattr(proposal, "session_id")
+                session = proposal.session_id
             lineage = (proposal.learner_id, session, proposal.fragment_id)
             sequences[lineage] = max(sequences.get(lineage, -1), proposal.sequence)
             intervals.add(

@@ -35,3 +35,6 @@ fs-diloco-bootstrap = "fs_diloco.log.bootstrap:main"
 [tool.ruff]
 line-length = 100
 target-version = "py310"
+
+[tool.ruff.lint]
+select = ["F", "B", "PLE"]

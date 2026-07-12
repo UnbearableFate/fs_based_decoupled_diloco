@@ -7,7 +7,7 @@ from typing import Any, Mapping
 
 from fs_diloco.log.layout import LogLayout
 from fs_diloco.protocol.canonical_json import canonical_bytes, canonical_digest, loads_strict
-from fs_diloco.storage import InjectedTimeout, NotFound, PreconditionFailed
+from fs_diloco.storage import ImmutableConflict, InjectedTimeout, NotFound, PreconditionFailed
 from fs_diloco.storage.base import ObjectMetadata, StorageBackend
 
 from .state_machine import CoordinationConflict, MutationRequestConflict, OwnerToken
@@ -246,11 +246,11 @@ class LeaseManager:
             raise ValueError("acquire requires an acquire mutation")
         try:
             current = self.load()
-        except NotFound:
+        except NotFound as exc:
             if mutation.observed_fencing_epoch != 0:
                 raise CoordinationConflict(
                     "missing lease after a committed fencing epoch is ambiguous"
-                )
+                ) from exc
             record = self._record(
                 mutation,
                 proposed_epoch=1,
@@ -261,10 +261,12 @@ class LeaseManager:
                 metadata = self.backend.put_if_absent(
                     self.layout.lease_key, record.canonical_bytes()
                 )
-            except InjectedTimeout:
+            except (ImmutableConflict, InjectedTimeout) as exc:
                 observed = self.load()
                 if self._same_request(observed.record, mutation):
                     return observed
+                if isinstance(exc, ImmutableConflict):
+                    raise CoordinationConflict("lease bootstrap creation lost") from exc
                 raise
             return LoadedLease(record, metadata)
 

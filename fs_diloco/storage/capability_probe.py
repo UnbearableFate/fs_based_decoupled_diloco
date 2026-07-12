@@ -4,16 +4,167 @@ from __future__ import annotations
 
 import argparse
 from dataclasses import asdict, dataclass
+import fcntl
+import hashlib
 import json
 import os
 from pathlib import Path
 import platform
+import socket
+import tempfile
+import time
 from typing import Iterable
 
 from .base import StorageBackend
 from .errors import CapabilityError, ImmutableConflict, PreconditionFailed
-from .layout import normalize_key
+from .layout import RESERVED_ROOT, normalize_key
 from .posix import PosixStorageBackend
+
+
+_LOCK_PROBE_SCHEMA = "duraloco-cross-node-lock-probe-v1"
+
+
+def _write_probe_json(path: Path, payload: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temp_name = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
+    )
+    temp = Path(temp_name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            json.dump(payload, handle, sort_keys=True)
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temp, path)
+    finally:
+        temp.unlink(missing_ok=True)
+
+
+def _wait_for_probe_json(path: Path, *, deadline: float) -> dict[str, object]:
+    while time.monotonic() < deadline:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (FileNotFoundError, json.JSONDecodeError, OSError):
+            time.sleep(0.01)
+            continue
+        if isinstance(payload, dict):
+            return payload
+        raise CapabilityError(f"lock probe marker is not a JSON object: {path}")
+    raise TimeoutError(f"timed out waiting for lock probe marker: {path}")
+
+
+def probe_cross_node_advisory_lock(
+    root: Path,
+    *,
+    prefix: str,
+    rank: int,
+    world_size: int,
+    timeout_seconds: float = 60.0,
+    require_distinct_hosts: bool = True,
+) -> dict[str, object]:
+    """Prove that one process' ``flock`` excludes a process on another host."""
+
+    if world_size != 2 or rank not in {0, 1}:
+        raise ValueError("cross-node lock probe requires exactly two ranks")
+    if timeout_seconds <= 0:
+        raise ValueError("cross-node lock probe timeout must be positive")
+    root = root.expanduser().resolve(strict=False)
+    root.mkdir(parents=True, exist_ok=True)
+    probe_identity = f"{prefix}\0{os.environ.get('PBS_JOBID', '')}"
+    probe_id = hashlib.sha256(probe_identity.encode("utf-8")).hexdigest()[:24]
+    probe_root = root / RESERVED_ROOT / "scope-probes" / probe_id
+    probe_root.mkdir(parents=True, exist_ok=True)
+    deadline = time.monotonic() + timeout_seconds
+    host_path = probe_root / f"host-{rank}.json"
+    _write_probe_json(host_path, {"hostname": socket.gethostname(), "rank": rank})
+    lock_path = probe_root / "scope.lock"
+    descriptor = os.open(lock_path, os.O_RDWR | os.O_CREAT, 0o600)
+    blocked_while_held = False
+    acquired_after_release = False
+    try:
+        if rank == 0:
+            fcntl.flock(descriptor, fcntl.LOCK_EX)
+            _write_probe_json(probe_root / "holder-ready.json", {"ready": True})
+            contender = _wait_for_probe_json(
+                probe_root / "contender-blocked.json", deadline=deadline
+            )
+            blocked_while_held = contender.get("blocked") is True
+            fcntl.flock(descriptor, fcntl.LOCK_UN)
+            _write_probe_json(probe_root / "holder-released.json", {"released": True})
+            takeover = _wait_for_probe_json(
+                probe_root / "contender-acquired.json", deadline=deadline
+            )
+            acquired_after_release = takeover.get("acquired") is True
+        else:
+            _wait_for_probe_json(probe_root / "holder-ready.json", deadline=deadline)
+            try:
+                fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                blocked_while_held = True
+            else:
+                fcntl.flock(descriptor, fcntl.LOCK_UN)
+            _write_probe_json(
+                probe_root / "contender-blocked.json",
+                {"blocked": blocked_while_held},
+            )
+            _wait_for_probe_json(probe_root / "holder-released.json", deadline=deadline)
+            while time.monotonic() < deadline:
+                try:
+                    fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                except BlockingIOError:
+                    time.sleep(0.01)
+                    continue
+                acquired_after_release = True
+                fcntl.flock(descriptor, fcntl.LOCK_UN)
+                break
+            _write_probe_json(
+                probe_root / "contender-acquired.json",
+                {"acquired": acquired_after_release},
+            )
+    finally:
+        os.close(descriptor)
+
+    _write_probe_json(
+        probe_root / f"result-{rank}.json",
+        {
+            "acquired_after_release": acquired_after_release,
+            "blocked_while_held": blocked_while_held,
+            "hostname": socket.gethostname(),
+            "rank": rank,
+        },
+    )
+    if rank == 0:
+        rank_reports = [
+            _wait_for_probe_json(probe_root / f"result-{item}.json", deadline=deadline)
+            for item in range(2)
+        ]
+        hosts = sorted({str(item["hostname"]) for item in rank_reports})
+        report = {
+            "schema": _LOCK_PROBE_SCHEMA,
+            "root": str(root),
+            "prefix": prefix,
+            "hosts": hosts,
+            "world_size": world_size,
+            "distinct_hosts": len(hosts) == 2,
+            "blocked_while_held": all(
+                item.get("blocked_while_held") is True for item in rank_reports
+            ),
+            "acquired_after_release": all(
+                item.get("acquired_after_release") is True for item in rank_reports
+            ),
+            "pbs_job_id": os.environ.get("PBS_JOBID"),
+        }
+        report["passed"] = (
+            (len(hosts) == 2 or not require_distinct_hosts)
+            and report["blocked_while_held"] is True
+            and report["acquired_after_release"] is True
+        )
+        _write_probe_json(probe_root / "summary.json", report)
+    report = _wait_for_probe_json(probe_root / "summary.json", deadline=deadline)
+    if report.get("passed") is not True:
+        raise CapabilityError("cross-node advisory-lock exclusion probe failed")
+    return report
 
 
 @dataclass(frozen=True)
@@ -118,11 +269,28 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="required boolean capability name; may be repeated",
     )
     parser.add_argument("--allow-missing-directory-fsync", action="store_true")
+    parser.add_argument("--cross-node-lock-rank", type=int)
+    parser.add_argument("--cross-node-lock-world-size", type=int, default=2)
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    if args.cross_node_lock_rank is not None:
+        report = probe_cross_node_advisory_lock(
+            args.root,
+            prefix=args.prefix,
+            rank=args.cross_node_lock_rank,
+            world_size=args.cross_node_lock_world_size,
+        )
+        if args.cross_node_lock_rank == 0:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(
+                json.dumps(report, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+        print(json.dumps(report, sort_keys=True))
+        return 0
     backend = PosixStorageBackend(
         args.root,
         require_directory_fsync=not args.allow_missing_directory_fsync,

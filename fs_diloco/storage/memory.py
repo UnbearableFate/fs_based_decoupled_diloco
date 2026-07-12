@@ -60,6 +60,8 @@ class InMemoryStorageBackend:
             listing=True,
             atomic_replace=True,
             advisory_lock=False,
+            cross_node_advisory_lock=False,
+            advisory_lock_evidence="not_applicable",
             directory_fsync=False,
         )
 

@@ -249,6 +249,7 @@ def write_heartbeat(
     payload = {
         "format_version": FORMAT_VERSION,
         "run_id": config.run.run_id,
+        "run_generation": config.init.run_generation,
         "learner_id": learner_id,
         "hostname": socket.gethostname(),
         "pid": os.getpid(),
@@ -416,9 +417,10 @@ def train_one_step(
         batch: Batch = next(batch_iter).to(device)
         with maybe_autocast(device, config.training.precision):
             output = model(input_ids=batch.input_ids, labels=batch.labels)
-            loss = output.loss / config.training.gradient_accumulation_steps
-        if loss is None:
+            raw_loss = output.loss
+        if raw_loss is None:
             raise RuntimeError("model did not return a loss")
+        loss = raw_loss / config.training.gradient_accumulation_steps
         if not torch.isfinite(loss.detach()):
             raise FloatingPointError(f"non-finite loss: {loss.item()}")
         loss.backward()
@@ -608,6 +610,8 @@ def write_fragment_update(
     fragment_norm: float,
     fragment_tensor: torch.Tensor,
 ) -> tuple[str, Path, Path, dict[str, Any], PublicationResult]:
+    if fragment_id != interval.fragment_id:
+        raise ValueError("fragment update metadata must match the contribution interval")
     update_uuid = uuid.uuid4().hex[:12]
     update_id = f"{learner_id}_{local_step:08d}_f{fragment_id:03d}_{update_uuid}"
     update_dir = paths.updates_pending / learner_id
@@ -670,6 +674,19 @@ def write_fragment_update(
     }
     atomic_write_json(meta_path, metadata)
     return update_id, tensor_path, meta_path, metadata, publication
+
+
+def _record_fragment_training_step(
+    interval: ContributionInterval,
+    tokens_since_fragment_load: dict[int, int],
+    *,
+    tokens: int,
+    examples: int,
+) -> ContributionInterval:
+    updated = interval.record_step(tokens=tokens, examples=examples)
+    for tracked_fragment_id in tokens_since_fragment_load:
+        tokens_since_fragment_load[tracked_fragment_id] += tokens
+    return updated
 
 
 def run_fragment_learner(
@@ -847,9 +864,12 @@ def run_fragment_learner(
                 local_step += 1
                 interval_tokens += step_tokens
                 interval_examples += step_examples
-                interval = interval.record_step(tokens=step_tokens, examples=step_examples)
-                for fragment_id in tokens_since_fragment_load:
-                    tokens_since_fragment_load[fragment_id] += step_tokens
+                interval = _record_fragment_training_step(
+                    interval,
+                    tokens_since_fragment_load,
+                    tokens=step_tokens,
+                    examples=step_examples,
+                )
                 losses.append(loss)
                 if local_step % max(1, config.training.log_every_steps) == 0:
                     logger.event(

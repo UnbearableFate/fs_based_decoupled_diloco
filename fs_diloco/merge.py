@@ -111,6 +111,6 @@ def weighted_average_tensors(tensors: list[Any], weights: list[float]) -> Any:
     if len(tensors) != len(weights):
         raise ValueError("tensor and weight counts differ")
     result = tensors[0].mul(float(weights[0]))
-    for tensor, weight in zip(tensors[1:], weights[1:]):
+    for tensor, weight in zip(tensors[1:], weights[1:], strict=True):
         result = result.add(tensor, alpha=float(weight))
     return result

@@ -144,7 +144,7 @@ def test_every_present_required_field_is_enforced_for_every_protocol_object(tmp_
         for field in tuple(payload):
             candidate = copy.deepcopy(payload)
             del candidate[field]
-            with pytest.raises(Exception):
+            with pytest.raises(ValueError):
                 type(manifest).from_dict(candidate)
 
 
@@ -154,7 +154,7 @@ def test_object_ref_required_fields_and_optional_version():
     for field in ("key", "sha256", "size"):
         candidate = dict(payload)
         del candidate[field]
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             ObjectRef.from_dict(candidate)
 
 
@@ -190,7 +190,7 @@ def test_frontier_fragment_keys_require_canonical_decimal(tmp_path, fragment_key
     commit = CommitManifest.from_dict(_commit_dict(proposal))
     payload = _frontier_dict(commit.commit_id, proposal.proposal_id)
     payload["fragments"] = {fragment_key: next(iter(payload["fragments"].values()))}
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         FrontierManifest.from_dict(payload)
 
 
@@ -200,12 +200,12 @@ def test_unhashable_enum_values_are_typed_schema_errors(tmp_path):
     for field, value in (("payload_kind", []), ("dtype", {})):
         candidate = copy.deepcopy(proposal_payload)
         candidate[field] = value
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             ProposalManifest.from_dict(candidate)
 
     drop = _all_objects(tmp_path)[-1].to_dict()
     drop["decision"] = []
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         DropDecision.from_dict(drop)
 
 
@@ -213,7 +213,7 @@ def test_unhashable_enum_values_are_typed_schema_errors(tmp_path):
 def test_proposal_required_fields_are_enforced(tmp_path, field):
     payload = make_proposal(tmp_path).to_dict()
     del payload[field]
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         ProposalManifest.from_dict(payload)
 
 
@@ -236,7 +236,7 @@ def test_unknown_fields_types_versions_and_ranges_are_rejected(tmp_path):
     item["fragment_id"] = True
     cases.append(item)
     for payload in cases:
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             ProposalManifest.from_dict(payload)
 
 
@@ -262,5 +262,5 @@ def test_non_genesis_commit_requires_positive_sequence_and_parent(tmp_path, fiel
     proposal = make_proposal(tmp_path)
     payload = _commit_dict(proposal)
     payload[field] = value
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError):
         CommitManifest.from_dict(payload)

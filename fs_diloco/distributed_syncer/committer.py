@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
-import hashlib
 from pathlib import Path
 import time
 from typing import Callable, TypeVar
@@ -14,6 +13,7 @@ from fs_diloco.config import Config
 from fs_diloco.distributed_syncer.bootstrap import distributed_run_spec_factory
 from fs_diloco.log.codec import verified_get
 from fs_diloco.log.codec import canonical_object
+from fs_diloco.log.errors import CommitConflict
 from fs_diloco.log.production_codec import (
     decode_production_outer_state,
     decode_production_params,
@@ -28,11 +28,10 @@ from fs_diloco.protocol.schemas import ObjectRef
 from fs_diloco.protocol.work_order_v1 import FragmentWorkOrderV1
 from fs_diloco.protocol.work_order_v2 import RedundantFragmentWorkOrderV2
 from fs_diloco.runtime_view import build_runtime_view
-from fs_diloco.storage import PosixStorageBackend
+from fs_diloco.storage import InjectedTimeout, PosixStorageBackend
 from fs_diloco.syncer import (
     PlanningCandidate,
     _acquire_and_activate_owner,
-    _candidate_paths,
     _load_committed_tensors,
     _publish_stop,
     _renew_owner_lease,
@@ -250,6 +249,78 @@ def _validate_result(
     return params, outer
 
 
+def _finalize_committer_stop(
+    *,
+    log,
+    view,
+    paths: RunPaths,
+    config: Config,
+    reason: str,
+    member_id: str,
+    owner_session_id: str,
+    logger,
+):
+    if view.authoritative_stop is None:
+        request_id = "distributed-stop-" + canonical_digest(
+            {
+                "parent_commit_id": view.commit_id,
+                "reason": reason,
+                "owner_id": member_id,
+                "owner_session_id": owner_session_id,
+            }
+        )
+        try:
+            log.commit_stop(reason=reason, request_id=request_id)
+            view = build_runtime_view(log)
+        except CommitConflict as exc:
+            logger.event(
+                "stale_owner_stop_rejected",
+                error=repr(exc),
+                owner_id=member_id,
+                owner_session_id=owner_session_id,
+            )
+            view = build_runtime_view(log, force_full=True)
+    if view.authoritative_stop is None:
+        logger.event(
+            "stop_not_published_without_authority",
+            reason=reason,
+            commit_seq=view.commit_seq,
+        )
+        return view
+    _publish_stop(
+        paths,
+        config=config,
+        view=view,
+        reason=view.authoritative_stop.reason,
+    )
+    logger.event(
+        "stop_published",
+        reason=view.authoritative_stop.reason,
+        commit_seq=view.commit_seq,
+        commit_id=view.commit_id,
+    )
+    return view
+
+
+def _finalize_committer_without_masking(*, primary_error: bool, logger, **kwargs):
+    try:
+        return _finalize_committer_stop(logger=logger, **kwargs)
+    except Exception as exc:
+        try:
+            logger.event(
+                "committer_stop_finalization_failed",
+                error=repr(exc),
+                original_error_active=primary_error,
+                reason=kwargs["reason"],
+            )
+        except Exception:
+            if not primary_error:
+                raise
+        if not primary_error:
+            raise
+        return kwargs["view"]
+
+
 def run_committer(
     config: Config,
     *,
@@ -355,6 +426,7 @@ def run_committer(
     last_progress = time.monotonic()
     next_renew = time.monotonic() + config.coordination.renew_interval_seconds
     stop_reason = "completed"
+    primary_error = False
     try:
         while True:
             if config.sync.stop_after_outer_steps is not None and (
@@ -566,14 +638,24 @@ def run_committer(
             allowed_executor_ids = tuple(
                 membership.member(owner_id).executor_id for owner_id in owner_member_ids
             )
-            result, envelopes, duplicate_decision = _wait_for_result(
-                backend,
-                layout,
-                order,
-                active_path=active_path,
-                allowed_executor_ids=allowed_executor_ids,
-                timeout_seconds=config.liveness.no_progress_timeout_seconds,
+            (result, envelopes, duplicate_decision), loaded_lease = (
+                _run_lifecycle_substage(
+                    lambda current_order=order, executor_ids=allowed_executor_ids: _wait_for_result(
+                        backend,
+                        layout,
+                        current_order,
+                        active_path=active_path,
+                        allowed_executor_ids=executor_ids,
+                        timeout_seconds=config.liveness.no_progress_timeout_seconds,
+                    ),
+                    substage="executor_result_wait",
+                    lease_manager=lease_manager,
+                    loaded_lease=loaded_lease,
+                    config=config,
+                    logger=logger,
+                )
             )
+            next_renew = time.monotonic() + config.coordination.renew_interval_seconds
             params_data, outer_data = _validate_result(
                 backend,
                 order=order,
@@ -589,18 +671,46 @@ def run_committer(
                     "fencing_epoch": view.fencing_epoch,
                 }
             )
-            prepared = log.prepare_transition(
-                fragment_id=fragment_id,
-                selected_proposal_ids=plan.selected_proposal_ids,
-                new_params=params_data,
-                new_outer_state=outer_data,
-                aggregate_digest=result.aggregate_digest,
-                outer_optimizer_impl_digest=order.outer_optimizer_impl_digest,
-                request_id=request_id,
-                distributed_work_order_id=order.work_order_id,
-                prepared_result_id=result.prepared_result_id,
-            )
-            log.commit_prepared(prepared)
+            try:
+                prepared = log.prepare_transition(
+                    fragment_id=fragment_id,
+                    selected_proposal_ids=plan.selected_proposal_ids,
+                    new_params=params_data,
+                    new_outer_state=outer_data,
+                    aggregate_digest=result.aggregate_digest,
+                    outer_optimizer_impl_digest=order.outer_optimizer_impl_digest,
+                    request_id=request_id,
+                    distributed_work_order_id=order.work_order_id,
+                    prepared_result_id=result.prepared_result_id,
+                )
+                log.commit_prepared(prepared)
+            except (CommitConflict, InjectedTimeout) as exc:
+                logger.event(
+                    "head_conflict_replay",
+                    error=repr(exc),
+                    parent_commit_id=view.commit_id,
+                    work_order_id=order.work_order_id,
+                )
+                active_path.unlink(missing_ok=True)
+                view = build_runtime_view(log, force_full=True)
+                fragments, states = _load_committed_tensors(log, view, device="cpu")
+                if view.authoritative_stop is not None:
+                    stop_reason = view.authoritative_stop.reason
+                    break
+                if view.membership is None:
+                    raise RuntimeError(
+                        "distributed head lost membership after conflict"
+                    ) from exc
+                membership = MembershipRevisionV1.from_dict(
+                    canonical_object(
+                        verified_get(
+                            backend,
+                            view.membership.membership_ref,
+                            commit_seq=view.commit_seq,
+                        )
+                    )
+                )
+                continue
             view = build_runtime_view(log)
             if lifecycle_cadence and (
                 view.optimizer_transition_count % lifecycle_cadence == 0
@@ -625,7 +735,9 @@ def run_committer(
                     }
                 )
                 _snapshot_result, loaded_lease = _run_lifecycle_substage(
-                    lambda: log.commit_snapshot(request_id=snapshot_request_id),
+                    lambda request_id=snapshot_request_id: log.commit_snapshot(
+                        request_id=request_id
+                    ),
                     substage="snapshot_commit",
                     lease_manager=lease_manager,
                     loaded_lease=loaded_lease,
@@ -688,8 +800,8 @@ def run_committer(
                 )
                 view = build_runtime_view(log)
                 inventory_bytes, loaded_lease = _run_lifecycle_substage(
-                    lambda: sum(
-                        backend.head(key).size for key in reachability.inventory
+                    lambda inventory=reachability.inventory: sum(
+                        backend.head(key).size for key in inventory
                     ),
                     substage="inventory",
                     lease_manager=lease_manager,
@@ -765,17 +877,36 @@ def run_committer(
             active_path.unlink(missing_ok=True)
             last_progress = time.monotonic()
             time.sleep(0.5)
+    except Exception:
+        primary_error = True
+        stop_reason = "error"
+        logger.exception("error", commit_seq=view.commit_seq)
+        raise
     finally:
-        if view.authoritative_stop is None:
-            request_id = "distributed-stop-" + canonical_digest(
-                {
-                    "parent_commit_id": view.commit_id,
-                    "reason": stop_reason,
-                    "owner_id": member_id,
-                    "owner_session_id": owner_session_id,
-                }
+        try:
+            view = _finalize_committer_without_masking(
+                primary_error=primary_error,
+                logger=logger,
+                log=log,
+                view=view,
+                paths=paths,
+                config=config,
+                reason=stop_reason,
+                member_id=member_id,
+                owner_session_id=owner_session_id,
             )
-            log.commit_stop(reason=stop_reason, request_id=request_id)
-            view = build_runtime_view(log)
-        _publish_stop(paths, config=config, view=view, reason=view.authoritative_stop.reason)
-        active_path.unlink(missing_ok=True)
+        finally:
+            try:
+                active_path.unlink(missing_ok=True)
+            except Exception as exc:
+                try:
+                    logger.event(
+                        "active_work_order_cleanup_failed",
+                        error=repr(exc),
+                        original_error_active=primary_error,
+                    )
+                except Exception:
+                    if not primary_error:
+                        raise
+                if not primary_error:
+                    raise

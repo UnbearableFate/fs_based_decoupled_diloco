@@ -79,3 +79,21 @@ fragments:
     bad_nested.write_text("sync:\n  mode: fragment\n", encoding="utf-8")
     with pytest.raises(ValueError, match="unknown config key"):
         load_config(bad_nested)
+
+
+def test_grace_window_must_fit_inside_lease_renewal_budget(tmp_path):
+    path = tmp_path / "unsafe-grace.yaml"
+    path.write_text(
+        """
+sync:
+  grace_window:
+    fixed_seconds: 31
+    max_seconds: 31
+coordination:
+  lease_ttl_seconds: 45
+  renew_margin_seconds: 15
+""",
+        encoding="utf-8",
+    )
+    with pytest.raises(ValueError, match="grace_window"):
+        resolve_config(path, run_id="unsafe-grace", project_root=tmp_path)

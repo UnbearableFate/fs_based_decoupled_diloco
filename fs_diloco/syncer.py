@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import os
 from pathlib import Path
 import socket
@@ -16,8 +15,8 @@ from safetensors.torch import load as load_safetensors_bytes
 
 from .atomic_io import atomic_write_json, safe_read_json
 from .config import Config, resolve_config, write_resolved_config
-from .coordination import CoordinationConflict, LeaseManager, LeaseMutation, OwnerToken
-from .constants import FORMAT_VERSION, LEARNER_STATUS_STOPPED, learner_id_from_index
+from .coordination import CoordinationConflict, LeaseManager, LeaseMutation
+from .constants import FORMAT_VERSION, learner_id_from_index
 from .fragment_codec import extract_fragment, materialize_full_from_fragments, save_fragment_weight
 from .fragment_index import build_fragment_index, fragment_layout_digest, load_fragment_index, save_fragment_index
 from .hf_model import choose_device, load_causal_lm_and_tokenizer
@@ -323,7 +322,11 @@ def _heartbeat_snapshot(paths: RunPaths, config: Config) -> dict[str, dict[str, 
         if not isinstance(payload, dict):
             continue
         learner_id = payload.get("learner_id")
-        if payload.get("run_id") != config.run.run_id or learner_id not in expected:
+        if (
+            payload.get("run_id") != config.run.run_id
+            or payload.get("run_generation") != config.init.run_generation
+            or learner_id not in expected
+        ):
             continue
         result[learner_id] = payload
     return result

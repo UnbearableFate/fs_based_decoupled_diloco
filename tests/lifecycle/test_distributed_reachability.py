@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from fs_diloco.distributed_syncer.layout import DistributedLayout
 from fs_diloco.log.acknowledgements import (
     LifecycleAcknowledgementV1,
@@ -8,6 +10,7 @@ from fs_diloco.log.acknowledgements import (
 from fs_diloco.log.pins import LifecyclePinV1, publish_pin
 from fs_diloco.log.reachability import build_reachability
 from fs_diloco.protocol.canonical_json import canonical_bytes
+from fs_diloco.storage import IntegrityError, PosixStorageBackend
 from fs_diloco.learner_protocol.capsule import REQUIRED_COMPONENTS, publish_capsule
 from tests.distributed_syncer.test_distributed_transition_binding import (
     _initialize,
@@ -78,6 +81,24 @@ def test_only_known_grace_elapsed_unreachable_objects_become_candidates():
     assert orphan.key in report.candidates
     assert unknown.key not in report.candidates
     assert unknown.key in report.protected_unknown
+
+
+def test_payload_corrupted_unknown_object_is_discovered_and_never_collected(tmp_path):
+    backend = PosixStorageBackend(tmp_path / "store")
+    log = _initialize(distributed=True, backend=backend)
+    key = f"{log.layout.immutable_prefix}future-schema/corrupt.bin"
+    backend.put_immutable(key, b"unknown future payload")
+    path = backend.root / key
+    envelope = bytearray(path.read_bytes())
+    envelope[-1] ^= 1
+    path.write_bytes(envelope)
+
+    assert key in backend.list_prefix(log.layout.immutable_prefix)
+    with pytest.raises(IntegrityError):
+        backend.get(key)
+    report = build_reachability(log, grace_eligible_keys={key})
+    assert key in report.protected_unknown
+    assert key not in report.candidates
 
 
 def test_no_longer_needs_ack_is_audit_evidence_but_does_not_root_subject_object():

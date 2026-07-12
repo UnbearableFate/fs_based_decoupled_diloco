@@ -63,6 +63,7 @@ def test_reference_optimizer_matches_legacy_torch_fragment_count_one(name):
     )
     theta_tuple = (1.0, -2.0, 0.5)
     state = initial_state(len(theta_tuple), reference_config)
+    previous_state = state
     theta = torch.tensor(theta_tuple, dtype=torch.float32)
     legacy_state = init_outer_state(theta, legacy_config)
     for gradient_tuple in ((0.1, -0.2, 0.3), (-0.4, 0.5, 0.2), (0.0, -0.1, 0.7)):

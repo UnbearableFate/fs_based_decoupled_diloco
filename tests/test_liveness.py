@@ -1,8 +1,12 @@
+import json
 import time
 
 from fs_diloco.atomic_io import atomic_write_json
 from fs_diloco.constants import FORMAT_VERSION
 from fs_diloco.liveness import build_liveness_view, liveness_counts, no_progress_timed_out
+from fs_diloco.syncer import finite_local_training_complete
+from fs_diloco.config import Config
+from fs_diloco.paths import RunPaths, prepare_run_dirs
 
 
 def _heartbeat(path, *, timestamp, status="active"):
@@ -11,6 +15,7 @@ def _heartbeat(path, *, timestamp, status="active"):
         {
             "format_version": FORMAT_VERSION,
             "run_id": "run",
+            "run_generation": 3,
             "learner_id": "learner_000",
             "hostname": "host",
             "pid": 123,
@@ -32,6 +37,7 @@ def test_heartbeat_view_is_rebuilt_without_persistent_state(tmp_path):
     stale = build_liveness_view(
         path.parent,
         run_id="run",
+        run_generation=3,
         num_learners=1,
         stale_after_seconds=1.0,
         dead_after_seconds=2.0,
@@ -41,6 +47,7 @@ def test_heartbeat_view_is_rebuilt_without_persistent_state(tmp_path):
     dead = build_liveness_view(
         path.parent,
         run_id="run",
+        run_generation=3,
         num_learners=1,
         stale_after_seconds=1.0,
         dead_after_seconds=2.0,
@@ -56,6 +63,7 @@ def test_stopped_is_preserved_and_no_progress_timeout(tmp_path):
     view = build_liveness_view(
         path.parent,
         run_id="run",
+        run_generation=3,
         num_learners=1,
         stale_after_seconds=1.0,
         dead_after_seconds=2.0,
@@ -63,3 +71,24 @@ def test_stopped_is_preserved_and_no_progress_timeout(tmp_path):
     )
     assert liveness_counts(view)["stopped"] == 1
     assert no_progress_timed_out(0.0, 1.0, now=2.0)
+
+
+def test_previous_generation_heartbeat_cannot_complete_current_training(tmp_path):
+    config = Config()
+    config.run.run_id = "run"
+    config.run.shared_root = str(tmp_path)
+    config.init.run_generation = 4
+    config.sync.num_learners = 1
+    config.training.max_local_steps = 50
+    paths = RunPaths(tmp_path)
+    prepare_run_dirs(paths, 1)
+    heartbeat = paths.heartbeats / "learner_000.json"
+    _heartbeat(heartbeat, timestamp=time.time())
+    payload = json.loads(heartbeat.read_text(encoding="utf-8"))
+    payload["last_local_step"] = 50
+    atomic_write_json(heartbeat, payload)
+
+    assert finite_local_training_complete(paths, config) is False
+    payload["run_generation"] = 4
+    atomic_write_json(heartbeat, payload)
+    assert finite_local_training_complete(paths, config) is True

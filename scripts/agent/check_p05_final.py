@@ -17,7 +17,6 @@ from fs_diloco.coordination import (
     CoordinationConflict,
     LeaseManager,
     LeaseMutation,
-    OwnerToken,
 )
 from fs_diloco.log import CommitConflict, ProductionTransactionalLog
 from fs_diloco.runtime_view import build_runtime_view
@@ -151,7 +150,7 @@ def run(
         for kind in ("full", "fragment")
     ]
     expected_counts = (2, 4)
-    for (before, after), expected in zip(before_after, expected_counts):
+    for (before, after), expected in zip(before_after, expected_counts, strict=True):
         if (
             before["committed_state_digest"] != after["committed_state_digest"]
             or before["optimizer_transition_count"] != expected

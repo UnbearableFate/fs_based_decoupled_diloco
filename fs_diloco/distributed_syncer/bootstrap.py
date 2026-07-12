@@ -7,7 +7,7 @@ from collections.abc import Sequence
 from fs_diloco.config import Config
 from fs_diloco.log.run import RunSpec
 from fs_diloco.protocol.canonical_json import canonical_digest
-from fs_diloco.syncer import _optimizer_config, _outer_schema_digest, initialize_generation
+from fs_diloco.syncer import _optimizer_config, _outer_schema_digest
 from fs_diloco.testing.deterministic_reference import ReferenceWeightingConfig
 from fs_diloco.log.production_codec import PRODUCTION_CODEC
 

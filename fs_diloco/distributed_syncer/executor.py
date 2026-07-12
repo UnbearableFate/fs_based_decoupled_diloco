@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-import os
 import resource
 
 import torch
@@ -14,7 +13,6 @@ from fs_diloco.protocol.prepared_transition_v1 import (
     PreparedAttemptEnvelopeV1,
     PreparedFragmentResultV1,
 )
-from fs_diloco.protocol.schemas import ObjectRef
 from fs_diloco.protocol.work_order_v1 import FragmentWorkOrderV1
 from fs_diloco.syncer_core.aggregation import apply_outer_transition, reduce_fragment
 from fs_diloco.syncer_core.types import FragmentPlan

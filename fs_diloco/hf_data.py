@@ -240,8 +240,8 @@ def wikitext_batches(
                 cache_dir=data_config.cache_dir,
                 streaming=bool(data_config.streaming),
             )
-        except Exception:
-            raise exc
+        except Exception as fallback_exc:
+            raise exc from fallback_exc
     dataset = dataset.shard(num_shards=num_learners, index=learner_index, contiguous=True)
     texts = [row["text"] for row in dataset if row.get("text")]
     token_stream: list[int] = []

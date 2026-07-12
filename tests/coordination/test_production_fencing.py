@@ -211,13 +211,14 @@ def test_control_response_loss_resolves_from_ancestry_after_successor():
     standby.activate_owner(
         token=OwnerToken("syncer-b", "session-b", 2), request_id="fence-b"
     )
+    standby.commit_snapshot(request_id="snapshot-after-takeover")
     resolved = standby.resolve_mutation(
         request_id=prepared.commit.request_id,
         request_digest=prepared.commit.request_digest,
     )
     assert resolved is not None
     assert resolved.commit_id == prepared.commit.commit_id
-    assert build_runtime_view(standby).commit_seq == 2
+    assert build_runtime_view(standby).commit_seq == 3
 
 
 def test_optimizer_response_loss_resolves_after_takeover_successor():

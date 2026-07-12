@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import os
-from pathlib import Path
 
 import pytest
 
 from fs_diloco.storage import (
+    CapabilityError,
     IntegrityError,
     InvalidKey,
     PosixStorageBackend,
@@ -36,7 +36,7 @@ def test_posix_rejects_symlink_traversal(tmp_path):
     assert not (outside / "object").exists()
 
 
-def test_posix_detects_short_or_corrupt_envelopes_on_every_read(tmp_path):
+def test_posix_listing_and_head_are_header_only_but_get_still_verifies_payload(tmp_path):
     root = tmp_path / "store"
     backend = PosixStorageBackend(root)
     metadata = backend.put_immutable("objects/a", b"verified")
@@ -45,11 +45,36 @@ def test_posix_detects_short_or_corrupt_envelopes_on_every_read(tmp_path):
     path.write_bytes(payload[:-1])
     with pytest.raises(IntegrityError):
         backend.get("objects/a")
-    with pytest.raises(IntegrityError):
-        backend.head("objects/a")
+    assert backend.head("objects/a") == metadata
+    assert backend.list_prefix("objects/") == ("objects/a",)
     with pytest.raises(IntegrityError):
         backend.range_get("objects/a", 0, 1)
-    assert metadata.sha256
+
+
+def test_posix_prefix_listing_and_head_read_no_payload_bytes(tmp_path):
+    backend = PosixStorageBackend(tmp_path / "store")
+    payload = b"x" * (2 * 1024 * 1024)
+    metadata = backend.put_immutable("objects/target/large", payload)
+    backend.put_immutable("objects/unrelated/large", payload)
+    before = backend.read_counters
+
+    assert backend.list_prefix("objects/target/") == ("objects/target/large",)
+    assert backend.head("objects/target/large") == metadata
+
+    after = backend.read_counters
+    assert after["payload_bytes"] == before["payload_bytes"]
+    assert after["header_bytes"] - before["header_bytes"] < 2 * 64 * 1024
+
+
+def test_posix_idempotent_immutable_put_compares_header_identity_only(tmp_path):
+    backend = PosixStorageBackend(tmp_path / "store")
+    payload = b"payload" * 100_000
+    first = backend.put_immutable("objects/a", payload)
+    before = backend.read_counters
+    second = backend.put_immutable("objects/a", payload)
+    after = backend.read_counters
+    assert second == first
+    assert after["payload_bytes"] == before["payload_bytes"]
 
 
 def test_posix_detects_header_corruption(tmp_path):
@@ -128,8 +153,27 @@ def test_posix_capability_records_parent_fsync_and_locking(tmp_path):
     backend = PosixStorageBackend(tmp_path / "store")
     assert backend.capabilities.directory_fsync
     assert backend.capabilities.advisory_lock
+    assert backend.capabilities.cross_node_advisory_lock
+    assert backend.capabilities.advisory_lock_evidence
     assert backend.capabilities.atomic_replace
     assert os.path.samefile(backend.root, tmp_path / "store")
+
+
+def test_shared_authority_root_fails_closed_without_cross_node_lock(monkeypatch, tmp_path):
+    import fs_diloco.storage.posix as posix_module
+
+    monkeypatch.setattr(
+        posix_module,
+        "_mount_details",
+        lambda _path: ("lustre", frozenset({"rw", "localflock"})),
+    )
+    with pytest.raises(CapabilityError, match="cross-node advisory locking"):
+        PosixStorageBackend(tmp_path / "authority")
+    backend = PosixStorageBackend(
+        tmp_path / "authority-observational",
+        require_cross_node_lock=False,
+    )
+    assert backend.capabilities.cross_node_advisory_lock is False
 
 
 def test_posix_temp_creation_and_lock_errors_are_translated(tmp_path, monkeypatch):

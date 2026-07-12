@@ -274,7 +274,19 @@ class ProductionTransactionalLog:
         coordination = replay.head_frontier.coordination
         if coordination is not None:
             return coordination.optimizer_transition_count
-        return sum(isinstance(item, CommitManifest) for item in replay.commits)
+        optimizer_sequences = [
+            item.commit_seq for item in replay.commits if isinstance(item, CommitManifest)
+        ]
+        return max(optimizer_sequences, default=0)
+
+    @staticmethod
+    def _commit_at_seq(replay: ReplayResult, commit_seq: int):
+        matches = [item for item in replay.commits if item.commit_seq == commit_seq]
+        if len(matches) != 1:
+            raise CommitConflict(
+                f"committed ancestry does not contain exactly one commit at sequence {commit_seq}"
+            )
+        return matches[0]
 
     @staticmethod
     def _control_request_body(
@@ -1020,7 +1032,7 @@ class ProductionTransactionalLog:
         if observed[0] != request_digest:
             raise CommitConflict("mutation request identity conflicts with committed ancestry")
         commit_seq = observed[1]
-        commit = replay.commits[commit_seq - 1]
+        commit = self._commit_at_seq(replay, commit_seq)
         return CommitResult(
             status="already_committed",
             commit_id=commit.commit_id,

@@ -41,12 +41,15 @@ def validate_heartbeat(
     payload: dict[str, Any],
     *,
     run_id: str,
+    run_generation: int,
     num_learners: int,
 ) -> tuple[bool, str | None]:
     if payload.get("format_version") != FORMAT_VERSION:
         return False, "format_version"
     if payload.get("run_id") != run_id:
         return False, "run_id"
+    if payload.get("run_generation") != run_generation:
+        return False, "run_generation"
     if payload.get("learner_id") not in valid_learner_ids(num_learners):
         return False, "learner_id"
     if not isinstance(payload.get("timestamp"), (int, float)):
@@ -78,6 +81,7 @@ def build_liveness_view(
     heartbeat_dir: str | Path,
     *,
     run_id: str,
+    run_generation: int,
     num_learners: int,
     stale_after_seconds: float,
     dead_after_seconds: float,
@@ -92,6 +96,7 @@ def build_liveness_view(
         valid, _ = validate_heartbeat(
             payload,
             run_id=run_id,
+            run_generation=run_generation,
             num_learners=num_learners,
         )
         if not valid:

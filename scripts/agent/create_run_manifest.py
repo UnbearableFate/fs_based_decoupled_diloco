@@ -41,6 +41,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--phase",
         required=True,
         choices=[
+            "H0",
             "M00",
             *[f"P{i:02d}" for i in range(13)],
             "P06A",
@@ -107,6 +108,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     v2_phases = {
+        "H0",
         "P05",
         "P06",
         "P06A",
