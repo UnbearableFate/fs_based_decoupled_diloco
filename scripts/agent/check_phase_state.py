@@ -301,6 +301,7 @@ def validate(payload: dict[str, Any], *, root: Path) -> None:
             "P06A": ("miyabi_c9", "miyabi_c9_pass"),
             "P06B": ("miyabi_d8", "miyabi_d8_pass"),
             "P06C": ("miyabi_d8_r2", "miyabi_d8_r2_pass"),
+            "P08": ("miyabi_d8_r2", "miyabi_d8_r2_pass"),
         }
         terminal_key, terminal_value = terminal_checks.get(
             payload["phase"], ("miyabi_9node", "miyabi_9node_pass")

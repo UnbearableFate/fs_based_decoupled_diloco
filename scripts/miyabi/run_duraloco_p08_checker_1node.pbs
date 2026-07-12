@@ -1,0 +1,77 @@
+#!/bin/bash
+#PBS -N p08_checker
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:30:00
+#PBS -j oe
+#PBS -m ae
+
+set -eEuo pipefail
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat CUDA_VISIBLE_DEVICES=""
+PROJECT_ROOT="${PROJECT_ROOT:-${PBS_O_WORKDIR:?}}"
+PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
+RUFF_BIN="$PROJECT_ROOT/.venv/bin/ruff"
+: "${EXPECTED_COMMIT:?}" "${RUN_ID:?}" "${ARTIFACT_ROOT:?}"
+: "${TARGETED_MANIFEST:?}" "${FULL_MANIFEST:?}" "${D2_MANIFEST:?}"
+: "${C9_MANIFEST:?}" "${D8_MANIFEST:?}" "${R2_MANIFEST:?}"
+: "${NO_LFE_REPORT:?}" "${FACTOR_ONE_REPORT:?}" "${R2_REPORT:?}"
+: "${INTERFERENCE_REPORT:?}" "${BUNDLE_GATE_REPORT:?}" "${LIFECYCLE_REPORT:?}"
+cd "$PROJECT_ROOT"
+mkdir "$ARTIFACT_ROOT"
+touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log" "$ARTIFACT_ROOT/commands.log"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+result=fail; exit_code=1
+
+finish() {
+  observed=$?
+  [[ "$result" == pass ]] && exit_code=0 || { [[ "$observed" -eq 0 ]] || exit_code=$observed; }
+  qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
+  args=(--root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json" --phase P08
+    --purpose contract --run-id "$RUN_ID" --schema-version 2
+    --validation-shape p08-independent-checker-full-1node --backend lustre
+    --config scripts/miyabi/run_duraloco_p08_checker_1node.pbs
+    --commands-log commands.log --stdout stdout.log --stderr stderr.log
+    --exit-code "$exit_code" --result "$result"
+    --termination-kind "$([[ "$result" == pass ]] && echo success || echo test_failure)"
+    --pbs-queue debug-g --requested-resources select=1:mpiprocs=1,walltime=00:30:00
+    --last-qstat-state R --termination-detail "Independent P08 A01-A25, P07 regression, bundle-gate and checksum audit"
+    --assertion "all 25 acceptance IDs and the matched final evidence are independently audited"
+    --assertion "head jump, validation/fsync, lifecycle and no-embedded-database counterexamples pass"
+    --assertion "D-0807 retains single FWO and A16-A18 are accepted not_applicable")
+  [[ -f "$ARTIFACT_ROOT/checker_results.json" ]] && args+=(--stage-metrics-path checker_results.json)
+  "$PYTHON_BIN" scripts/agent/create_run_manifest.py "${args[@]}" || true
+}
+trap finish EXIT
+trap 'echo "[ERROR] P08 checker failed at line $LINENO" | tee -a "$ARTIFACT_ROOT/stderr.log"' ERR
+
+[[ "$(hostname)" == mg* ]]
+[[ "$(git rev-parse HEAD)" == "$EXPECTED_COMMIT" ]]
+[[ -z "$(git status --porcelain=v1 --untracked-files=no)" ]]
+
+run_command() {
+  printf '%q ' "$@" | tee -a "$ARTIFACT_ROOT/commands.log"
+  printf '\n' | tee -a "$ARTIFACT_ROOT/commands.log"
+  "$@" 2> >(tee -a "$ARTIFACT_ROOT/stderr.log" >&2) | tee -a "$ARTIFACT_ROOT/stdout.log"
+}
+
+run_command "$RUFF_BIN" check fs_diloco tests scripts/agent benchmarks
+run_command bash -n scripts/miyabi/*.pbs
+run_command "$PYTHON_BIN" scripts/agent/check_research_contract.py --root "$PROJECT_ROOT"
+run_command "$PYTHON_BIN" scripts/agent/check_phase_state.py plans/duraloco/STATE.yaml
+run_command "$PYTHON_BIN" scripts/agent/check_phase_state.py plans/duraloco/phases/P08_STATE.yaml
+run_command "$PYTHON_BIN" scripts/agent/check_no_embedded_database.py \
+  --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/forbidden_surface.json"
+run_command "$PYTHON_BIN" -m pytest -q tests --junitxml "$ARTIFACT_ROOT/junit.xml"
+run_command "$PYTHON_BIN" scripts/agent/check_p08_final.py --root "$PROJECT_ROOT" \
+  --manifest "$TARGETED_MANIFEST" --manifest "$FULL_MANIFEST" \
+  --manifest "$D2_MANIFEST" --manifest "$C9_MANIFEST" \
+  --manifest "$D8_MANIFEST" --manifest "$R2_MANIFEST" \
+  --no-lfe-report "$NO_LFE_REPORT" --factor-one-report "$FACTOR_ONE_REPORT" \
+  --r2-report "$R2_REPORT" --interference-report "$INTERFERENCE_REPORT" \
+  --bundle-gate-report "$BUNDLE_GATE_REPORT" --lifecycle-report "$LIFECYCLE_REPORT" \
+  --error-ledger plans/duraloco/errors/P08_ERROR_LEDGER.yaml \
+  --checksums plans/duraloco/evidence/P08_MAKER_CHECKSUMS.sha256 \
+  --output "$ARTIFACT_ROOT/checker_results.json" \
+  --report "$ARTIFACT_ROOT/checker_report.md"
+result=pass; exit_code=0

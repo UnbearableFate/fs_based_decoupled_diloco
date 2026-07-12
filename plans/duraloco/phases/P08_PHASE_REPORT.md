@@ -2,14 +2,15 @@
 
 ## Current status
 
-- Status: in progress, Loops 2–3 implementation
+- Status: checking; implementation and matched final ladder complete
 - Branch: `codex/duraloco-p08-distributed-performance`
 - H0 runtime basis: `f167a07c49339ba42d14f8a5873fe2c8781884d4`
 - H0 Checker basis: `04e0a8634b0e9d7c4cd55c5593081a0ca969a060`
 - Actual branch base including the documentation rewrite: `8c12839a7b985e590378ac593c846f07b0637517`
 - Instrumentation commit: `fcbbfa17e91fc1eb9cdd90b3d3ea40aea3c79705`
 - Login-node static checks: PASS (`bash -n`, ruff, phase-state contract, diff check)
-- Runtime checks: not run; current shell is Miyabi login/control plane
+- Runtime checks: final targeted/full/D2/C9/D8/D8-R2 and P07 regression PASS;
+  independent Checker pending
 
 ## Orientation and frozen decisions
 
@@ -33,9 +34,9 @@ path is limited to a parent whose authoritative stop reason is exactly
 
 ## Acceptance tracking
 
-P08-A01 through P08-A25 are all `not_run`. No implementation or performance
-claim is considered passed during orientation. Evidence will be added only
-after RED/GREEN tests and PBS compute-node runs complete.
+P08-A01–A15 and P08-A19–A24 have maker PASS evidence. P08-A16–A18 are
+profile-gated `not_applicable` pending independent Checker acceptance. P08-A25
+remains open until the Checker report and final P10 handoff are persisted.
 
 ## Failures and experiments
 
@@ -313,3 +314,35 @@ relative to P07, or sixteen across the three-point/two-interval tail. D-0820
 therefore preserves the P07 default and binds only P08 R2 to an explicit
 80-object budget. P08-E029 preserves this read-only failed proof; deletion
 remains dry-run and no authority semantics changed.
+
+The complete recovery ladder passed at clean commit
+`8492eb4163b406baf67d6d56f100b693dd6aa781`: preserved-run proof PBS
+`2371036`, full one-node PBS `2371052` (504 passed, one skipped), and D2-R2
+PBS `2371061` (four two-attempt transitions and fenced error resume). The final
+matched runs then passed on that same commit:
+
+- C9/no-LFE PBS `2371066`: ten transitions, 834 seconds, 440 GPU-step samples,
+  mean 0.0259145 s, guarded normal terminal.
+- D8 factor-one PBS `2371067`: ten transitions, 950 seconds, 440 samples, mean
+  0.0260422 s, ten optimizer-CAS renewals, one stop-CAS renewal, 57 lifecycle
+  substage renewals, and no authority loss.
+- D8-R2 PBS `2371105`: ten transitions, 725 seconds, 409 samples, mean
+  0.0268058 s, one controlled pre-publication executor failure recovered in
+  21.4963 seconds, twenty terminal attempts / nineteen prepared results / one
+  loser, guarded normal terminal, and all 29 P07 lifecycle/replay regressions.
+
+Matched GPU-step slowdown was 0.4925% for factor one and 3.4392% for R2 versus
+no-LFE. D-0807 did not trigger: only 2/10 factor-one transitions crossed the
+25% serialization-wait threshold, and the penalty-adjusted conservative
+two-FWO E2E upper bound was 1.2214%, below the 15% requirement. The archived
+conclusion is `retain_single_fwo`; no bundle schema or authority object was
+written, so P08-A16–A18 await the independent Checker's explicit
+`not_applicable` acceptance. The P08 lifecycle curve passed its explicit
+80-object budget with a measured 72-object tail delta, dry-run deletion, strict
+replay/snapshot equality, retained exact capsules, and growing reclaimable
+candidates.
+
+Maker evidence and fifteen primary artifacts are frozen in
+`plans/duraloco/evidence/P08_MAKER_CHECKSUMS.sha256`. The phase is now
+`checking`; P08-A25 and the conditional A16–A18 close only after the independent
+Checker returns PASS with no required gate follow-up.

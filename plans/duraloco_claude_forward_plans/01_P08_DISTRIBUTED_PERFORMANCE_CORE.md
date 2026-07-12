@@ -1,7 +1,7 @@
 ---
 plan_id: "P08"
 title: "Distributed Performance Core: Direct Fragment I/O, Streaming Reducer, Bounded Bundling, Telemetry"
-status: "ready"
+status: "checking"
 date: "2026-07-12"
 planning_basis_commit: "f167a07c49339ba42d14f8a5873fe2c8781884d4"
 planning_basis_checker_commit: "04e0a8634b0e9d7c4cd55c5593081a0ca969a060"
@@ -49,32 +49,33 @@ deletable without correctness impact.
       because H0 changes listing cost; the re-measured numbers are the
       baseline of record.
 - [x] CRS/LFE numeric equivalence harness re-runnable.
-- [ ] Profilers must not alter authority or timing-sensitive selection.
+- [x] Profilers do not alter authority or timing-sensitive selection; final
+      matched evidence is bound to commit `8492eb4`.
 
 ## 3. Design decisions to freeze first
 
-- [ ] **D-0800 (new): error-stop semantics.** Decide review-M8: either an
+- [x] **D-0800 (new): error-stop semantics.** Decide review-M8: either an
       `"error"` stop is not committed (lease lapse → standby/restart resumes)
       or a fenced `resume` control transition is added. If a control-kind is
       added it is a schema change: new ADR + generation-compatibility note +
       P07 lifecycle extension. Freeze before Loop 4 (interference kills will
       hit this path constantly).
-- [ ] D-0801: fragment layout cache + canonical layout identity.
-- [ ] D-0802: reduction order, accumulation dtype, deterministic mode
+- [x] D-0801: fragment layout cache + canonical layout identity.
+- [x] D-0802: reduction order, accumulation dtype, deterministic mode
       (bfloat16 transport / float32 accumulation contract preserved).
-- [ ] D-0803: LFE core affinity, NUMA, thread/RSS/I/O budgets.
-- [ ] D-0804: typed validation-token lifetime and invalidation (epoch/head
+- [x] D-0803: LFE core affinity, NUMA, thread/RSS/I/O budgets.
+- [x] D-0804: typed validation-token lifetime and invalidation (epoch/head
       change, corruption suspicion → token discard + strict revalidation).
-- [ ] D-0805: scanner cursor is process-local and reconstructible from
+- [x] D-0805: scanner cursor is process-local and reconstructible from
       storage; `range_get` chunk-verification policy (whole-object digest at
       finalize vs per-chunk).
-- [ ] D-0806: telemetry event schema, monotonic-clock spans + causal IDs (no
+- [x] D-0806: telemetry event schema, monotonic-clock spans + causal IDs (no
       fabricated global clock), sampling overhead budget.
-- [ ] D-0807: multi-FWO trigger thresholds + maximum speculative window.
-- [ ] D-0808: bundle canonical fragment order, parent binding, proposal
+- [x] D-0807: multi-FWO trigger thresholds + maximum speculative window.
+- [x] D-0808: bundle canonical fragment order, parent binding, proposal
       consumption, serial-equivalence proof obligation.
-- [ ] D-0809: bundle failure/cancellation/lifecycle interface.
-- [ ] D-0810: matched topology/resource accounting for every performance claim.
+- [x] D-0809: bundle failure/cancellation/lifecycle interface.
+- [x] D-0810: matched topology/resource accounting for every performance claim.
 
 ## 4. Expected repository changes
 
@@ -202,36 +203,36 @@ never participates in correctness.
 
 ## 8. Acceptance
 
-- [ ] P08-A01: direct fragment access equivalent to legacy/reference.
-- [ ] P08-A02: measured copies/I/O at fragment scope end-to-end (learner
+- [x] P08-A01: direct fragment access equivalent to legacy/reference.
+- [x] P08-A02: measured copies/I/O at fragment scope end-to-end (learner
       publication included; single authoritative payload copy).
-- [ ] P08-A03: streaming reducer equivalent to reference.
-- [ ] P08-A04: peak working set no longer O(q × fragment).
-- [ ] P08-A05: typed validation reuse with hard read/SHA/finite-check bounds,
+- [x] P08-A03: streaming reducer equivalent to reference.
+- [x] P08-A04: peak working set no longer O(q × fragment).
+- [x] P08-A05: typed validation reuse with hard read/SHA/finite-check bounds,
       covering both LFE attempts and committer catalog rescans.
-- [ ] P08-A06: cheap rejection precedes payload I/O.
-- [ ] P08-A07: scanner restart/duplicates/list omission never affect
+- [x] P08-A06: cheap rejection precedes payload I/O.
+- [x] P08-A07: scanner restart/duplicates/list omission never affect
       correctness; cursors reconstructible from storage.
-- [ ] P08-A08: head/epoch jump cancels prefetch/tokens and strict-revalidates.
-- [ ] P08-A09: every commit and loser attempt reconstructible from telemetry.
-- [ ] P08-A10: raw manifests/events keep fail/inconclusive/retry lineage.
-- [ ] P08-A11: LFE affinity/NUMA/RSS/threads/in-flight budgets in manifests
+- [x] P08-A08: head/epoch jump cancels prefetch/tokens and strict-revalidates.
+- [x] P08-A09: every commit and loser attempt reconstructible from telemetry.
+- [x] P08-A10: raw manifests/events keep fail/inconclusive/retry lineage.
+- [x] P08-A11: LFE affinity/NUMA/RSS/threads/in-flight budgets in manifests
       and audited against actual placement.
-- [ ] P08-A12: GPU interference measured with no-LFE, factor-1, R2 matched
+- [x] P08-A12: GPU interference measured with no-LFE, factor-1, R2 matched
       data.
-- [ ] P08-A13: bfloat16-transport/float32-accumulation contract unchanged.
-- [ ] P08-A14: same-FWO primary/backup honor frozen backend/thread/reduction
+- [x] P08-A13: bfloat16-transport/float32-accumulation contract unchanged.
+- [x] P08-A14: same-FWO primary/backup honor frozen backend/thread/reduction
       identity bitwise; numerics-affecting resource settings form a distinct
       implementation identity and go through numeric comparison.
-- [ ] P08-A15: single-FWO bottleneck gate has an explicit archived conclusion.
+- [x] P08-A15: single-FWO bottleneck gate has an explicit archived conclusion.
 - [ ] P08-A16–A18: bundle schema/equivalence/fault suites pass **or** are
       checker-accepted `not_applicable` with the profile evidence.
-- [ ] P08-A19: still no per-fragment heads or second authority.
-- [ ] P08-A20: D1/D2 optimized correctness gates pass.
-- [ ] P08-A21: D8 50×10 optimized terminal + raw profile.
-- [ ] P08-A22: D8-R2 controlled-fault optimized terminal.
-- [ ] P08-A23: no SQLite/embedded DB on the active surface or artifacts.
-- [ ] P08-A24: D-0800 error-stop decision implemented and tested (crash →
+- [x] P08-A19: still no per-fragment heads or second authority.
+- [x] P08-A20: D1/D2 optimized correctness gates pass.
+- [x] P08-A21: D8 50×10 optimized terminal + raw profile.
+- [x] P08-A22: D8-R2 controlled-fault optimized terminal.
+- [x] P08-A23: no SQLite/embedded DB on the active surface or artifacts.
+- [x] P08-A24: D-0800 error-stop decision implemented and tested (crash →
       restart → resume path exercised end-to-end under the chosen semantics).
 - [ ] P08-A25: report/checksums/clean commit; P07 regressions pass;
       `STATE.yaml.next_action = P10`.
