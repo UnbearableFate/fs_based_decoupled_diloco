@@ -1,0 +1,33 @@
+#!/bin/bash
+#PBS -N p07_checker
+#PBS -q debug-g
+#PBS -W group_list=xg24i002
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:15:00
+#PBS -j oe
+#PBS -m ae
+
+set -eEuo pipefail
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat CUDA_VISIBLE_DEVICES=""
+PROJECT_ROOT="${PROJECT_ROOT:-${PBS_O_WORKDIR:?}}"
+PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
+: "${EXPECTED_COMMIT:?}" "${ARTIFACT_ROOT:?}" "${SOURCE_REPORT_ROOT:?}"
+cd "$PROJECT_ROOT"
+mkdir -p "$ARTIFACT_ROOT"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+[[ "$(hostname)" == mg* ]]
+[[ "$(git rev-parse HEAD)" == "$EXPECTED_COMMIT" ]]
+[[ -z "$(git status --porcelain=v1 --untracked-files=no)" ]]
+
+"$PYTHON_BIN" -m pytest -q \
+  tests/lifecycle/test_gc_concurrency.py::test_payload_before_marker_is_reprotected_during_apply_revalidation \
+  tests/lifecycle/test_distributed_reachability.py::test_same_digest_loser_grace_and_divergent_blocker_are_distinct \
+  tests/lifecycle/test_restore_after_gc.py::test_two_snapshot_compaction_restores_falls_back_and_allows_takeover \
+  tests/distributed_syncer/test_lease_stage_guard.py::test_long_lifecycle_substage_renews_until_worker_finishes \
+  --junitxml "$ARTIFACT_ROOT/junit.xml" | tee "$ARTIFACT_ROOT/stdout.log"
+"$PYTHON_BIN" scripts/agent/create_p07_checker_report.py \
+  --lifecycle-report "$SOURCE_REPORT_ROOT/p07_d8_report.json" \
+  --d8-report "$SOURCE_REPORT_ROOT/d8_r2_report.json" \
+  --output "$ARTIFACT_ROOT/checker_report.json" | tee -a "$ARTIFACT_ROOT/stdout.log"
+sha256sum "$SOURCE_REPORT_ROOT/p07_d8_report.json" "$SOURCE_REPORT_ROOT/d8_r2_report.json" \
+  "$ARTIFACT_ROOT/checker_report.json" > "$ARTIFACT_ROOT/checksums.sha256"
