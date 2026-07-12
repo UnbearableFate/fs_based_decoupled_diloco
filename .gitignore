@@ -21,3 +21,4 @@ logs/
 artifacts
 .runtime/
 .cache/
+.duraloco_scratch
