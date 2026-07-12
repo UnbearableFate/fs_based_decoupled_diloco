@@ -894,3 +894,8 @@ P05+ 的规范性路线决策生效。
 
 - Choice: every matched nine-node wrapper atomically creates a previously absent `STORAGE_ROOT` and `ARTIFACT_ROOT` before runtime setup. Existing roots fail before authority access. A PBS job ID never shares a run ID, authority namespace, artifact manifest, or observational logs with another allocation.
 - Rejected: `mkdir -p` on caller-supplied experiment roots, treating a duplicate submission as resume, or allowing two allocations to race initialization and marker publication.
+
+## D-0819 — Phase-specific elapsed envelope without hiding measured runtime
+
+- Choice: keep the historical P06B factor-one report ceiling at 900 seconds by default, but require the P08 D8 wrapper to pass its explicit 1500-second PBS allocation envelope. The P08 report always archives the observed elapsed time and the matched comparison uses that value, so accepting report construction within the allocation does not assert that the runtime is fast or acceptable.
+- Rejected: silently changing the P06B threshold, dropping elapsed validation, or replacing the measured 17:41 result with a nominal value.

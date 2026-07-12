@@ -256,4 +256,7 @@ its 25-minute P08 allocation, but the inherited P06B reporter rejected its
 17:41 wall time against an obsolete 900-second phase ceiling. P08-E024 and
 `P08_9NODE_FAILURE_REVIEW_2370782.md` preserve the successful runtime and
 post-run failure. The reporter now retains 900 seconds by default for P06B and
-accepts an explicit 1500-second P08 envelope.
+accepts an explicit 1500-second P08 envelope. This changes report admission,
+not the measured 17:41 runtime or its interpretation. Duplicate PBS `2370787`
+was rejected by D-0818's atomic namespace claim before runtime or authority
+access and is preserved as P08-E025.

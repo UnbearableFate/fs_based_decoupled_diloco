@@ -38,7 +38,7 @@ acceptance:
   P08-A07: {result: pass, evidence: [2370206.opbs, test_discovery_cursor_never_filters_inventory_and_restart_is_equivalent]}
   P08-A08: {result: pass, evidence: [2370206.opbs, test_head_or_epoch_jump_cancels_prefetch_and_forces_new_scope]}
   P08-A09: {result: pass, evidence: [2370269.opbs, d1_report.json complete work-order timeline plus publish/adopt lineage]}
-  P08-A10: {result: pass, evidence: [P08-E001 through P08-E024 preserved with pass/fail lineage]}
+  P08-A10: {result: pass, evidence: [P08-E001 through P08-E025 preserved with pass/fail lineage]}
   P08-A11: {result: pass, evidence: [2370269.opbs, actual affinity 8 CPUs, NUMA 0-1, Torch threads 8, RSS 6339821568 below 16 GiB]}
   P08-A12: {result: not_run, evidence: []}
   P08-A13: {result: pass, evidence: [2370206.opbs, ordered float32 streaming equivalence tests]}

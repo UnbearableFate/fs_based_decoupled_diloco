@@ -411,4 +411,20 @@ entries:
       - tracejob 2370782.opbs
     correction: parameterize the P06B reporter ceiling with a backward-compatible 900-second default and pass 1500 explicitly for P08
     retry_policy: compute report proof plus clean 1-node and D2 qualification before one fresh D8 retry
-last_updated: "2026-07-13T05:48:00+09:00"
+  - id: P08-E025
+    job: 2370787.opbs
+    shape: D8_factor_one_duplicate_namespace
+    commit: 6cd515cc193b6a5d7dc3fd0efd8d6b67fa46565c
+    result: fail
+    failure_class: duplicate_submission_rejected_by_atomic_claim
+    expected: every allocation receives a unique absent artifact and storage namespace
+    actual: a duplicate qsub reused job 2370782's roots; non-idempotent mkdir rejected it in one second before project runtime setup
+    authority_effect: none; the duplicate never opened or changed the existing authority
+    runtime_started: false
+    evidence:
+      - duraloco_p08_d8.o2370787
+      - tracejob 2370787.opbs
+      - plans/duraloco/phases/P08_9NODE_FAILURE_REVIEW_2370782.md
+    correction: D-0818 already supplies the fail-closed repair; allocate a fresh caller-unique namespace exactly once
+    retry_policy: no runtime retry for this duplicate; retain it as proof that atomic namespace claiming works
+last_updated: "2026-07-13T05:55:00+09:00"
