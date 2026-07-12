@@ -140,6 +140,52 @@ class LogLayout:
             f"{self.snapshot_prefix}{_component(snapshot_id, 'snapshot_id')}.json"
         )
 
+    @property
+    def lifecycle_prefix(self) -> str:
+        return f"{self.root}/immutable/lifecycle/"
+
+    @property
+    def acknowledgement_prefix(self) -> str:
+        return f"{self.lifecycle_prefix}acknowledgements/"
+
+    @property
+    def pin_prefix(self) -> str:
+        return f"{self.lifecycle_prefix}pins/"
+
+    @property
+    def mark_prefix(self) -> str:
+        return f"{self.lifecycle_prefix}marks/"
+
+    @property
+    def delete_request_prefix(self) -> str:
+        return f"{self.lifecycle_prefix}delete-requests/"
+
+    @property
+    def delete_result_prefix(self) -> str:
+        return f"{self.lifecycle_prefix}delete-results/"
+
+    def acknowledgement_key(self, acknowledgement_id: str) -> str:
+        return normalize_key(
+            f"{self.acknowledgement_prefix}"
+            f"{_component(acknowledgement_id, 'acknowledgement_id')}.json"
+        )
+
+    def pin_key(self, pin_id: str) -> str:
+        return normalize_key(f"{self.pin_prefix}{_component(pin_id, 'pin_id')}.json")
+
+    def mark_key(self, mark_id: str) -> str:
+        return normalize_key(f"{self.mark_prefix}{_component(mark_id, 'mark_id')}.json")
+
+    def delete_request_key(self, request_id: str) -> str:
+        return normalize_key(
+            f"{self.delete_request_prefix}{_component(request_id, 'request_id')}.json"
+        )
+
+    def delete_result_key(self, request_id: str) -> str:
+        return normalize_key(
+            f"{self.delete_result_prefix}{_component(request_id, 'request_id')}.json"
+        )
+
     def _payload_key(
         self,
         kind: str,

@@ -59,7 +59,7 @@ run_command() {
 run_command "$PYTHON_BIN" scripts/agent/check_phase_state.py plans/duraloco/STATE.yaml --root "$PROJECT_ROOT"
 run_command "$PYTHON_BIN" scripts/agent/check_no_embedded_database.py --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/forbidden_surface.json"
 run_command "$PYTHON_BIN" -m pytest -q \
-  tests/lifecycle/test_snapshot_suffix_replay.py \
+  tests/lifecycle \
   tests/coordination/test_production_fencing.py \
   tests/log/test_production_runtime.py \
   --junitxml "$ARTIFACT_ROOT/junit.xml"

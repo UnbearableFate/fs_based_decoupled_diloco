@@ -751,3 +751,23 @@ P05+ 的规范性路线决策生效。
 
 - Choice: a pinned snapshot may seed only a process-local replay attempt after its pin, covered head, state digest, and suffix have been strictly validated. Failed snapshot validation does not populate memoization. Fresh open, takeover, explicit verification, CAS ambiguity, head jump, epoch change, or corruption suspicion discards all prior replay acceleration and starts with empty-cache strict replay or a newly validated pinned snapshot.
 - Rejected: serializing verified-object caches or carrying them across committer ownership would violate the M00 recovery contract.
+
+## D-0702 — Acknowledgements are typed immutable evidence, not liveness authority
+
+- Choice: acknowledgements distinguish `observed`, `durably_adopted`, `capsuled`, and `no_longer_needs` and bind role, subject/session, committed watermark, optional fragment, and canonical ObjectRefs. `capsuled` and all non-release acknowledgements retain their referenced objects; `no_longer_needs` is audit evidence that may permit reclamation only after reachability and grace checks.
+- Rejected: a heartbeat-derived watermark could release objects after false suspicion; one undifferentiated ack cannot distinguish observation from durable adoption or exact recovery state.
+
+## D-0703 — Inactivity never removes roots by itself
+
+- Choice: learner/executor inactivity may stop extending an observational grace period but cannot remove a committed, pinned, capsuled, response-loss, divergent-blocker, or experiment root. Release requires an explicit immutable `no_longer_needs` acknowledgement plus the mark/apply proof.
+- Rejected: automatically dropping roots when heartbeats expire would let transient partitions delete live recovery state.
+
+## D-0704 — Prepared evidence has three retention classes
+
+- Choice: the committed prepared result and its output refs remain reachable; equivalent same-result attempt envelopes/markers receive a bounded loser grace; abandoned old-epoch attempts receive a longer audit grace; any same-FWO divergent result set is a blocker root and is never automatically collected. The reachability report records the exact class for every retained object.
+- Rejected: treating all uncommitted PFTs as immediate orphans repeats the marker-last race; treating every loser forever-live prevents bounded growth.
+
+## D-0705 — Active work, response loss, and pins are explicit immutable roots
+
+- Choice: active FWO, capsule, restore-point, experiment, response-loss, and quarantine roots are immutable typed pins. Committed final transitions additionally root their exact FWO/PFR identities. Listing and heartbeat observations may discover these records but cannot create or remove authority.
+- Rejected: process-local active-work sets or directory presence are not recoverable root definitions.
