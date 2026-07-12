@@ -94,3 +94,13 @@ These implementation claims are not acceptance results yet. They have passed
 only login-safe ruff, shell syntax, diff, and phase-state checks; all Torch,
 storage runtime, replay, lifecycle, numeric, memory, and resume tests await the
 next one-node PBS compute qualification.
+
+The first optimized qualification, PBS `2370192.opbs` at commit `360f2ac`,
+failed with 102 tests passing and one RED counterexample: scattering into a
+non-contiguous parameter used `reshape(-1)`, which produced a temporary copy,
+so the parameter itself stayed unchanged. The EXIT trap also failed to create
+its automatic manifest because the script used unsupported purpose
+`qualification`; a complete failure manifest was reconstructed immediately
+with the supported `contract` purpose and the compute-node/job facts. The
+repair explicitly copies the logically flattened update back into the shaped
+non-contiguous parameter and fixes the manifest purpose before the retry.

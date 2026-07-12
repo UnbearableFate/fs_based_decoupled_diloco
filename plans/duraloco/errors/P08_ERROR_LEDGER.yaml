@@ -85,4 +85,23 @@ entries:
     correction: rewrite P08_STATE.yaml to the canonical 25-acceptance checker schema and invoke the checker with the state path as its positional argument
     retry_evidence: corrected phase-state validation, ruff, PBS shell syntax, and diff checks pass on the current worktree
     retry_policy: rerun the corrected static validation before the next commit
-last_updated: "2026-07-13T03:20:00+09:00"
+  - id: P08-E006
+    job: 2370192.opbs
+    shape: optimized_targeted_1node
+    commit: 360f2ac282ea23e84d00816f17b6df503c315efa
+    result: fail
+    failure_class: noncontiguous_scatter_and_manifest_purpose
+    expected: focused Loops 2-4 tests and streaming benchmark pass with an automatic immutable failure/pass manifest
+    actual: 102 tests passed; non-contiguous direct scatter mutated a reshape copy rather than parameter storage; the EXIT manifest command rejected unsupported purpose qualification
+    authority_effect: none
+    runtime_started: true
+    benchmark_started: false
+    evidence:
+      - artifacts/duraloco/P08/20260713_p08_opt_360f2ac_1node/manifest.json
+      - artifacts/duraloco/P08/20260713_p08_opt_360f2ac_1node/focused-junit.xml
+      - artifacts/duraloco/P08/20260713_p08_opt_360f2ac_1node/stdout.log
+      - duraloco_p08_opt1.o2370192
+      - tracejob 2370192.opbs
+    correction: for non-contiguous parameters update a logical flat copy then copy the shaped value back to parameter storage; use supported manifest purpose contract
+    retry_policy: rerun the same optimized one-node qualification on the corrected clean commit
+last_updated: "2026-07-13T03:13:00+09:00"

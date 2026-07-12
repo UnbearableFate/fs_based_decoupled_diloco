@@ -152,9 +152,21 @@ class FragmentAccessPlan:
             parameter = named.get(item.param_name)
             if parameter is None:
                 raise ValueError(f"model is missing parameter {item.param_name}")
-            target = parameter.reshape(-1)[item.param_offset : item.param_offset + item.numel]
             source = flat[item.fragment_offset : item.fragment_offset + item.numel]
-            target.copy_(source.to(device=target.device, dtype=target.dtype))
+            if parameter.is_contiguous():
+                target = parameter.view(-1)[
+                    item.param_offset : item.param_offset + item.numel
+                ]
+                target.copy_(source.to(device=target.device, dtype=target.dtype))
+            else:
+                # ``reshape`` of a non-contiguous parameter is a copy. Update
+                # that logical flat order and explicitly copy the shaped value
+                # back so the parameter storage, not a temporary, is mutated.
+                updated = parameter.detach().reshape(-1).clone()
+                updated[item.param_offset : item.param_offset + item.numel].copy_(
+                    source.to(device=updated.device, dtype=updated.dtype)
+                )
+                parameter.copy_(updated.reshape(parameter.shape))
 
 
 class FragmentAccessPlanCache:
