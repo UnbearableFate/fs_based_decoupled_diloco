@@ -20,6 +20,15 @@ def ensure_dir(path: str | Path) -> Path:
     return path
 
 
+def _fsync_directory(path: Path) -> None:
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    descriptor = os.open(path, flags)
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
 def atomic_write_bytes(path: str | Path, data: bytes, mode: int = 0o644) -> Path:
     path = Path(path)
     ensure_dir(path.parent)
@@ -32,6 +41,7 @@ def atomic_write_bytes(path: str | Path, data: bytes, mode: int = 0o644) -> Path
             os.fsync(handle.fileno())
         os.chmod(tmp_path, mode)
         os.replace(tmp_path, path)
+        _fsync_directory(path.parent)
     except Exception:
         try:
             tmp_path.unlink(missing_ok=True)
@@ -61,6 +71,7 @@ def atomic_write_with_writer(path: str | Path, writer: Callable[[Path], None], m
             os.fsync(handle.fileno())
         os.chmod(tmp_path, mode)
         os.replace(tmp_path, path)
+        _fsync_directory(path.parent)
     except Exception:
         try:
             tmp_path.unlink(missing_ok=True)

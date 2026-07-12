@@ -854,3 +854,8 @@ P05+ 的规范性路线决策生效。
 
 - Choice: every P08 performance claim binds clean commit/config/dataset/model/seed, learner and allocation topology, replication/mode/fault tape, LFE affinity/NUMA/thread/RSS/in-flight budget, storage mount/stripe, module/Python/Torch environment and raw stage events. C9/no-LFE, D8 factor one and D8-R2 comparisons must state every unmatched dimension and cannot combine historical timings as matched data.
 - Rejected: topology-declared-only, synthetic-only, or cross-commit comparisons as causal performance evidence.
+
+## D-0811 — Derived sidecar durability and materialization cadence
+
+- Choice: control-plane JSON/safetensors sidecars remain derived from the committed log, but every atomic rename is followed by a parent-directory fsync so a visible learner marker or `latest.json` is not intentionally left directory-volatile. Fragment exports reuse only an existing file whose version/path matches the prior derived view. Full-model materialization honors the positive `fragments.materialize_full_every_events` cadence by optimizer-transition count; single-fragment runs and missing prior materializations regenerate immediately. A skipped full export keeps the prior materialized path and records its producing commit sequence.
+- Rejected: treating sidecars as authority, trusting a missing/mismatched derived file, or reconstructing every unchanged fragment on every transition.

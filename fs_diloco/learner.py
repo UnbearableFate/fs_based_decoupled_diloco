@@ -15,16 +15,13 @@ from typing import Any
 
 import torch
 
-from .atomic_io import atomic_write_json, file_size, safe_read_json
+from .atomic_io import atomic_write_json, safe_read_json
 from .config import Config, resolve_config
 from .constants import FORMAT_VERSION, LEARNER_STATUS_ACTIVE, LEARNER_STATUS_STOPPED, learner_index_from_id
 from .failure_sim import maybe_crash, maybe_sleep_jitter, should_skip_upload
 from .fragment_codec import (
-    extract_fragment,
+    encode_fragment_update,
     load_fragment_weight,
-    materialize_full_from_fragments,
-    save_fragment_update,
-    scatter_fragment,
 )
 from .fragment_index import load_fragment_index
 from .fragment_scheduler import select_fragment
@@ -47,6 +44,7 @@ from .learner_protocol.rng_state import RngCursor
 from .learner_protocol.session import LearnerSession
 from .log.acknowledgements import LifecycleAcknowledgementV1, publish_acknowledgement
 from .metrics import LEARNER_METRIC_FIELDS, UPDATE_MANIFEST_FIELDS, append_csv_row
+from .optimizer.fragment_access import FragmentAccessPlanCache, model_parameter_norm
 from .param_index import (
     build_param_index,
     flatten_trainable_params,
@@ -57,7 +55,7 @@ from .param_index import (
 from .paths import RunPaths, prepare_run_dirs
 from .retention import cleanup_learner_update_artifacts
 from .storage import PosixStorageBackend
-from .tensor_codec import dtype_from_name, load_global_weights_flat, save_update_vector
+from .tensor_codec import dtype_from_name, encode_update_vector, load_global_weights_flat
 
 _SUCCESSFUL_STOP_REASONS = {"completed", "stop_after_outer_steps", "stop_after_global_tokens"}
 
@@ -458,18 +456,17 @@ def load_fragment_latest_into_model(
     param_index: dict[str, Any],
     fragment_index: dict[str, Any],
     device: torch.device,
+    access_cache: FragmentAccessPlanCache | None = None,
 ) -> tuple[int, dict[int, int]]:
     fragments = latest.get("fragments") or {}
-    fragment_tensors = {
-        int(fragment_id): load_fragment_weight(info["weight_path"])
-        for fragment_id, info in fragments.items()
-    }
-    flat = materialize_full_from_fragments(
-        fragment_tensors,
-        fragment_index,
-        int(param_index["total_numel"]),
-    )
-    load_flat_into_model(model, flat, param_index)
+    cache = access_cache or FragmentAccessPlanCache()
+    for fragment_id_text, info in sorted(
+        fragments.items(), key=lambda item: int(item[0])
+    ):
+        fragment_id = int(fragment_id_text)
+        cache.get(param_index, fragment_index, fragment_id).scatter_model(
+            model, load_fragment_weight(info["weight_path"])
+        )
     model.to(device)
     versions = {int(fragment_id): int(info["version"]) for fragment_id, info in fragments.items()}
     return int(latest.get("global_merge_event", latest.get("version", 0))), versions
@@ -483,21 +480,23 @@ def adopt_fragment_updates(
     fragment_index: dict[str, Any],
     last_loaded_fragment_versions: dict[int, int],
     device: torch.device,
+    access_cache: FragmentAccessPlanCache | None = None,
 ) -> tuple[int, dict[int, int], list[int]]:
     fragments = latest.get("fragments") or {}
     changed: list[int] = []
-    flat = flatten_trainable_params(model, param_index, dtype=torch.float32)
+    cache = access_cache or FragmentAccessPlanCache()
     for fragment_id_text, info in sorted(fragments.items(), key=lambda item: int(item[0])):
         fragment_id = int(fragment_id_text)
         version = int(info["version"])
         if version <= int(last_loaded_fragment_versions.get(fragment_id, -1)):
             continue
         fragment_tensor = load_fragment_weight(info["weight_path"])
-        flat = scatter_fragment(flat, fragment_index, fragment_id, fragment_tensor)
+        cache.get(param_index, fragment_index, fragment_id).scatter_model(
+            model, fragment_tensor
+        )
         last_loaded_fragment_versions[fragment_id] = version
         changed.append(fragment_id)
     if changed:
-        load_flat_into_model(model, flat, param_index)
         model.to(device)
     return int(latest.get("global_merge_event", latest.get("version", 0))), last_loaded_fragment_versions, changed
 
@@ -527,11 +526,10 @@ def write_update(
     update_uuid = uuid.uuid4().hex[:12]
     update_id = f"{learner_id}_{local_step:08d}_{update_uuid}"
     update_dir = paths.updates_pending / learner_id
-    tensor_path = update_dir / f"update_{update_uuid}.params.safetensors"
     meta_path = update_dir / f"update_{update_uuid}.meta.json"
     created_at = time.time()
-    save_update_vector(tensor_path, flat, dtype=dtype_from_name(config.io.tensor_dtype))
-    payload_bytes = tensor_path.read_bytes()
+    payload_dtype = dtype_from_name(config.io.tensor_dtype)
+    payload_bytes = encode_update_vector(flat, dtype=payload_dtype)
     digest = hashlib.sha256(payload_bytes).hexdigest()
     publication = LearnerPublisher(
         PosixStorageBackend(paths.authority),
@@ -542,6 +540,7 @@ def write_update(
         tensor_key="local_params",
         shape=(int(flat.numel()),),
     )
+    tensor_path = paths.authority / publication.payload_ref.key
     metadata = {
         "format_version": FORMAT_VERSION,
         "run_id": config.run.run_id,
@@ -577,7 +576,11 @@ def write_update(
         "param_norm": param_norm,
         "delta_norm": None,
         "file_path": str(tensor_path),
-        "file_size_bytes": file_size(tensor_path),
+        "payload_ref": publication.payload_ref.to_dict(),
+        "tensor_key": "local_params",
+        "tensor_shape": [int(flat.numel())],
+        "tensor_dtype": config.io.tensor_dtype,
+        "file_size_bytes": len(payload_bytes),
         "sha256": digest,
         "created_at": created_at,
         "committed_at": time.time(),
@@ -615,11 +618,10 @@ def write_fragment_update(
     update_uuid = uuid.uuid4().hex[:12]
     update_id = f"{learner_id}_{local_step:08d}_f{fragment_id:03d}_{update_uuid}"
     update_dir = paths.updates_pending / learner_id
-    tensor_path = update_dir / f"update_{update_uuid}_fragment_{fragment_id:03d}.params.safetensors"
     meta_path = update_dir / f"update_{update_uuid}_fragment_{fragment_id:03d}.meta.json"
     created_at = time.time()
-    save_fragment_update(tensor_path, fragment_tensor, dtype_from_name(config.io.tensor_dtype))
-    payload_bytes = tensor_path.read_bytes()
+    payload_dtype = dtype_from_name(config.io.tensor_dtype)
+    payload_bytes = encode_fragment_update(fragment_tensor, payload_dtype)
     digest = hashlib.sha256(payload_bytes).hexdigest()
     publication = LearnerPublisher(
         PosixStorageBackend(paths.authority),
@@ -630,6 +632,7 @@ def write_fragment_update(
         tensor_key="fragment_params",
         shape=(int(fragment_tensor.numel()),),
     )
+    tensor_path = paths.authority / publication.payload_ref.key
     metadata = {
         "format_version": FORMAT_VERSION,
         "update_kind": "fragment",
@@ -667,7 +670,11 @@ def write_fragment_update(
         "param_norm": param_norm,
         "fragment_norm": fragment_norm,
         "file_path": str(tensor_path),
-        "file_size_bytes": file_size(tensor_path),
+        "payload_ref": publication.payload_ref.to_dict(),
+        "tensor_key": "fragment_params",
+        "tensor_shape": [int(fragment_tensor.numel())],
+        "tensor_dtype": config.io.tensor_dtype,
+        "file_size_bytes": len(payload_bytes),
         "sha256": digest,
         "created_at": created_at,
         "committed_at": time.time(),
@@ -720,6 +727,7 @@ def run_fragment_learner(
     wait_for_json(paths.fragment_index_json)
     param_index = load_param_index(paths.param_index_json)
     fragment_index = load_fragment_index(paths.fragment_index_json)
+    access_cache = FragmentAccessPlanCache()
     current_index = build_param_index(model, model_name_or_path=config.model.name_or_path)
     validate_compatible_index(current_index, param_index)
     latest = wait_for_json(paths.latest_json)
@@ -731,6 +739,7 @@ def run_fragment_learner(
         param_index=param_index,
         fragment_index=fragment_index,
         device=device,
+        access_cache=access_cache,
     )
     last_authority = latest
     optimizer, scheduler = build_inner_optimizer_and_scheduler(model, config)
@@ -802,6 +811,7 @@ def run_fragment_learner(
                 fragment_index=fragment_index,
                 last_loaded_fragment_versions=last_loaded_fragment_versions,
                 device=device,
+                access_cache=access_cache,
             )
             last_authority = recovery_latest
             if recovery_changed:
@@ -920,11 +930,12 @@ def run_fragment_learner(
 
             write_start = time.monotonic()
             interval = interval.close(end_cursor=DataCursor(local_step, 0))
-            flat = flatten_trainable_params(model, param_index).float()
-            param_norm = float(flat.norm().item())
+            param_norm = model_parameter_norm(model)
             mean_loss = sum(losses) / len(losses)
             base_fragment_version = int(interval.base.fragment_versions[fragment_id])
-            fragment_tensor = extract_fragment(flat, fragment_index, fragment_id)
+            fragment_tensor = access_cache.get(
+                param_index, fragment_index, fragment_id
+            ).gather_model(model)
             fragment_norm = float(fragment_tensor.norm().item())
             update_id, tensor_path, _meta_path, metadata, publication = write_fragment_update(
                 paths=paths,
@@ -1055,6 +1066,7 @@ def run_fragment_learner(
                         fragment_index=fragment_index,
                         last_loaded_fragment_versions=last_loaded_fragment_versions,
                         device=device,
+                        access_cache=access_cache,
                     )
                     last_authority = maybe_latest
                     if changed:
@@ -1142,6 +1154,7 @@ def run_fragment_learner(
                             fragment_index=fragment_index,
                             last_loaded_fragment_versions=last_loaded_fragment_versions,
                             device=device,
+                            access_cache=access_cache,
                         )
                         last_authority = maybe_latest
                         if changed:
@@ -1169,6 +1182,7 @@ def run_fragment_learner(
                     fragment_index=fragment_index,
                     last_loaded_fragment_versions=last_loaded_fragment_versions,
                     device=device,
+                    access_cache=access_cache,
                 )
                 last_authority = maybe_latest
                 if changed:

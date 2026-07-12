@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import torch
-from safetensors.torch import load_file, save_file
+from safetensors.torch import load_file, save as save_bytes, save_file
 
 from .atomic_io import atomic_write_with_writer
 from .outer_optim import state_from_tensors, state_to_tensors
@@ -44,6 +44,15 @@ def load_safetensors(path: str | Path, *, device: str | torch.device = "cpu") ->
 
 def save_update_vector(path: str | Path, flat: torch.Tensor, *, dtype: torch.dtype = torch.float32) -> Path:
     return save_safetensors_atomic(path, {"local_params": flat.detach().cpu().to(dtype=dtype).contiguous()})
+
+
+def encode_update_vector(flat: torch.Tensor, *, dtype: torch.dtype = torch.float32) -> bytes:
+    """Encode the authoritative learner payload once, without a mailbox copy."""
+
+    tensor = flat.detach().cpu().to(dtype=dtype).reshape(-1).contiguous()
+    if tensor.numel() < 1:
+        raise ValueError("learner update tensor must be non-empty")
+    return save_bytes({"local_params": tensor})
 
 
 def load_update_vector(path: str | Path, *, device: str | torch.device = "cpu") -> torch.Tensor:

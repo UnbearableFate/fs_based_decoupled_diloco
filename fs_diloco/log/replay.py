@@ -32,6 +32,11 @@ from .codec import (
 )
 from .commit import LoadedHead, TransactionalLog
 from .errors import VerificationError
+from .run import (
+    DISTRIBUTED_COORDINATION_PROTOCOLS,
+    ERROR_RESUME_COORDINATION_PROTOCOL,
+    FENCED_COORDINATION_PROTOCOLS,
+)
 
 
 @dataclass(frozen=True)
@@ -41,6 +46,8 @@ class ReplayResult:
     commits: tuple[CommittedManifest, ...]
     proposals: dict[str, object]
     consumption: dict[str, int]
+    last_lineage_sequence: dict[tuple[str, str, int], int]
+    consumed_interval_bases: frozenset[tuple[str, str, int, str, int]]
     prefix_digests: tuple[str, ...]
     committed_state_digest: str
     reachable_keys: frozenset[str]
@@ -521,6 +528,8 @@ def _replay_reference_log(log: TransactionalLog) -> ReplayResult:
         commits=commits,
         proposals=proposals,
         consumption=consumption,
+        last_lineage_sequence=last_lineage_sequence,
+        consumed_interval_bases=frozenset(consumed_interval_bases),
         prefix_digests=tuple(prefix_digests),
         committed_state_digest=prefix_digests[-1],
         reachable_keys=frozenset(reachable),
@@ -560,8 +569,16 @@ def _verify_control_transition(
     frontier: FrontierManifest,
     commit: ControlCommitManifest,
     control_requests: dict[str, tuple[str, int]],
+    allow_error_resume: bool,
 ) -> None:
-    if previous.coordination is not None and previous.coordination.stop is not None:
+    previous_stop = (
+        previous.coordination.stop if previous.coordination is not None else None
+    )
+    if previous_stop is not None and not (
+        allow_error_resume
+        and commit.control_kind == "resume"
+        and previous_stop.reason == "error"
+    ):
         raise VerificationError(
             "control transition is forbidden after authoritative stop",
             commit_seq=commit.commit_seq,
@@ -702,6 +719,19 @@ def _verify_control_transition(
                 "snapshot pin was not issued by the current fenced owner",
                 commit_seq=commit.commit_seq,
             )
+    elif commit.control_kind == "resume":
+        if (
+            not allow_error_resume
+            or previous_stop is None
+            or previous_stop.reason != "error"
+            or commit.fencing_epoch <= previous.fencing_epoch
+            or projection.stop is not None
+            or frontier.membership != previous.membership
+        ):
+            raise VerificationError(
+                "resume is not a fenced transition from an error stop",
+                commit_seq=commit.commit_seq,
+            )
     control_requests[commit.request_id] = (
         commit.request_digest,
         commit.commit_seq,
@@ -791,7 +821,7 @@ def _replay_production_log(
         log.layout.head_key,
         *(log.layout.frontier_key(item.commit_seq, item.frontier_sha256) for item in frontiers),
     }
-    if log.spec.coordination_protocol == "distributed-head-fenced-v1":
+    if log.spec.coordination_protocol in DISTRIBUTED_COORDINATION_PROTOCOLS:
         from fs_diloco.distributed_syncer.membership import MembershipRevisionV1
         from fs_diloco.distributed_syncer.ownership import derive_ownership
 
@@ -887,7 +917,7 @@ def _replay_production_log(
         if frontier.parent_frontier_sha256 != previous.frontier_sha256:
             raise VerificationError("frontier parent chain is not contiguous", commit_seq=index)
         if isinstance(commit, ControlCommitManifest):
-            if log.spec.coordination_protocol not in {"head-fenced-v1", "distributed-head-fenced-v1"}:
+            if log.spec.coordination_protocol not in FENCED_COORDINATION_PROTOCOLS:
                 raise VerificationError(
                     "run contract does not allow control commits", commit_seq=index
                 )
@@ -896,6 +926,9 @@ def _replay_production_log(
                 frontier=frontier,
                 commit=commit,
                 control_requests=control_requests,
+                allow_error_resume=(
+                    log.spec.coordination_protocol == ERROR_RESUME_COORDINATION_PROTOCOL
+                ),
             )
             if commit.membership is not None:
                 from fs_diloco.distributed_syncer.membership import MembershipRevisionV1
@@ -973,7 +1006,7 @@ def _replay_production_log(
             continue
         if not isinstance(commit, CommitManifest):
             raise VerificationError("unknown committed transition type", commit_seq=index)
-        if log.spec.coordination_protocol in {"head-fenced-v1", "distributed-head-fenced-v1"}:
+        if log.spec.coordination_protocol in FENCED_COORDINATION_PROTOCOLS:
             prior_coordination = previous.coordination
             if prior_coordination is None or prior_coordination.stop is not None:
                 raise VerificationError(
@@ -993,7 +1026,7 @@ def _replay_production_log(
                 "aggregate_digest": commit.aggregate_digest,
             }
             if commit.distributed_work_order_id is not None:
-                if log.spec.coordination_protocol != "distributed-head-fenced-v1":
+                if log.spec.coordination_protocol not in DISTRIBUTED_COORDINATION_PROTOCOLS:
                     raise VerificationError(
                         "central optimizer transition carries distributed identity",
                         commit_seq=index,
@@ -1181,7 +1214,7 @@ def _replay_production_log(
             raise VerificationError("frontier scheduler state mismatch", commit_seq=index)
         if frontier.fencing_epoch != commit.fencing_epoch:
             raise VerificationError("frontier fencing epoch mismatch", commit_seq=index)
-        if log.spec.coordination_protocol in {"head-fenced-v1", "distributed-head-fenced-v1"}:
+        if log.spec.coordination_protocol in FENCED_COORDINATION_PROTOCOLS:
             coordination = frontier.coordination
             if (
                 coordination is None
@@ -1224,6 +1257,8 @@ def _replay_production_log(
         commits=commits,
         proposals=proposals,
         consumption=consumption,
+        last_lineage_sequence=last_lineage_sequence,
+        consumed_interval_bases=frozenset(consumed_interval_bases),
         prefix_digests=tuple(prefix_digests),
         committed_state_digest=prefix_digests[-1],
         reachable_keys=frozenset(reachable),
@@ -1339,6 +1374,10 @@ def find_valid_snapshots(
                     frontier=current,
                     commit=commit,
                     control_requests=requests,
+                    allow_error_resume=(
+                        log.spec.coordination_protocol
+                        == ERROR_RESUME_COORDINATION_PROTOCOL
+                    ),
                 )
                 valid.append(
                     ValidatedSnapshotPin(

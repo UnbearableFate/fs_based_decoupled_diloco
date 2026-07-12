@@ -760,7 +760,7 @@ class ControlCommitManifest:
         if payload["manifest_type"] != cls.MANIFEST_TYPE:
             raise _error("SCHEMA_ENUM", "manifest_type must be control_commit")
         kind = payload["control_kind"]
-        if kind not in {"epoch_bump", "stop", "membership", "snapshot_pin"}:
+        if kind not in {"epoch_bump", "stop", "membership", "snapshot_pin", "resume"}:
             raise _error("SCHEMA_ENUM", f"unsupported control_kind: {kind!r}")
         stop_reason = payload.get("stop_reason")
         if stop_reason is None and "stop_reason" in payload:
@@ -827,10 +827,12 @@ class ControlCommitManifest:
             ),
             created_at=created_at,
         )
-        if kind == "epoch_bump" and instance.fencing_epoch <= instance.prior_fencing_epoch:
+        if kind in {"epoch_bump", "resume"} and (
+            instance.fencing_epoch <= instance.prior_fencing_epoch
+        ):
             raise _error(
                 "FENCING_EPOCH",
-                "epoch bump must strictly increase the fencing epoch",
+                f"{kind} must strictly increase the fencing epoch",
             )
         if kind == "stop" and instance.fencing_epoch != instance.prior_fencing_epoch:
             raise _error("FENCING_EPOCH", "stop cannot change the fencing epoch")

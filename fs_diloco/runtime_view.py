@@ -105,8 +105,8 @@ class RuntimeView:
             }
             for item in replay.frontiers
         }
-        sequences: dict[Lineage, int] = {}
-        intervals: set[IntervalBase] = set()
+        sequences: dict[Lineage, int] = dict(replay.last_lineage_sequence)
+        intervals: set[IntervalBase] = set(replay.consumed_interval_bases)
         interval_identities: set[IntervalIdentity] = set()
         total_seen_tokens = 0
         for proposal in replay.proposals.values():
@@ -114,14 +114,6 @@ class RuntimeView:
             if session is None:
                 session = proposal.session_id
             lineage = (proposal.learner_id, session, proposal.fragment_id)
-            sequences[lineage] = max(sequences.get(lineage, -1), proposal.sequence)
-            intervals.add(
-                (
-                    *lineage,
-                    proposal.base_commit_id,
-                    proposal.base_fragment_version,
-                )
-            )
             interval_identities.add((*lineage, proposal.sequence))
             total_seen_tokens += int(
                 getattr(proposal, "target_tokens_since_base", getattr(proposal, "target_tokens", 0))

@@ -28,6 +28,7 @@ def _event(stage: str, role: str, *, index: int) -> StageEventV1:
             "observed_at_utc_ns": 1_000_000 + now,
             "work_order_id": "fwo-test",
             "attempt_id": "attempt-test" if role == "executor" else None,
+            "transition_id": "commit-test" if stage == "head_cas" else None,
             "head_commit_id": "parent",
             "fencing_epoch": 1,
             "membership_revision": 0,
@@ -116,3 +117,31 @@ def test_summary_fails_closed_on_missing_stage_or_recorder_drop():
             ],
             recorder_health=[{"complete": False}],
         )
+
+
+def test_summary_cannot_hide_an_incomplete_loser_attempt():
+    events = []
+    index = 0
+    for stage in sorted(COMMITTER_REQUIRED):
+        events.append(_event(stage, "committer", index=index))
+        index += 1
+    for stage in sorted(EXECUTOR_REQUIRED):
+        events.append(_event(stage, "executor", index=index))
+        index += 1
+    incomplete = _event("executor_input_read", "executor", index=index).to_dict()
+    incomplete["attempt_id"] = "attempt-loser"
+    events.append(StageEventV1.create(incomplete))
+    with pytest.raises(TelemetryContractError, match="incomplete without terminal"):
+        summarize_events(events)
+
+    failed = incomplete.copy()
+    failed["outcome"] = "fail"
+    failed["monotonic_start_ns"] += 1
+    failed["monotonic_end_ns"] += 1
+    events.append(StageEventV1.create(failed))
+    report = summarize_events(events)
+    attempts = report["timelines"][0]["attempts"]
+    assert {item["attempt_id"]: item["outcome"] for item in attempts} == {
+        "attempt-loser": "fail",
+        "attempt-test": "pass",
+    }

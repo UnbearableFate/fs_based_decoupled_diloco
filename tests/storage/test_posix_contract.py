@@ -66,6 +66,31 @@ def test_posix_prefix_listing_and_head_read_no_payload_bytes(tmp_path):
     assert after["header_bytes"] - before["header_bytes"] < 2 * 64 * 1024
 
 
+def test_posix_range_get_reads_and_verifies_only_intersecting_v2_chunks(tmp_path):
+    import fs_diloco.storage.posix as posix_module
+
+    backend = PosixStorageBackend(tmp_path / "store")
+    chunk = posix_module._RANGE_CHUNK_BYTES
+    payload = b"a" * chunk + b"b" * 1024
+    backend.put_immutable("objects/range", payload)
+    before = backend.read_counters
+    assert backend.range_get("objects/range", chunk + 10, chunk + 20) == b"b" * 10
+    after = backend.read_counters
+    assert after["payload_bytes"] - before["payload_bytes"] == 1024
+
+    path = backend.root / "objects/range"
+    with path.open("r+b") as handle:
+        header = backend._read_header_from_handle(handle, "objects/range")
+        payload_offset = handle.tell()
+        assert header.chunk_size == chunk
+        handle.seek(payload_offset)
+        handle.write(b"z")
+    # Corruption outside the requested chunk does not force full-object I/O.
+    assert backend.range_get("objects/range", chunk + 10, chunk + 20) == b"b" * 10
+    with pytest.raises(IntegrityError):
+        backend.get("objects/range")
+
+
 def test_posix_idempotent_immutable_put_compares_header_identity_only(tmp_path):
     backend = PosixStorageBackend(tmp_path / "store")
     payload = b"payload" * 100_000

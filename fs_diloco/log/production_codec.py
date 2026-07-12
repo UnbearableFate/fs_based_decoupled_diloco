@@ -39,12 +39,24 @@ _PROTOCOL_TORCH_DTYPES = {
 
 @dataclass(frozen=True)
 class ValidatedProductionPayload:
-    data: bytes
+    data: bytes | None
+    size: int
     sha256: str
     tensor_key: str
     shape: tuple[int, ...]
     dtype: str
     finite_checked: bool
+
+    def without_data(self) -> "ValidatedProductionPayload":
+        return ValidatedProductionPayload(
+            data=None,
+            size=self.size,
+            sha256=self.sha256,
+            tensor_key=self.tensor_key,
+            shape=self.shape,
+            dtype=self.dtype,
+            finite_checked=self.finite_checked,
+        )
 
 
 def _cpu_contiguous(tensor: torch.Tensor, *, dtype: torch.dtype | None = None) -> torch.Tensor:
@@ -96,6 +108,7 @@ def validate_production_tensor_payload(
                 raise ProtocolError("PAYLOAD_NONFINITE", "payload contains non-finite values")
         return ValidatedProductionPayload(
             data=payload,
+            size=len(payload),
             sha256=hashlib.sha256(payload).hexdigest(),
             tensor_key=tensor_key,
             shape=shape,

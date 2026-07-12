@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import torch
+from safetensors.torch import save as save_bytes
 
 from .fragment_index import fragment_by_id
 from .param_index import flatten_trainable_params, load_flat_into_model
@@ -66,6 +67,13 @@ def save_fragment_update(path: str | Path, fragment_tensor: torch.Tensor, dtype:
         path,
         {FRAGMENT_TENSOR_KEY: fragment_tensor.detach().cpu().to(dtype=dtype).contiguous()},
     )
+
+
+def encode_fragment_update(fragment_tensor: torch.Tensor, dtype: torch.dtype) -> bytes:
+    tensor = fragment_tensor.detach().cpu().to(dtype=dtype).reshape(-1).contiguous()
+    if tensor.numel() < 1:
+        raise ValueError("fragment update tensor must be non-empty")
+    return save_bytes({FRAGMENT_TENSOR_KEY: tensor})
 
 
 def load_fragment_update(path: str | Path, device: str | torch.device = "cpu") -> torch.Tensor:

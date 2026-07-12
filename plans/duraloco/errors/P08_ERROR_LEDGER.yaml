@@ -53,4 +53,36 @@ entries:
       - artifacts/duraloco/P08/20260713_p08_profile_2df86d3_1node_r2/stderr.log
     correction: make benchmarks a package and invoke the harness with python -m from the project root
     retry_policy: rerun the targeted one-node benchmark on the corrected clean commit
-last_updated: "2026-07-13T02:44:00+09:00"
+  - id: P08-E004
+    job: 2370057.opbs
+    shape: targeted_1node_profile
+    commit: d97d9142e70356468b79f954e87f69c163b687e2
+    result: pass
+    expected: telemetry contracts pass and the materialized LFE baseline is persisted
+    actual: four telemetry tests passed and q=1/2/4/8 baseline timings, RSS, and resident proposal bytes were persisted
+    authority_effect: none
+    runtime_started: true
+    benchmark_started: true
+    evidence:
+      - artifacts/duraloco/P08/20260713_p08_profile_d97d914_1node_r3/manifest.json
+      - artifacts/duraloco/P08/20260713_p08_profile_d97d914_1node_r3/lfe_materialized_baseline.json
+      - artifacts/duraloco/P08/20260713_p08_profile_d97d914_1node_r3/stdout.log
+    correction: null
+    retry_policy: no retry; proceed to the optimized targeted qualification
+  - id: P08-E005
+    job: null
+    shape: login_static_phase_state
+    commit: d97d9142e70356468b79f954e87f69c163b687e2
+    result: fail
+    failure_class: state_checker_invocation_and_schema
+    expected: executable P08 phase-state contract validates on the login node
+    actual: the first command used an unsupported --phase option; the corrected invocation then exposed that P08_STATE.yaml lacked the executable checker fields
+    authority_effect: none
+    runtime_started: false
+    evidence:
+      - plans/duraloco/phases/P08_STATE.yaml
+      - scripts/agent/check_phase_state.py
+    correction: rewrite P08_STATE.yaml to the canonical 25-acceptance checker schema and invoke the checker with the state path as its positional argument
+    retry_evidence: corrected phase-state validation, ruff, PBS shell syntax, and diff checks pass on the current worktree
+    retry_policy: rerun the corrected static validation before the next commit
+last_updated: "2026-07-13T03:20:00+09:00"

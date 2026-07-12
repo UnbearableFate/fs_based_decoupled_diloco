@@ -52,7 +52,13 @@ from .replay import (
     replay_log,
     replay_snapshot_suffix,
 )
-from .run import RunManifest, RunSpec
+from .run import (
+    DISTRIBUTED_COORDINATION_PROTOCOLS,
+    ERROR_RESUME_COORDINATION_PROTOCOL,
+    FENCED_COORDINATION_PROTOCOLS,
+    RunManifest,
+    RunSpec,
+)
 from .snapshot import SnapshotManifestV1
 from fs_diloco.coordination.state_machine import OwnerToken
 
@@ -67,6 +73,7 @@ class ProductionTransactionalLog:
         self._replay_cache = ProductionReplayCache.empty()
         self._replay_validation_device = None
         self._owner_token: OwnerToken | None = None
+        self.last_prepare_lineage_checks = 0
 
     @property
     def backend(self) -> StorageBackend:
@@ -328,9 +335,9 @@ class ProductionTransactionalLog:
     ) -> PreparedLogTransition:
         """Prepare an epoch-bump or stop fact without changing optimizer state."""
 
-        if self.spec.coordination_protocol not in {"head-fenced-v1", "distributed-head-fenced-v1"}:
+        if self.spec.coordination_protocol not in FENCED_COORDINATION_PROTOCOLS:
             raise CommitConflict("run generation does not enable fenced coordination")
-        if control_kind not in {"epoch_bump", "stop", "membership", "snapshot_pin"}:
+        if control_kind not in {"epoch_bump", "stop", "membership", "snapshot_pin", "resume"}:
             raise ValueError(f"unsupported control transition: {control_kind}")
         if not isinstance(request_id, str) or not request_id:
             raise ValueError("control request_id must be non-empty")
@@ -340,9 +347,19 @@ class ProductionTransactionalLog:
         replay = self._authoritative_replay()
         previous = replay.head_frontier
         prior_coordination = previous.coordination
-        if previous.coordination is not None and previous.coordination.stop is not None:
+        stopped = previous.coordination is not None and previous.coordination.stop is not None
+        if stopped and control_kind != "resume":
             raise CommitConflict("authoritative stop is already committed")
-        if control_kind == "epoch_bump":
+        if control_kind == "resume":
+            if self.spec.coordination_protocol != ERROR_RESUME_COORDINATION_PROTOCOL:
+                raise CommitConflict("run generation does not enable error resume")
+            assert previous.coordination is not None
+            assert previous.coordination.stop is not None
+            if previous.coordination.stop.reason != "error":
+                raise CommitConflict("only an authoritative error stop can resume")
+            if token.fencing_epoch <= previous.fencing_epoch:
+                raise CommitConflict("resume fencing epoch is not newer")
+        elif control_kind == "epoch_bump":
             if token.fencing_epoch <= previous.fencing_epoch:
                 resolved = replay.control_requests.get(request_id)
                 if resolved is not None:
@@ -361,7 +378,7 @@ class ProductionTransactionalLog:
 
         membership_projection = None
         if control_kind == "membership":
-            if self.spec.coordination_protocol != "distributed-head-fenced-v1":
+            if self.spec.coordination_protocol not in DISTRIBUTED_COORDINATION_PROTOCOLS:
                 raise CommitConflict("run generation does not enable committed membership")
             if membership is None or previous.membership is None:
                 raise ValueError("membership transition requires a membership revision")
@@ -581,6 +598,36 @@ class ProductionTransactionalLog:
         )
         return self.commit_prepared(prepared, crash_at=crash_at)
 
+    def resume_error(
+        self,
+        *,
+        token: OwnerToken,
+        request_id: str,
+        crash_at: str | None = None,
+    ) -> CommitResult:
+        """Strictly resume only a v2 authoritative error stop under a new fence."""
+
+        self.clear_owner_state()
+        prepared = self.prepare_control_transition(
+            control_kind="resume",
+            token=token,
+            request_id=request_id,
+            crash_at=crash_at,
+        )
+        result = self.commit_prepared(prepared, crash_at=crash_at)
+        replay = self._authoritative_replay()
+        projection = replay.head_frontier.coordination
+        if (
+            projection is None
+            or projection.stop is not None
+            or projection.owner_id != token.owner_id
+            or projection.owner_session_id != token.owner_session_id
+            or replay.head_frontier.fencing_epoch != token.fencing_epoch
+        ):
+            raise VerificationError("committed error resume differs after strict replay")
+        self._owner_token = token
+        return result
+
     def commit_membership(
         self,
         *,
@@ -661,7 +708,7 @@ class ProductionTransactionalLog:
         return self.commit_prepared(prepared, crash_at=crash_at)
 
     def _require_owner_token(self) -> OwnerToken:
-        if self.spec.coordination_protocol not in {"head-fenced-v1", "distributed-head-fenced-v1"}:
+        if self.spec.coordination_protocol not in FENCED_COORDINATION_PROTOCOLS:
             raise CommitConflict("run generation does not require fenced ownership")
         if self._owner_token is None:
             raise CommitConflict("production writer has no activated owner token")
@@ -696,9 +743,11 @@ class ProductionTransactionalLog:
         expected_payload_key = self.layout.proposal_payload_key(proposal.payload_sha256)
         if proposal.payload_key != expected_payload_key:
             raise CommitConflict("proposal payload key is not canonical for its content")
+        if payload.data is None:
+            raise CommitConflict("validated proposal payload bytes are unavailable")
         if (
             payload.sha256 != proposal.payload_sha256
-            or len(payload.data) != proposal.payload_size
+            or payload.size != proposal.payload_size
             or payload.tensor_key != proposal.tensor_key
             or payload.shape != proposal.shape
             or payload.dtype != proposal.dtype
@@ -712,6 +761,42 @@ class ProductionTransactionalLog:
             payload.data,
             sha256=proposal.payload_sha256,
         )
+        self.backend.put_immutable(ref.key, data, sha256=ref.sha256)
+        return ref
+
+    def publish_validated_proposal_reference(
+        self,
+        proposal: ProposalManifest,
+        payload: ValidatedProductionPayload,
+        payload_ref: ObjectRef,
+    ) -> ObjectRef:
+        """Publish only the manifest when the learner already published the payload."""
+
+        if proposal.run_id != self.spec.run_id or (
+            proposal.run_generation != self.spec.run_generation
+        ):
+            raise CommitConflict("proposal belongs to another run generation")
+        expected = ObjectRef(
+            key=self.layout.proposal_payload_key(proposal.payload_sha256),
+            sha256=proposal.payload_sha256,
+            size=proposal.payload_size,
+        )
+        if payload_ref != expected:
+            raise CommitConflict("proposal payload ObjectRef differs from canonical identity")
+        if (
+            payload.sha256 != proposal.payload_sha256
+            or payload.size != proposal.payload_size
+            or payload.tensor_key != proposal.tensor_key
+            or payload.shape != proposal.shape
+            or payload.dtype != proposal.dtype
+            or not payload.finite_checked
+        ):
+            raise CommitConflict("validated proposal token differs from its manifest")
+        metadata = self.backend.head(payload_ref.key)
+        if metadata.size != payload_ref.size or metadata.sha256 != payload_ref.sha256:
+            raise CommitConflict("authoritative proposal payload observation differs")
+        data = proposal.canonical_bytes()
+        ref = content_ref(self.layout.proposal_key(proposal.proposal_id), data)
         self.backend.put_immutable(ref.key, data, sha256=ref.sha256)
         return ref
 
@@ -746,7 +831,7 @@ class ProductionTransactionalLog:
     ) -> PreparedLogTransition:
         replay = self._authoritative_replay()
         owner_token: OwnerToken | None = None
-        if self.spec.coordination_protocol in {"head-fenced-v1", "distributed-head-fenced-v1"}:
+        if self.spec.coordination_protocol in FENCED_COORDINATION_PROTOCOLS:
             owner_token = self._require_owner_token()
             coordination = replay.head_frontier.coordination
             if (
@@ -768,6 +853,7 @@ class ProductionTransactionalLog:
         if len({proposal.learner_id for proposal in proposals}) != len(proposals):
             raise CommitConflict("selection contains multiple proposals from one learner")
         current_fragment = replay.head_frontier.fragments[fragment_id]
+        self.last_prepare_lineage_checks = 0
         for proposal in proposals:
             if proposal.proposal_id in replay.consumption:
                 raise CommitConflict("selection contains an already-consumed proposal")
@@ -783,31 +869,21 @@ class ProductionTransactionalLog:
                 raise CommitConflict("proposal exceeds global staleness")
             if current_fragment.version - proposal.base_fragment_version > self.spec.max_fragment_staleness:
                 raise CommitConflict("proposal exceeds fragment staleness")
-            for consumed in replay.proposals.values():
-                consumed_session = getattr(
-                    consumed,
-                    "learner_session_id",
-                    getattr(consumed, "session_id", None),
-                )
-                same_lineage = (
-                    consumed.learner_id,
-                    consumed_session,
-                    consumed.fragment_id,
-                ) == (
-                    proposal.learner_id,
-                    proposal.learner_session_id,
-                    proposal.fragment_id,
-                )
-                if same_lineage and consumed.sequence >= proposal.sequence:
-                    raise CommitConflict("proposal lineage sequence is not monotonic")
-                if same_lineage and (
-                    consumed.base_commit_id,
-                    consumed.base_fragment_version,
-                ) == (
-                    proposal.base_commit_id,
-                    proposal.base_fragment_version,
-                ):
-                    raise CommitConflict("proposal overlaps a consumed same-base interval")
+            lineage = (
+                proposal.learner_id,
+                proposal.learner_session_id,
+                proposal.fragment_id,
+            )
+            self.last_prepare_lineage_checks += 1
+            if replay.last_lineage_sequence.get(lineage, -1) >= proposal.sequence:
+                raise CommitConflict("proposal lineage sequence is not monotonic")
+            interval_base = (
+                *lineage,
+                proposal.base_commit_id,
+                proposal.base_fragment_version,
+            )
+            if interval_base in replay.consumed_interval_bases:
+                raise CommitConflict("proposal overlaps a consumed same-base interval")
 
         weights = normalized_weights(
             {item.proposal_id: item.target_tokens_since_base for item in proposals},
@@ -822,7 +898,7 @@ class ProductionTransactionalLog:
         if (distributed_work_order_id is None) != (prepared_result_id is None):
             raise CommitConflict("distributed optimizer identity fields must be paired")
         if any(value is not None for value in distributed_identity) and (
-            self.spec.coordination_protocol != "distributed-head-fenced-v1"
+            self.spec.coordination_protocol not in DISTRIBUTED_COORDINATION_PROTOCOLS
         ):
             raise CommitConflict("only distributed generations bind work-order results")
         if owner_token is not None:
@@ -1004,7 +1080,7 @@ class ProductionTransactionalLog:
         *,
         crash_at: str | None = None,
     ) -> CommitResult:
-        if self.spec.coordination_protocol in {"head-fenced-v1", "distributed-head-fenced-v1"}:
+        if self.spec.coordination_protocol in FENCED_COORDINATION_PROTOCOLS:
             current = self.transactional.load_head()
             if current.manifest != prepared.parent_head.manifest:
                 resolved = self.resolve_prepared(prepared)

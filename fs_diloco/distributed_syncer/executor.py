@@ -5,17 +5,20 @@ from __future__ import annotations
 from dataclasses import dataclass
 import resource
 from contextlib import nullcontext
+import time
+from typing import Callable, Mapping
 
 import torch
 
 from fs_diloco.log.production_codec import encode_production_outer_state, encode_production_params
+from fs_diloco.optimizer.streaming_reduce import reduce_fragment_streaming
 from fs_diloco.protocol.canonical_json import canonical_digest
 from fs_diloco.protocol.prepared_transition_v1 import (
     PreparedAttemptEnvelopeV1,
     PreparedFragmentResultV1,
 )
 from fs_diloco.protocol.work_order_v1 import FragmentWorkOrderV1
-from fs_diloco.syncer_core.aggregation import apply_outer_transition, reduce_fragment
+from fs_diloco.syncer_core.aggregation import apply_outer_transition
 from fs_diloco.syncer_core.types import FragmentPlan
 from fs_diloco.telemetry import StageRecorder
 
@@ -28,9 +31,15 @@ class ExecutorBudget:
     threads: int = 8
     max_inflight: int = 1
     max_rss_bytes: int = 16 * 1024**3
+    max_prefetch_bytes: int = 1024**3
 
     def __post_init__(self) -> None:
-        if self.threads < 1 or self.max_inflight != 1 or self.max_rss_bytes < 1:
+        if (
+            self.threads < 1
+            or self.max_inflight != 1
+            or self.max_rss_bytes < 1
+            or self.max_prefetch_bytes < 1
+        ):
             raise ValueError("invalid LFE resource budget")
 
     @property
@@ -42,6 +51,7 @@ class ExecutorBudget:
             "threads": self.threads,
             "max_inflight": self.max_inflight,
             "max_rss_bytes": self.max_rss_bytes,
+            "max_prefetch_bytes": self.max_prefetch_bytes,
         }
 
 
@@ -52,7 +62,7 @@ def execution_backend_identity(*, threads: int) -> dict[str, object]:
         "dtype": "float32",
         "torch_version": torch.__version__,
         "threads": threads,
-        "reduction_order": "work-order-proposal-order-left-fold-v1",
+        "reduction_order": "work-order-proposal-order-streaming-left-fold-v1",
     }
 
 
@@ -63,7 +73,7 @@ def execute_work_order(
     order: FragmentWorkOrderV1,
     current_params: torch.Tensor,
     current_outer_state: dict[str, torch.Tensor],
-    proposal_tensors: dict[str, torch.Tensor],
+    proposal_tensors: Mapping[str, torch.Tensor] | None,
     optimizer_config,
     executor_id: str,
     executor_session_id: str,
@@ -71,6 +81,7 @@ def execute_work_order(
     resource_evidence_digest: str,
     budget: ExecutorBudget,
     telemetry: StageRecorder | None = None,
+    proposal_loader: Callable[[str], torch.Tensor] | None = None,
 ) -> tuple[PreparedFragmentResultV1, PreparedAttemptEnvelopeV1]:
     torch.set_num_threads(budget.threads)
     if canonical_digest(execution_backend_identity(threads=budget.threads)) != order.execution_backend_digest:
@@ -99,23 +110,43 @@ def execute_work_order(
         "fencing_epoch": order.committer_fencing_epoch,
         "membership_revision": order.membership_revision,
     }
-    reduction_span = (
-        telemetry.span(
-            "streaming_reduction",
-            counters={
-                "proposal_count": len(plan.selected_proposal_ids),
-                "fragment_numel": int(current_params.numel()),
-            },
-            attributes={"implementation": "materialized-left-fold-baseline"},
-            **identity,
+    if (proposal_tensors is None) == (proposal_loader is None):
+        raise ValueError("executor requires exactly one proposal tensor source")
+    if proposal_loader is None:
+        assert proposal_tensors is not None
+        if set(proposal_tensors) != set(plan.selected_proposal_ids):
+            raise ValueError("proposal tensors must exactly match the frozen plan")
+        proposal_loader = proposal_tensors.__getitem__
+    reduction_started_ns = time.monotonic_ns()
+    try:
+        aggregate, reduction_stats = reduce_fragment_streaming(
+            plan=plan,
+            load_proposal=proposal_loader,
+            current_params=current_params,
+            max_inflight_bytes=budget.max_prefetch_bytes,
         )
-        if telemetry is not None
-        else nullcontext()
-    )
-    with reduction_span:
-        aggregate = reduce_fragment(
-            plan=plan, proposal_tensors=proposal_tensors, current_params=current_params
-        )
+    except BaseException as exc:
+        if telemetry is not None:
+            telemetry.record(
+                "streaming_reduction",
+                start_ns=reduction_started_ns,
+                outcome="fail",
+                attributes={
+                    "implementation": "ordered-streaming-left-fold-v1",
+                    "error_type": type(exc).__name__,
+                },
+                **identity,
+            )
+        raise
+    else:
+        if telemetry is not None:
+            telemetry.record(
+                "streaming_reduction",
+                start_ns=reduction_started_ns,
+                counters=reduction_stats.to_counters(),
+                attributes={"implementation": "ordered-streaming-left-fold-v1"},
+                **identity,
+            )
     outer_span = (
         telemetry.span(
             "outer_step",

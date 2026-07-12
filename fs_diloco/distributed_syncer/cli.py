@@ -10,6 +10,7 @@ import resource
 import socket
 import time
 
+import torch
 from safetensors.torch import load as load_safetensors_bytes
 
 from fs_diloco.atomic_io import atomic_write_json, safe_read_json
@@ -18,7 +19,7 @@ from fs_diloco.log.codec import verified_get
 from fs_diloco.log.layout import LogLayout
 from fs_diloco.log.production_codec import decode_production_outer_state, decode_production_params
 from fs_diloco.logging_utils import JsonlLogger
-from fs_diloco.protocol.canonical_json import canonical_digest
+from fs_diloco.protocol.canonical_json import canonical_bytes, canonical_digest
 from fs_diloco.protocol.work_order_v2 import RedundantFragmentWorkOrderV2
 from fs_diloco.storage import PosixStorageBackend
 from fs_diloco.syncer_core.capabilities import PrepareObjectFacade
@@ -52,10 +53,16 @@ def _executor(args: argparse.Namespace) -> int:
         threads=args.threads,
         max_inflight=1,
         max_rss_bytes=args.max_rss_bytes,
+        max_prefetch_bytes=args.max_prefetch_bytes,
     )
     available_cpus = tuple(sorted(os.sched_getaffinity(0)))
+    if len(available_cpus) < budget.threads:
+        raise RuntimeError("LFE thread budget exceeds its schedulable CPU affinity")
     executor_cpus = available_cpus[-min(len(available_cpus), budget.threads) :]
     os.sched_setaffinity(0, executor_cpus)
+    torch.set_num_threads(budget.threads)
+    if torch.get_num_threads() != budget.threads:
+        raise RuntimeError("Torch did not apply the declared LFE thread budget")
     numa_mems = None
     try:
         for line in Path("/proc/self/status").read_text(encoding="utf-8").splitlines():
@@ -87,6 +94,7 @@ def _executor(args: argparse.Namespace) -> int:
         threads=budget.threads,
         max_inflight=budget.max_inflight,
         max_rss_bytes=budget.max_rss_bytes,
+        max_prefetch_bytes=budget.max_prefetch_bytes,
         cpu_affinity=list(executor_cpus),
         numa_mems_allowed_list=numa_mems,
     )
@@ -200,11 +208,6 @@ def _executor(args: argparse.Namespace) -> int:
             outer = decode_production_outer_state(
                 verified_get(facade, bundle.outer_state_ref, commit_seq=0)
             )
-            tensors = {}
-            for item in bundle.proposals:
-                data = verified_get(facade, item.payload_ref, commit_seq=0)
-                decoded = load_safetensors_bytes(data)
-                tensors[item.proposal_id] = decoded[item.tensor_key].float().reshape(-1)
         except BaseException as exc:
             stage_recorder.record(
                 "executor_input_read",
@@ -228,7 +231,7 @@ def _executor(args: argparse.Namespace) -> int:
                 fencing_epoch=order.committer_fencing_epoch,
                 membership_revision=order.membership_revision,
                 counters={
-                    "object_reads": 2 + len(bundle.proposals),
+                    "object_reads": 2,
                     "input_bytes": (
                         bundle.params_ref.size
                         + bundle.outer_state_ref.size
@@ -237,8 +240,41 @@ def _executor(args: argparse.Namespace) -> int:
                     "proposal_count": len(bundle.proposals),
                 },
             )
-        resource_digest = canonical_digest(
-            {"budget": budget.to_dict(), "hostname": socket.gethostname()}
+        proposal_inputs = {item.proposal_id: item for item in bundle.proposals}
+
+        def load_proposal(proposal_id: str, inputs=proposal_inputs):
+            try:
+                item = inputs[proposal_id]
+            except KeyError as exc:
+                raise ValueError("work order requested an unbound proposal") from exc
+            if item.payload_ref.size > budget.max_prefetch_bytes:
+                raise MemoryError("proposal exceeds the LFE prefetch byte budget")
+            data = verified_get(facade, item.payload_ref, commit_seq=0)
+            decoded = load_safetensors_bytes(data)
+            return decoded[item.tensor_key].float().reshape(-1)
+
+        resource_evidence = {
+            "schema": "duraloco-lfe-resource-evidence-v1",
+            "member_id": args.member_id,
+            "executor_id": args.executor_id,
+            "executor_session_id": args.executor_session_id,
+            "work_order_id": order.work_order_id,
+            "hostname": socket.gethostname(),
+            "pid": os.getpid(),
+            "budget": budget.to_dict(),
+            "actual_cpu_affinity": list(sorted(os.sched_getaffinity(0))),
+            "actual_numa_mems_allowed_list": numa_mems,
+            "actual_torch_threads": torch.get_num_threads(),
+        }
+        resource_digest = canonical_digest(resource_evidence)
+        resource_key = (
+            f"{layout.prepared_prefix}resources/{resource_digest}.json"
+        )
+        resource_data = canonical_bytes(resource_evidence)
+        facade.put_immutable(
+            resource_key,
+            resource_data,
+            sha256=canonical_digest(resource_evidence),
         )
         atomic_write_json(
             heartbeat_path,
@@ -258,7 +294,7 @@ def _executor(args: argparse.Namespace) -> int:
             order=order,
             current_params=params,
             current_outer_state=outer,
-            proposal_tensors=tensors,
+            proposal_tensors=None,
             optimizer_config=config.outer_optimizer,
             executor_id=args.executor_id,
             executor_session_id=args.executor_session_id,
@@ -266,6 +302,7 @@ def _executor(args: argparse.Namespace) -> int:
             resource_evidence_digest=resource_digest,
             budget=budget,
             telemetry=stage_recorder,
+            proposal_loader=load_proposal,
         )
         completed.add(order.work_order_id)
         prepare_seconds = time.monotonic() - prepare_started
@@ -291,8 +328,15 @@ def _executor(args: argparse.Namespace) -> int:
             "prepare_seconds": prepare_seconds,
             "rss_bytes": resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * 1024,
             "threads": budget.threads,
+            "actual_torch_threads": torch.get_num_threads(),
             "cpu_affinity": list(executor_cpus),
             "numa_mems_allowed_list": numa_mems,
+            "max_inflight": budget.max_inflight,
+            "max_prefetch_bytes": budget.max_prefetch_bytes,
+            "max_rss_bytes": budget.max_rss_bytes,
+            "resource_evidence_digest": resource_digest,
+            "resource_evidence_key": resource_key,
+            "budget_violation": False,
             "input_bytes": input_bytes,
             "output_bytes": output_bytes,
             "logical_input_reads": 2 + len(bundle.proposals),
@@ -325,6 +369,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     executor.add_argument("--executor-session-id", required=True)
     executor.add_argument("--threads", type=int, default=8)
     executor.add_argument("--max-rss-bytes", type=int, default=16 * 1024**3)
+    executor.add_argument("--max-prefetch-bytes", type=int, default=1024**3)
     executor.add_argument("--poll-seconds", type=float, default=0.1)
     committer = sub.add_parser("committer")
     committer.add_argument("--config", required=True)
@@ -336,6 +381,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     committer.add_argument("--owner-session-id", required=True)
     committer.add_argument("--threads", type=int, default=8)
     committer.add_argument("--max-rss-bytes", type=int, default=16 * 1024**3)
+    committer.add_argument("--max-prefetch-bytes", type=int, default=1024**3)
     committer.add_argument("--standby", action="store_true")
     committer.add_argument("--replication-factor", type=int, choices=(1, 2), default=1)
     committer.add_argument(
@@ -343,6 +389,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     committer.add_argument("--hedge-delay-ms", type=int)
     committer.add_argument("--lifecycle-cadence", type=int, default=0)
+    committer.add_argument("--error-resume", action="store_true")
     return parser.parse_args(argv)
 
 
@@ -361,6 +408,7 @@ def main(argv: list[str] | None = None) -> int:
             threads=args.threads,
             max_inflight=1,
             max_rss_bytes=args.max_rss_bytes,
+            max_prefetch_bytes=args.max_prefetch_bytes,
         )
         node_ids = tuple(item for item in args.node_ids.split(",") if item)
         learner_ids = tuple(f"learner_{index:03d}" for index in range(args.num_learners))
@@ -392,6 +440,7 @@ def main(argv: list[str] | None = None) -> int:
             replication_factor=args.replication_factor,
             redundancy_policy=redundancy_policy,
             lifecycle_cadence=args.lifecycle_cadence,
+            error_resume=args.error_resume,
         )
         return 0
     raise AssertionError(args.command)

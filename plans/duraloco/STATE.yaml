@@ -7,9 +7,9 @@ verified_dependency_checker_commit: 04e0a8634b0e9d7c4cd55c5593081a0ca969a060
 actual_base_branch: codex/problem-fix-after-p07
 actual_base_commit: 8c12839a7b985e590378ac593c846f07b0637517
 feature_branch: codex/duraloco-p08-distributed-performance
-current_loop: 1
-current_goal: "freeze P08 decisions and build an identity-preserving critical-path baseline"
-attempts_for_current_failure: 3
+current_loop: 3
+current_goal: "qualify direct fragment I/O, streaming reduction, validation reuse, range I/O, bounded execution, and error resume"
+attempts_for_current_failure: 0
 last_terminal_failure_review: null
 terminal_retry_authorized: false
 terminal_retry_qualification:
@@ -20,6 +20,7 @@ last_verified_commit: f167a07c49339ba42d14f8a5873fe2c8781884d4
 checks:
   local_static: static_pass
   local_runtime: not_run
+  telemetry_profile_1node: miyabi_1node_pass
   targeted_1node: not_run
   miyabi_1node: not_run
   miyabi_2node: not_run
@@ -62,7 +63,7 @@ artifacts:
   - plans/duraloco/errors/P08_ERROR_LEDGER.yaml
   - scripts/miyabi/run_duraloco_p08_profile_1node.pbs
   - benchmarks/bench_lfe_pipeline.py
-next_action: "implement Loop 1 RED telemetry/profile contracts and run the smallest targeted PBS benchmark"
+next_action: "commit Loops 2-4 implementation and run the optimized targeted one-node PBS qualification"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

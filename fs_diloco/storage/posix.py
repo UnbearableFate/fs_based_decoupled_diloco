@@ -40,10 +40,13 @@ from .layout import (
 )
 
 
-_MAGIC = b"FSDILOCO-STORAGE-V1\n"
+_MAGIC_V1 = b"FSDILOCO-STORAGE-V1\n"
+_MAGIC_V2 = b"FSDILOCO-STORAGE-V2\n"
+_MAGIC = _MAGIC_V2
 _HEADER_LENGTH = struct.Struct(">Q")
 _HEADER_DIGEST_BYTES = 32
-_MAX_HEADER_BYTES = 64 * 1024
+_MAX_HEADER_BYTES = 128 * 1024
+_RANGE_CHUNK_BYTES = 64 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -59,6 +62,8 @@ class _DecodedHeader:
     metadata: ObjectMetadata
     previous_version: str | None
     request_id: str | None
+    chunk_size: int | None = None
+    chunk_sha256: tuple[str, ...] = ()
 
 
 _SHARED_FILESYSTEM_TYPES = frozenset({"ceph", "gpfs", "lustre", "nfs", "nfs4", "panfs"})
@@ -364,8 +369,15 @@ class PosixStorageBackend:
         previous_version: str | None,
         request_id: str | None,
     ) -> bytes:
+        chunk_sha256 = [
+            hashlib.sha256(data[offset : offset + _RANGE_CHUNK_BYTES]).hexdigest()
+            for offset in range(0, len(data), _RANGE_CHUNK_BYTES)
+        ]
         header = json.dumps(
             {
+                "chunk_sha256": chunk_sha256,
+                "chunk_size": _RANGE_CHUNK_BYTES,
+                "envelope_version": 2,
                 "previous_version": previous_version,
                 "request_id": request_id,
                 "sha256": hashlib.sha256(data).hexdigest(),
@@ -387,7 +399,7 @@ class PosixStorageBackend:
         magic = handle.read(len(_MAGIC))
         raw_length = handle.read(_HEADER_LENGTH.size)
         header_prefix_bytes = len(magic) + len(raw_length)
-        if magic != _MAGIC or len(raw_length) != _HEADER_LENGTH.size:
+        if magic not in {_MAGIC_V1, _MAGIC_V2} or len(raw_length) != _HEADER_LENGTH.size:
             self._count_read(header_bytes=header_prefix_bytes)
             raise IntegrityError(f"invalid storage envelope prefix: {key}", key=key)
         header_length = _HEADER_LENGTH.unpack(raw_length)[0]
@@ -412,14 +424,28 @@ class PosixStorageBackend:
             header = json.loads(header_bytes.decode("ascii"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise IntegrityError(f"invalid storage envelope JSON: {key}", key=key) from exc
-        if not isinstance(header, dict) or set(header) != {
+        v1_fields = {
             "previous_version",
             "request_id",
             "sha256",
             "size",
             "version",
-        }:
+        }
+        v2_fields = {
+            *v1_fields,
+            "envelope_version",
+            "chunk_size",
+            "chunk_sha256",
+        }
+        header_fields = set(header) if isinstance(header, dict) else set()
+        if not isinstance(header, dict) or (
+            header_fields != v1_fields and header_fields != v2_fields
+        ):
             raise IntegrityError(f"invalid storage envelope fields: {key}", key=key)
+        if magic == _MAGIC_V1 and header_fields != v1_fields:
+            raise IntegrityError(f"v1 storage envelope fields differ: {key}", key=key)
+        if magic == _MAGIC_V2 and header_fields != v2_fields:
+            raise IntegrityError(f"v2 storage envelope fields differ: {key}", key=key)
         version = header["version"]
         previous_version = header["previous_version"]
         request_id = header["request_id"]
@@ -437,10 +463,36 @@ class PosixStorageBackend:
             or any(character not in "0123456789abcdef" for character in digest)
         ):
             raise IntegrityError(f"invalid storage envelope metadata: {key}", key=key)
+        chunk_size = None
+        chunks: tuple[str, ...] = ()
+        if header_fields == v2_fields:
+            raw_chunks = header["chunk_sha256"]
+            chunk_size = header["chunk_size"]
+            if (
+                header["envelope_version"] != 2
+                or type(chunk_size) is not int
+                or chunk_size < 1
+            ):
+                raise IntegrityError(f"invalid storage range metadata: {key}", key=key)
+            expected_chunks = (size + chunk_size - 1) // chunk_size if size else 0
+            if (
+                not isinstance(raw_chunks, list)
+                or len(raw_chunks) != expected_chunks
+                or any(
+                    not isinstance(item, str)
+                    or len(item) != 64
+                    or any(character not in "0123456789abcdef" for character in item)
+                    for item in raw_chunks
+                )
+            ):
+                raise IntegrityError(f"invalid storage range metadata: {key}", key=key)
+            chunks = tuple(raw_chunks)
         return _DecodedHeader(
             metadata=ObjectMetadata(key, size, digest, version),
             previous_version=previous_version,
             request_id=request_id,
+            chunk_size=chunk_size,
+            chunk_sha256=chunks,
         )
 
     def _read_header_path(self, path: Path, key: str) -> _DecodedHeader:
@@ -670,7 +722,62 @@ class PosixStorageBackend:
             raise ValueError("range start must be a non-negative integer")
         if end is not None and (type(end) is not int or end < start):
             raise ValueError("range end must be an integer >= start")
-        return self.get(key)[start:end]
+        operation = "range_get"
+        key = normalize_key(key)
+        path = contained_path(self.root, key)
+        try:
+            flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+            descriptor = os.open(path, flags)
+            with os.fdopen(descriptor, "rb") as handle:
+                header = self._read_header_from_handle(handle, key)
+                if header.chunk_size is None:
+                    data = handle.read()
+                    self._count_read(payload_bytes=len(data))
+                    if (
+                        len(data) != header.metadata.size
+                        or hashlib.sha256(data).hexdigest() != header.metadata.sha256
+                    ):
+                        raise IntegrityError(
+                            f"storage object size/hash mismatch: {key}", key=key
+                        )
+                    result = data[start:end]
+                else:
+                    size = header.metadata.size
+                    bounded_end = size if end is None else min(end, size)
+                    if start >= size or bounded_end <= start:
+                        result = b""
+                    else:
+                        payload_offset = handle.tell()
+                        first_chunk = start // header.chunk_size
+                        last_chunk = (bounded_end - 1) // header.chunk_size
+                        chunks: list[bytes] = []
+                        for index in range(first_chunk, last_chunk + 1):
+                            chunk_start = index * header.chunk_size
+                            chunk_length = min(header.chunk_size, size - chunk_start)
+                            handle.seek(payload_offset + chunk_start)
+                            chunk = handle.read(chunk_length)
+                            self._count_read(payload_bytes=len(chunk))
+                            if len(chunk) != chunk_length or (
+                                hashlib.sha256(chunk).hexdigest()
+                                != header.chunk_sha256[index]
+                            ):
+                                raise IntegrityError(
+                                    f"storage range chunk mismatch: {key}", key=key
+                                )
+                            chunks.append(chunk)
+                        joined = b"".join(chunks)
+                        relative_start = start - first_chunk * header.chunk_size
+                        result = joined[
+                            relative_start : relative_start + (bounded_end - start)
+                        ]
+        except FileNotFoundError as exc:
+            raise NotFound(key, operation="read", key=key, errno=exc.errno) from exc
+        except StorageError:
+            raise
+        except OSError as exc:
+            raise StorageIOError.from_oserror(exc, operation="range_get", key=key) from exc
+        self._record(operation, key, "read", header.metadata.version)
+        return result
 
     def delete_batch(self, keys: Iterable[DeleteTarget]) -> dict[str, str]:
         results: dict[str, str] = {}

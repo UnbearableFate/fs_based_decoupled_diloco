@@ -69,6 +69,18 @@ def summarize_events(
         raise TelemetryContractError("no work-order telemetry was observed")
     timelines: list[dict[str, object]] = []
     for work_order_id, items in sorted(by_work.items()):
+        missing_identity = [
+            item.event_id
+            for item in items
+            if item.head_commit_id is None
+            or item.fencing_epoch is None
+            or item.membership_revision is None
+        ]
+        if missing_identity:
+            raise TelemetryContractError(
+                f"work order {work_order_id} has events without head/epoch/membership "
+                f"identity: {missing_identity}"
+            )
         stages = {item.stage for item in items if item.outcome == "pass"}
         missing = sorted((COMMITTER_REQUIRED | EXECUTOR_REQUIRED) - stages)
         if missing:
@@ -78,6 +90,38 @@ def summarize_events(
         attempts = sorted({item.attempt_id for item in items if item.attempt_id})
         if not attempts:
             raise TelemetryContractError(f"work order {work_order_id} has no attempt lineage")
+        attempt_summaries: list[dict[str, object]] = []
+        for attempt_id in attempts:
+            attempt_events = [item for item in items if item.attempt_id == attempt_id]
+            passed = {item.stage for item in attempt_events if item.outcome == "pass"}
+            terminal = [
+                item
+                for item in attempt_events
+                if item.outcome in {"fail", "cancelled", "inconclusive"}
+            ]
+            missing_attempt_stages = sorted(EXECUTOR_REQUIRED - passed)
+            if missing_attempt_stages and not terminal:
+                raise TelemetryContractError(
+                    f"attempt {attempt_id} is incomplete without terminal evidence: "
+                    f"{missing_attempt_stages}"
+                )
+            attempt_summaries.append(
+                {
+                    "attempt_id": attempt_id,
+                    "outcome": terminal[-1].outcome if terminal else "pass",
+                    "stages": sorted(passed),
+                    "terminal_event_ids": [item.event_id for item in terminal],
+                }
+            )
+        head_cas = [
+            item
+            for item in items
+            if item.stage == "head_cas" and item.outcome == "pass"
+        ]
+        if len(head_cas) != 1 or head_cas[0].transition_id is None:
+            raise TelemetryContractError(
+                f"work order {work_order_id} lacks one identified successful head CAS"
+            )
         roles = sorted({item.role for item in items})
         timeline_events = sorted(
             items,
@@ -93,6 +137,8 @@ def summarize_events(
                 "work_order_id": work_order_id,
                 "roles": roles,
                 "attempt_ids": attempts,
+                "attempts": attempt_summaries,
+                "committed_transition_id": head_cas[0].transition_id,
                 "stages": sorted(stages),
                 "events": [item.to_dict() for item in timeline_events],
                 "duration_by_role_ns": {

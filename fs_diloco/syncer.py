@@ -58,6 +58,7 @@ from .log.production_codec import (
     production_optimizer_digest,
 )
 from .log.run import RunSpec
+from .log.run import ERROR_RESUME_COORDINATION_PROTOCOL
 
 
 _SUCCESSFUL_STOP_REASONS = {"completed", "stop_after_outer_steps", "stop_after_global_tokens"}
@@ -154,21 +155,61 @@ def publish_materialized_view(
     fragment_versions = {
         fragment_id: state.version for fragment_id, state in view.fragments.items()
     }
+    previous = safe_read_json(paths.latest_json) or {}
+    previous_fragments = previous.get("fragments")
+    if not isinstance(previous_fragments, dict):
+        previous_fragments = {}
     for fragment_id, theta in fragment_thetas.items():
         version = fragment_versions[fragment_id]
-        save_fragment_weight(paths.fragment_weight_path(fragment_id, version), theta)
-        save_outer_state(
-            paths.fragment_outer_optim_path(fragment_id, version),
-            theta,
-            outer_states[fragment_id],
+        previous_fragment = previous_fragments.get(str(fragment_id))
+        weight_path_for_fragment = paths.fragment_weight_path(fragment_id, version)
+        state_path_for_fragment = paths.fragment_outer_optim_path(fragment_id, version)
+        reusable = (
+            isinstance(previous_fragment, dict)
+            and previous_fragment.get("version") == version
+            and previous_fragment.get("weight_path") == str(weight_path_for_fragment)
+            and previous_fragment.get("optim_path") == str(state_path_for_fragment)
+            and weight_path_for_fragment.is_file()
+            and state_path_for_fragment.is_file()
         )
-    full = materialize_full_from_fragments(
-        fragment_thetas,
-        fragment_index,
-        int(param_index["total_numel"]),
+        if not reusable:
+            save_fragment_weight(weight_path_for_fragment, theta)
+            save_outer_state(
+                state_path_for_fragment,
+                theta,
+                outer_states[fragment_id],
+            )
+    cadence = config.fragments.materialize_full_every_events
+    if cadence is not None and (type(cadence) is not int or cadence < 1):
+        raise ValueError("materialize_full_every_events must be null or positive")
+    previous_materialized = previous.get("materialized_weight_path")
+    previous_weight_path = (
+        Path(previous_materialized)
+        if isinstance(previous_materialized, str) and previous_materialized
+        else None
     )
-    weight_path = paths.global_weight_path(view.commit_seq)
-    save_global_weights(weight_path, full, param_index)
+    full_due = (
+        len(fragment_thetas) == 1
+        or cadence is None
+        or view.optimizer_transition_count % cadence == 0
+        or previous_weight_path is None
+        or not previous_weight_path.is_file()
+    )
+    if full_due:
+        full = materialize_full_from_fragments(
+            fragment_thetas,
+            fragment_index,
+            int(param_index["total_numel"]),
+        )
+        weight_path = paths.global_weight_path(view.commit_seq)
+        save_global_weights(weight_path, full, param_index)
+        materialized_at_commit_seq = view.commit_seq
+    else:
+        assert previous_weight_path is not None
+        weight_path = previous_weight_path
+        materialized_at_commit_seq = int(
+            previous.get("materialized_at_commit_seq", previous.get("commit_seq", 0))
+        )
     if len(fragment_thetas) == 1:
         optim_path = paths.outer_optim_path(view.commit_seq)
         save_outer_state(optim_path, full, outer_states[0])
@@ -199,6 +240,8 @@ def publish_materialized_view(
             "param_index_path": str(paths.param_index_json),
             "fragment_index_path": str(paths.fragment_index_json),
             "materialized_weight_path": str(weight_path),
+            "materialized_at_commit_seq": materialized_at_commit_seq,
+            "materialization_cadence": cadence,
             "fragments": fragments,
         }
     atomic_write_json(paths.latest_json, payload)
@@ -424,6 +467,13 @@ def _acquire_and_activate_owner(
     logger: JsonlLogger,
     standby: bool = False,
 ) -> tuple[LeaseManager, Any, RuntimeView]:
+    def resumable_error(view: RuntimeView) -> bool:
+        return (
+            log.spec.coordination_protocol == ERROR_RESUME_COORDINATION_PROTOCOL
+            and view.authoritative_stop is not None
+            and view.authoritative_stop.reason == "error"
+        )
+
     lease_manager = LeaseManager(
         log.backend,
         log.layout,
@@ -434,7 +484,10 @@ def _acquire_and_activate_owner(
     while True:
         if standby:
             observed_view = build_runtime_view(log)
-            if observed_view.authoritative_stop is not None:
+            if (
+                observed_view.authoritative_stop is not None
+                and not resumable_error(observed_view)
+            ):
                 logger.event(
                     "standby_observed_authoritative_stop",
                     reason=observed_view.authoritative_stop.reason,
@@ -516,9 +569,12 @@ def _acquire_and_activate_owner(
     # The former owner can commit stop while a standby is winning the
     # observational lease CAS.  Replay once more before preparing an epoch
     # bump so the terminal head does not create a guaranteed CAS-loser orphan.
+    observed_view = build_runtime_view(log, force_full=True)
     if standby:
-        observed_view = build_runtime_view(log, force_full=True)
-        if observed_view.authoritative_stop is not None:
+        if (
+            observed_view.authoritative_stop is not None
+            and not resumable_error(observed_view)
+        ):
             logger.event(
                 "standby_observed_authoritative_stop_after_lease",
                 reason=observed_view.authoritative_stop.reason,
@@ -526,7 +582,8 @@ def _acquire_and_activate_owner(
             )
             return lease_manager, None, observed_view
     token = loaded_lease.record.owner_token
-    fence_request_id = "fence-" + canonical_digest(
+    operation = "resume" if resumable_error(observed_view) else "fence"
+    fence_request_id = operation + "-" + canonical_digest(
         {
             "run_id": log.spec.run_id,
             "run_generation": log.spec.run_generation,
@@ -536,7 +593,10 @@ def _acquire_and_activate_owner(
     )
     fence_start = time.monotonic()
     try:
-        result = log.activate_owner(token=token, request_id=fence_request_id)
+        if operation == "resume":
+            result = log.resume_error(token=token, request_id=fence_request_id)
+        else:
+            result = log.activate_owner(token=token, request_id=fence_request_id)
     except CommitConflict:
         if not standby:
             raise
@@ -544,7 +604,7 @@ def _acquire_and_activate_owner(
         # ProductionTransactionalLog rejects that epoch before CAS; resolve the
         # expected terminal race from the now-current committed head.
         observed_view = build_runtime_view(log)
-        if observed_view.authoritative_stop is None:
+        if observed_view.authoritative_stop is None or resumable_error(observed_view):
             raise
         logger.event(
             "standby_lost_fence_to_authoritative_stop",
@@ -555,7 +615,11 @@ def _acquire_and_activate_owner(
     view = build_runtime_view(log)
     logger.event(
         "coordination_stage_completed",
-        stage="fence_commit_and_strict_replay",
+        stage=(
+            "error_resume_commit_and_strict_replay"
+            if operation == "resume"
+            else "fence_commit_and_strict_replay"
+        ),
         owner_id=owner_id,
         owner_session_id=owner_session_id,
         fencing_epoch=view.fencing_epoch,
@@ -848,8 +912,8 @@ def run_syncer(
 
             tensors: dict[str, torch.Tensor] = {}
             for entry in selected:
-                payload = catalog.load_payload(entry)
-                log.publish_validated_proposal(entry.manifest, entry.payload)
+                payload = catalog.load_payload(entry, backend=log.backend)
+                catalog.publish_entry(log, entry)
                 tensors[entry.proposal_id] = _load_selected_tensor(entry, payload, device)
             proposal_observation_done = time.monotonic()
             logger.event(

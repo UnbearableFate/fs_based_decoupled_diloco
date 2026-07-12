@@ -165,7 +165,7 @@ def test_malformed_future_and_stale_flood_cannot_hide_current_valid_candidate(tm
         learner="learner_advance",
     )
     entry = catalog.scan(metadata_paths=[advance], log=log, view=initial)[0]
-    log.publish_validated_proposal(entry.manifest, entry.payload)
+    catalog.publish_entry(log, entry)
     params = torch.tensor([0.5, 1.0])
     outer = init_outer_state(params, log.spec.optimizer_config)
     log.commit_transition(

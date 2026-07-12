@@ -20,6 +20,10 @@ from fs_diloco.log.production_codec import (
     decode_production_params,
     production_optimizer_digest,
 )
+from fs_diloco.log.run import (
+    DISTRIBUTED_COORDINATION_PROTOCOLS,
+    ERROR_RESUME_COORDINATION_PROTOCOL,
+)
 from fs_diloco.log.gc import create_gc_mark
 from fs_diloco.logging_utils import JsonlLogger
 from fs_diloco.paths import RunPaths, prepare_run_dirs
@@ -334,6 +338,7 @@ def run_committer(
     replication_factor: int = 1,
     redundancy_policy: RedundancyPolicyV1 | None = None,
     lifecycle_cadence: int = 0,
+    error_resume: bool = False,
 ) -> None:
     if not membership.member(member_id).committer_eligible:
         raise ValueError("floating committer is not a committed candidate")
@@ -378,10 +383,15 @@ def run_committer(
                 membership=membership,
                 budget=budget,
                 replication_factor=replication_factor,
+                error_resume=error_resume,
             ),
         )
-    if log.spec.coordination_protocol != "distributed-head-fenced-v1":
+    if log.spec.coordination_protocol not in DISTRIBUTED_COORDINATION_PROTOCOLS:
         raise ValueError("floating committer opened a non-distributed generation")
+    if error_resume != (
+        log.spec.coordination_protocol == ERROR_RESUME_COORDINATION_PROTOCOL
+    ):
+        raise ValueError("error-resume launch mode differs from immutable RunSpec")
     if log.spec.ownership_replication_factor != replication_factor:
         raise ValueError("committer replication factor differs from immutable RunSpec")
     if replication_factor == 2 and redundancy_policy is None:
@@ -392,7 +402,9 @@ def run_committer(
         raise ValueError("lifecycle cadence must be a non-negative integer")
     # An authoritative stop is terminal.  In particular, a standby must not
     # acquire a fresh fencing epoch after observing the stopped head.
-    if view.authoritative_stop is not None:
+    if view.authoritative_stop is not None and not (
+        error_resume and view.authoritative_stop.reason == "error"
+    ):
         _publish_stop(paths, config=config, view=view, reason=view.authoritative_stop.reason)
         stage_recorder.close()
         return
@@ -502,7 +514,6 @@ def run_committer(
                 )
                 view = build_runtime_view(log)
                 membership = successor
-                fragments, states = _load_committed_tensors(log, view, device="cpu")
                 reconfigure_path.unlink(missing_ok=True)
                 logger.event(
                     "membership_reconfigured",
@@ -564,9 +575,12 @@ def run_committer(
                         catalog_counters.get("validation_token_hits", 0)
                     ),
                 },
+                attributes={
+                    "proposal_ids": [item.proposal_id for item in selected],
+                },
             )
             for entry in selected:
-                log.publish_validated_proposal(entry.manifest, entry.payload)
+                catalog.publish_entry(log, entry)
             plan = build_fragment_plan(
                 (
                     PlanningCandidate(
@@ -699,6 +713,10 @@ def run_committer(
                         + bundle.outer_state_ref.size
                         + sum(item.payload_ref.size for item in bundle.proposals)
                     ),
+                },
+                attributes={
+                    "proposal_ids": [item.proposal_id for item in order.proposals],
+                    "owner_member_ids": list(owner_member_ids),
                 },
             )
             allowed_executor_ids = tuple(
@@ -837,6 +855,8 @@ def run_committer(
                 )
                 continue
             view = build_runtime_view(log)
+            fragments[fragment_id] = decode_production_params(params_data)
+            states[fragment_id] = decode_production_outer_state(outer_data)
             if lifecycle_cadence and (
                 view.optimizer_transition_count % lifecycle_cadence == 0
             ):
@@ -993,7 +1013,6 @@ def run_committer(
                 atomic_write_json(report_path, lifecycle_report)
                 logger.event("lifecycle_cycle_completed", **lifecycle_report)
             materialization_started_ns = time.monotonic_ns()
-            fragments, states = _load_committed_tensors(log, view, device="cpu")
             publish_materialized_view(
                 config=config,
                 paths=paths,

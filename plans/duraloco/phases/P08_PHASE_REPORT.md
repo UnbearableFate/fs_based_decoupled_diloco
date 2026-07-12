@@ -2,7 +2,7 @@
 
 ## Current status
 
-- Status: in progress, Loop 1 orientation
+- Status: in progress, Loops 2–3 implementation
 - Branch: `codex/duraloco-p08-distributed-performance`
 - H0 runtime basis: `f167a07c49339ba42d14f8a5873fe2c8781884d4`
 - H0 Checker basis: `04e0a8634b0e9d7c4cd55c5593081a0ca969a060`
@@ -65,6 +65,32 @@ All later failed, inconclusive, cancelled, superseded, and passing runs will be
 preserved in `plans/duraloco/errors/P08_ERROR_LEDGER.yaml` and the phase report
 rather than replaced by the final result.
 
-The first compute action is the one-node targeted telemetry/materialized-LFE
-profile in `scripts/miyabi/run_duraloco_p08_profile_1node.pbs`; its test and
-benchmark have not been executed on the login node.
+PBS `2370057.opbs` passed the corrected one-node telemetry contract (4/4) and
+persisted the H0-style materialized-LFE baseline. For 16 MiB fragments and
+quorum 1/2/4/8, materialized proposal residency was 16/32/64/128 MiB, peak RSS
+was 585,105,408 / 603,979,776 / 660,602,880 / 1,203,240,960 bytes, and minimum
+reduction times were 1.95/2.89/4.90/9.01 ms. This is baseline evidence, not an
+optimized-path acceptance pass. Its immutable manifest and raw JSON are under
+`artifacts/duraloco/P08/20260713_p08_profile_d97d914_1node_r3/`.
+
+The login-node phase-state validation was initially invoked with a nonexistent
+`--phase` option and then exposed that the first P08 phase-state draft used the
+documentation-oriented schema instead of the executable checker schema. No
+runtime or authority was touched. The state file was rewritten to the canonical
+25-acceptance contract and is now validated with its positional path.
+
+Loops 2–3 now have a login-statically-clean candidate implementation: canonical
+direct fragment gather/scatter and learner single-copy authority publication;
+one-proposal-at-a-time float32 reduction; head/epoch/owner-scoped digest-only
+validation tokens; cheap causal rejection; reconstructible discovery cursors;
+POSIX envelope-v2 chunk digests with seek-based range reads and v1 fallback;
+replay-maintained lineage maps; cadence-gated full materialization and unchanged
+fragment reuse; and parent-directory fsync for derived sidecars. Loop 4 has an
+explicit one-in-flight/thread/RSS/prefetch budget plus actual affinity, NUMA and
+Torch-thread evidence bound into each attempt. D-0800 is implemented as the
+fresh-generation `distributed-head-fenced-error-resume-v2` control path.
+
+These implementation claims are not acceptance results yet. They have passed
+only login-safe ruff, shell syntax, diff, and phase-state checks; all Torch,
+storage runtime, replay, lifecycle, numeric, memory, and resume tests await the
+next one-node PBS compute qualification.

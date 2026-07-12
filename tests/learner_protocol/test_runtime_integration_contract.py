@@ -63,4 +63,6 @@ def test_interval_metadata_freezes_numeric_and_recovery_identity():
         "proposal-transport-to-float32-commit-v1",
     ):
         assert required in source
-    assert source.count("read_bytes()") == 1
+    assert source.count("read_bytes()") == 0
+    assert '"payload_ref": publication.payload_ref.to_dict()' in source
+    assert "encode_fragment_update" in source

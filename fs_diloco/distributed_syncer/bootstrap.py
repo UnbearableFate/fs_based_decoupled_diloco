@@ -50,6 +50,7 @@ def distributed_run_spec_factory(
     membership: MembershipRevisionV1,
     budget: ExecutorBudget,
     replication_factor: int = 1,
+    error_resume: bool = False,
 ):
     backend_digest = canonical_digest(execution_backend_identity(threads=budget.threads))
 
@@ -66,7 +67,11 @@ def distributed_run_spec_factory(
             max_global_staleness=config.sync.max_staleness_versions,
             max_fragment_staleness=config.sync.max_staleness_versions,
             payload_codec=PRODUCTION_CODEC,
-            coordination_protocol="distributed-head-fenced-v1",
+            coordination_protocol=(
+                "distributed-head-fenced-error-resume-v2"
+                if error_resume
+                else "distributed-head-fenced-v1"
+            ),
             distributed_membership=membership,
             ownership_replication_factor=replication_factor,
             execution_backend_digest=backend_digest,

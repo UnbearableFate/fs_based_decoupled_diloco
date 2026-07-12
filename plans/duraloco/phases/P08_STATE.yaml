@@ -1,46 +1,69 @@
-schema_version: 3
-project: duraloco
 phase: P08
 status: in_progress
-branch: codex/duraloco-p08-distributed-performance
-basis:
-  phase: H0
-  runtime_commit: f167a07c49339ba42d14f8a5873fe2c8781884d4
-  checker_commit: 04e0a8634b0e9d7c4cd55c5593081a0ca969a060
-  documentation_commit: 8c12839a7b985e590378ac593c846f07b0637517
-current_commit: fcbbfa17e91fc1eb9cdd90b3d3ea40aea3c79705
-working_tree_clean: true
-architecture:
-  mode: distributed_performance_core
-  dedicated_syncer_nodes: 0
-  learner_nodes: 8
-  executor_processes: 8
-  replication_factors: [1, 2]
-  global_head_mode: single
-  per_fragment_heads: false
-  bundle_gate: pending_profile
-progress:
-  current_loop: 1
-  next_smallest_gap: stage telemetry RED contract and H0 matched baseline
-  acceptance_total: 25
-  acceptance_passed: 0
-  acceptance_not_run: 25
-validation:
-  static: pass
-  targeted_1node: not_run
-  D1: not_run
-  D2_R2: not_run
-  D8: not_run
-  D8_R2: not_run
-checker:
-  status: not_run
-  verdict: null
-  report: null
+planning_basis_branch: codex/problem-fix-after-p07
+planning_basis_commit: f167a07c49339ba42d14f8a5873fe2c8781884d4
+verified_dependency_implementation: f167a07c49339ba42d14f8a5873fe2c8781884d4
+verified_dependency_checker_commit: 04e0a8634b0e9d7c4cd55c5593081a0ca969a060
+actual_base_branch: codex/problem-fix-after-p07
+actual_base_commit: 8c12839a7b985e590378ac593c846f07b0637517
+feature_branch: codex/duraloco-p08-distributed-performance
+current_loop: 3
+current_goal: "complete direct fragment I/O, streaming reduction, validation reuse, range I/O, and bounded execution contracts"
+attempts_for_current_failure: 0
+last_terminal_failure_review: null
+terminal_retry_authorized: false
+terminal_retry_qualification:
+  targeted_1node_benchmark: null
+  miyabi_1node: null
+  miyabi_2node: null
+last_verified_commit: d97d9142e70356468b79f954e87f69c163b687e2
+checks:
+  local_static: static_pass
+  telemetry_profile_1node: miyabi_1node_pass
+  optimized_targeted_1node: not_run
+  optimized_full_1node: not_run
+  miyabi_d1: not_run
+  miyabi_d2: not_run
+  miyabi_d8: not_run
+  miyabi_d8_r2: not_run
+  p07_regression: not_run
+  independent_checker: not_run
+acceptance:
+  P08-A01: {result: not_run, evidence: []}
+  P08-A02: {result: not_run, evidence: []}
+  P08-A03: {result: not_run, evidence: []}
+  P08-A04: {result: not_run, evidence: []}
+  P08-A05: {result: not_run, evidence: []}
+  P08-A06: {result: not_run, evidence: []}
+  P08-A07: {result: not_run, evidence: []}
+  P08-A08: {result: not_run, evidence: []}
+  P08-A09: {result: not_run, evidence: []}
+  P08-A10: {result: not_run, evidence: []}
+  P08-A11: {result: not_run, evidence: []}
+  P08-A12: {result: not_run, evidence: []}
+  P08-A13: {result: not_run, evidence: []}
+  P08-A14: {result: not_run, evidence: []}
+  P08-A15: {result: not_run, evidence: []}
+  P08-A16: {result: not_run, evidence: []}
+  P08-A17: {result: not_run, evidence: []}
+  P08-A18: {result: not_run, evidence: []}
+  P08-A19: {result: not_run, evidence: []}
+  P08-A20: {result: not_run, evidence: []}
+  P08-A21: {result: not_run, evidence: []}
+  P08-A22: {result: not_run, evidence: []}
+  P08-A23: {result: not_run, evidence: []}
+  P08-A24: {result: not_run, evidence: []}
+  P08-A25: {result: not_run, evidence: []}
+open_decisions: []
+open_blockers: []
 artifacts:
-  phase_report: plans/duraloco/phases/P08_PHASE_REPORT.md
-  error_ledger: plans/duraloco/errors/P08_ERROR_LEDGER.yaml
-  targeted_profile_script: scripts/miyabi/run_duraloco_p08_profile_1node.pbs
-blockers: []
-decisions_open: []
-next_action: implement Loop 1 RED telemetry and profile contracts
-updated_at: "2026-07-13T00:00:00+09:00"
+  - plans/duraloco/phases/P08_STATE.yaml
+  - plans/duraloco/phases/P08_PHASE_REPORT.md
+  - plans/duraloco/errors/P08_ERROR_LEDGER.yaml
+  - artifacts/duraloco/P08/20260713_p08_profile_d97d914_1node_r3/manifest.json
+  - artifacts/duraloco/P08/20260713_p08_profile_d97d914_1node_r3/lfe_materialized_baseline.json
+next_action: "finish Loops 2-4 implementation and run the optimized one-node compute qualification"
+automatic_progression: true
+requires_human_approval: false
+approval_reason: null
+checker_report: null

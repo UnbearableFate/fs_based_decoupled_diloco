@@ -18,6 +18,19 @@ from .codec import canonical_object
 from .errors import VerificationError
 
 
+FENCED_COORDINATION_PROTOCOLS = frozenset(
+    {
+        "head-fenced-v1",
+        "distributed-head-fenced-v1",
+        "distributed-head-fenced-error-resume-v2",
+    }
+)
+DISTRIBUTED_COORDINATION_PROTOCOLS = frozenset(
+    {"distributed-head-fenced-v1", "distributed-head-fenced-error-resume-v2"}
+)
+ERROR_RESUME_COORDINATION_PROTOCOL = "distributed-head-fenced-error-resume-v2"
+
+
 @dataclass(frozen=True)
 class RunSpec:
     run_id: str
@@ -68,9 +81,7 @@ class RunSpec:
             raise ValueError(f"unsupported run payload codec: {self.payload_codec}")
         if self.generation_kind not in {"fresh", "warm_start"}:
             raise ValueError("generation_kind must be fresh or warm_start")
-        if self.coordination_protocol not in {
-            "none", "head-fenced-v1", "distributed-head-fenced-v1"
-        }:
+        if self.coordination_protocol not in {"none", *FENCED_COORDINATION_PROTOCOLS}:
             raise ValueError("unsupported coordination protocol")
         distributed_values = (
             self.distributed_membership,
@@ -78,7 +89,7 @@ class RunSpec:
             self.execution_backend_digest,
             self.prepare_capability_digest,
         )
-        if self.coordination_protocol == "distributed-head-fenced-v1":
+        if self.coordination_protocol in DISTRIBUTED_COORDINATION_PROTOCOLS:
             if any(value is None for value in distributed_values):
                 raise ValueError("distributed protocol requires complete bootstrap facts")
             if self.distributed_membership is None or self.distributed_membership.revision != 0:
