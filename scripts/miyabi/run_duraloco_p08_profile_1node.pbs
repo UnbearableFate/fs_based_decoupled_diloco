@@ -24,16 +24,6 @@ hostname | tee "$ARTIFACT_ROOT/hostname.log"
 printf 'PBS_JOBID=%s\nPBS_NODEFILE=%s\n' "${PBS_JOBID:-}" "${PBS_NODEFILE:-}" \
   | tee "$ARTIFACT_ROOT/pbs_context.log"
 
-ACTUAL_COMMIT="$(git rev-parse HEAD)"
-test "$ACTUAL_COMMIT" = "$EXPECTED_COMMIT"
-test -z "$(git status --porcelain=v1)"
-
-COMMANDS_LOG="$ARTIFACT_ROOT/commands.log"
-printf '%s\n' \
-  "$PYTHON_BIN -m pytest tests/performance_core/test_stage_telemetry.py -q" \
-  "$PYTHON_BIN benchmarks/bench_lfe_pipeline.py --output $ARTIFACT_ROOT/lfe_materialized_baseline.json" \
-  > "$COMMANDS_LOG"
-
 result=fail
 exit_code=1
 finish() {
@@ -69,6 +59,16 @@ finish() {
     || true
 }
 trap finish EXIT
+
+ACTUAL_COMMIT="$(git rev-parse HEAD)"
+test "$ACTUAL_COMMIT" = "$EXPECTED_COMMIT"
+test -z "$(git status --porcelain=v1)"
+
+COMMANDS_LOG="$ARTIFACT_ROOT/commands.log"
+printf '%s\n' \
+  "$PYTHON_BIN -m pytest tests/performance_core/test_stage_telemetry.py -q" \
+  "$PYTHON_BIN benchmarks/bench_lfe_pipeline.py --output $ARTIFACT_ROOT/lfe_materialized_baseline.json" \
+  > "$COMMANDS_LOG"
 
 "$PYTHON_BIN" -m pytest tests/performance_core/test_stage_telemetry.py -q \
   > >(tee "$ARTIFACT_ROOT/stdout.log") \

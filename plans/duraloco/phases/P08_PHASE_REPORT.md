@@ -39,10 +39,17 @@ after RED/GREEN tests and PBS compute-node runs complete.
 
 ## Failures and experiments
 
-No P08 runtime experiment has been submitted yet. No failure is currently
-recorded. All later failed, inconclusive, cancelled, superseded, and passing
-runs will be preserved in `plans/duraloco/errors/P08_ERROR_LEDGER.yaml` and the
-phase report rather than replaced by the final result.
+The first targeted submission, PBS `2369958.opbs`, failed before project
+runtime because `EXPECTED_COMMIT` was manually transcribed with the wrong full
+hash. It ran for one second, changed no authority, and produced no test/profile
+result. The PBS output, host/module context and scheduler trace are preserved
+as P08-E001. The wrapper now installs its immutable-manifest EXIT trap before
+the identity check, and the retry derives the exact hash from `git rev-parse`
+instead of retyping it.
+
+All later failed, inconclusive, cancelled, superseded, and passing runs will be
+preserved in `plans/duraloco/errors/P08_ERROR_LEDGER.yaml` and the phase report
+rather than replaced by the final result.
 
 The first compute action is the one-node targeted telemetry/materialized-LFE
 profile in `scripts/miyabi/run_duraloco_p08_profile_1node.pbs`; its test and
