@@ -202,3 +202,9 @@ The final one-node gate also pairs real streaming reductions with and without
 the asynchronous recorder, includes recorder drain time, requires identical
 numeric output and complete health, and enforces D-0806's two-percent wall-time
 overhead ceiling before any matched nine-node submission.
+
+The first final one-node allocation, PBS `2370427.opbs`, never entered the
+wrapper. PBS retained mg0023 in running substate 41 for 281 seconds with unset
+elapsed time and no stdout or artifact directory. It was cancelled as an
+infrastructure prologue stall. P08-E017 records the zero-authority, zero-runtime
+attempt; no source change is attributed to it.

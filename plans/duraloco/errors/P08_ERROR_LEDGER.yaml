@@ -272,4 +272,19 @@ entries:
       - tracejob 2370338.opbs
     correction: pass a unique shared Lustre STORAGE_ROOT explicitly in the qsub environment
     retry_policy: rerun targeted one-node on the new clean persistence commit, then submit D2 with all four required environment values
-last_updated: "2026-07-13T03:36:00+09:00"
+  - id: P08-E017
+    job: 2370427.opbs
+    shape: optimized_targeted_1node
+    commit: c5fffe6f75e56c8b5de10af0b3bdf4e5dba1ff98
+    result: infrastructure_cancelled
+    failure_class: compute_node_prologue_stall
+    expected: allocated debug node starts the clean one-node qualification wrapper
+    actual: PBS held the job in running substate 41 on mg0023 for 281 seconds with no walltime, stdout, artifact directory, or script entry; operator cancelled the stalled allocation
+    authority_effect: none; the wrapper never started and no authority path exists for this gate
+    runtime_started: false
+    evidence:
+      - tracejob 2370427.opbs
+      - qstat substate=41 with elapsed unset
+    correction: no source repair; retry the identical gate after persisting this infrastructure lineage
+    retry_policy: one clean one-node resubmission; do not count the stalled prologue as runtime qualification
+last_updated: "2026-07-13T03:57:00+09:00"
