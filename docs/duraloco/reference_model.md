@@ -1,78 +1,38 @@
-# Deterministic Reference Model
+# Reference Model 与 Production 对照
 
-P02 provides an executable specification independent of Torch, Hugging Face,
-NumPy, filesystem I/O, networking, GPU scheduling, and the production syncer.
-It comprises an in-memory semantic storage backend, immutable transition
-system, deterministic outer-optimizer oracle, crash simulator, trace grammar,
-model checker, replay/minimizer, and deliberate safety mutants.
+## 作用
 
-## Storage semantics
+`fs_diloco/log/model.py`、`fs_diloco/testing/reference_simulator.py` 和
+`fs_diloco/testing/model_checker.py` 构成小状态、确定性的协议 oracle。它们枚举 proposal、decision、
+commit、crash/restart/CAS conflict 和 lineage 状态，检查 I-001–I-009，并用 deliberate mutants 证明
+关键不变量能杀死错误实现。
 
-`InMemoryStorageBackend` supplies immutable put/put-if-absent, get/head/range,
-single-key conditional replacement, delete, operation history, and deterministic
-before/after-effect timeout injection. Same-key/same-bytes writes are
-idempotent; conflicting immutable content fails. Conditional replacement has
-one winner, and replaying the exact operation after an after-effect timeout is
-idempotent. Listing exists for discovery tests but is absent from transition
-correctness.
+reference model 的价值是把“期望的 committed state”与 POSIX、PyTorch、MPI launcher、telemetry 等
+工程细节分开。它不是 production storage，也不提供性能或 Miyabi/Lustre 证据。
 
-## Transition system
+## Production 对照
 
-`SystemState` contains one global head, per-fragment parameters/version/outer
-state, published proposals, committed consumption/drop sets, and a parent-linked
-commit sequence. Its full state identity binds the optimizer,
-rational-weighting, global/fragment staleness configurations, and every
-durably published proposal as well as committed/drop state. A separate
-`committed_digest` excludes the unordered proposal store and is the oracle for
-independent head-prefix folding. Preparing a transition
-canonicalizes proposal IDs, validates
-eligibility against authoritative state, rejects duplicate learners/IDs,
-applies the frozen rational staleness decay `tokens / (1 + 0.2 * staleness)`,
-normalizes those positive weights in float64, reduces in canonical order, and
-executes the declared outer optimizer. Preparation does not mutate authority.
+`ProductionTransactionalLog` 使用相同 canonical manifests、selection/weight/numeric oracle 和
+head-CAS transition。production codec 把 params/outer state 编码为 safetensors；strict replay 将实际
+ObjectRef 读回并与 reference fold/state digest 比较。
 
-Proposal drop/supersession is itself a parent-linked decision event that
-advances the same global head; it cannot change eligibility outside the
-recoverable prefix log. Same learner/session/fragment proposals sharing one
-base are treated as overlapping: after the oldest is consumed, successors
-require an explicit supersession decision and cannot be consumed. Across
-successive bases, committed sequence numbers for each learner/session/fragment
-lineage must increase monotonically; a late lower sequence remains published
-but is ineligible for commitment.
+distributed path 在 reference transition 前增加 FWO/input bundle、LFE PFR/attempt envelope、membership、
+ownership/fencing 和 redundancy validation，但只有最终 commit/frontier/head 进入 global optimizer chain。
+prepared result 不是第二套 state machine。
 
-`commit_prepared` re-derives and revalidates the complete deterministic event,
-succeeds only against the exact parent head, consumes each
-proposal once, and installs parameters plus outer state with the same producing
-commit ID. Every committed result checks linear history, consumption equality,
-version increments, output pairing, reference completeness, and deterministic
-transition identity.
+## Evidence 层级
 
-## Numeric oracle
+1. pure reference/model checker：不变量与 counterexample；
+2. memory/POSIX fault tests：storage/commit crash windows；
+3. 1-node compute：真实 runtime、codec、GPU/model 或 focused lifecycle；
+4. 2-node compute：Lustre cross-node locking、visibility、failover；
+5. 9-node/D8-R2：完整 topology、workload、fault schedule 和 lifecycle；
+6. independent checker：RED-on-base、GREEN-on-feature、identity/checksum audit。
 
-Immutable Python float tuples implement SGD, momentum, Nesterov, and AdamW
-using the same weight-decay placement, momentum update, bias correction,
-epsilon, and step-counter semantics as `fs_diloco.outer_optim`. Repeated inputs
-produce stable hexadecimal state identities. PBS compute tests compare all four
-optimizers and the `fragment_count=1` path against the legacy Torch code under
-the P00 numeric tolerance.
+较低层 PASS 不能替代较高层，较高层也不能追溯性地使未运行的 gate 变成 PASS。
 
-## Crash and model checking
+## Identity-preserving change
 
-The simulator injects crashes before and after parameter-object, outer-state,
-commit-record, frontier, decision-record, and head-CAS effects. Every pre-CAS
-crash recovers the old prefix and may leave only unreachable prepared objects;
-response loss after CAS recovers the new prefix. Recorded historical committed
-digests and an independent event fold verify every stored prefix.
-
-Seeded traces cover publication (including before/after-effect crashes),
-selection/commit, rejected illegal selections, crash, and restart. Rejected
-transitions must leave the durable state unchanged, and replay must produce the
-same state digest. Commit trace events call the same oldest-first
-`select_quorum` policy as the transition specification; proposal-ID ordering
-cannot bypass learner-lineage ordering. The quick gate runs 1,000 traces; the
-explicit suite runs 10,000. The minimizer removes irrelevant events from a
-failing trace. Deliberate double-apply, wrong-parent, parameter/outer-state
-pairing, and canonical-but-numerically-wrong transition mutants must be
-detected. A fifth mutant for committed learner-lineage sequence rollback must
-also be detected, demonstrating that the checks fail when the target
-invariants are actually broken.
+性能/工程改动若不改变 canonical input、decision、numeric backend 和 committed schema，应在固定 tape 上
+证明 old/new committed IDs、prefix digests 和 final state 相同。若确实需要改变 identity，则必须采用
+显式 protocol/schema/generation boundary，并记录 ADR/Checker 兼容性结论，不能原地改写历史对象。

@@ -1,59 +1,64 @@
-# DuraLoCo Transaction Log Contract / DuraLoCo 事务日志契约
+# DuraLoCo 持久事务日志
 
-## English
+## 唯一提交点
 
-`authority/runs/<run>/generations/<generation>/control/head.json` is the only
-mutable authority. Genesis uses create-if-absent; every later optimizer
-transition becomes committed only through one conditional replacement of the
-head. Proposal payloads/manifests, parameter tensors, outer-state tensors,
-commit records, and frontiers are immutable preparations. An unreachable
-preparation is an orphan and cannot affect recovery or selection.
+```text
+authority/runs/<run>/generations/<generation>/control/head.json
+```
 
-Each frontier carries the complete fragment map, paired parameter and
-outer-state ObjectRefs, their producing commits, cumulative consumed proposal
-IDs, and the deterministic scheduler cursor. Replay starts at the verified
-head and checks the entire parent-linked prefix, proposal causality and lineage,
-canonical weights, content references, pairing, consumption, and scheduling.
+genesis 通过 create-if-absent 建立。之后每次 optimizer、membership、snapshot pin、fencing epoch bump
+或 stop/error control transition 都先发布不可变对象，最后以一次 head conditional replace 提交。
+成功 CAS 前的任何对象都不是 committed state；response loss 后必须通过 strict replay 判断 CAS 是否
+生效，不能根据本地返回/缓存猜测。
 
-The production codec stores flat float32 safetensors for each parameter
-fragment and named safetensors for its outer state. Full-vector and fragment
-runs use the same `ProductionTransactionalLog` and head-CAS commit path.
-Candidate discovery is a repeatable full scan; omissions, duplicates, and
-reordering cannot change committed state. A CAS conflict discards the tentative
-selection and forces replay, validation, and reselection.
+## Transition 顺序
 
-`RuntimeView` is immutable and process-local. Deleting a process working
-directory or killing the syncer loses only hints. A new process opens the run,
-replays the committed prefix, and obtains the same state digest. Human-readable
-latest/stop files and telemetry are exports and may be deleted or corrupted
-without changing authority.
+一个 optimizer transition 的逻辑步骤是：
 
-Historical checkpoints can seed a fresh generation only through explicit warm
-start. Proposal history, selection state, sequence authority, and exact-
-continuation claims are never imported.
+1. 从当前 head 执行 strict replay，得到 immutable RuntimeView；
+2. 全量验证 catalog observation，按 frozen policy 选择 proposals；
+3. 固化 canonical weights、membership/ownership/fencing 并发布 FWO/input bundle；
+4. LFE 发布 marker-last PFR；
+5. committer 验证 work order、attempt、outputs 与当前 owner；
+6. 写新 params、outer state、commit 和 frontier；
+7. 以 expected head version + unique request ID 做 CAS；
+8. CAS 成功后才更新 derived `latest.json`/telemetry，失败则丢弃 tentative view。
 
-## 中文
+params fragment 与 outer state 必须由同一个 commit 产生并在 frontier 中配对。scheduler cursor、
+consumed proposals、learner lineage、membership revision 和 fencing epoch 也由 prefix fold 重建。
 
-`authority/runs/<run>/generations/<generation>/control/head.json` 是唯一可变
-权威。Genesis 通过 create-if-absent 建立；之后每个优化器 transition 只有一次
-head 条件替换成功后才成为 committed。proposal payload/manifest、参数张量、外
-优化器状态、commit 与 frontier 都是不可变 prepare 对象；head 不可达的对象是
-orphan，不能影响恢复或选择。
+## Strict replay
 
-每个 frontier 包含完整 fragment map、成对的参数/outer-state ObjectRef、产生它们
-的 commit、累计 consumed proposal IDs 与确定性 scheduler cursor。Replay 从校验
-后的 head 开始，验证完整 parent prefix、proposal 因果与 lineage、规范权重、内容
-引用、配对、消费集合和调度状态。
+replay 从 verified head 沿 parent chain 检查连续 commit sequence、frontier digest、ObjectRef 完整性、
+proposal causality/lineage/staleness、canonical selection/weight、numeric output、paired state、consumption、
+membership/ownership、snapshot/control transition 和 committed state digest。
 
-生产 codec 为每个参数 fragment 保存 flat float32 safetensors，并以具名
-safetensors 保存 outer state。full-vector 与 fragment run 共用
-`ProductionTransactionalLog` 和同一 head-CAS 路径。候选发现可从头重扫；listing
-漏项、重复或重排不改变 committed state。CAS 冲突后丢弃 tentative selection，
-重新 replay、validate 和 select。
+以下边界必须 `force_full`/empty-cache：fresh open、owner takeover、显式 verify、CAS ambiguity、head jump、
+corruption suspicion。一次完整成功 replay 后可在当前进程/owner/session 使用完整 ObjectRef key 的
+verified-object memoization；缓存不得跨 owner、序列化或被当成 authority。
 
-`RuntimeView` 是进程内不可变视图。删除进程工作目录或 kill syncer 只会丢失 hint；
-新进程从 committed prefix 恢复同一 state digest。latest/stop 与 telemetry 是可删除
-导出物，不能成为权威。
+CAS conflict 的正确处理是 reload head、strict replay、重新观察/验证/选择并重新计算。不能把旧
+selection/PFR 直接套到新 parent，也不能仅修改 identity 伪装成新 transition。
 
-历史 checkpoint 只能显式 warm-start 新 generation；不得导入 proposal history、
-selection/sequence authority，也不得声称 exact continuation。
+## Snapshot+suffix
+
+snapshot 是 immutable projection，不是第二 head。只有 committed snapshot-pin transition 且 snapshot
+的 covered head/frontier/state digest、causal bases 和 embedded objects 全部验证后才可使用。恢复从
+snapshot fold suffix，结果必须与完整 strict replay 相同；缺失/损坏/过期/owner mismatch 直接回退。
+
+系统保留两个独立 valid restore base；在第二个 base 出现前，旧 committed prefix object 仍受保护。
+snapshot 只减少 covered-prefix 读取，不能省略 suffix 或新 ObjectRef 的完整验证。
+
+## Inspection
+
+```bash
+python -m fs_diloco.log.inspect_cli verify \
+  --root <shared-root>/authority --run-id <run-id> --generation 0
+python -m fs_diloco.log.inspect_cli replay \
+  --root <shared-root>/authority --run-id <run-id> --generation 0
+python -m fs_diloco.log.inspect_cli orphans \
+  --root <shared-root>/authority --run-id <run-id> --generation 0
+```
+
+`latest.json`、materialized checkpoint、heartbeat、CSV/JSONL/W&B 和 process-local selection 是派生或
+观测数据。删除或损坏这些对象不能改变 replay；若它们与 head 不一致，以 head chain 为准。

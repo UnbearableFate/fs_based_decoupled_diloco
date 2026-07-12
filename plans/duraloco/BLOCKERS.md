@@ -1,7 +1,9 @@
 # DuraLoCo Blockers
 
-No open blocker is recorded through completed M00. P05 is authorized to start
-from corrected archival tip `89ae48aae5956b09fc6685074d3ea0eaea36b816`.
+No open blocker is recorded through completed P07 and H0. P08 is authorized to
+start from the H0-qualified runtime commit
+`f167a07c49339ba42d14f8a5873fe2c8781884d4`; its independent checker basis is
+`04e0a8634b0e9d7c4cd55c5593081a0ca969a060`.
 
 Runtime checks must remain `not_run` until a PBS compute job produces evidence;
 queue delay is not itself a blocker. Any later blocker entry must include a

@@ -1,23 +1,22 @@
-# DuraLoCo Invariant Catalog
+# DuraLoCo Safety Invariants
 
-Invariant IDs are stable. P00 freezes their meaning; later phases supply the
-listed executable owners.
+这些 ID 是跨阶段稳定的验收接口。下表描述当前实现的含义，并给出至少一个活跃测试 owner；阶段
+report/Checker 提供 Miyabi 证据，测试路径本身不等于 PBS 已运行。
 
-| ID | Invariant | Future executable owner |
+| ID | 当前不变量 | 测试 owner |
 |---|---|---|
-| I-001 | Every object referenced by committed head/frontier exists and passes size and digest verification. | `tests/log/test_replay_prefix.py` (P04) |
-| I-002 | Committed heads form one parent-linked chain with strictly increasing commit sequence. | `tests/reference/test_reference_transitions.py` (P02), `tests/log/test_cas_conflict.py` (P04) |
-| I-003 | A proposal ID appears in at most one committed selected set. | `tests/reference/test_double_inclusion.py` (P02), `tests/log/test_commit_crash_matrix.py` (P04) |
-| I-004 | Every selected proposal has a current-run causal base that is a committed ancestor and within configured staleness. | `tests/protocol/test_validation_matrix.py` (P01) |
-| I-005 | Each fragment version and its outer-optimizer state are generated and referenced by the same commit. | `tests/reference/test_reference_transitions.py` (P02), `tests/log/test_commit_happy_path.py` (P04) |
-| I-006 | A head CAS is the sole committed-transition linearization point; prepared/orphan objects never affect committed state. | `tests/reference/test_crash_prefixes.py` (P02), `tests/log/test_commit_crash_matrix.py` (P04) |
-| I-007 | Fencing epochs never decrease; after an epoch bump an older leader cannot advance head. | `tests/syncer_v2/test_lease_fencing.py` (P05) |
-| I-008 | Recovery equals the fold of one complete head-reachable committed prefix and is independent of disposable caches. | `tests/reference/test_crash_prefixes.py` (P02), `tests/log/test_cache_rebuild.py` (P04) |
-| I-009 | Equal canonical parent/input/decision/optimizer data produces the same transition identity under the declared numeric mode. | `tests/reference/test_reference_outer_optim.py` (P02) |
-| I-010 | Objects reachable from head, snapshots, active cursors/capsules, pins, eligible proposals, or grace roots are never reclaimed. | `tests/lifecycle/test_reachability.py` (P07) |
-| I-011 | Protocol identities map to one canonical body and one content digest; conflicts fail closed. | `tests/protocol/test_identities.py` (P01) |
-| I-012 | A proposal's payload path/key stays inside its run namespace and matches declared key, size, digest, shape, dtype, and finite-value contract. | `tests/protocol/test_validation_matrix.py` (P01) |
+| I-001 | head/frontier/commit/FWO/PFR/capsule 等权威引用的对象必须存在，并通过 canonical key、size 与 digest 验证；坏对象不能静默参与 transition。 | `tests/log/test_replay_prefix.py`, `tests/protocol/test_validation_matrix.py` |
+| I-002 | committed head 只命名一条 parent-linked、commit-sequence 连续的 chain；CAS conflict 不能产生两个 committed tip。 | `tests/reference/test_reference_transitions.py`, `tests/log/test_cas_conflict.py` |
+| I-003 | 一个 proposal 最多进入一个 committed selected set；consumed、dropped 和 selected terminal state 互斥，learner interval/lineage 不重复。 | `tests/reference/test_double_inclusion.py`, `tests/log/test_commit_crash_matrix.py` |
+| I-004 | selected proposal 的 causal base 必须是当前 generation 的 committed ancestor，fragment/version 对应且在 frozen staleness bound 内。 | `tests/protocol/test_validation_matrix.py`, `tests/reference/test_reference_transitions.py` |
+| I-005 | 每个 fragment 的 params 和 outer-optimizer state 由同一 commit 产生、共同递增，并与 replay frontier 一致。 | `tests/reference/test_reference_transitions.py`, `tests/log/test_commit_happy_path.py` |
+| I-006 | head CAS 是唯一 committed-transition linearization point；prepared、orphan、lost response 和 derived file 都不能单独改变 authority。 | `tests/reference/test_crash_prefixes.py`, `tests/log/test_commit_crash_matrix.py` |
+| I-007 | fencing epoch 单调不减；epoch bump/takeover 后旧 owner、旧 membership 或旧 work order 不能推进 head。 | `tests/coordination/test_production_fencing.py`, `tests/distributed_syncer/test_ownership_r2.py` |
+| I-008 | recovery 必须等于一个完整 head-reachable committed prefix 的 fold；empty-cache strict、memoized 与 valid snapshot+suffix 的 state/identity 相同。 | `tests/log/test_production_runtime.py`, `tests/lifecycle/test_snapshot_suffix_replay.py` |
+| I-009 | 相同 canonical parent/input/decision/optimizer/backend 产生相同 transition identity 和 reference numeric result。 | `tests/reference/test_reference_outer_optim.py`, `tests/reference/test_model_checker_mutants.py` |
+| I-010 | head ancestry、retained snapshots、active distributed evidence、pins/acks/capsules、eligible/grace/quarantine/unknown roots 在 GC 中不可回收。 | `tests/lifecycle/test_gc_concurrency.py`, `tests/lifecycle/test_distributed_reachability.py` |
+| I-011 | 每个 protocol identity 只映射一个 canonical body/content digest；冲突、不同 redundant result 或自相矛盾 marker fail closed。 | `tests/protocol/test_identities.py`, `tests/distributed_syncer/test_duplicate_equivalence.py` |
+| I-012 | proposal/payload key 留在 run namespace，并精确匹配声明 key、ObjectRef、shape、dtype、layout 与 finite-value contract。 | `tests/protocol/test_validation_matrix.py`, `tests/protocol/test_schema_roundtrip.py` |
 
-The P0 stop conditions are any unexplained violation of I-003, I-005, I-006,
-I-007, I-008, or I-010. Performance or training gates must remain closed while
-such a violation is open.
+任何无法解释的 I-003、I-005、I-006、I-007、I-008 或 I-010 违反都是 stop condition；性能、质量和
+后续 phase gate 必须关闭，先保存 authority/failure evidence 并执行独立 root-cause review。
