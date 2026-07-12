@@ -36,6 +36,26 @@ class ReachabilityReport:
     protected_unknown: tuple[str, ...]
     retention_reasons: tuple[tuple[str, tuple[str, ...]], ...]
 
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "head_commit_id": self.head_commit_id,
+            "head_commit_seq": self.head_commit_seq,
+            "fencing_epoch": self.fencing_epoch,
+            "membership_revision": self.membership_revision,
+            "inventory": list(self.inventory),
+            "roots": [list(item) for item in self.roots],
+            "edges": [
+                {"source": item.source, "target": item.target, "reason": item.reason}
+                for item in self.edges
+            ],
+            "reachable": list(self.reachable),
+            "candidates": list(self.candidates),
+            "protected_unknown": list(self.protected_unknown),
+            "retention_reasons": [
+                [key, list(reasons)] for key, reasons in self.retention_reasons
+            ],
+        }
+
     def explain(self, target: str) -> tuple[ReachabilityEdge, ...]:
         root_keys = {key for key, _reason in self.roots}
         if target in root_keys:
