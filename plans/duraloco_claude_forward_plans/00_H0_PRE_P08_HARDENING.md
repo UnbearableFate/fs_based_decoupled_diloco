@@ -1,9 +1,12 @@
 ---
 plan_id: "H0"
 title: "Pre-P08 Hardening: Evidence Integrity, Storage Listing Cost, Platform Lock Probe"
-status: "ready"
+status: "completed"
 date: "2026-07-12"
 planning_basis_commit: "c099adc3c3a99127569a7d9bf38a58547022173c"
+qualified_runtime_commit: "f167a07c49339ba42d14f8a5873fe2c8781884d4"
+independent_checker_commit: "04e0a8634b0e9d7c4cd55c5593081a0ca969a060"
+independent_checker_job: "2369726.opbs"
 target_branch: "codex/duraloco-h0-pre-p08-hardening"
 depends_on: ["P07"]
 execution_mode: "single-writer maker + independent checker"
@@ -30,17 +33,17 @@ listing pathology, and so every later committed stop fact can be trusted.
 
 ### 2.1 Committer evidence integrity (review H2, H3, M4, M5)
 
-- [ ] `run_committer` gains the same exception discipline as `run_syncer`:
+- [x] `run_committer` gains the same exception discipline as `run_syncer`:
       `except Exception: stop_reason = "error"; raise` before `finally`.
-- [ ] The `finally` block tolerates `CommitConflict` on `commit_stop`, rebuilds
+- [x] The `finally` block tolerates `CommitConflict` on `commit_stop`, rebuilds
       the view, and publishes `stop.json` only when
       `view.authoritative_stop is not None`; otherwise logs
       `stop_not_published_without_authority`. No exception may escape the
       `finally` and mask the original error.
-- [ ] Main loop handles `CommitConflict`/`InjectedTimeout` on
+- [x] Main loop handles `CommitConflict`/`InjectedTimeout` on
       `prepare_transition`/`commit_prepared` with force-full replay + continue
       (or clean exit on observed authoritative stop), mirroring `syncer.py`.
-- [ ] `_wait_for_result` renews the fenced lease at
+- [x] `_wait_for_result` renews the fenced lease at
       `renew_interval_seconds` cadence while polling (reuse
       `_run_lifecycle_substage` or renew inline). Assert in config validation
       that `sync.grace_window < coordination.lease_ttl_seconds -
@@ -48,13 +51,13 @@ listing pathology, and so every later committed stop fact can be trusted.
 
 ### 2.2 Storage listing/head cost (review H15, H16)
 
-- [ ] `PosixStorageBackend.list_prefix(prefix)` walks only the prefix subtree.
-- [ ] Listing and `head()` validate the checksummed envelope **header only**
+- [x] `PosixStorageBackend.list_prefix(prefix)` walks only the prefix subtree.
+- [x] Listing and `head()` validate the checksummed envelope **header only**
       (bounded read); full payload verification remains in `get`/
       `verified_get`. `head()` returns sha/size from the header.
-- [ ] `put_immutable` idempotency compares header digest + size instead of full
+- [x] `put_immutable` idempotency compares header digest + size instead of full
       bytes once header-only `head` exists.
-- [ ] Fault-injection and storage-contract tests updated: a payload-corrupted
+- [x] Fault-injection and storage-contract tests updated: a payload-corrupted
       object must still be *listed* (discovery) but must fail `verified_get`;
       reachability/GC behavior on such an object is asserted explicitly
       (unknown/quarantine path, never silent deletion).
@@ -65,10 +68,10 @@ freeze.
 
 ### 2.3 Platform lock probe (review M11)
 
-- [ ] `storage/capability_probe.py` gains a multi-process advisory-lock scope
+- [x] `storage/capability_probe.py` gains a multi-process advisory-lock scope
       probe; `PosixStorageBackend` records the probe result in
       `StorageCapabilities`.
-- [ ] A two-node Miyabi probe job demonstrates cross-node `flock` exclusion on
+- [x] A two-node Miyabi probe job demonstrates cross-node `flock` exclusion on
       the target Lustre mount (or documents `-o flock` verification via mount
       options) and archives the evidence. Backend construction on shared roots
       fails closed when the capability is absent and
@@ -76,27 +79,27 @@ freeze.
 
 ### 2.4 Dormant-bug and race fixes (review H1, M6, M7, M9)
 
-- [ ] Rename the shadowing loop variable in `run_fragment_learner`
+- [x] Rename the shadowing loop variable in `run_fragment_learner`
       (`learner.py:851`) and add a functional multi-fragment test
       (`num_fragments >= 2`) asserting per-update metadata `fragment_id ==
       interval.fragment_id` and round-robin coverage of all fragments.
-- [ ] `resolve_mutation` (and `_optimizer_transition_count` fallback) look up
+- [x] `resolve_mutation` (and `_optimizer_transition_count` fallback) look up
       commits by `commit_seq`, never by list index; regression test resolves a
       pre-snapshot-base request id after compaction.
-- [ ] Heartbeats carry `run_generation`; `_heartbeat_snapshot` and
+- [x] Heartbeats carry `run_generation`; `_heartbeat_snapshot` and
       `validate_heartbeat` filter on it. Regression test: stale
       previous-generation heartbeats cannot satisfy
       `finite_local_training_complete`.
-- [ ] `LeaseManager.acquire` NotFound branch converts a lost `put_if_absent`
+- [x] `LeaseManager.acquire` NotFound branch converts a lost `put_if_absent`
       race (`ImmutableConflict`) into idempotent return or
       `CoordinationConflict`; two-process bootstrap race test.
 
 ### 2.5 Quick hygiene (review L12, L13, L26, L27; zero-risk only)
 
-- [ ] `ruff --fix` for unused imports; bind B023 lambdas with default args;
+- [x] `ruff --fix` for unused imports; bind B023 lambdas with default args;
       move the dead `loss is None` check above the division; dtype `KeyError`
       → typed `PAYLOAD_DTYPE` protocol error.
-- [ ] Add ruff (F, B, PLE rule families) to the local static gate so these
+- [x] Add ruff (F, B, PLE rule families) to the local static gate so these
       classes cannot re-enter.
 
 ## 3. Explicitly out of scope (deferred, with owners)
@@ -138,23 +141,23 @@ archived. Artifacts + checksums under `artifacts/duraloco/H0/`.
 
 ## 5. Acceptance
 
-- [ ] H0-A01: committer crash paths commit `error` (never `completed`) stop
+- [x] H0-A01: committer crash paths commit `error` (never `completed`) stop
       facts; `finally` never raises over the original exception.
-- [ ] H0-A02: committer survives head conflict via strict replay; survives a
+- [x] H0-A02: committer survives head conflict via strict replay; survives a
       lease-length executor wait without losing the lease.
-- [ ] H0-A03: `list_prefix`/`head` are prefix-scoped and header-only; payload
+- [x] H0-A03: `list_prefix`/`head` are prefix-scoped and header-only; payload
       bytes read during a D2 lifecycle cycle drop accordingly (counter
       evidence archived); corruption-detection contract tests still pass.
-- [ ] H0-A04: cross-node lock probe evidence archived; backend fails closed
+- [x] H0-A04: cross-node lock probe evidence archived; backend fails closed
       without the capability on authority roots.
-- [ ] H0-A05: multi-fragment learner test passes; round-robin restored.
-- [ ] H0-A06: `resolve_mutation`, heartbeat generation-scoping, and lease
+- [x] H0-A05: multi-fragment learner test passes; round-robin restored.
+- [x] H0-A06: `resolve_mutation`, heartbeat generation-scoping, and lease
       bootstrap race regressions pass.
-- [ ] H0-A07: all P07 acceptance regressions pass unchanged on the H0 commit;
+- [x] H0-A07: all P07 acceptance regressions pass unchanged on the H0 commit;
       no committed identity changed.
-- [ ] H0-A08: static gate includes ruff; active surface still free of
+- [x] H0-A08: static gate includes ruff; active surface still free of
       SQLite/embedded DBs.
-- [ ] H0-A09: report/checksums/clean commit; `STATE.yaml.next_action = P08`
+- [x] H0-A09: report/checksums/clean commit; `STATE.yaml.next_action = P08`
       with H0 commit as P08's `planning_basis_runtime_commit`.
 
 ## 6. Startup instruction (copyable)

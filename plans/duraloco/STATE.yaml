@@ -7,8 +7,8 @@ verified_dependency_checker_commit: 6a528cbe26a9209720325ce031937c30d970b977
 actual_base_branch: codex/duraloco-p06c-redundant-fragment-executors
 actual_base_commit: 6a528cbe26a9209720325ce031937c30d970b977
 feature_branch: codex/duraloco-p07-distributed-lifecycle
-current_loop: 5
-current_goal: "P07 completed; hand the verified lifecycle contract to P08"
+current_loop: 6
+current_goal: "H0 completed; hand the hardened, identity-preserving runtime baseline to P08"
 attempts_for_current_failure: 0
 last_terminal_failure_review: plans/duraloco/reviews/P07_D8_2366167_WORKFLOW_REVIEW.md
 terminal_retry_authorized: false
@@ -16,7 +16,10 @@ terminal_retry_qualification:
   targeted_1node_benchmark: 2368753.opbs
   miyabi_1node: 2368758.opbs
   miyabi_2node: 2368760.opbs
-last_verified_commit: c099adc3c3a99127569a7d9bf38a58547022173c
+last_verified_commit: 04e0a8634b0e9d7c4cd55c5593081a0ca969a060
+planning_basis_runtime_commit: f167a07c49339ba42d14f8a5873fe2c8781884d4
+h0_status: completed
+h0_checker_job: 2369726.opbs
 checks:
   local_static: static_pass
   local_runtime: unit_pass
@@ -74,8 +77,18 @@ artifacts:
   - plans/duraloco/reviews/P07_D8_2366037_WORKFLOW_REVIEW.md
   - plans/duraloco/reviews/P07_D8_2366101_WORKFLOW_REVIEW.md
   - plans/duraloco/reviews/P07_D8_2366167_WORKFLOW_REVIEW.md
-next_action: "start P08 from c099adc3c3a99127569a7d9bf38a58547022173c with a profile-first orientation loop and preserve every P07 lifecycle regression"
+  - plans/duraloco/phases/H0_STATE.yaml
+  - plans/duraloco/phases/H0_PHASE_REPORT.md
+  - plans/duraloco/phases/H0_RUN_LEDGER.md
+  - plans/duraloco/phases/H0_CHECKER_REPORT.md
+  - artifacts/duraloco/H0/20260713_011736_h0_unit_f167a07
+  - artifacts/duraloco/H0/20260713_011915_h0_d1_f167a07
+  - artifacts/duraloco/H0/20260713_012130_h0_lock_f167a07
+  - artifacts/duraloco/H0/20260713_012200_h0_d2_f167a07
+  - artifacts/duraloco/H0/20260713_012343_h0_d8r2_50x10_f167a07
+  - artifacts/duraloco/H0/20260713_014514_h0_checker_04e0a86
+next_action: "start P08 from H0 runtime commit f167a07c49339ba42d14f8a5873fe2c8781884d4 with profile-first orientation and preserve every P07/H0 regression"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
-checker_report: plans/duraloco/phases/P07_CHECKER_REPORT.md
+checker_report: plans/duraloco/phases/H0_CHECKER_REPORT.md

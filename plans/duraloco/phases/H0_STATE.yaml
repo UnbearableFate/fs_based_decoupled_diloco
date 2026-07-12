@@ -1,0 +1,86 @@
+schema_version: 1
+phase: H0
+status: completed
+planning_basis_phase: P07
+planning_basis_commit: c099adc3c3a99127569a7d9bf38a58547022173c
+feature_branch: codex/problem-fix-after-p07
+qualified_runtime_commit: f167a07c49339ba42d14f8a5873fe2c8781884d4
+independent_checker_commit: 04e0a8634b0e9d7c4cd55c5593081a0ca969a060
+checker_job: 2369726.opbs
+checker_verdict: PASS
+required_gate_followups: []
+acceptance:
+  H0-A01:
+    result: pass
+    evidence: [2369617.opbs, 2369726.opbs, red-01 through red-03]
+  H0-A02:
+    result: pass
+    evidence: [2369617.opbs, 2369634.opbs, nine executor-result-wait renewal heartbeats]
+  H0-A03:
+    result: pass
+    evidence: [2369629.opbs, D2 four-cycle inventory payload bytes 0, 2369634.opbs D8 five-cycle inventory payload bytes 0]
+  H0-A04:
+    result: pass
+    evidence: [2369628.opbs, distinct-host Lustre exclusion and takeover]
+  H0-A05:
+    result: pass
+    evidence: [2369617.opbs, 2369726.opbs multi-fragment RED/GREEN]
+  H0-A06:
+    result: pass
+    evidence: [2369617.opbs, 2369726.opbs suffix-only resolve, generation heartbeat, and bootstrap race RED/GREEN]
+  H0-A07:
+    result: pass
+    evidence: [2369617.opbs 468 passed and 1 skipped, 2369726.opbs identity_equal]
+  H0-A08:
+    result: pass
+    evidence: [2369617.opbs ruff pass, 2369617.opbs forbidden database scan 0 findings]
+  H0-A09:
+    result: pass
+    evidence: [2369726.opbs PASS, checksums.sha256, H0 phase persistence files]
+validation:
+  static: pass
+  focused_1node: pass
+  full_1node: pass
+  real_d1: pass
+  lock_probe_2node: pass
+  failover_d2_r2: pass
+  gpt2_wikitext_d8_r2_50x10: pass
+  independent_checker: pass
+terminal_run:
+  job: 2369634.opbs
+  local_steps_per_interval: 50
+  global_optimizer_transitions: 10
+  elapsed_seconds: 752
+  lifecycle_cycles: 5
+  max_recovery_seconds: 89.44031405448914
+failed_or_superseded_runs:
+  - job: 2369364.opbs
+    result: fail
+    cause: stale P07 acceptance-count fixture
+  - job: 2369366.opbs
+    result: fail
+    cause: stale P08 acceptance-count fixture
+  - job: 2369715.opbs
+    result: fail
+    cause: RED counterexample did not expose suffix-only resolve_mutation and checker manifest purpose was invalid
+  - job: 2369394.opbs
+    result: superseded_pass
+    cause: runtime commit was superseded by archived lifecycle counters
+  - job: 2369420.opbs
+    result: superseded_pass
+    cause: runtime commit was superseded by archived lifecycle counters
+  - job: 2369428.opbs
+    result: superseded_pass
+    cause: runtime commit was superseded by corrected inventory counter isolation
+artifacts:
+  unit: artifacts/duraloco/H0/20260713_011736_h0_unit_f167a07
+  d1: artifacts/duraloco/H0/20260713_011915_h0_d1_f167a07
+  lock_probe: artifacts/duraloco/H0/20260713_012130_h0_lock_f167a07
+  d2: artifacts/duraloco/H0/20260713_012200_h0_d2_f167a07
+  d8_50x10: artifacts/duraloco/H0/20260713_012343_h0_d8r2_50x10_f167a07
+  checker: artifacts/duraloco/H0/20260713_014514_h0_checker_04e0a86
+  phase_report: plans/duraloco/phases/H0_PHASE_REPORT.md
+  run_ledger: plans/duraloco/phases/H0_RUN_LEDGER.md
+  checker_report: plans/duraloco/phases/H0_CHECKER_REPORT.md
+next_action: start P08 from qualified runtime commit f167a07c49339ba42d14f8a5873fe2c8781884d4
+updated_at: "2026-07-13T01:46:00+09:00"

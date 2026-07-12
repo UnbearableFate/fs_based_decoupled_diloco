@@ -1,9 +1,10 @@
 ---
 plan_id: "P08"
 title: "Distributed Performance Core: Direct Fragment I/O, Streaming Reducer, Bounded Bundling, Telemetry"
-status: "ready_after_H0"
+status: "ready"
 date: "2026-07-12"
-planning_basis_commit: "resolve_from_H0_verified_report"
+planning_basis_commit: "f167a07c49339ba42d14f8a5873fe2c8781884d4"
+planning_basis_checker_commit: "04e0a8634b0e9d7c4cd55c5593081a0ca969a060"
 target_branch: "codex/duraloco-p08-distributed-performance"
 depends_on: ["H0"]
 execution_mode: "single-writer maker + independent checker"
@@ -41,13 +42,13 @@ deletable without correctness impact.
 
 ## 2. Preconditions
 
-- [ ] H0-A01–A09 pass; H0 commit is the runtime baseline (honest listing
+- [x] H0-A01–A09 pass; H0 commit is the runtime baseline (honest listing
       costs, truthful stop facts).
-- [ ] Factor-1 / R2 / lifecycle raw baselines exist (P06B 470 s, P06C 528 s,
+- [x] Factor-1 / R2 / lifecycle raw baselines exist (P06B 470 s, P06C 528 s,
       P07 1100 s D8 references) — these will be re-measured on the H0 commit
       because H0 changes listing cost; the re-measured numbers are the
       baseline of record.
-- [ ] CRS/LFE numeric equivalence harness re-runnable.
+- [x] CRS/LFE numeric equivalence harness re-runnable.
 - [ ] Profilers must not alter authority or timing-sensitive selection.
 
 ## 3. Design decisions to freeze first
