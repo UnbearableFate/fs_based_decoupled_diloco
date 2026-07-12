@@ -72,7 +72,7 @@ module list 2>&1 | cat > "$ARTIFACT_ROOT/modules.log"
 "$PYTHON_BIN" scripts/agent/check_phase_state.py plans/duraloco/STATE.yaml --root "$PROJECT_ROOT"
 "$PYTHON_BIN" scripts/agent/check_no_embedded_database.py --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/forbidden_surface.json"
 
-command=(mpirun --bind-to none -np 8 --hostfile "$ARTIFACT_ROOT/learner_hosts.log" /usr/bin/env PROJECT_ROOT="$PROJECT_ROOT" PYTHON_BIN="$PYTHON_BIN" CONFIG="$CONFIG" RUN_ID="$TRAIN_RUN" SHARED_ROOT="$TRAINING_ROOT" ARTIFACT_ROOT="$ARTIFACT_ROOT" NODE_IDS="$NODE_IDS" LIFECYCLE_CADENCE=2 REQUIRED_CAPSULES=8 FS_DILOCO_CAPSULE_CADENCE=1 FS_DILOCO_CAPSULE_MAX_SEQUENCE=1 PYTHONPATH="$PROJECT_ROOT" bash scripts/miyabi/run_p06c_d8_r2_host.sh)
+command=(mpirun --bind-to none -np 8 --hostfile "$ARTIFACT_ROOT/learner_hosts.log" /usr/bin/env PROJECT_ROOT="$PROJECT_ROOT" PYTHON_BIN="$PYTHON_BIN" CONFIG="$CONFIG" RUN_ID="$TRAIN_RUN" SHARED_ROOT="$TRAINING_ROOT" ARTIFACT_ROOT="$ARTIFACT_ROOT" NODE_IDS="$NODE_IDS" LIFECYCLE_CADENCE=2 REQUIRED_CAPSULES=8 D8_DEADLINE_SECONDS=1800 FS_DILOCO_CAPSULE_CADENCE=1 FS_DILOCO_CAPSULE_MAX_SEQUENCE=1 PYTHONPATH="$PROJECT_ROOT" bash scripts/miyabi/run_p06c_d8_r2_host.sh)
 printf '%q ' "${command[@]}" | tee "$ARTIFACT_ROOT/commands.log"
 printf '\n' | tee -a "$ARTIFACT_ROOT/commands.log"
 "${command[@]}" 2>&1 | tee -a "$ARTIFACT_ROOT/stdout.log"

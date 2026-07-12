@@ -3,6 +3,8 @@ set -eEuo pipefail
 : "${PROJECT_ROOT:?}" "${PYTHON_BIN:?}" "${CONFIG:?}" "${RUN_ID:?}" "${SHARED_ROOT:?}" "${ARTIFACT_ROOT:?}" "${NODE_IDS:?}"
 LIFECYCLE_CADENCE="${LIFECYCLE_CADENCE:-0}"
 REQUIRED_CAPSULES="${REQUIRED_CAPSULES:-0}"
+D8_DEADLINE_SECONDS="${D8_DEADLINE_SECONDS:-840}"
+[[ "$D8_DEADLINE_SECONDS" =~ ^[0-9]+$ ]] && [[ "$D8_DEADLINE_SECONDS" -ge 840 ]]
 rank="${OMPI_COMM_WORLD_RANK:?}"
 member_id=$(printf 'member-%03d' "$rank")
 learner_id=$(printf 'learner_%03d' "$rank")
@@ -96,7 +98,7 @@ supervise &
 supervisor_pid=$!
 if [[ "$rank" -eq 0 ]]; then
   log="$SHARED_ROOT/logs/distributed_committer.jsonl"
-  deadline=$((SECONDS + 840))
+  deadline=$((SECONDS + D8_DEADLINE_SECONDS))
   wait_for_count() {
     local wanted="$1"
     while [[ ! -f "$log" ]] || [[ "$(grep -c 'distributed_transition_committed' "$log" || true)" -lt "$wanted" ]]; do

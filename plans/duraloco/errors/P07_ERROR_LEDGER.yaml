@@ -1,6 +1,38 @@
 schema: duraloco-error-ledger-v1
 phase: P07
 records:
+  - error_id: E-P07-20260712-07
+    phase_and_gate: P07.5/D8-R2-renewal-retry
+    observed_at_utc: "2026-07-12T03:56:00Z"
+    pbs_job_id: 2366167.opbs
+    hosts: [mg0131, mg0274, mg0287, mg0298, mg0302, mg0357, mg0878, mg0879, mg0883]
+    git_commit: f56b95345fe1fd8f196f2fa7ac699fb4bd0eb3f9
+    classification: unexpected_failure
+    phenomenon:
+      exit_code: 1
+      exception: "rank-zero D8 harness deadline expired and mpirun aborted"
+      terminal_state: "nine optimizer transitions passed; final lifecycle strict replay was active with healthy periodic lease renewals"
+      log_excerpt: artifacts/duraloco/P07/20260712_p07_renew_f56b953_d8/stdout.log
+    expected: "orchestration deadline covers the 35-minute P07 PBS envelope"
+    impact:
+      acceptance_ids: [P07-A18, P07-A21]
+      invariants: ["harness timeout must exceed preregistered lifecycle soak duration"]
+      committed_prefix_safe: true
+    cause:
+      confirmed: ["inherited P06C host harness fixed deadline at 840 seconds", "P07 lifecycle reached increasing 46.193, 69.307, 93.257, and 118.557 second cycles"]
+      unknown: []
+    repair:
+      change: "parameterize D8 harness deadline and set P07 to 1800 seconds within its 2100-second PBS walltime"
+      rationale: "does not change training or authority; only permits the declared lifecycle validation to finish"
+    verification:
+      minimal_reproduction: "one-node environment-wiring gate"
+      targeted_gate: "P07 command exports D8_DEADLINE_SECONDS=1800 and host validates it"
+      qualification_ladder: ["Miyabi 1-node targeted/unit", "Miyabi 2-node D2-R2", "one Miyabi 9-node D8-R2 attempt"]
+    retry_decision:
+      authorized: false
+      rationale: "terminal nine-node harness failure requires same-commit qualification before resubmission"
+      parent_run_id: 20260712_p07_renew_f56b953_d8
+    artifacts: [artifacts/duraloco/P07/20260712_p07_renew_f56b953_d8, plans/duraloco/reviews/P07_D8_2366167_WORKFLOW_REVIEW.md]
   - error_id: E-P07-20260712-06
     phase_and_gate: P07.5/targeted-D1-renewal
     observed_at_utc: "2026-07-12T03:36:49Z"
