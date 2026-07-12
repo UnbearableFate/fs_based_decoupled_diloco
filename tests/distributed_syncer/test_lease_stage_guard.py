@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import inspect
+from types import SimpleNamespace
+import time
 
 import pytest
 
@@ -64,3 +66,36 @@ def test_committer_guards_takeover_reconfiguration_and_dispatch():
     assert source.index('stage="work_dispatch"') < source.index(
         "publish_work_order("
     )
+
+
+def test_long_lifecycle_substage_renews_until_worker_finishes(monkeypatch):
+    renewals = []
+
+    def fake_renew(**kwargs):
+        renewed = f"lease-{len(renewals) + 1}"
+        renewals.append((kwargs["loaded_lease"], renewed))
+        return renewed
+
+    monkeypatch.setattr(committer_module, "_renew_owner_lease", fake_renew)
+    logger = _Logger()
+    config = SimpleNamespace(
+        coordination=SimpleNamespace(renew_interval_seconds=0.01)
+    )
+
+    def slow_read():
+        time.sleep(0.045)
+        return "verified"
+
+    result, lease = committer_module._run_lifecycle_substage(
+        slow_read,
+        substage="strict_replay",
+        lease_manager="manager",
+        loaded_lease="lease-0",
+        config=config,
+        logger=logger,
+    )
+
+    assert result == "verified"
+    assert lease == renewals[-1][1]
+    assert len(renewals) >= 3
+    assert any(event == "lifecycle_substage_heartbeat" for event, _ in logger.events)

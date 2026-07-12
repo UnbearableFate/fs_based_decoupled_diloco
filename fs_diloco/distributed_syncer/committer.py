@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 import hashlib
 from pathlib import Path
 import time
+from typing import Callable, TypeVar
 
 from fs_diloco.atomic_io import atomic_write_json
 from fs_diloco.atomic_io import safe_read_json
@@ -57,6 +59,9 @@ from .reconfiguration import ReconfigurationRequestV1
 from .work_order_store import publish_work_order
 
 
+_T = TypeVar("_T")
+
+
 def _payload_ref(entry) -> ObjectRef:
     return ObjectRef(
         key=entry.manifest.payload_key,
@@ -85,6 +90,7 @@ def _renew_for_authoritative_stage(
         "lifecycle_strict_replay_completed",
         "lifecycle_reachability_completed",
         "lifecycle_inventory_completed",
+        "lifecycle_substage_heartbeat",
     }:
         raise ValueError("unknown authoritative lease-renewal stage")
     renewed = _renew_owner_lease(
@@ -95,6 +101,38 @@ def _renew_for_authoritative_stage(
     )
     logger.event("lease_stage_guard", stage=stage)
     return renewed
+
+
+def _run_lifecycle_substage(
+    operation: Callable[[], _T],
+    *,
+    substage: str,
+    lease_manager,
+    loaded_lease,
+    config,
+    logger,
+) -> tuple[_T, object]:
+    """Run storage work while the main thread keeps the fenced lease alive.
+
+    Lease mutation remains serialized on the committer thread.  The worker has
+    no lease capability and performs only the supplied log/read operation.
+    """
+
+    interval = max(0.01, float(config.coordination.renew_interval_seconds))
+    with ThreadPoolExecutor(max_workers=1, thread_name_prefix="lifecycle") as pool:
+        future = pool.submit(operation)
+        while True:
+            try:
+                return future.result(timeout=interval), loaded_lease
+            except FutureTimeout:
+                loaded_lease = _renew_for_authoritative_stage(
+                    lease_manager=lease_manager,
+                    loaded_lease=loaded_lease,
+                    config=config,
+                    logger=logger,
+                    stage="lifecycle_substage_heartbeat",
+                )
+                logger.event("lifecycle_substage_heartbeat", substage=substage)
 
 
 def _wait_for_result(
@@ -586,7 +624,14 @@ def run_committer(
                         "owner_session_id": owner_session_id,
                     }
                 )
-                log.commit_snapshot(request_id=snapshot_request_id)
+                _snapshot_result, loaded_lease = _run_lifecycle_substage(
+                    lambda: log.commit_snapshot(request_id=snapshot_request_id),
+                    substage="snapshot_commit",
+                    lease_manager=lease_manager,
+                    loaded_lease=loaded_lease,
+                    config=config,
+                    logger=logger,
+                )
                 loaded_lease = _renew_for_authoritative_stage(
                     lease_manager=lease_manager,
                     loaded_lease=loaded_lease,
@@ -594,7 +639,14 @@ def run_committer(
                     logger=logger,
                     stage="lifecycle_snapshot_committed",
                 )
-                accelerated = log.replay_from_snapshot()
+                accelerated, loaded_lease = _run_lifecycle_substage(
+                    log.replay_from_snapshot,
+                    substage="accelerated_replay",
+                    lease_manager=lease_manager,
+                    loaded_lease=loaded_lease,
+                    config=config,
+                    logger=logger,
+                )
                 loaded_lease = _renew_for_authoritative_stage(
                     lease_manager=lease_manager,
                     loaded_lease=loaded_lease,
@@ -602,7 +654,14 @@ def run_committer(
                     logger=logger,
                     stage="lifecycle_accelerated_replay_completed",
                 )
-                strict = log.replay(force_full=True)
+                strict, loaded_lease = _run_lifecycle_substage(
+                    lambda: log.replay(force_full=True),
+                    substage="strict_replay",
+                    lease_manager=lease_manager,
+                    loaded_lease=loaded_lease,
+                    config=config,
+                    logger=logger,
+                )
                 loaded_lease = _renew_for_authoritative_stage(
                     lease_manager=lease_manager,
                     loaded_lease=loaded_lease,
@@ -612,7 +671,14 @@ def run_committer(
                 )
                 if accelerated.replay != strict:
                     raise RuntimeError("snapshot+suffix replay differs from strict replay")
-                mark, reachability = create_gc_mark(log)
+                (mark, reachability), loaded_lease = _run_lifecycle_substage(
+                    lambda: create_gc_mark(log),
+                    substage="reachability",
+                    lease_manager=lease_manager,
+                    loaded_lease=loaded_lease,
+                    config=config,
+                    logger=logger,
+                )
                 loaded_lease = _renew_for_authoritative_stage(
                     lease_manager=lease_manager,
                     loaded_lease=loaded_lease,
@@ -621,8 +687,15 @@ def run_committer(
                     stage="lifecycle_reachability_completed",
                 )
                 view = build_runtime_view(log)
-                inventory_bytes = sum(
-                    backend.head(key).size for key in reachability.inventory
+                inventory_bytes, loaded_lease = _run_lifecycle_substage(
+                    lambda: sum(
+                        backend.head(key).size for key in reachability.inventory
+                    ),
+                    substage="inventory",
+                    lease_manager=lease_manager,
+                    loaded_lease=loaded_lease,
+                    config=config,
+                    logger=logger,
                 )
                 loaded_lease = _renew_for_authoritative_stage(
                     lease_manager=lease_manager,
