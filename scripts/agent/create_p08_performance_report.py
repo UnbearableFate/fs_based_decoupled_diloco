@@ -163,12 +163,39 @@ def _runtime(args: argparse.Namespace, mode: str) -> int:
         raise AssertionError("matched runtime did not reach the frozen ten-transition terminal")
 
     if mode == "no_lfe":
+        syncer_events = _jsonl(root / "logs" / "syncer.jsonl")
+        stop_prepare_heartbeats = [
+            item
+            for item in syncer_events
+            if item.get("event_type") == "transaction_substage_heartbeat"
+            and item.get("substage") == "stop_prepare"
+        ]
+        stop_replay_heartbeats = [
+            item
+            for item in syncer_events
+            if item.get("event_type") == "transaction_substage_heartbeat"
+            and item.get("substage") == "stop_post_cas_replay"
+        ]
+        stop_stages = [
+            item
+            for item in syncer_events
+            if item.get("event_type") == "coordination_stage_completed"
+            and item.get("stage") == "authoritative_stop"
+        ]
+        if not stop_prepare_heartbeats or not stop_replay_heartbeats or len(stop_stages) != 1:
+            raise AssertionError("no-LFE terminal lacks guarded stop heartbeat evidence")
         payload.update(
             {
                 "executors": 0,
                 "dedicated_syncer_nodes": 1,
                 "lfe_cpu_threads_per_learner": 0,
                 "fault_tape": [],
+                "terminal_lease_guard": {
+                    "stop_prepare_heartbeats": len(stop_prepare_heartbeats),
+                    "stop_post_cas_replay_heartbeats": len(stop_replay_heartbeats),
+                    "authoritative_stop_seconds": float(stop_stages[0]["seconds"]),
+                    "final_renew_before_cas": True,
+                },
             }
         )
     elif mode == "factor_one":

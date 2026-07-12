@@ -323,4 +323,23 @@ entries:
       - tracejob 2370465.opbs
     correction: heartbeat only non-authoritative prepare/replay substages, require one final live renewal before head CAS, and forbid an authority-lost process from committing stop
     retry_policy: dedicated targeted compute proof plus clean 1-node and 2-node qualification on one commit before exactly one fresh 9-node C9 retry
-last_updated: "2026-07-13T04:12:00+09:00"
+  - id: P08-E020
+    job: 2370521.opbs
+    shape: C9_no_LFE_matched_50x10
+    commit: 60e9687a07dfb1a22ce06408c87b74c8769eb570
+    result: inconclusive
+    failure_class: terminal_stop_cas_without_live_lease_proof
+    expected: ten transitions and a normal terminal with every authoritative CAS preceded by a live renewal
+    actual: all ten optimizer transitions and the normal terminal completed, but stop preparation plus replay took 101.495 seconds and the convenience stop CAS had no intervening renewal under the 45-second TTL
+    authority_effect: semantically normal terminal at commit_seq 12, but the run is rejected as acceptance evidence because stop ownership was not proven live
+    runtime_started: true
+    evidence:
+      - plans/duraloco/phases/P08_9NODE_FAILURE_REVIEW_2370521.md
+      - artifacts/duraloco/P08/20260713_p08_nolfe_60e9687_r2/manifest.json
+      - artifacts/duraloco/P08/20260713_p08_nolfe_60e9687_r2/p08_nolfe_report.json
+      - artifacts/duraloco/P08/20260713_p08_nolfe_60e9687_r2/stdout.log
+      - artifacts/duraloco/P08/20260713_p08_nolfe_60e9687_r2_storage/training
+      - tracejob 2370521.opbs
+    correction: split stop into guarded non-authoritative prepare, final lease renewal, caller-thread CAS, and guarded post-CAS replay
+    retry_policy: rerun targeted compute, clean 1-node and 2-node qualification, then one fresh C9 attempt on the same clean commit
+last_updated: "2026-07-13T04:35:00+09:00"

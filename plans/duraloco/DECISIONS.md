@@ -879,3 +879,8 @@ P05+ 的规范性路线决策生效。
 
 - Choice: centralized successor preparation and post-CAS replay may run on a worker only because they cannot perform the global head CAS: prepare writes immutable unreachable evidence and replay is read-only. The owner thread renews the observational lease during those stages and performs one final successful renewal immediately before `commit_prepared`. Any renewal loss prevents CAS and prevents that process from committing a stop.
 - Rejected: increasing the matched workload TTL, allowing a worker thread to CAS, committing an error stop after lease authority is lost, or reusing the terminal failed namespace.
+
+## D-0816 — Guarded centralized terminal stop
+
+- Choice: terminal stop uses the same separation as optimizer work: strict stop preparation is a non-authoritative heartbeat-guarded substage, the owner performs a final successful renewal, the caller thread executes the only head CAS, and post-CAS replay is read-only and heartbeat-guarded. A manifest-level pass without live-lease proof at stop CAS is inconclusive.
+- Rejected: using the convenience `commit_stop` when strict preparation can exceed TTL, treating a semantically correct but unfenced terminal as acceptance evidence, or extending TTL only for the shadow.

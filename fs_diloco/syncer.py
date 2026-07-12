@@ -709,6 +709,54 @@ def _run_non_authoritative_substage(
                 )
 
 
+def _commit_stop_with_lease_guard(
+    *,
+    log: ProductionTransactionalLog,
+    view: RuntimeView,
+    reason: str,
+    request_id: str,
+    lease_manager: LeaseManager,
+    loaded_lease,
+    config: Config,
+    logger: JsonlLogger,
+) -> tuple[RuntimeView, object]:
+    prepared, loaded_lease = _run_non_authoritative_substage(
+        lambda: log.prepare_control_transition(
+            control_kind="stop",
+            token=loaded_lease.record.owner_token,
+            request_id=request_id,
+            stop_reason=reason,
+        ),
+        substage="stop_prepare",
+        lease_manager=lease_manager,
+        loaded_lease=loaded_lease,
+        config=config,
+        logger=logger,
+    )
+    loaded_lease = _renew_owner_lease(
+        lease_manager=lease_manager,
+        loaded_lease=loaded_lease,
+        config=config,
+        logger=logger,
+    )
+    result = log.commit_prepared(prepared)
+    committed_view, loaded_lease = _run_non_authoritative_substage(
+        lambda: build_runtime_view(log),
+        substage="stop_post_cas_replay",
+        lease_manager=lease_manager,
+        loaded_lease=loaded_lease,
+        config=config,
+        logger=logger,
+    )
+    if (
+        committed_view.commit_id != result.commit_id
+        or committed_view.commit_seq != view.commit_seq + 1
+        or committed_view.authoritative_stop is None
+    ):
+        raise RuntimeError("guarded stop result and replay-derived view differ")
+    return committed_view, loaded_lease
+
+
 def _init_wandb(config: Config, paths: RunPaths, logger: JsonlLogger, device, hostname):
     if wandb_is_disabled(config):
         logger.event("wandb_disabled")
@@ -1197,8 +1245,16 @@ def run_syncer(
                 )
                 stop_start = time.monotonic()
                 try:
-                    log.commit_stop(reason=stop_reason, request_id=stop_request_id)
-                    view = build_runtime_view(log)
+                    view, loaded_lease = _commit_stop_with_lease_guard(
+                        log=log,
+                        view=view,
+                        reason=stop_reason,
+                        request_id=stop_request_id,
+                        lease_manager=lease_manager,
+                        loaded_lease=loaded_lease,
+                        config=config,
+                        logger=logger,
+                    )
                     logger.event(
                         "coordination_stage_completed",
                         stage="authoritative_stop",

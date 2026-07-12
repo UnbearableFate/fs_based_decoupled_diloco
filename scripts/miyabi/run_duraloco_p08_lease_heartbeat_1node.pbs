@@ -31,7 +31,7 @@ finish() {
     --pbs-queue debug-g --requested-resources select=1:mpiprocs=1,walltime=00:10:00
     --last-qstat-state R --termination-detail "P08-E019 targeted long-stage lease-heartbeat repair proof"
     --assertion "a non-authoritative stage exceeds its initial TTL while real conditional lease renewals remain live"
-    --assertion "a final renewal precedes head CAS and lease loss cannot publish an authoritative stop")
+    --assertion "optimizer and terminal stop preparation renew before caller-thread CAS; lease loss cannot publish a stop")
   [[ -f "$ARTIFACT_ROOT/lease_heartbeat_benchmark.json" ]] && \
     args+=(--stage-metrics-path lease_heartbeat_benchmark.json)
   "$PYTHON_BIN" scripts/agent/create_run_manifest.py "${args[@]}" || true

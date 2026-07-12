@@ -65,7 +65,8 @@ def test_public_syncer_cli_exposes_owner_and_standby_without_db_flags():
 def test_syncer_stop_and_takeover_use_committed_coordination_path():
     source = inspect.getsource(syncer)
     assert "log.activate_owner(" in source
-    assert "log.commit_stop(" in source
+    assert "log.prepare_control_transition(" in source
+    assert "log.commit_prepared(prepared)" in source
     assert "standby_wait" in source
     assert "standby_observed_authoritative_stop_after_lease" in source
     assert "standby_lost_fence_to_authoritative_stop" in source

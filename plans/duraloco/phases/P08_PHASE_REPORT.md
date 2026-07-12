@@ -227,3 +227,12 @@ loop occupied 49.023 seconds after renewal and exceeded the 45-second TTL.
 P08-E019 and `P08_9NODE_FAILURE_REVIEW_2370465.md` preserve the terminal error
 head, raw stages, root cause, repair, and mandatory targeted → one-node →
 two-node qualification before exactly one fresh C9 retry.
+
+That repair and its same-commit qualification passed, and PBS `2370521`
+completed all ten optimizer transitions with 45 long-substage heartbeats and a
+normal terminal. Acceptance still fails closed: the terminal convenience path
+spent 101.495 seconds preparing and replaying the stop with no renewal directly
+before its CAS. P08-E020 and `P08_9NODE_FAILURE_REVIEW_2370521.md` therefore
+classify the manifest-level pass as inconclusive. D-0816 splits terminal stop
+into guarded preparation, a final renewal, caller-thread CAS, and guarded
+post-CAS replay before one newly qualified C9 attempt.
