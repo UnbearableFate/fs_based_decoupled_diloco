@@ -80,6 +80,11 @@ def _renew_for_authoritative_stage(
         "membership_transition",
         "work_dispatch",
         "lifecycle_snapshot",
+        "lifecycle_snapshot_committed",
+        "lifecycle_accelerated_replay_completed",
+        "lifecycle_strict_replay_completed",
+        "lifecycle_reachability_completed",
+        "lifecycle_inventory_completed",
     }:
         raise ValueError("unknown authoritative lease-renewal stage")
     renewed = _renew_owner_lease(

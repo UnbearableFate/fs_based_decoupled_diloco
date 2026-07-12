@@ -1,6 +1,38 @@
 schema: duraloco-error-ledger-v1
 phase: P07
 records:
+  - error_id: E-P07-20260712-06
+    phase_and_gate: P07.5/targeted-D1-renewal
+    observed_at_utc: "2026-07-12T03:36:49Z"
+    pbs_job_id: 2366143.opbs
+    hosts: [mg0003]
+    git_commit: 0141711a8e7a3486990310222153462d4cb247ce
+    classification: unexpected_failure
+    phenomenon:
+      exit_code: 1
+      exception: "ValueError: unknown authoritative lease-renewal stage"
+      terminal_state: "snapshot committed; first new renewal checkpoint rejected before accelerated replay"
+      log_excerpt: artifacts/duraloco/P07/20260712_p07_renew_0141711_d1/committer.log
+    expected: "all five preregistered lifecycle checkpoint labels are accepted by the strict renewal helper"
+    impact:
+      acceptance_ids: [P07-A17, P07-A18]
+      invariants: ["renewal-stage labels remain closed and explicit"]
+      committed_prefix_safe: true
+    cause:
+      confirmed: ["new call sites were added without extending the helper's closed stage-name set"]
+      unknown: []
+    repair:
+      change: "add the five exact lifecycle checkpoint labels to the closed set"
+      rationale: "preserves typo rejection while enabling the reviewed checkpoints"
+    verification:
+      minimal_reproduction: "targeted one-node D1 renewal run"
+      targeted_gate: "all five lease_stage_guard events and terminal PASS"
+      qualification_ladder: ["targeted Miyabi 1-node D1", "Miyabi 1-node unit", "Miyabi 2-node D2-R2"]
+    retry_decision:
+      authorized: true
+      rationale: "one-line closed-enum wiring defect found before any nine-node resubmission"
+      parent_run_id: 20260712_p07_renew_0141711_d1
+    artifacts: [artifacts/duraloco/P07/20260712_p07_renew_0141711_d1]
   - error_id: E-P07-20260712-05
     phase_and_gate: P07.5/D8-R2-retry
     observed_at_utc: "2026-07-12T03:32:45Z"
