@@ -133,6 +133,43 @@ def _stage_profile(root: Path, elapsed_seconds: int) -> dict[str, object]:
     }
 
 
+def _distributed_lease_guard(root: Path) -> dict[str, object]:
+    events = _jsonl(root / "logs" / "distributed_committer.jsonl")
+    stage_guards = [
+        str(item.get("stage"))
+        for item in events
+        if item.get("event_type") == "lease_stage_guard"
+    ]
+    substages = [
+        str(item.get("substage"))
+        for item in events
+        if item.get("event_type") == "lifecycle_substage_heartbeat"
+    ]
+    report = {
+        "optimizer_head_cas_renewals": stage_guards.count("optimizer_head_cas"),
+        "stop_head_cas_renewals": stage_guards.count("stop_head_cas"),
+        "successor_prepare_heartbeats": substages.count("successor_prepare"),
+        "post_cas_replay_heartbeats": substages.count("post_cas_replay"),
+        "stop_prepare_heartbeats": substages.count("stop_prepare"),
+        "stop_post_cas_replay_heartbeats": substages.count("stop_post_cas_replay"),
+        "lease_authority_loss_events": sum(
+            item.get("event_type") == "stop_not_published_after_lease_authority_loss"
+            for item in events
+        ),
+    }
+    if (
+        report["optimizer_head_cas_renewals"] != 10
+        or report["stop_head_cas_renewals"] != 1
+        or report["successor_prepare_heartbeats"] < 1
+        or report["post_cas_replay_heartbeats"] < 1
+        or report["stop_prepare_heartbeats"] < 1
+        or report["stop_post_cas_replay_heartbeats"] < 1
+        or report["lease_authority_loss_events"]
+    ):
+        raise AssertionError("distributed D8 lacks complete long-stage lease guards")
+    return report
+
+
 def _write(output: Path, payload: dict[str, object]) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -213,6 +250,7 @@ def _runtime(args: argparse.Namespace, mode: str) -> int:
                 "resource_telemetry": base["resource_telemetry"],
                 "lustre_io_telemetry": base["lustre_io_telemetry"],
                 "stage_profile": stage,
+                "lease_guard": _distributed_lease_guard(root),
                 "base_report": base,
             }
         )
@@ -277,6 +315,7 @@ def _runtime(args: argparse.Namespace, mode: str) -> int:
                     "threads": sorted({int(item["actual_torch_threads"]) for item in prepared}),
                 },
                 "stage_profile": stage,
+                "lease_guard": _distributed_lease_guard(root),
             }
         )
     _write(args.output, payload)

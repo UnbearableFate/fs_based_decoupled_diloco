@@ -18,7 +18,15 @@ CONFIG="$PROJECT_ROOT/configs/duraloco_milestone_gpt2_9node_50x10.yaml"
 TRAINING_ROOT="$STORAGE_ROOT/training"
 TRAIN_RUN="$RUN_ID-training"
 cd "$PROJECT_ROOT"
-mkdir -p "$ARTIFACT_ROOT" "$TRAINING_ROOT"
+if ! mkdir "$STORAGE_ROOT"; then
+  echo "refusing reused P08 storage root: $STORAGE_ROOT" >&2
+  exit 2
+fi
+if ! mkdir "$ARTIFACT_ROOT"; then
+  echo "refusing reused P08 artifact root: $ARTIFACT_ROOT" >&2
+  exit 2
+fi
+mkdir "$TRAINING_ROOT"
 touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log" "$ARTIFACT_ROOT/commands.log"
 export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
 result=fail; exit_code=1; started=$(date +%s)
