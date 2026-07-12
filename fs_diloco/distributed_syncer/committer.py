@@ -811,6 +811,7 @@ def run_committer(
                     config=config,
                     logger=logger,
                 )
+                inventory_reads_finished = backend.read_counters
                 loaded_lease = _renew_for_authoritative_stage(
                     lease_manager=lease_manager,
                     loaded_lease=loaded_lease,
@@ -818,7 +819,6 @@ def run_committer(
                     logger=logger,
                     stage="lifecycle_inventory_completed",
                 )
-                inventory_reads_finished = backend.read_counters
                 lifecycle_reads_finished = backend.read_counters
                 next_renew = (
                     time.monotonic() + config.coordination.renew_interval_seconds
