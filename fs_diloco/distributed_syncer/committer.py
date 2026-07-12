@@ -293,8 +293,10 @@ def _finalize_committer_stop(
             commit_seq=view.commit_seq,
         )
         return view
+    spec = getattr(log, "spec", None)
     if (
-        log.spec.coordination_protocol == ERROR_RESUME_COORDINATION_PROTOCOL
+        spec is not None
+        and spec.coordination_protocol == ERROR_RESUME_COORDINATION_PROTOCOL
         and view.authoritative_stop.reason == "error"
     ):
         recoverable_path = paths.control / "recoverable_error.json"

@@ -287,4 +287,21 @@ entries:
       - qstat substate=41 with elapsed unset
     correction: no source repair; retry the identical gate after persisting this infrastructure lineage
     retry_policy: one clean one-node resubmission; do not count the stalled prologue as runtime qualification
-last_updated: "2026-07-13T03:57:00+09:00"
+  - id: P08-E018
+    job: 2370446.opbs
+    shape: optimized_full_1node
+    commit: ef479f0fd06e741287e22de1c9da4bed44b13ad4
+    result: fail
+    failure_class: test_double_missing_optional_runspec
+    expected: full repository regression passes after the final targeted gate
+    actual: 494 tests passed and one skipped; the committer conflict-finalization unit failed because the new error-resume branch dereferenced spec on a deliberately minimal legacy test double
+    authority_effect: none; unit/static gate only
+    runtime_started: true
+    evidence:
+      - artifacts/duraloco/P08/20260713_p08_final_full_ef479f0_r1/manifest.json
+      - artifacts/duraloco/P08/20260713_p08_final_full_ef479f0_r1/full-junit.xml
+      - duraloco_p08_full.o2370446
+      - tracejob 2370446.opbs
+    correction: treat an absent optional RunSpec on non-production test adapters as a non-error-resume protocol while preserving exact protocol matching for production logs
+    retry_policy: rerun targeted one-node, then full one-node, then D2 on the corrected clean commit before any nine-node job
+last_updated: "2026-07-13T04:01:00+09:00"

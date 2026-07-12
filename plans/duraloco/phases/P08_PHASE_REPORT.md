@@ -208,3 +208,12 @@ wrapper. PBS retained mg0023 in running substate 41 for 281 seconds with unset
 elapsed time and no stdout or artifact directory. It was cancelled as an
 infrastructure prologue stall. P08-E017 records the zero-authority, zero-runtime
 attempt; no source change is attributed to it.
+
+The replacement targeted gate passed, including 110 focused tests and a
+0.303% recorder overhead measurement with 160 fully flushed events. The first
+full gate, PBS `2370446.opbs`, then passed 494 tests with one skip before a
+legacy minimal committer test double exposed an unconditional `log.spec`
+lookup in the new error-resume finalizer. P08-E018 records the unit-only
+failure. Production logs always carry a RunSpec; the repair keeps exact
+protocol matching there while treating an absent optional test-adapter spec as
+the legacy non-error-resume path.
