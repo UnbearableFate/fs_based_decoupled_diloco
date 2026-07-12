@@ -140,4 +140,19 @@ entries:
       - artifacts/duraloco/P08/20260713_p08_opt_86b77d4_1node_r2/forbidden_surface.json
     correction: null
     retry_policy: no retry; proceed to full one-node and D1 qualification
-last_updated: "2026-07-13T03:19:00+09:00"
+  - id: P08-E009
+    job: null
+    shape: full_1node_regression_submission
+    commit: b034ebefacac209050ce2f816e93493112918230
+    result: fail
+    failure_class: scheduler_resource_limit
+    expected: full one-node regression job is accepted by debug-g
+    actual: qsub rejected the 35-minute walltime as exceeding queue/server resource limits; no job ID was allocated
+    authority_effect: none
+    runtime_started: false
+    evidence:
+      - scripts/miyabi/run_duraloco_p08_full_1node.pbs
+      - qsub stderr: Job violates queue and/or server resource limits
+    correction: reduce requested walltime and manifest declaration to the debug-g-supported 30 minutes
+    retry_policy: resubmit the corrected full one-node gate on a clean commit
+last_updated: "2026-07-13T03:23:00+09:00"

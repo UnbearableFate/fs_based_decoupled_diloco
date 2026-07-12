@@ -122,3 +122,8 @@ bytes across all four cases. At q=8 the minimum reduction time was 8.60 ms,
 versus 9.01 ms and 1,203,240,960-byte peak RSS in the earlier materialized
 baseline. This closes the focused equivalence/memory/cache/range/cancellation
 contracts, but is not D1/D2 or matched GPU-interference evidence.
+
+The first full-regression submission was rejected before allocation because its
+35-minute request exceeded the `debug-g` queue limit. It received no PBS job
+ID, ran no command, and touched no authority. P08-E009 records the operator
+submission failure; the wrapper now requests the queue-supported 30 minutes.

@@ -3,7 +3,7 @@
 #PBS -q debug-g
 #PBS -W group_list=xg24i002
 #PBS -l select=1:mpiprocs=1
-#PBS -l walltime=00:35:00
+#PBS -l walltime=00:30:00
 #PBS -j oe
 
 set -eEuo pipefail
@@ -34,7 +34,7 @@ finish() {
     --commands-log commands.log --stdout stdout.log --stderr stderr.log \
     --exit-code "$exit_code" --result "$result" \
     --termination-kind "$([[ "$result" == pass ]] && echo success || echo test_failure)" \
-    --pbs-queue debug-g --requested-resources select=1:mpiprocs=1,walltime=00:35:00 \
+    --pbs-queue debug-g --requested-resources select=1:mpiprocs=1,walltime=00:30:00 \
     --last-qstat-state R --termination-detail "P08 full repository regression on compute" \
     --assertion "all repository tests pass with direct/streaming/error-resume changes" \
     --assertion "static phase state, PBS syntax and forbidden database surface pass" || true
