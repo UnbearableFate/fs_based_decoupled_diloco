@@ -1,7 +1,7 @@
 ---
 plan_id: "P08"
 title: "Distributed Performance Core: Direct Fragment I/O, Streaming Reducer, Bounded Bundling, Telemetry"
-status: "checking"
+status: "completed"
 date: "2026-07-12"
 planning_basis_commit: "f167a07c49339ba42d14f8a5873fe2c8781884d4"
 planning_basis_checker_commit: "04e0a8634b0e9d7c4cd55c5593081a0ca969a060"
@@ -225,7 +225,7 @@ never participates in correctness.
       identity bitwise; numerics-affecting resource settings form a distinct
       implementation identity and go through numeric comparison.
 - [x] P08-A15: single-FWO bottleneck gate has an explicit archived conclusion.
-- [ ] P08-A16–A18: bundle schema/equivalence/fault suites pass **or** are
+- [x] P08-A16–A18: bundle schema/equivalence/fault suites pass **or** are
       checker-accepted `not_applicable` with the profile evidence.
 - [x] P08-A19: still no per-fragment heads or second authority.
 - [x] P08-A20: D1/D2 optimized correctness gates pass.
@@ -234,7 +234,7 @@ never participates in correctness.
 - [x] P08-A23: no SQLite/embedded DB on the active surface or artifacts.
 - [x] P08-A24: D-0800 error-stop decision implemented and tested (crash →
       restart → resume path exercised end-to-end under the chosen semantics).
-- [ ] P08-A25: report/checksums/clean commit; P07 regressions pass;
+- [x] P08-A25: report/checksums/clean commit; P07 regressions pass;
       `STATE.yaml.next_action = P10`.
 
 ## 9. Maker–Checker

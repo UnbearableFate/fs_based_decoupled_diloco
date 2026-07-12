@@ -2,7 +2,7 @@
 
 ## Current status
 
-- Status: checking; implementation and matched final ladder complete
+- Status: completed; independent Checker PASS
 - Branch: `codex/duraloco-p08-distributed-performance`
 - H0 runtime basis: `f167a07c49339ba42d14f8a5873fe2c8781884d4`
 - H0 Checker basis: `04e0a8634b0e9d7c4cd55c5593081a0ca969a060`
@@ -10,7 +10,7 @@
 - Instrumentation commit: `fcbbfa17e91fc1eb9cdd90b3d3ea40aea3c79705`
 - Login-node static checks: PASS (`bash -n`, ruff, phase-state contract, diff check)
 - Runtime checks: final targeted/full/D2/C9/D8/D8-R2 and P07 regression PASS;
-  independent Checker pending
+  independent Checker PBS `2371170` PASS (504 passed, one skipped)
 
 ## Orientation and frozen decisions
 
@@ -34,9 +34,9 @@ path is limited to a parent whose authoritative stop reason is exactly
 
 ## Acceptance tracking
 
-P08-A01–A15 and P08-A19–A24 have maker PASS evidence. P08-A16–A18 are
-profile-gated `not_applicable` pending independent Checker acceptance. P08-A25
-remains open until the Checker report and final P10 handoff are persisted.
+P08-A01–A25 are complete. P08-A16–A18 are profile-gated `not_applicable` and
+were explicitly accepted by the independent Checker; the executable state
+records them as passed by that gate decision.
 
 ## Failures and experiments
 
@@ -354,3 +354,12 @@ production validator now correctly requires P08's actual terminal shape,
 `miyabi_d8_r2=miyabi_d8_r2_pass`. P08-E030 preserves the unit-only failure.
 The fixture is aligned with the production contract before a fresh independent
 Checker run; no maker evidence or authority changed.
+
+Independent Checker PBS `2371170` then passed at checker commit `4dd6dd8`:
+ruff, all PBS syntax, research/state contracts, zero active embedded-database
+findings, 504 repository tests with one intentional skip, the complete maker
+checksum set, all 25 acceptance IDs, matched bindings, controlled recovery,
+and the P07 lifecycle contract. Its verdict is PASS with
+`required_gate_followups: none`. The persisted report is
+`plans/duraloco/phases/P08_CHECKER_REPORT.md`; P08 is complete and the next
+action is P10.
