@@ -17,6 +17,7 @@ PYTHON_BIN="${PYTHON_BIN:-$PROJECT_ROOT/.venv/bin/python}"
 : "${ARTIFACT_ROOT:?ARTIFACT_ROOT is required}"
 : "${STORAGE_ROOT:?STORAGE_ROOT is required}"
 PARENT_RUN_ID="${PARENT_RUN_ID:-}"
+REQUIRE_LIFECYCLE_RENEWALS="${REQUIRE_LIFECYCLE_RENEWALS:-0}"
 CONFIG="$PROJECT_ROOT/configs/fs_diloco_gpt2_wikitext2_1l_debug.yaml"
 TRAINING_ROOT="$STORAGE_ROOT/training"
 TRAIN_RUN="$RUN_ID-training"
@@ -87,6 +88,17 @@ for index in 0 1; do
 done
 for pid in "${pids[@]}"; do wait "$pid"; done
 pids=()
+
+if [[ "$REQUIRE_LIFECYCLE_RENEWALS" -eq 1 ]]; then
+  for stage in \
+    lifecycle_snapshot_committed \
+    lifecycle_accelerated_replay_completed \
+    lifecycle_strict_replay_completed \
+    lifecycle_reachability_completed \
+    lifecycle_inventory_completed; do
+    grep -q "\"stage\": \"$stage\"" "$ARTIFACT_ROOT/committer.log"
+  done
+fi
 
 "$PYTHON_BIN" -m fs_diloco.analysis summary "$TRAINING_ROOT" --json | tee "$ARTIFACT_ROOT/training_summary.json"
 "$PYTHON_BIN" scripts/agent/create_p06c_runtime_report.py --root "$TRAINING_ROOT" --run-id "$TRAIN_RUN" --run-generation 0 --expected-mode active_active --expected-learners 2 --output "$ARTIFACT_ROOT/d1_r2_runtime_report.json" | tee -a "$ARTIFACT_ROOT/stdout.log"

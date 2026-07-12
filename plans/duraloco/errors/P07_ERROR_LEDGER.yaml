@@ -1,6 +1,38 @@
 schema: duraloco-error-ledger-v1
 phase: P07
 records:
+  - error_id: E-P07-20260712-05
+    phase_and_gate: P07.5/D8-R2-retry
+    observed_at_utc: "2026-07-12T03:32:45Z"
+    pbs_job_id: 2366101.opbs
+    hosts: [mg0287, mg0298, mg0302, mg0586, mg0587, mg0589, mg0590, mg0878, mg0879]
+    git_commit: 287a7796aa893dfcb0cc513c7c195cb09739f3fb
+    classification: unexpected_failure
+    phenomenon:
+      exit_code: 1
+      exception: "CoordinationConflict: expired lease cannot be renewed"
+      terminal_state: "the qualified retry again reached four optimizer transitions and completed both lifecycle cycles before lease loss"
+      log_excerpt: artifacts/duraloco/P07/20260712_p07_retry_287a779_d8/member-006_committer.log
+    expected: "long lifecycle observation retains the same fenced owner through periodic substage renewals"
+    impact:
+      acceptance_ids: [P07-A18, P07-A19, P07-A21]
+      invariants: ["no single composite lifecycle stage may assume an upper runtime below lease TTL"]
+      committed_prefix_safe: true
+    cause:
+      confirmed: ["the first repair removed capsule payload reads but the composite lifecycle cycles still took 46.345 and 69.733 seconds", "the committer renewed only once before the entire composite stage"]
+      unknown: []
+    repair:
+      change: "renew the same fenced lease after each lifecycle substage"
+      rationale: "substage boundaries already serialize durable work and permit fail-closed owner/session/epoch renewal without a second authority"
+    verification:
+      minimal_reproduction: "one-node real GPT-2 lifecycle run with renewal-stage event assertions"
+      targeted_gate: "renewals observed after snapshot, accelerated replay, strict replay, reachability, and inventory"
+      qualification_ladder: ["targeted Miyabi 1-node D1", "Miyabi 1-node unit", "Miyabi 2-node D2-R2", "one Miyabi 9-node D8-R2 attempt"]
+    retry_decision:
+      authorized: false
+      rationale: "second non-transient terminal failure requires a new targeted proof and same-commit qualification ladder"
+      parent_run_id: 20260712_p07_retry_287a779_d8
+    artifacts: [artifacts/duraloco/P07/20260712_p07_retry_287a779_d8, plans/duraloco/reviews/P07_D8_2366101_WORKFLOW_REVIEW.md]
   - error_id: E-P07-20260712-04
     phase_and_gate: P07.5/D8-R2
     observed_at_utc: "2026-07-12T03:19:48Z"

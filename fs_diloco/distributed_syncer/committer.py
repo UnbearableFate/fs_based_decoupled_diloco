@@ -582,14 +582,52 @@ def run_committer(
                     }
                 )
                 log.commit_snapshot(request_id=snapshot_request_id)
+                loaded_lease = _renew_for_authoritative_stage(
+                    lease_manager=lease_manager,
+                    loaded_lease=loaded_lease,
+                    config=config,
+                    logger=logger,
+                    stage="lifecycle_snapshot_committed",
+                )
                 accelerated = log.replay_from_snapshot()
+                loaded_lease = _renew_for_authoritative_stage(
+                    lease_manager=lease_manager,
+                    loaded_lease=loaded_lease,
+                    config=config,
+                    logger=logger,
+                    stage="lifecycle_accelerated_replay_completed",
+                )
                 strict = log.replay(force_full=True)
+                loaded_lease = _renew_for_authoritative_stage(
+                    lease_manager=lease_manager,
+                    loaded_lease=loaded_lease,
+                    config=config,
+                    logger=logger,
+                    stage="lifecycle_strict_replay_completed",
+                )
                 if accelerated.replay != strict:
                     raise RuntimeError("snapshot+suffix replay differs from strict replay")
                 mark, reachability = create_gc_mark(log)
+                loaded_lease = _renew_for_authoritative_stage(
+                    lease_manager=lease_manager,
+                    loaded_lease=loaded_lease,
+                    config=config,
+                    logger=logger,
+                    stage="lifecycle_reachability_completed",
+                )
                 view = build_runtime_view(log)
                 inventory_bytes = sum(
                     backend.head(key).size for key in reachability.inventory
+                )
+                loaded_lease = _renew_for_authoritative_stage(
+                    lease_manager=lease_manager,
+                    loaded_lease=loaded_lease,
+                    config=config,
+                    logger=logger,
+                    stage="lifecycle_inventory_completed",
+                )
+                next_renew = (
+                    time.monotonic() + config.coordination.renew_interval_seconds
                 )
                 lifecycle_report = {
                     "schema": "duraloco-lifecycle-cycle-v1",
