@@ -7,8 +7,8 @@ basis:
   phase: P06C
   verified_commit: 6a528cbe26a9209720325ce031937c30d970b977
   dependency_digest: cba9f487dcc697a6df7930b22280e4f0d512377b
-current_commit: null
-working_tree_clean: false
+current_commit: 03ed1392cd626435d783caeeb915a3820f04c9d1
+working_tree_clean: true
 architecture:
   mode: distributed_r2
   dedicated_syncer_nodes: 0
@@ -23,7 +23,7 @@ progress:
   current_loop: 1
   next_smallest_gap: implement validated snapshot+suffix replay without old tensor reads
   acceptance_total: 24
-  acceptance_passed: 0
+  acceptance_passed: 2
   acceptance_blocked: 0
 validation:
   local: static_pass
@@ -39,7 +39,7 @@ checker:
   verdict: null
   report: null
 artifacts:
-  latest_run_id: null
+  latest_run_id: 20260712_p07_snapshot_03ed139_1node
   phase_report: plans/duraloco/phases/P07_PHASE_REPORT.md
   oracle_or_equivalence_report: null
   authority_audit: null
