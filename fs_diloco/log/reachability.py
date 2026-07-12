@@ -7,12 +7,12 @@ from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
 from fs_diloco.distributed_syncer.layout import DistributedLayout
-from fs_diloco.log.codec import canonical_object
+from fs_diloco.log.codec import canonical_object, verified_get
 from fs_diloco.protocol.schemas import CommitManifest, ObjectRef, ProposalManifest
 
 from .acknowledgements import LifecycleAcknowledgementV1
 from .pins import LifecyclePinV1
-from fs_diloco.learner_protocol.capsule import load_capsule
+from fs_diloco.learner_protocol.capsule import LearnerCapsuleV1
 from .replay import find_valid_snapshots
 
 
@@ -412,8 +412,20 @@ def build_reachability(
     ):
         try:
             marker = canonical_object(backend.get(key))
-            capsule = load_capsule(backend, key)
+            if set(marker) != {"schema", "capsule_id", "manifest_ref"} or (
+                marker["schema"] != "duraloco-learner-capsule-marker-v1"
+            ):
+                raise ValueError("capsule marker fields differ")
             manifest_ref = ObjectRef.from_dict(marker["manifest_ref"])
+            capsule = LearnerCapsuleV1.from_dict(
+                canonical_object(verified_get(backend, manifest_ref))
+            )
+            if (
+                capsule.capsule_id != marker["capsule_id"]
+                or capsule.run_id != log.spec.run_id
+                or capsule.run_generation != log.spec.run_generation
+            ):
+                raise ValueError("capsule marker identity differs")
             capsules.append((key, capsule, manifest_ref))
         except Exception:
             root(key, "invalid_capsule_quarantine")

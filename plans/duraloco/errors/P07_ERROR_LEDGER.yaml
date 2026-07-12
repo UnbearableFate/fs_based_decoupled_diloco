@@ -1,6 +1,38 @@
 schema: duraloco-error-ledger-v1
 phase: P07
 records:
+  - error_id: E-P07-20260712-04
+    phase_and_gate: P07.5/D8-R2
+    observed_at_utc: "2026-07-12T03:19:48Z"
+    pbs_job_id: 2366037.opbs
+    hosts: [mg0287, mg0298, mg0302, mg0357, mg0382, mg0492, mg0586, mg0587, mg0589]
+    git_commit: 4b0def4598aa89342e56fa801fafe26214776a1d
+    classification: unexpected_failure
+    phenomenon:
+      exit_code: 1
+      exception: "CoordinationConflict: expired lease cannot be renewed"
+      terminal_state: "four optimizer transitions, two snapshot cycles, eight exact capsules, executor loss, whole-host loss, takeover, and membership reconfiguration completed"
+      log_excerpt: artifacts/duraloco/P07/20260712_p07_final_4b0def4_d8/member-002_committer.log
+    expected: "each lifecycle cycle completes within the renewed 45-second lease or renews without losing fenced ownership"
+    impact:
+      acceptance_ids: [P07-A18, P07-A19, P07-A21]
+      invariants: ["lifecycle observation must not expire the active committer lease"]
+      committed_prefix_safe: true
+    cause:
+      confirmed: ["reachability reread and hashed every component of all eight GPT-2 exact capsules on every mark", "lifecycle cycles grew from 47.793 to 72.011 seconds against a 45-second lease TTL"]
+      unknown: []
+    repair:
+      change: "verify capsule marker and manifest ObjectRefs for reachability edges without rereading component payload bytes; retain full component validation in exact restore and terminal reporting"
+      rationale: "GC rooting depends on immutable identities, while repeated multi-gigabyte component reads are observational work outside the reachability proof"
+    verification:
+      minimal_reproduction: "one-node capsule reachability I/O benchmark with large component payloads"
+      targeted_gate: "reachability reads marker/manifest metadata only and preserves every component edge"
+      qualification_ladder: ["targeted Miyabi 1-node benchmark", "Miyabi 1-node P07", "Miyabi 2-node D2-R2", "one Miyabi 9-node D8-R2 retry"]
+    retry_decision:
+      authorized: false
+      rationale: "a non-transient nine-node terminal failure requires the targeted benchmark and clean 1-node/2-node requalification first"
+      parent_run_id: 20260712_p07_final_4b0def4_d8
+    artifacts: [artifacts/duraloco/P07/20260712_p07_final_4b0def4_d8, plans/duraloco/reviews/P07_D8_2366037_WORKFLOW_REVIEW.md]
   - error_id: E-P07-20260712-03
     phase_and_gate: P07.5/D2-R2
     observed_at_utc: "2026-07-12T02:50:56Z"

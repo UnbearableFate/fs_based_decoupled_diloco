@@ -8,6 +8,7 @@ from fs_diloco.log.acknowledgements import (
 from fs_diloco.log.pins import LifecyclePinV1, publish_pin
 from fs_diloco.log.reachability import build_reachability
 from fs_diloco.protocol.canonical_json import canonical_bytes
+from fs_diloco.learner_protocol.capsule import REQUIRED_COMPONENTS, publish_capsule
 from tests.distributed_syncer.test_distributed_transition_binding import (
     _initialize,
     _prepare,
@@ -190,3 +191,40 @@ def test_same_digest_loser_grace_and_divergent_blocker_are_distinct():
     divergent_reasons = dict(divergent_report.retention_reasons)
     assert "divergent_result_blocker" in divergent_reasons[divergent_marker.key]
     assert divergent_marker.key not in divergent_report.candidates
+
+
+def test_capsule_reachability_reads_only_marker_and_manifest_metadata():
+    log, _prepared = _committed_log("capsule-metadata-io")
+    head = log.replay(force_full=True).head_frontier
+    publication = publish_capsule(
+        log.backend,
+        log.layout,
+        identity={
+            "run_id": log.spec.run_id,
+            "run_generation": log.spec.run_generation,
+            "learner_id": "learner-io",
+            "learner_session_id": "session-io",
+            "sequence": 1,
+            "consistency_point": "interval_boundary",
+            "frontier_commit_seq": head.commit_seq,
+            "frontier_commit_id": head.commit_id,
+            "pending_proposal_ids": [],
+        },
+        components={kind: ((kind.encode() + b"-large") * 1024, "pt") for kind in REQUIRED_COMPONENTS},
+    )
+    component_keys = {
+        ref.key for ref in publication.capsule.component_map.values()
+    }
+    history_start = len(log.backend.history)
+
+    report = build_reachability(log)
+
+    reads = {
+        record.key
+        for record in log.backend.history[history_start:]
+        if record.operation == "get"
+    }
+    assert publication.marker_ref.key in reads
+    assert publication.manifest_ref.key in reads
+    assert not reads & component_keys
+    assert component_keys <= set(report.reachable)
