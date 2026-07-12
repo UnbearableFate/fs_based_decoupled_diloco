@@ -771,3 +771,9 @@ P05+ 的规范性路线决策生效。
 
 - Choice: active FWO, capsule, restore-point, experiment, response-loss, and quarantine roots are immutable typed pins. Committed final transitions additionally root their exact FWO/PFR identities. Listing and heartbeat observations may discover these records but cannot create or remove authority.
 - Rejected: process-local active-work sets or directory presence are not recoverable root definitions.
+
+## D-0707 — GC is immutable mark plus guarded revalidated apply
+
+- Choice: mark records the exact head manifest/backend version, fencing epoch, membership revision, candidate ObjectRefs, and reachability/protected-unknown digests. Creating a mark is always dry-run. Apply is unavailable for real run namespaces without the separate human gate; the active API permits only `synthetic-*` runs with a mark-and-namespace-bound approval token. Apply strict-replays and rebuilds reachability, rejects any head/epoch/object change, writes an immutable delete request, deletes payload/result/attempt objects before publication markers, and writes an immutable result.
+- Response loss: retries use the same request ID and ObjectRefs; already-missing targets reconcile as an after-effect while changed identities fail closed. Partial batches resume idempotently and never broaden the original target set.
+- Rejected: list-and-delete in one pass, mutable GC cursors, or deleting a candidate after head advance cannot prove zero live deletion.
