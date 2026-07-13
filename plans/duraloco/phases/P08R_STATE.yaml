@@ -7,8 +7,8 @@ actual_base_commit: ff41499f0960d8b2ee90e513f5487cc8b1dc0a28
 feature_branch: codex/duraloco-p08r-replay-440s
 current_loop: 2
 current_goal: "complete the pre-P10 P08R 440-second 50x10 performance gate"
-attempts_for_current_failure: 0
-last_terminal_failure_review: plans/duraloco/phases/P08R_D8_FAILURE_REVIEW_2372056.md
+attempts_for_current_failure: 1
+last_terminal_failure_review: plans/duraloco/phases/P08R_D8R2_FAILURE_REVIEW_2372217.md
 terminal_retry_authorized: false
 terminal_retry_qualification:
   targeted_1node_benchmark: 2372171.opbs
@@ -23,7 +23,7 @@ checks:
   miyabi_d2: miyabi_d2_pass
   miyabi_d8: miyabi_d8_pass
   miyabi_d8_repeat: miyabi_d8_pass
-  miyabi_d8_r2: not_run
+  miyabi_d8_r2: failed
   independent_checker: not_run
 acceptance:
   P08R-A01: {result: pass, evidence: [2372056.opbs, 2372194.opbs, elapsed_contract.json exact runtime and experiment monotonic spans]}
@@ -68,10 +68,12 @@ artifacts:
   - artifacts/duraloco/P08R/20260713_p08r_d1_16e8c42_r4/manifest.json
   - artifacts/duraloco/P08R/20260713_p08r_d2_16e8c42_r3/manifest.json
   - artifacts/duraloco/P08R/20260713_p08r_d8_16e8c42_r2/manifest.json
+  - artifacts/duraloco/P08R/20260713_p08r_d8r2_16e8c42_r1/manifest.json
   - plans/duraloco/phases/P08R_D8_FAILURE_REVIEW_2372056.md
+  - plans/duraloco/phases/P08R_D8R2_FAILURE_REVIEW_2372217.md
 next_action: >-
-  run the distinct required D8-R2 fault and lifecycle arm once on qualified
-  clean runtime commit 16e8c4242022c965db3c6fdf30021a5f0c8f4958
+  implement opt-in deferred periodic strict audit, prove it with the smallest
+  frozen-authority compute benchmark, then rerun 1-node and 2-node qualification
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

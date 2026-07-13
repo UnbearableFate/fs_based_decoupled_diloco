@@ -1,6 +1,6 @@
 phase: P08R
 schema: duraloco-error-ledger-v1
-updated_at: "2026-07-13T12:25:00+09:00"
+updated_at: "2026-07-13T12:50:00+09:00"
 entries:
   - error_id: P08R-E001
     attempt_kind: control_plane_orchestration
@@ -263,3 +263,47 @@ entries:
       one-node recovery shape on a fresh artifact root. Do not count a PASS
       inner report under a failed wrapper as qualification.
     retry_gate: same_1node_report_recovery_shape_before_qualification_ladder
+
+  - error_id: P08R-E010
+    attempt_kind: d8_r2_50x10_fault_lifecycle
+    pbs_job_id: 2372217.opbs
+    runtime_commit: 16e8c4242022c965db3c6fdf30021a5f0c8f4958
+    situation: >-
+      The first eight-node R2 arm completed the controlled fault, all twenty
+      attempts, ten optimizer transitions, five lifecycle cycles, normal stop,
+      terminal strict audit, all performance/lifecycle reports, and 30
+      lifecycle regression tests. The EXIT gate then correctly marked the run
+      failed because the frozen elapsed target was exceeded.
+    outcome: terminal_performance_failure
+    reason: >-
+      Five synchronous periodic lifecycle cycles still performed redundant
+      empty-cache force_full strict replay on the authoritative committer path.
+      They consumed 251.394 seconds and reread 142382668678 payload bytes even
+      though each cycle had a verified snapshot replay and the terminal path
+      independently performed strict equality. Explicit periodic verification
+      also invalidated the owner memo and caused four later post-CAS heartbeat
+      intervals.
+    evidence:
+      - artifacts/duraloco/P08R/20260713_p08r_d8r2_16e8c42_r1/manifest.json
+      - artifacts/duraloco/P08R/20260713_p08r_d8r2_16e8c42_r1/elapsed_contract.json
+      - artifacts/duraloco/P08R/20260713_p08r_d8r2_16e8c42_r1/p08_d8_r2_report.json
+      - artifacts/duraloco/P08R/20260713_p08r_d8r2_16e8c42_r1/p07_lifecycle_report.json
+      - plans/duraloco/phases/P08R_D8R2_FAILURE_REVIEW_2372217.md
+      - tracejob_2372217_scheduler_exit_0_manifest_fail
+    allocation_nodes: 8
+    optimizer_transitions: 10
+    runtime_elapsed_seconds: 670.007937869
+    experiment_elapsed_seconds: 695.344515011
+    post_runtime_elapsed_seconds: 24.275678011
+    lifecycle_cycle_seconds: [12.318114394, 43.431269957, 54.432970894, 65.201461, 76.010514669]
+    lifecycle_cycle_total_seconds: 251.394330914
+    lifecycle_payload_bytes_read: 142382668678
+    authority_terminal_audit: pass
+    repair: >-
+      Add an explicit P08R-only opt-in that preserves periodic snapshot,
+      accelerated replay, reachability, inventory, dry-run, and lease evidence
+      while deferring redundant periodic strict comparison to the mandatory
+      read-only terminal strict audit. Preserve historical default behavior.
+    retry_gate: >-
+      smallest one-node frozen-authority lifecycle benchmark, then focused and
+      full one-node, D1, and D2 on one clean commit before one D8-R2 retry

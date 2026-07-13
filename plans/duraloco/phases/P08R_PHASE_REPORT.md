@@ -91,3 +91,13 @@ with the runtime-complete 340.529-second `2372056` experiment and its read-only
 recovered PASS report from `2372168`, this supplies the two sequential
 factor-one measurements without violating the one-retry limit. The next and
 only eight-node shape is the distinct required D8-R2 fault/lifecycle arm.
+
+PBS `2372217.opbs` completed that R2 arm functionally but failed performance:
+runtime 670.008 seconds and complete experiment 695.345 seconds. All R2,
+interference, bundle, P07, terminal-audit, and regression reports passed. Five
+synchronous lifecycle cycles consumed 251.394 seconds and reread 142.383 GB
+because they still repeated empty-cache strict replay before the mandatory
+terminal strict audit. The preserved root-cause review is
+`P08R_D8R2_FAILURE_REVIEW_2372217.md`. No D8-R2 resubmission is authorized
+until the opt-in deferral repair passes the smallest compute benchmark and a
+fresh clean-commit 1-node to 2-node ladder.
