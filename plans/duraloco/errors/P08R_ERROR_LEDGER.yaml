@@ -1,6 +1,6 @@
 phase: P08R
 schema: duraloco-error-ledger-v1
-updated_at: "2026-07-13T11:31:00+09:00"
+updated_at: "2026-07-13T11:43:00+09:00"
 entries:
   - error_id: P08R-E001
     attempt_kind: control_plane_orchestration
@@ -138,3 +138,31 @@ entries:
       require P10 to depend on P08R. Rerun the targeted benchmark and full suite
       on the resulting clean commit before D1 or D2.
     retry_gate: targeted_1node_then_full_1node_same_commit
+
+  - error_id: P08R-E006
+    attempt_kind: d1_real_gpt2_qualification
+    pbs_job_id: 2371980.opbs
+    runtime_commit: 9194a03d660dca97bb748105816e95bf73b5b776
+    situation: >-
+      The first D1 allocation passed identity and active-surface checks, then
+      all three runtime roles rejected configuration before authority
+      initialization or model training.
+    outcome: submission_path_contract_failure
+    reason: >-
+      The detached clean validation worktree was the project root, while the
+      submitted STORAGE_ROOT pointed into the primary checkout. Config path
+      validation correctly rejected run.shared_root outside the active project
+      root. The artifact root may be external, but runtime storage may not.
+    evidence:
+      - artifacts/duraloco/P08R/20260713_p08r_d1_9194a03_r1/manifest.json
+      - artifacts/duraloco/P08R/20260713_p08r_d1_9194a03_r1/committer.log
+      - artifacts/duraloco/P08R/20260713_p08r_d1_9194a03_r1/executor.log
+      - artifacts/duraloco/P08R/20260713_p08r_d1_9194a03_r1/learner.log
+      - tracejob_2371980_exit_status_1_walltime_9s
+    allocation_nodes: 1
+    authority_created: false
+    repair: >-
+      Place fresh qualification STORAGE_ROOT paths under the clean detached
+      worktree while continuing to preserve immutable reports under the primary
+      checkout. PBS 2371983 passed that corrected D1 shape on the same commit.
+    retry_gate: same_commit_d1_retry_then_d2

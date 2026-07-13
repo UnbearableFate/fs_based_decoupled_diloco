@@ -22,6 +22,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--expected-learners", required=True, type=int)
     parser.add_argument("--require-bounded-window", action="store_true")
     parser.add_argument("--bounded-window-delta", type=int, default=64)
+    parser.add_argument("--runtime-terminal-audit", action="store_true")
     parser.add_argument("--output", required=True)
     return parser.parse_args()
 
@@ -35,10 +36,28 @@ def main() -> int:
     log = ProductionTransactionalLog.open(
         backend, args.run_id, args.run_generation
     )
-    strict = log.replay(force_full=True)
     accelerated = log.replay_from_snapshot()
-    if accelerated.mode != "snapshot_suffix" or accelerated.replay != strict:
-        raise RuntimeError("snapshot+suffix replay did not equal strict replay")
+    if accelerated.mode != "snapshot_suffix":
+        raise RuntimeError("fresh report did not use an ancestry-pinned snapshot")
+    if args.runtime_terminal_audit:
+        audit = json.loads(
+            (root / "distributed/lifecycle/terminal-audit.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        if (
+            audit.get("status") != "PASS"
+            or audit.get("strict_state_digest")
+            != accelerated.replay.committed_state_digest
+            or audit.get("snapshot_state_digest")
+            != accelerated.replay.committed_state_digest
+        ):
+            raise RuntimeError("runtime terminal audit differs from fresh snapshot replay")
+        strict = accelerated.replay
+    else:
+        strict = log.replay(force_full=True)
+        if accelerated.replay != strict:
+            raise RuntimeError("snapshot+suffix replay did not equal strict replay")
     pins = [
         commit
         for commit in strict.commits

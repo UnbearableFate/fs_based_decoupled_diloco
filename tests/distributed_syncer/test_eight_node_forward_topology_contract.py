@@ -29,6 +29,19 @@ def test_forward_d8_wrappers_allocate_and_launch_exactly_eight_hosts() -> None:
         assert "-np 8" in script
         assert "control_plane_host.log" not in script
         assert "select=9" not in script
+        assert "create_p08r_elapsed_report.py" in script
+        assert "runtime_started_ns" in script
+        assert "runtime_ended_ns" in script
+
+
+def test_forward_report_binding_is_exactly_eight_nodes() -> None:
+    source = (
+        ROOT / "scripts/agent/create_p08_performance_report.py"
+    ).read_text(encoding="utf-8")
+
+    assert "len(set(hosts)) != 8" in source
+    assert '"allocation_nodes": 8' in source
+    assert "requires nine hosts" not in source
 
 
 def test_forward_r2_comparison_does_not_require_c9() -> None:

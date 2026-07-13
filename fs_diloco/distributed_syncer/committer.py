@@ -321,7 +321,66 @@ def _finalize_committer_stop(
     logger,
     lease_manager=None,
     loaded_lease=None,
+    terminal_snapshot: bool = False,
+    terminal_strict_audit: bool = False,
 ):
+    if (
+        terminal_snapshot
+        and reason != "error"
+        and view.authoritative_stop is None
+    ):
+        snapshot_request_id = "terminal-snapshot-" + canonical_digest(
+            {
+                "parent_commit_id": view.commit_id,
+                "optimizer_transition_count": view.optimizer_transition_count,
+                "owner_id": member_id,
+                "owner_session_id": owner_session_id,
+            }
+        )
+        prepared_snapshot, loaded_lease = _run_lifecycle_substage(
+            lambda: log.prepare_snapshot_transition(
+                request_id=snapshot_request_id
+            ),
+            substage="terminal_snapshot_prepare",
+            lease_manager=lease_manager,
+            loaded_lease=loaded_lease,
+            config=config,
+            logger=logger,
+        )
+        loaded_lease = _renew_for_authoritative_stage(
+            lease_manager=lease_manager,
+            loaded_lease=loaded_lease,
+            config=config,
+            logger=logger,
+            stage="lifecycle_snapshot",
+        )
+        snapshot_result = log.commit_prepared(prepared_snapshot)
+        loaded_lease = _renew_for_authoritative_stage(
+            lease_manager=lease_manager,
+            loaded_lease=loaded_lease,
+            config=config,
+            logger=logger,
+            stage="lifecycle_snapshot_committed",
+        )
+        view, loaded_lease = _run_lifecycle_substage(
+            lambda: build_runtime_view(log),
+            substage="terminal_snapshot_replay",
+            lease_manager=lease_manager,
+            loaded_lease=loaded_lease,
+            config=config,
+            logger=logger,
+        )
+        if view.commit_id != snapshot_result.commit_id:
+            raise RuntimeError("terminal snapshot replay differs from committed pin")
+        _log_replay_telemetry(
+            logger=logger, log=log, substage="terminal_snapshot_replay"
+        )
+        logger.event(
+            "terminal_snapshot_committed",
+            commit_id=view.commit_id,
+            commit_seq=view.commit_seq,
+            optimizer_transition_count=view.optimizer_transition_count,
+        )
     if view.authoritative_stop is None:
         request_id = "distributed-stop-" + canonical_digest(
             {
@@ -381,6 +440,32 @@ def _finalize_committer_stop(
                 owner_session_id=owner_session_id,
             )
             view = build_runtime_view(log, force_full=True)
+    if terminal_strict_audit and view.authoritative_stop is not None:
+        # Authority is already terminal. These are read-only final audits and
+        # deliberately hold no lease or mutation capability.
+        accelerated = log.replay_from_snapshot()
+        strict = log.replay(force_full=True)
+        if accelerated.replay != strict:
+            raise RuntimeError("terminal snapshot replay differs from fresh strict replay")
+        terminal_audit = {
+            "schema": "duraloco-terminal-strict-audit-v1",
+            "status": "PASS",
+            "head_commit_id": strict.head_frontier.commit_id,
+            "head_commit_seq": strict.head_frontier.commit_seq,
+            "optimizer_transition_count": (
+                strict.head_frontier.coordination.optimizer_transition_count
+                if strict.head_frontier.coordination is not None
+                else None
+            ),
+            "strict_state_digest": strict.committed_state_digest,
+            "snapshot_state_digest": accelerated.replay.committed_state_digest,
+            "snapshot_id": accelerated.snapshot_id,
+            "snapshot_mode": accelerated.mode,
+            "snapshot_suffix_length": accelerated.suffix_length,
+        }
+        audit_path = paths.shared_root / "distributed/lifecycle/terminal-audit.json"
+        atomic_write_json(audit_path, terminal_audit)
+        logger.event("terminal_strict_audit_completed", **terminal_audit)
     if view.authoritative_stop is None:
         logger.event(
             "stop_not_published_without_authority",
@@ -461,6 +546,8 @@ def run_committer(
     replication_factor: int = 1,
     redundancy_policy: RedundancyPolicyV1 | None = None,
     lifecycle_cadence: int = 0,
+    terminal_snapshot: bool = False,
+    terminal_strict_audit: bool = False,
     error_resume: bool = False,
     inject_error_after_transitions: int | None = None,
 ) -> None:
@@ -524,6 +611,10 @@ def run_committer(
         raise ValueError("factor-one committer cannot carry a redundancy policy")
     if type(lifecycle_cadence) is not int or lifecycle_cadence < 0:
         raise ValueError("lifecycle cadence must be a non-negative integer")
+    if type(terminal_snapshot) is not bool:
+        raise ValueError("terminal snapshot flag must be boolean")
+    if type(terminal_strict_audit) is not bool:
+        raise ValueError("terminal strict audit flag must be boolean")
     if inject_error_after_transitions is not None and (
         type(inject_error_after_transitions) is not int
         or inject_error_after_transitions < 1
@@ -1084,16 +1175,24 @@ def run_committer(
                         "owner_session_id": owner_session_id,
                     }
                 )
-                _snapshot_result, loaded_lease = _run_lifecycle_substage(
-                    lambda request_id=snapshot_request_id: log.commit_snapshot(
+                prepared_snapshot, loaded_lease = _run_lifecycle_substage(
+                    lambda request_id=snapshot_request_id: log.prepare_snapshot_transition(
                         request_id=request_id
                     ),
-                    substage="snapshot_commit",
+                    substage="snapshot_prepare",
                     lease_manager=lease_manager,
                     loaded_lease=loaded_lease,
                     config=config,
                     logger=logger,
                 )
+                loaded_lease = _renew_for_authoritative_stage(
+                    lease_manager=lease_manager,
+                    loaded_lease=loaded_lease,
+                    config=config,
+                    logger=logger,
+                    stage="lifecycle_snapshot",
+                )
+                log.commit_prepared(prepared_snapshot)
                 loaded_lease = _renew_for_authoritative_stage(
                     lease_manager=lease_manager,
                     loaded_lease=loaded_lease,
@@ -1296,6 +1395,8 @@ def run_committer(
                     owner_session_id=owner_session_id,
                     lease_manager=lease_manager,
                     loaded_lease=loaded_lease,
+                    terminal_snapshot=terminal_snapshot,
+                    terminal_strict_audit=terminal_strict_audit,
                 )
         finally:
             try:

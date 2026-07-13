@@ -731,13 +731,13 @@ class ProductionTransactionalLog:
         )
         return self.commit_prepared(prepared, crash_at=crash_at)
 
-    def commit_snapshot(
+    def prepare_snapshot_transition(
         self,
         *,
         request_id: str,
         crash_at: str | None = None,
-    ) -> CommitResult:
-        """Strict-replay, publish an immutable snapshot, then pin it in ancestry."""
+    ) -> PreparedLogTransition:
+        """Strict-replay and prepare a snapshot pin without performing head CAS."""
 
         token = self._require_owner_token()
         replay = self._authoritative_replay()
@@ -784,11 +784,24 @@ class ProductionTransactionalLog:
             covered_commit_id=snapshot.covered_head.commit_id,
             covered_state_digest=snapshot.covered_state_digest,
         )
-        prepared = self.prepare_control_transition(
+        return self.prepare_control_transition(
             control_kind="snapshot_pin",
             token=token,
             request_id=request_id,
             snapshot=projection,
+            crash_at=crash_at,
+        )
+
+    def commit_snapshot(
+        self,
+        *,
+        request_id: str,
+        crash_at: str | None = None,
+    ) -> CommitResult:
+        """Strict-replay, publish an immutable snapshot, then pin it in ancestry."""
+
+        prepared = self.prepare_snapshot_transition(
+            request_id=request_id,
             crash_at=crash_at,
         )
         return self.commit_prepared(prepared, crash_at=crash_at)

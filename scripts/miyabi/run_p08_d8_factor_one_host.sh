@@ -46,7 +46,7 @@ if [[ "$rank" -eq "$owner_rank" || "$rank" -eq "$standby_rank" ]]; then
     --config "$CONFIG" --run-id "$RUN_ID" --shared-root "$SHARED_ROOT"
     --num-learners 8 --node-ids "$NODE_IDS" --member-id "$member_id"
     --owner-session-id "$RUN_ID-$member_id-committer-session" --threads 8
-    --max-prefetch-bytes 1073741824)
+    --max-prefetch-bytes 1073741824 --terminal-snapshot --terminal-strict-audit)
   [[ "$rank" -eq "$owner_rank" ]] || committer+=(--standby)
 fi
 

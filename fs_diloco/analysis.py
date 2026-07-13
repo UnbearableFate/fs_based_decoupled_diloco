@@ -15,7 +15,6 @@ import yaml
 from .atomic_io import safe_read_json
 from .fragment_scheduler import expected_fragment_versions_after_events
 from .log.production import ProductionTransactionalLog
-from .log.replay import replay_log
 from .protocol.schemas import CommitManifest
 from .runtime_view import RuntimeView
 from .storage import PosixStorageBackend
@@ -130,7 +129,7 @@ def _open_replay(root: Path, config: dict[str, Any]):
         run_id,
         generation,
     )
-    replay = replay_log(log.transactional)
+    replay = log.replay_from_snapshot().replay
     return log, replay, RuntimeView.from_replay(replay)
 
 

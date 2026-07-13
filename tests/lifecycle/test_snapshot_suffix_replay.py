@@ -54,6 +54,21 @@ def test_snapshot_is_immutable_side_object_pinned_by_one_head_transition():
     assert backend.get(log.layout.head_key) != backend.get(pin.snapshot.snapshot_ref.key)
 
 
+def test_snapshot_publication_can_be_prepared_without_worker_head_cas():
+    _backend, log = _initialize("p08r-snapshot-prepare-only")
+    _activate(log)
+    before = log.load_head().manifest
+
+    prepared = log.prepare_snapshot_transition(request_id="snapshot-prepare")
+
+    assert log.load_head().manifest == before
+    assert prepared.parent_head.manifest == before
+    assert prepared.commit.control_kind == "snapshot_pin"
+    result = log.commit_prepared(prepared)
+    assert result.status == "committed"
+    assert log.replay_from_snapshot().mode == "snapshot_suffix"
+
+
 @pytest.mark.parametrize("failure", ["missing", "corrupt"])
 def test_bad_snapshot_never_blocks_empty_cache_strict_replay(failure):
     backend, log = _initialize(f"p07-snapshot-fallback-{failure}")

@@ -17,6 +17,7 @@ PYTHON_BIN="$PROJECT_ROOT/.venv/bin/python"
 CONFIG="$PROJECT_ROOT/configs/duraloco_milestone_gpt2_8node_50x10.yaml"
 TRAINING_ROOT="$STORAGE_ROOT/training"
 TRAIN_RUN="$RUN_ID-training"
+experiment_started_ns=$(date +%s%N)
 cd "$PROJECT_ROOT"
 if ! mkdir "$STORAGE_ROOT"; then
   echo "refusing reused P08 storage root: $STORAGE_ROOT" >&2
@@ -29,11 +30,26 @@ fi
 mkdir "$TRAINING_ROOT"
 touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log" "$ARTIFACT_ROOT/commands.log"
 export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
-result=fail; exit_code=1; started=$(date +%s)
+result=fail; exit_code=1
+runtime_started_ns=0
+runtime_ended_ns=0
 
 finish() {
   observed=$?
   [[ "$result" == pass ]] && exit_code=0 || { [[ "$observed" -eq 0 ]] || exit_code=$observed; }
+  experiment_ended_ns=$(date +%s%N)
+  if (( runtime_started_ns > 0 && runtime_ended_ns >= runtime_started_ns )); then
+    if ! "$PYTHON_BIN" scripts/agent/create_p08r_elapsed_report.py \
+      --experiment-started-ns "$experiment_started_ns" \
+      --runtime-started-ns "$runtime_started_ns" \
+      --runtime-ended-ns "$runtime_ended_ns" \
+      --experiment-ended-ns "$experiment_ended_ns" \
+      --output "$ARTIFACT_ROOT/elapsed_contract.json" \
+      >> "$ARTIFACT_ROOT/stdout.log" 2>> "$ARTIFACT_ROOT/stderr.log"; then
+      result=fail
+      exit_code=1
+    fi
+  fi
   qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
   args=(--root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json" --phase P08R
     --purpose experiment --run-id "$RUN_ID" --schema-version 2
@@ -46,6 +62,7 @@ finish() {
     --last-qstat-state R --termination-detail "P08 D8-R2 eight-node 50x10, controlled executor fault, matched factor-one interference and bundle gate"
     --assertion "hedged factor two recovers one recorded executor exception with complete loser-attempt telemetry"
     --assertion "ten single-head transitions, raw profiles, matched eight-node factor-one/R2 interference, and D-0807 gate pass"
+    --assertion "runtime and complete-experiment monotonic elapsed contracts are at most 440 seconds"
     --assertion "P07 strict/snapshot replay, capsules, reachability, bounded lifecycle dry-runs, and lifecycle regressions pass")
   [[ -f "$ARTIFACT_ROOT/p08_d8_r2_report.json" ]] && args+=(--stage-metrics-path p08_d8_r2_report.json)
   "$PYTHON_BIN" scripts/agent/create_run_manifest.py "${args[@]}" || true
@@ -79,11 +96,13 @@ command=(mpirun --bind-to none -np 8 --hostfile "$ARTIFACT_ROOT/learner_hosts.lo
   FS_DILOCO_CAPSULE_CADENCE=1 FS_DILOCO_CAPSULE_MAX_SEQUENCE=1
   bash scripts/miyabi/run_p08_d8_r2_host.sh)
 printf '%q ' "${command[@]}" | tee "$ARTIFACT_ROOT/commands.log"; printf '\n' | tee -a "$ARTIFACT_ROOT/commands.log"
+runtime_started_ns=$(date +%s%N)
 "${command[@]}" 2>&1 | tee -a "$ARTIFACT_ROOT/stdout.log"
+runtime_ended_ns=$(date +%s%N)
 
 "$PYTHON_BIN" -m fs_diloco.analysis summary "$TRAINING_ROOT" --json \
   | tee "$ARTIFACT_ROOT/training_summary.json"
-elapsed=$(($(date +%s) - started))
+elapsed=$(( (runtime_ended_ns - runtime_started_ns + 999999999) / 1000000000 ))
 "$PYTHON_BIN" scripts/agent/create_p08_performance_report.py r2 \
   --root "$TRAINING_ROOT" --artifacts "$ARTIFACT_ROOT" --run-id "$TRAIN_RUN" \
   --config "$CONFIG" --elapsed-seconds "$elapsed" \
@@ -98,7 +117,7 @@ elapsed=$(($(date +%s) - started))
   --output "$ARTIFACT_ROOT/bundle_gate_report.json" | tee -a "$ARTIFACT_ROOT/stdout.log"
 "$PYTHON_BIN" scripts/agent/create_p07_lifecycle_report.py --root "$TRAINING_ROOT" \
   --run-id "$TRAIN_RUN" --run-generation 0 --expected-learners 8 --require-bounded-window \
-  --bounded-window-delta 80 \
+  --bounded-window-delta 80 --runtime-terminal-audit \
   --output "$ARTIFACT_ROOT/p07_lifecycle_report.json" | tee -a "$ARTIFACT_ROOT/stdout.log"
 "$PYTHON_BIN" -m pytest -q tests/lifecycle tests/log/test_replay_prefix.py \
   --junitxml "$ARTIFACT_ROOT/p07_regression_junit.xml" | tee -a "$ARTIFACT_ROOT/stdout.log"

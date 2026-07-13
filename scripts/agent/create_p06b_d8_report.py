@@ -56,7 +56,8 @@ def build(
 ) -> dict[str, object]:
     summary = json.loads((artifacts / "training_summary.json").read_text(encoding="utf-8"))
     log = ProductionTransactionalLog.open(PosixStorageBackend(root / "authority"), run_id, 0)
-    view = build_runtime_view(log, force_full=True)
+    replay = log.replay_from_snapshot().replay
+    view = build_runtime_view(log)
     committer_events = _jsonl(root / "logs/distributed_committer.jsonl")
     commits = [
         row
@@ -176,7 +177,7 @@ def build(
         "coordination_protocol": log.spec.coordination_protocol,
         "control_sequence": [
             row.control_kind
-            for row in log.replay(force_full=True).commits
+            for row in replay.commits
             if hasattr(row, "control_kind")
         ],
     }
@@ -187,7 +188,7 @@ def build(
     assert report["membership_revision"] == 0
     assert report["coordination_protocol"] == "distributed-head-fenced-v1"
     assert report["stop_reason"] == "stop_after_outer_steps"
-    assert report["control_sequence"] == ["epoch_bump", "stop"]
+    assert report["control_sequence"] == ["epoch_bump", "snapshot_pin", "stop"]
     assert len(resource["cpu_affinity_by_executor"]) == 8 and gpu_steps
     assert all(row["prepare_to_commit_seconds"] >= 0 for row in latency_rows)
     assert sum(int(row["adoption_count"]) for row in latency_rows) >= 1

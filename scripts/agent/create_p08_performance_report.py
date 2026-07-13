@@ -68,8 +68,8 @@ def _sha256(path: Path) -> str:
 def _binding(artifacts: Path, config: Path) -> dict[str, object]:
     hosts = [line for line in (artifacts / "hosts.log").read_text().splitlines() if line]
     commit = (artifacts / "git_commit.log").read_text().strip()
-    if len(set(hosts)) != 9 or len(commit) != 40:
-        raise AssertionError("matched P08 evidence requires nine hosts and one clean commit")
+    if len(set(hosts)) != 8 or len(commit) != 40:
+        raise AssertionError("matched P08R evidence requires eight hosts and one clean commit")
     return {
         "git_commit": commit,
         "config_sha256": _sha256(config),
@@ -77,7 +77,7 @@ def _binding(artifacts: Path, config: Path) -> dict[str, object]:
         "model_revision": "gpt2",
         "dataset_revision": "wikitext-2-raw-v1",
         "seed": 1337,
-        "allocation_nodes": 9,
+        "allocation_nodes": 8,
         "learner_nodes": 8,
         "learners": 8,
         "hosts": hosts,
@@ -214,7 +214,20 @@ def _runtime(args: argparse.Namespace, mode: str) -> int:
     log = ProductionTransactionalLog.open(
         PosixStorageBackend(root / "authority"), args.run_id, 0
     )
-    view = build_runtime_view(log, force_full=True)
+    view = build_runtime_view(log)
+    terminal_audit = json.loads(
+        (root / "distributed/lifecycle/terminal-audit.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    if (
+        terminal_audit.get("status") != "PASS"
+        or terminal_audit.get("strict_state_digest")
+        != view.committed_state_digest
+        or terminal_audit.get("snapshot_state_digest")
+        != view.committed_state_digest
+    ):
+        raise AssertionError("runtime terminal strict audit differs from fresh report view")
     samples = _gpu_samples(root)
     payload: dict[str, object] = {
         "schema": "duraloco-p08-matched-runtime-v1",
@@ -227,6 +240,7 @@ def _runtime(args: argparse.Namespace, mode: str) -> int:
         "gpu_step_seconds": _summary(samples),
         "gpu_step_samples": samples,
         "coordination_protocol": log.spec.coordination_protocol,
+        "terminal_audit": terminal_audit,
     }
     if view.optimizer_transition_count != 10 or summary["stop_reason"] != "stop_after_outer_steps":
         raise AssertionError("matched runtime did not reach the frozen ten-transition terminal")

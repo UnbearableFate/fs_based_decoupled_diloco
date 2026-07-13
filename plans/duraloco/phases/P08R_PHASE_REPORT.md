@@ -41,6 +41,9 @@ Every failed try is preserved in
 - P08R-E005 / PBS `2371957.opbs` passed static checks, the database scan, and
   514 repository tests, but the state-checker's unit fixture still encoded the
   superseded direct P08-to-P10 dependency instead of P08R-to-P10.
+- P08R-E006 / PBS `2371980.opbs` rejected a D1 storage root outside the detached
+  validation worktree before authority initialization. The same-commit retry
+  `2371983.opbs` used an in-project fresh storage root and passed.
 
 None of these attempts mutated the completed historical source authority.
 `2371888` never started runtime, `2371896` stopped in tests, and `2371905`
@@ -48,7 +51,9 @@ operated read-only on the preserved P08 prefix.
 
 ## Next qualification
 
-The next clean commit adds replay-call events to the committer's raw telemetry.
-The required order remains targeted real-prefix benchmark, full one-node suite,
-D1 real GPT-2, D2 takeover/ambiguity, then the sequential eight-node final
-arms. No ninth node is authorized.
+On commit `9194a03d660dca97bb748105816e95bf73b5b776`, targeted replay PBS
+`2371964`, full one-node PBS `2371978` (515 passed, one skipped), D1 PBS
+`2371983`, and D2 PBS `2371993` passed in order. The next clean commit adds the
+frozen complete-experiment elapsed report, terminal snapshot, and in-runtime
+terminal strict audit; therefore the same 1-node to 2-node ladder will be
+rerun before any eight-node arm. No ninth node is authorized.
