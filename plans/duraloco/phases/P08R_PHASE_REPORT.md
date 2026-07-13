@@ -156,3 +156,17 @@ focused tests, fresh strict digest equality, unchanged authority head, and no
 follow-ups, but its EXIT manifest used the unsupported purpose `audit`. The
 wrapper now uses the closed `contract` value and the checker is rerun on a fresh
 root; the manifest-less artifact is retained as failed-try evidence.
+
+## Final verdict
+
+Independent checker PBS `2372523.opbs` passed on commit `1e1f30c` with 73
+focused tests, fresh empty-cache strict replay, snapshot/strict terminal digest
+equality, unchanged authority head, all A01–A19 evidence, and no required
+follow-ups. P08R-A20 is closed by the persisted Maker/Checker checksums and
+`P08R_CHECKER_REPORT.md`.
+
+P08R is completed. Factor-one complete experiments were 336.920 and 337.553
+seconds. The accepted error-recovery R2 experiment was 527.044 seconds under
+D-4406, with 21.199 seconds of post-runtime reporting, all fault/lifecycle/
+numeric reports PASS, and exactly eight nodes. P10 is unblocked; `main` was not
+merged automatically.

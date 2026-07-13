@@ -1,12 +1,12 @@
 phase: P08R
-status: in_progress
+status: completed
 planning_basis_branch: codex/duraloco-p08-distributed-performance
 planning_basis_commit: c6ec3571bdc240fff8dd26e2dd7580bca8f69336
 actual_base_branch: codex/duraloco-p08-distributed-performance
 actual_base_commit: ff41499f0960d8b2ee90e513f5487cc8b1dc0a28
 feature_branch: codex/duraloco-p08r-replay-440s
-current_loop: 2
-current_goal: "complete factor-one 440-second and practical R2 recovery gates"
+current_loop: 6
+current_goal: "P08R complete; hand verified evidence to P10"
 attempts_for_current_failure: 0
 last_terminal_failure_review: plans/duraloco/phases/P08R_D8R2_FAILURE_REVIEW_2372318.md
 terminal_retry_authorized: false
@@ -24,7 +24,7 @@ checks:
   miyabi_d8: miyabi_d8_pass
   miyabi_d8_repeat: miyabi_d8_pass
   miyabi_d8_r2: miyabi_d8_r2_pass
-  independent_checker: not_run
+  independent_checker: contract_pass
 acceptance:
   P08R-A01: {result: pass, evidence: [2372056.opbs, 2372194.opbs, elapsed_contract.json exact runtime and experiment monotonic spans]}
   P08R-A02: {result: pass, evidence: [2371915.opbs, two strict calls each read 30861300554 payload bytes]}
@@ -45,7 +45,7 @@ acceptance:
   P08R-A17: {result: pass, evidence: [2372318.opbs 527.044s, 2372403.opbs D-4406 adjudication PASS]}
   P08R-A18: {result: pass, evidence: [2372292.opbs, 2372318.opbs, matched GPU LFE affinity RSS I/O and interference reports PASS]}
   P08R-A19: {result: pass, evidence: [2372417.opbs, forbidden_surface.json finding_count=0]}
-  P08R-A20: {result: not_run, evidence: []}
+  P08R-A20: {result: pass, evidence: [2372523.opbs, P08R maker and checker checksums, clean runtime and qualification commits, P10 handoff]}
 open_decisions: []
 open_blockers: []
 artifacts:
@@ -83,13 +83,18 @@ artifacts:
   - artifacts/duraloco/P08R/20260713_p08r_d1_ac2d961_r6/manifest.json
   - artifacts/duraloco/P08R/20260713_p08r_d2_ac2d961_r5/manifest.json
   - artifacts/duraloco/P08R/20260713_p08r_checker_0e6da55_r1/checker_report.json
+  - artifacts/duraloco/P08R/20260713_p08r_checker_1e1f30c_r2/manifest.json
+  - artifacts/duraloco/P08R/20260713_p08r_checker_1e1f30c_r2/checker_report.json
+  - plans/duraloco/evidence/P08R_MAKER_CHECKSUMS.sha256
+  - plans/duraloco/evidence/P08R_CHECKER_CHECKSUMS.sha256
+  - plans/duraloco/phases/P08R_CHECKER_REPORT.md
   - plans/duraloco/phases/P08R_D8_FAILURE_REVIEW_2372056.md
   - plans/duraloco/phases/P08R_D8R2_FAILURE_REVIEW_2372217.md
   - plans/duraloco/phases/P08R_D8R2_FAILURE_REVIEW_2372318.md
 next_action: >-
-  run the independent compute-node checker with fresh strict terminal replay;
-  persist PASS and hand P10 to the verified successor phase without merging main
-automatic_progression: true
+  orient P10 from the P08R verified evidence and qualified repair commit;
+  do not merge main automatically
+automatic_progression: false
 requires_human_approval: false
 approval_reason: null
-checker_report: null
+checker_report: plans/duraloco/phases/P08R_CHECKER_REPORT.md

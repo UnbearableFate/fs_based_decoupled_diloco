@@ -1,7 +1,7 @@
 ---
 plan_id: P08R-440
 title: Pre-P10 50x10 Replay and Lifecycle Performance Recovery
-status: ready
+status: completed
 date: 2026-07-13
 planning_basis_runtime_commit: 8492eb4163b406baf67d6d56f100b693dd6aa781
 planning_basis_checker_job: 2371170.opbs
