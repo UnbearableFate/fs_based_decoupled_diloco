@@ -81,3 +81,13 @@ PBS `2372168`, targeted replay PBS `2372171`, full one-node PBS `2372183` (520
 passed, one skipped), D1 PBS `2372186`, and D2 PBS `2372189`. The source head
 digest was unchanged by report recovery. One D8 factor-one retry is explicitly
 authorized on this exact commit; another immediate retry is not.
+
+The authorized retry, PBS `2372194.opbs`, passed end to end on exactly eight
+learner nodes. Runtime was 329.365 seconds, the complete experiment was 336.920
+seconds, and post-runtime work was 6.514 seconds. Its report recorded ten
+optimizer CAS guards, one stop CAS guard, zero unnecessary periodic lifecycle
+heartbeats, zero authority loss, and terminal strict-audit equality. Together
+with the runtime-complete 340.529-second `2372056` experiment and its read-only
+recovered PASS report from `2372168`, this supplies the two sequential
+factor-one measurements without violating the one-retry limit. The next and
+only eight-node shape is the distinct required D8-R2 fault/lifecycle arm.
