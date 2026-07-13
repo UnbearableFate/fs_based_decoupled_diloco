@@ -1,6 +1,6 @@
 phase: P08R
 schema: duraloco-error-ledger-v1
-updated_at: "2026-07-13T12:20:00+09:00"
+updated_at: "2026-07-13T12:25:00+09:00"
 entries:
   - error_id: P08R-E001
     attempt_kind: control_plane_orchestration
@@ -229,4 +229,37 @@ entries:
       Export the exact PBS_O_WORKDIR project root as PYTHONPATH, matching the
       production wrappers, then rerun the same read-only one-node benchmark on
       a fresh artifact root and the resulting clean commit.
+    retry_gate: same_1node_report_recovery_shape_before_qualification_ladder
+
+  - error_id: P08R-E009
+    attempt_kind: targeted_1node_frozen_d8_report_recovery
+    pbs_job_id: 2372160.opbs
+    runtime_commit: dac69f2bd6a8edcae887c239473c1d6386015d74
+    situation: >-
+      The repaired one-node wrapper opened and strictly reconstructed the
+      frozen D8 authority, wrote a complete recovered performance report with
+      zero lifecycle heartbeat renewals, and proved the authority head digest
+      unchanged. Its final shell assertion then failed.
+    outcome: wrapper_output_contract_failure
+    reason: >-
+      The jq postcondition checked optimizer_transition_count, the terminal
+      audit field name, at the report top level. The performance report's
+      established top-level field is optimizer_transitions. The recovered
+      report itself was PASS and contained all ten transitions, all mandatory
+      CAS guards, zero authority loss, and terminal audit PASS.
+    evidence:
+      - artifacts/duraloco/P08R/20260713_p08r_report_dac69f2_r2/manifest.json
+      - artifacts/duraloco/P08R/20260713_p08r_report_dac69f2_r2/recovered_p08_d8_report.json
+      - artifacts/duraloco/P08R/20260713_p08r_report_dac69f2_r2/source_head_before.sha256
+      - artifacts/duraloco/P08R/20260713_p08r_report_dac69f2_r2/source_head_after.sha256
+      - tracejob_2372160_exit_status_1_walltime_6s
+    allocation_nodes: 1
+    source_authority_opened: true
+    recovered_report_written: true
+    recovered_report_status: pass
+    source_authority_unchanged: true
+    repair: >-
+      Assert the established optimizer_transitions field and rerun the same
+      one-node recovery shape on a fresh artifact root. Do not count a PASS
+      inner report under a failed wrapper as qualification.
     retry_gate: same_1node_report_recovery_shape_before_qualification_ladder

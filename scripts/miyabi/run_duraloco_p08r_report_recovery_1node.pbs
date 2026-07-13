@@ -76,7 +76,7 @@ printf '%s\n' \
 sha256sum "$HEAD_PATH" > "$ARTIFACT_ROOT/source_head_after.sha256"
 cmp "$ARTIFACT_ROOT/source_head_before.sha256" "$ARTIFACT_ROOT/source_head_after.sha256"
 jq -e '
-  .optimizer_transition_count == 10 and
+  .optimizer_transitions == 10 and
   .lease_guard.optimizer_head_cas_renewals == 10 and
   .lease_guard.stop_head_cas_renewals == 1 and
   .lease_guard.lifecycle_substage_renewals == 0 and
