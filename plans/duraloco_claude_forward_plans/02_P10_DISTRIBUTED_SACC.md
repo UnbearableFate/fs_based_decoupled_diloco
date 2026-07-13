@@ -42,6 +42,9 @@ enforcement + complete `not_qualified` evidence for the algorithm tier.
 
 ## 2. Preconditions
 
+- [ ] Pre-P10 P08R performance gate PASS: matched C9, two sequential D8
+      factor-one runs, and D8-R2 complete 50×10 experiments each finish within
+      440 seconds without weakening replay/lifecycle safety.
 - [ ] P08 verified commit with P07 lifecycle regressions checker-PASS.
 - [ ] Lifecycle + performance schemas frozen; D8/D8-R2 raw stage metrics
       complete, **including the storage-op counters landed in H0/P08** (these

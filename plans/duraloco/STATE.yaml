@@ -8,7 +8,7 @@ actual_base_branch: codex/problem-fix-after-p07
 actual_base_commit: 8c12839a7b985e590378ac593c846f07b0637517
 feature_branch: codex/duraloco-p08-distributed-performance
 current_loop: 6
-current_goal: "hand off the independently verified P08 contract to P10"
+current_goal: "complete the pre-P10 P08R 440-second 50x10 performance gate"
 attempts_for_current_failure: 0
 last_terminal_failure_review: plans/duraloco/phases/P08_9NODE_FAILURE_REVIEW_2370941.md
 terminal_retry_authorized: false
@@ -77,7 +77,8 @@ artifacts:
   - plans/duraloco/evidence/P08_CHECKER_CHECKSUMS.sha256
   - plans/duraloco/phases/P08_CHECKER_REPORT.md
   - artifacts/duraloco/P08/20260713_p08_checker_4dd6dd8_r2/checker_results.json
-next_action: "start P10 learner/contributor substrate from the verified P08 runtime contract"
+  - plans/duraloco/phases/P08R_440S_OPTIMIZATION_PLAN.md
+next_action: "execute P08R Loop 0 real-prefix replay RED benchmark on a one-node PBS allocation"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

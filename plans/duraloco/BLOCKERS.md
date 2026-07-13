@@ -1,9 +1,10 @@
 # DuraLoCo Blockers
 
-No open blocker is recorded through completed P07 and H0. P08 is authorized to
-start from the H0-qualified runtime commit
-`f167a07c49339ba42d14f8a5873fe2c8781884d4`; its independent checker basis is
-`04e0a8634b0e9d7c4cd55c5593081a0ca969a060`.
+No correctness blocker is open. P08 completed with independent Checker PASS,
+but P10 execution is intentionally sequenced after the user-requested P08R
+performance gate. The gate requires complete matched 50×10 C9, D8 factor-one,
+and D8-R2 experiments to finish within 440 seconds; its executable plan is
+`plans/duraloco/phases/P08R_440S_OPTIMIZATION_PLAN.md`.
 
 Runtime checks must remain `not_run` until a PBS compute job produces evidence;
 queue delay is not itself a blocker. Any later blocker entry must include a

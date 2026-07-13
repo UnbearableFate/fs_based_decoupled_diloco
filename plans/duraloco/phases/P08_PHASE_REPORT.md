@@ -363,3 +363,16 @@ and the P07 lifecycle contract. Its verdict is PASS with
 `required_gate_followups: none`. The persisted report is
 `plans/duraloco/phases/P08_CHECKER_REPORT.md`; P08 is complete and the next
 action is P10.
+
+## Post-completion P08R performance gate
+
+The user added a hard pre-P10 requirement on 2026-07-13: complete 50×10
+experiments must finish within 440 seconds. This does not revoke P08's
+correctness verdict, but it delays P10 execution until the dedicated
+`P08R_440S_OPTIMIZATION_PLAN.md` passes.
+
+The plan treats current 834/950/725-second C9/factor-one/R2 results as RED
+baselines. It targets the confirmed replay/lifecycle control-plane bottleneck,
+not the already-faster learner GPU or LFE. No implementation or new runtime
+experiment has been performed yet; the next authorized action is a one-node
+real-prefix replay scaling benchmark.
