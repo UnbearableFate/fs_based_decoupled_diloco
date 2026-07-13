@@ -936,3 +936,19 @@ P05+ 的规范性路线决策生效。
 
 - Choice: first qualify ownership-bound memo and existing snapshots. Incremental post-CAS RuntimeView application is permitted only if matched measurements still project above 440 seconds; it must remain deletable, compare against strict replay, and fall back on every ambiguity.
 - Rejected: changing replay semantics before the smaller verified-object reuse is measured.
+
+## D-4406 — Practical R2 error-recovery elapsed envelope
+
+- Context: after P08R had reduced the full D8-R2 experiment from 695.345 to
+  527.044 seconds while every fault, lifecycle, terminal-audit, interference,
+  numeric, and regression report passed, the user explicitly said the
+  error-recovery test only needs to finish in a reasonable range and need not
+  satisfy a fixed 440-second time.
+- Choice: keep factor one's 440-second gate. For D8-R2, retain exact monotonic
+  runtime/experiment telemetry and the 25-second post-runtime gate, but use a
+  600-second complete-experiment envelope. A preserved run that failed only the
+  superseded 440-second assertion may be accepted through a separate immutable
+  adjudication report that rechecks all raw reports, topology, clean commit,
+  terminal strict audit, and lifecycle JUnit evidence.
+- Rejected: hiding elapsed time, dropping the post-runtime bound, weakening any
+  correctness/fault/lifecycle gate, or rewriting a failed historical manifest.

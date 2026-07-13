@@ -44,6 +44,7 @@ finish() {
       --runtime-started-ns "$runtime_started_ns" \
       --runtime-ended-ns "$runtime_ended_ns" \
       --experiment-ended-ns "$experiment_ended_ns" \
+      --max-experiment-seconds 600 \
       --output "$ARTIFACT_ROOT/elapsed_contract.json" \
       >> "$ARTIFACT_ROOT/stdout.log" 2>> "$ARTIFACT_ROOT/stderr.log"; then
       result=fail
@@ -62,7 +63,7 @@ finish() {
     --last-qstat-state R --termination-detail "P08 D8-R2 eight-node 50x10, controlled executor fault, matched factor-one interference and bundle gate"
     --assertion "hedged factor two recovers one recorded executor exception with complete loser-attempt telemetry"
     --assertion "ten single-head transitions, raw profiles, matched eight-node factor-one/R2 interference, and D-0807 gate pass"
-    --assertion "runtime and complete-experiment monotonic elapsed contracts are at most 440 seconds"
+    --assertion "the error-recovery complete experiment fits the user-approved practical 600-second envelope"
     --assertion "periodic lifecycle cycles defer redundant strict replay to the mandatory terminal strict audit"
     --assertion "P07 strict/snapshot replay, capsules, reachability, bounded lifecycle dry-runs, and lifecycle regressions pass")
   [[ -f "$ARTIFACT_ROOT/p08_d8_r2_report.json" ]] && args+=(--stage-metrics-path p08_d8_r2_report.json)

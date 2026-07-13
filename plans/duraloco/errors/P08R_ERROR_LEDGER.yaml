@@ -1,6 +1,6 @@
 phase: P08R
 schema: duraloco-error-ledger-v1
-updated_at: "2026-07-13T13:20:00+09:00"
+updated_at: "2026-07-13T13:30:00+09:00"
 entries:
   - error_id: P08R-E001
     attempt_kind: control_plane_orchestration
@@ -347,3 +347,33 @@ entries:
     retry_gate: >-
       smallest one-node frozen real snapshot-suffix benchmark, then focused,
       full one-node, D1, D2, and matched factor-one before one D8-R2 attempt
+
+  - error_id: P08R-E012
+    attempt_kind: targeted_1node_frozen_snapshot_suffix_benchmark
+    pbs_job_id: 2372365.opbs
+    runtime_commit: 00beea42a278420716763c4f7da8db811aad785f
+    situation: >-
+      The first historical-head snapshot-suffix benchmark passed all 54 focused
+      tests and completed its real strict and snapshot reads, then failed a
+      benchmark-only lower-bound assertion before writing the JSON report.
+    outcome: benchmark_measurement_threshold_failure
+    reason: >-
+      The benchmark required the first two-transition suffix to read more than
+      ten decimal gigabytes. The selected historical snapshot already embedded
+      some verified proposal identities from the committer process cache, so
+      the uncached suffix still read real tensor bytes but less than that
+      arbitrary threshold. The repair property requires first-call bytes to be
+      positive and second-call bytes to be zero, not a minimum volume.
+    evidence:
+      - artifacts/duraloco/P08R/20260713_p08r_lifecycle_00beea4_r2/manifest.json
+      - artifacts/duraloco/P08R/20260713_p08r_lifecycle_00beea4_r2/stderr.log
+      - tracejob_2372365_exit_status_1_walltime_125s
+    allocation_nodes: 1
+    focused_tests: {passed: 54, failed: 0}
+    report_written: false
+    source_authority_mutated: false
+    repair: >-
+      Gate the RED first call on positive tensor bytes and the warm call on zero
+      tensor bytes, while retaining exact strict equality and unchanged-head
+      checks. Rerun on a fresh artifact root.
+    retry_gate: same_1node_historical_suffix_shape

@@ -13,13 +13,15 @@ execution_mode: single-writer maker + independent checker
 next_phase: P10
 ---
 
-# P08R — 50×10 wall-clock recovery to 440 seconds
+# P08R — 50×10 wall-clock recovery
 
 ## 1. Objective and scope
 
 Recover the P06B/M00 50×10 wall-clock envelope without weakening any P08
-correctness guarantee. The hard target is **440 seconds or less** for each
-frozen eight-node production 50×10 shape:
+correctness guarantee. Factor one retains the **440 seconds or less** target.
+Per the user's 2026-07-13 scope amendment, the fault-recovery R2 arm uses a
+practical **600-second complete-experiment envelope** rather than treating 440
+seconds as a strict failure boundary:
 
 1. D8 factor-one;
 2. D8-R2 with the frozen controlled executor failure and P07 lifecycle
@@ -46,8 +48,9 @@ record both:
   performance/lifecycle reports, regressions, and successful manifest-ready
   completion.
 
-The acceptance value is `experiment_elapsed_seconds <= 440`. Queue wait is
-excluded; PBS prologue/epilogue is archived separately as scheduler wall time.
+The factor-one acceptance value is `experiment_elapsed_seconds <= 440`; the
+R2 error-recovery acceptance value is `experiment_elapsed_seconds <= 600`.
+Queue wait is excluded; PBS prologue/epilogue is archived separately as scheduler wall time.
 The report must also retain runtime-only time so report work cannot be hidden
 inside or outside the claim.
 
@@ -173,6 +176,15 @@ First attempt the smaller memo/snapshot repair. Incremental post-CAS RuntimeView
 application is allowed only if the measured projection still exceeds 440 s;
 it must be a deletable optimization checked against strict replay for every
 prefix and must fall back on ambiguity.
+
+### D-4406 — Practical R2 error-recovery envelope
+
+Factor one retains its 440-second diagnostic and acceptance target. The R2 arm
+must still record exact runtime, post-runtime, and complete-experiment spans,
+pass every fault/lifecycle/numeric/topology gate, and keep post-runtime work at
+or below 25 seconds, but its complete-experiment pass boundary is 600 seconds.
+This reflects the user's explicit instruction that error recovery be shortened
+to a reasonable range rather than held to a fixed 440-second requirement.
 
 ## 6. Execution loop
 
@@ -307,7 +319,7 @@ one fresh 8-node retry. Never reuse a run namespace.
 - [ ] P08R-A14: D2 takeover/ambiguity/lease qualification passes;
 - [ ] P08R-A15: every final manifest proves exactly eight allocated/active learner nodes and zero dedicated/idle control nodes;
 - [ ] P08R-A16: two sequential D8 factor-one complete experiments are each ≤ 440 s;
-- [ ] P08R-A17: D8-R2 fault+lifecycle complete experiment ≤ 440 s;
+- [ ] P08R-A17: D8-R2 fault+lifecycle complete experiment ≤ 600 s under D-4406;
 - [ ] P08R-A18: GPU/LFE numeric, interference, affinity, RSS, and I/O gates do not regress;
 - [ ] P08R-A19: no SQLite, second authority, per-fragment head, disabled validation/fsync, or changed optimizer trajectory;
 - [ ] P08R-A20: report, checksums, clean runtime commit, independent Checker PASS, and P10 handoff persisted.

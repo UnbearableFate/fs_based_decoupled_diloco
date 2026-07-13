@@ -14,6 +14,7 @@ trap 'echo "[ERROR] line=$LINENO status=$?" >&2' ERR
 : "${ARTIFACT_ROOT:?set a fresh benchmark artifact root}"
 : "${SOURCE_TRAINING_ROOT:?set the frozen failed D8-R2 training root}"
 : "${SOURCE_RUN_ID:?set the frozen failed D8-R2 training run ID}"
+: "${SOURCE_ARTIFACT_ROOT:?set the frozen failed D8-R2 artifact root}"
 
 PROJECT_ROOT="${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}"
 PYTHON_BIN="$PROJECT_ROOT/.venv/bin/python"
@@ -57,6 +58,7 @@ printf '%s\n' \
   "$PYTHON_BIN -m pytest tests/distributed_syncer/test_lease_stage_guard.py tests/performance_core/test_p08_performance_report.py -q" \
   "$PYTHON_BIN -m pytest tests/lifecycle/test_snapshot_suffix_replay.py tests/log/test_production_runtime.py -q" \
   "$PYTHON_BIN -m benchmarks.bench_p08r_snapshot_suffix_memo --training-root $SOURCE_TRAINING_ROOT --run-id $SOURCE_RUN_ID --output $ARTIFACT_ROOT/snapshot_suffix_benchmark.json" \
+  "$PYTHON_BIN scripts/agent/create_p08r_r2_adjudication.py --source-artifacts $SOURCE_ARTIFACT_ROOT --output $ARTIFACT_ROOT/r2_adjudication.json" \
   > "$ARTIFACT_ROOT/commands.log"
 "$PYTHON_BIN" -m pytest \
   tests/distributed_syncer/test_lease_stage_guard.py \
@@ -68,6 +70,11 @@ printf '%s\n' \
 "$PYTHON_BIN" -m benchmarks.bench_p08r_snapshot_suffix_memo \
   --training-root "$SOURCE_TRAINING_ROOT" --run-id "$SOURCE_RUN_ID" \
   --output "$ARTIFACT_ROOT/snapshot_suffix_benchmark.json" \
+  > >(tee -a "$ARTIFACT_ROOT/stdout.log") \
+  2> >(tee -a "$ARTIFACT_ROOT/stderr.log" >&2)
+"$PYTHON_BIN" scripts/agent/create_p08r_r2_adjudication.py \
+  --source-artifacts "$SOURCE_ARTIFACT_ROOT" \
+  --output "$ARTIFACT_ROOT/r2_adjudication.json" \
   > >(tee -a "$ARTIFACT_ROOT/stdout.log") \
   2> >(tee -a "$ARTIFACT_ROOT/stderr.log" >&2)
 result=pass

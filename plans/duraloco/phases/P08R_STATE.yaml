@@ -6,7 +6,7 @@ actual_base_branch: codex/duraloco-p08-distributed-performance
 actual_base_commit: ff41499f0960d8b2ee90e513f5487cc8b1dc0a28
 feature_branch: codex/duraloco-p08r-replay-440s
 current_loop: 2
-current_goal: "complete the pre-P10 P08R 440-second 50x10 performance gate"
+current_goal: "complete factor-one 440-second and practical R2 recovery gates"
 attempts_for_current_failure: 1
 last_terminal_failure_review: plans/duraloco/phases/P08R_D8R2_FAILURE_REVIEW_2372318.md
 terminal_retry_authorized: false
@@ -75,12 +75,13 @@ artifacts:
   - artifacts/duraloco/P08R/20260713_p08r_d2_ba0a5c6_r4/manifest.json
   - artifacts/duraloco/P08R/20260713_p08r_d8_ba0a5c6_r3/manifest.json
   - artifacts/duraloco/P08R/20260713_p08r_d8r2_ba0a5c6_r2/manifest.json
+  - artifacts/duraloco/P08R/20260713_p08r_lifecycle_00beea4_r2/manifest.json
   - plans/duraloco/phases/P08R_D8_FAILURE_REVIEW_2372056.md
   - plans/duraloco/phases/P08R_D8R2_FAILURE_REVIEW_2372217.md
   - plans/duraloco/phases/P08R_D8R2_FAILURE_REVIEW_2372318.md
 next_action: >-
-  implement transactional union of snapshot and live suffix memo, prove it on
-  the frozen real authority, then rerun the clean 1-node to 2-node ladder
+  rerun the corrected frozen real suffix benchmark with D-4406 adjudication,
+  then complete the clean 1-node to 2-node ladder and independent check
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

@@ -1,11 +1,11 @@
-# P08R 440-second replay recovery report
+# P08R replay and error-recovery performance report
 
 ## Current status
 
 P08R is in progress on `codex/duraloco-p08r-replay-440s`. P08 remains
-completed. P10 is held until two D8 factor-one 50x10 runs and one D8-R2
-fault/lifecycle run each finish within the frozen 440-second complete-experiment
-metric on exactly eight learner nodes, followed by an independent Checker PASS.
+completed. P10 is held until factor one satisfies 440 seconds, D8-R2 satisfies
+the user-approved practical 600-second envelope, both use exactly eight learner
+nodes, and an independent Checker reports PASS.
 
 ## Loop 0 and Loop 1 evidence
 
@@ -122,3 +122,17 @@ prefix and discarded already verified live suffix tensors, so they reread
 preserved review `P08R_D8R2_FAILURE_REVIEW_2372318.md` requires a real
 historical-head suffix-memo benchmark and a fresh qualification ladder before
 any further D8-R2 attempt.
+
+The user subsequently amended the R2 goal: error recovery should be shortened
+to a reasonable range and need not be held to a fixed 440-second boundary.
+D-4406 therefore retains factor one's 440-second gate and uses a 600-second
+complete-experiment envelope for R2, with every correctness gate and the
+25-second post-runtime bound unchanged. The 527.044-second `2372318` run is
+eligible for immutable adjudication because all of its non-elapsed reports
+already passed; its historical failed manifest will not be rewritten.
+
+P08R-E012 / PBS `2372365.opbs` passed 54 focused tests and completed the first
+real historical suffix benchmark, but an arbitrary RED assertion demanded more
+than 10 GB on the first call. The actual contract is positive first-call tensor
+bytes and zero warm-call bytes, so the threshold was corrected without changing
+the cache repair.
