@@ -1,6 +1,6 @@
 phase: P08R
 schema: duraloco-error-ledger-v1
-updated_at: "2026-07-13T12:50:00+09:00"
+updated_at: "2026-07-13T13:20:00+09:00"
 entries:
   - error_id: P08R-E001
     attempt_kind: control_plane_orchestration
@@ -307,3 +307,43 @@ entries:
     retry_gate: >-
       smallest one-node frozen-authority lifecycle benchmark, then focused and
       full one-node, D1, and D2 on one clean commit before one D8-R2 retry
+
+  - error_id: P08R-E011
+    attempt_kind: d8_r2_50x10_fault_lifecycle_retry
+    pbs_job_id: 2372318.opbs
+    runtime_commit: ba0a5c693eb586d5db27b7e304f230d4acd826a8
+    situation: >-
+      The authorized D8-R2 retry completed all functional, fault, lifecycle,
+      terminal-audit, interference, bundle, and regression gates but failed
+      the frozen complete-experiment elapsed contract.
+    outcome: terminal_performance_failure
+    reason: >-
+      Snapshot-mode replay rebuilt its scratch cache only from the embedded
+      snapshot prefix and replaced the live owner cache. Verified tensors in
+      the two optimizer transitions after the snapshot were discarded and
+      reread at every later lifecycle cadence. Five deferred cycles still took
+      89.645 seconds, reread 47805060618 payload bytes, and cache loss caused
+      four later post-CAS heartbeat intervals.
+    evidence:
+      - artifacts/duraloco/P08R/20260713_p08r_d8r2_ba0a5c6_r2/manifest.json
+      - artifacts/duraloco/P08R/20260713_p08r_d8r2_ba0a5c6_r2/elapsed_contract.json
+      - artifacts/duraloco/P08R/20260713_p08r_d8r2_ba0a5c6_r2/p08_d8_r2_report.json
+      - artifacts/duraloco/P08R/20260713_p08r_d8r2_ba0a5c6_r2/p07_lifecycle_report.json
+      - plans/duraloco/phases/P08R_D8R2_FAILURE_REVIEW_2372318.md
+      - tracejob_2372318_scheduler_exit_0_manifest_fail
+    allocation_nodes: 8
+    optimizer_transitions: 10
+    runtime_elapsed_seconds: 504.797810859
+    experiment_elapsed_seconds: 527.044491248
+    post_runtime_elapsed_seconds: 21.199228703
+    lifecycle_cycle_seconds: [0.691432672, 21.445380345, 21.85162301, 22.529735426, 23.127294665]
+    lifecycle_cycle_total_seconds: 89.645466118
+    lifecycle_payload_bytes_read: 47805060618
+    authority_terminal_audit: pass
+    repair: >-
+      Conflict-check and union the ownership-bound live verified cache into the
+      snapshot-derived scratch cache, then promote only after full replay and
+      exact head validation.
+    retry_gate: >-
+      smallest one-node frozen real snapshot-suffix benchmark, then focused,
+      full one-node, D1, D2, and matched factor-one before one D8-R2 attempt

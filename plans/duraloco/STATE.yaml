@@ -8,8 +8,8 @@ feature_branch: codex/duraloco-p08r-replay-440s
 current_loop: 2
 current_goal: "complete the pre-P10 P08R 440-second 50x10 performance gate"
 attempts_for_current_failure: 1
-last_terminal_failure_review: plans/duraloco/phases/P08R_D8R2_FAILURE_REVIEW_2372217.md
-terminal_retry_authorized: true
+last_terminal_failure_review: plans/duraloco/phases/P08R_D8R2_FAILURE_REVIEW_2372318.md
+terminal_retry_authorized: false
 terminal_retry_qualification:
   targeted_1node_benchmark: 2372265.opbs
   miyabi_1node: 2372277.opbs
@@ -73,12 +73,14 @@ artifacts:
   - artifacts/duraloco/P08R/20260713_p08r_full_ba0a5c6_r5/manifest.json
   - artifacts/duraloco/P08R/20260713_p08r_d1_ba0a5c6_r5/manifest.json
   - artifacts/duraloco/P08R/20260713_p08r_d2_ba0a5c6_r4/manifest.json
+  - artifacts/duraloco/P08R/20260713_p08r_d8_ba0a5c6_r3/manifest.json
+  - artifacts/duraloco/P08R/20260713_p08r_d8r2_ba0a5c6_r2/manifest.json
   - plans/duraloco/phases/P08R_D8_FAILURE_REVIEW_2372056.md
   - plans/duraloco/phases/P08R_D8R2_FAILURE_REVIEW_2372217.md
+  - plans/duraloco/phases/P08R_D8R2_FAILURE_REVIEW_2372318.md
 next_action: >-
-  record one matched factor-one baseline on qualified clean runtime commit
-  ba0a5c693eb586d5db27b7e304f230d4acd826a8, then use the one authorized
-  D8-R2 retry against that exact-commit report; do not resubmit on failure
+  implement transactional union of snapshot and live suffix memo, prove it on
+  the frozen real authority, then rerun the clean 1-node to 2-node ladder
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

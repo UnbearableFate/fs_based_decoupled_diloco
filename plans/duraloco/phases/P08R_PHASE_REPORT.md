@@ -113,3 +113,12 @@ exact commit; another immediate retry is not. The matched interference gate
 binds factor one and R2 to an identical git commit, so one factor-one baseline
 on `ba0a5c6` is a prerequisite measurement before that R2 retry. It is not an
 R2 resubmission and does not change the one-retry limit.
+
+Matched factor-one PBS `2372292` passed in 337.553 seconds. The authorized R2
+retry `2372318` then improved from 695.345 to 527.044 seconds but still failed
+the 440-second gate. Later snapshot cycles rebuilt their cache from the pinned
+prefix and discarded already verified live suffix tensors, so they reread
+47.805 GB in 89.645 seconds and caused four post-CAS heartbeat intervals. The
+preserved review `P08R_D8R2_FAILURE_REVIEW_2372318.md` requires a real
+historical-head suffix-memo benchmark and a fresh qualification ladder before
+any further D8-R2 attempt.
