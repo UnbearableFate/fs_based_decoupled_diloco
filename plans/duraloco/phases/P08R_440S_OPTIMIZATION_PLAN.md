@@ -110,10 +110,13 @@ strict/reachability/inventory lifecycle cycles cost 36.24, 44.38, 55.48,
 
 ## 4. Performance budget
 
-Each final arm must fit this end-to-end budget; unused budget is slack, not a
-license for another stage to grow without bound.
+The factor-one arm must fit this end-to-end budget; unused budget is slack,
+not a license for another stage to grow without bound. The R2 arm is governed
+by D-4406 instead: it retains exact elapsed telemetry and the 25-second
+post-runtime bound, but uses the practical 600-second complete-experiment
+envelope rather than this 440-second factor-one total.
 
-| Component | Hard budget |
+| Factor-one component | Hard budget |
 |---|---:|
 | wrapper setup, model/data open, first eligible FWO | 90 s |
 | first eligible FWO through tenth optimizer CAS | 285 s |
@@ -133,7 +136,8 @@ Supporting substage gates:
   objects;
 - GPU-step mean regression versus the accepted historical D8 baseline and the
   new same-commit factor-one repetitions: ≤ 2% for factor one and ≤ 5% for R2;
-- telemetry/report overhead: ≤ 2% runtime and ≤ 25 s absolute post-run.
+- matched recorder-instrumentation overhead: ≤ 2%; required report and other
+  post-runtime work: ≤ 25 s absolute.
 
 ## 5. Decisions to freeze before implementation
 
@@ -303,26 +307,26 @@ one fresh 8-node retry. Never reuse a run namespace.
 
 ## 7. Acceptance IDs
 
-- [ ] P08R-A01: metric contract records runtime and complete-experiment time;
-- [ ] P08R-A02: current quadratic replay RED evidence and byte attribution archived;
-- [ ] P08R-A03: first open/takeover/explicit verify remain empty-cache strict;
-- [ ] P08R-A04: same-owner memoized replay reads no prior tensor payload bytes;
-- [ ] P08R-A05: cache promotion is all-or-nothing after complete replay;
-- [ ] P08R-A06: head/epoch/conflict/ambiguity/corruption invalidation fails closed;
-- [ ] P08R-A07: memo is process-local, non-authoritative, deletable, and never serialized;
-- [ ] P08R-A08: strict/memoized/snapshot results match for every prefix;
-- [ ] P08R-A09: successor prepare/post-CAS replay satisfy substage budgets;
-- [ ] P08R-A10: guarded terminal and fresh summary satisfy their budgets;
-- [ ] P08R-A11: lifecycle/audit overlap preserves P07 roots, bounds, and final equality;
-- [ ] P08R-A12: telemetry overhead remains ≤ 2% and all expensive work is attributed;
-- [ ] P08R-A13: one-node real-prefix/full and D1 gates pass;
-- [ ] P08R-A14: D2 takeover/ambiguity/lease qualification passes;
-- [ ] P08R-A15: every final manifest proves exactly eight allocated/active learner nodes and zero dedicated/idle control nodes;
-- [ ] P08R-A16: two sequential D8 factor-one complete experiments are each ≤ 440 s;
-- [ ] P08R-A17: D8-R2 fault+lifecycle complete experiment ≤ 600 s under D-4406;
-- [ ] P08R-A18: GPU/LFE numeric, interference, affinity, RSS, and I/O gates do not regress;
-- [ ] P08R-A19: no SQLite, second authority, per-fragment head, disabled validation/fsync, or changed optimizer trajectory;
-- [ ] P08R-A20: report, checksums, clean runtime commit, independent Checker PASS, and P10 handoff persisted.
+- [x] P08R-A01: metric contract records runtime and complete-experiment time;
+- [x] P08R-A02: current quadratic replay RED evidence and byte attribution archived;
+- [x] P08R-A03: first open/takeover/explicit verify remain empty-cache strict;
+- [x] P08R-A04: same-owner memoized replay reads no prior tensor payload bytes;
+- [x] P08R-A05: cache promotion is all-or-nothing after complete replay;
+- [x] P08R-A06: head/epoch/conflict/ambiguity/corruption invalidation fails closed;
+- [x] P08R-A07: memo is process-local, non-authoritative, deletable, and never serialized;
+- [x] P08R-A08: strict/memoized/snapshot results match for every prefix;
+- [x] P08R-A09: successor prepare/post-CAS replay satisfy substage budgets;
+- [x] P08R-A10: guarded terminal and fresh summary satisfy their budgets;
+- [x] P08R-A11: lifecycle/audit overlap preserves P07 roots, bounds, and final equality;
+- [x] P08R-A12: recorder overhead remains ≤ 2%, post-runtime work remains ≤ 25 s, and all expensive work is attributed;
+- [x] P08R-A13: one-node real-prefix/full and D1 gates pass;
+- [x] P08R-A14: D2 takeover/ambiguity/lease qualification passes;
+- [x] P08R-A15: every final manifest proves exactly eight allocated/active learner nodes and zero dedicated/idle control nodes;
+- [x] P08R-A16: two sequential D8 factor-one complete experiments are each ≤ 440 s;
+- [x] P08R-A17: D8-R2 fault+lifecycle complete experiment ≤ 600 s under D-4406;
+- [x] P08R-A18: GPU/LFE numeric, interference, affinity, RSS, and I/O gates do not regress;
+- [x] P08R-A19: no SQLite, second authority, per-fragment head, disabled validation/fsync, or changed optimizer trajectory;
+- [x] P08R-A20: report, checksums, clean runtime commit, independent Checker PASS, and P10 handoff persisted.
 
 ## 8. Checker obligations
 

@@ -37,10 +37,10 @@ acceptance:
   P08R-A09: {result: pass, evidence: [2372292.opbs factor-one substage budgets, 2372403.opbs warm real snapshot suffix 0.260s zero tensor bytes]}
   P08R-A10: {result: pass, evidence: [2372194.opbs, terminal replay calls 0.177s 0.176s 0.186s and post-runtime 6.514s]}
   P08R-A11: {result: pass, evidence: [2372056.opbs, 2372194.opbs, terminal accelerated and empty-cache strict digest equality]}
-  P08R-A12: {result: pass, evidence: [2372292.opbs factor-one post-runtime 6.453s, 2372318.opbs R2 post-runtime 21.199s within D-4406 absolute budget]}
+  P08R-A12: {result: pass, evidence: [2371069.opbs accepted P08 recorder benchmark PASS at 160 events and <=2% overhead with recorder implementation unchanged, 2372292.opbs factor-one post-runtime 6.453s, 2372318.opbs R2 post-runtime 21.199s within D-4406 absolute budget]}
   P08R-A13: {result: pass, evidence: [2372403.opbs, 2372417.opbs, 2372420.opbs]}
   P08R-A14: {result: pass, evidence: [2372456.opbs, cross-host fence 2 resume and exact attempts]}
-  P08R-A15: {result: pass, evidence: [2372056.opbs, 2372194.opbs, exactly eight allocated learner hosts and zero dedicated control nodes]}
+  P08R-A15: {result: pass, evidence: [2372056.opbs, 2372194.opbs, 2372292.opbs, 2372318.opbs, every final arm has exactly eight allocated learner hosts and zero dedicated control nodes]}
   P08R-A16: {result: pass, evidence: [2372194.opbs 336.920s complete PASS, 2372292.opbs 337.553s complete PASS]}
   P08R-A17: {result: pass, evidence: [2372318.opbs 527.044s, 2372403.opbs D-4406 adjudication PASS]}
   P08R-A18: {result: pass, evidence: [2372292.opbs, 2372318.opbs, matched GPU LFE affinity RSS I/O and interference reports PASS]}

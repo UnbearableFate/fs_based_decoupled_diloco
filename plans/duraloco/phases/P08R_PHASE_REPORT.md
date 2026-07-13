@@ -2,10 +2,10 @@
 
 ## Current status
 
-P08R is in progress on `codex/duraloco-p08r-replay-440s`. P08 remains
-completed. P10 is held until factor one satisfies 440 seconds, D8-R2 satisfies
-the user-approved practical 600-second envelope, both use exactly eight learner
-nodes, and an independent Checker reports PASS.
+P08R is completed on `codex/duraloco-p08r-replay-440s`. P08 remains completed.
+Both factor-one repetitions satisfy 440 seconds, D8-R2 satisfies the
+user-approved practical 600-second envelope, all final arms use exactly eight
+learner nodes, and the independent Checker reports PASS. P10 is unblocked.
 
 ## Loop 0 and Loop 1 evidence
 
@@ -148,8 +148,8 @@ Adjudication PBS `2372401` passed, and the same-clean-commit combined proof PBS
 (5,973,112,800 first-call bytes, zero warm bytes, 0.260-second warm replay),
 strict equality, unchanged authority head, and D-4406 adjudication. Full
 one-node PBS `2372417` passed 526 tests with one skip; D1 `2372420` and D2
-`2372456` passed. The remaining gate is the independent checker with a fresh
-strict terminal replay.
+`2372456` passed. At that point, the only remaining gate was the independent
+checker with a fresh strict terminal replay.
 
 P08R-E014 / PBS `2372486.opbs` produced an independent checker `PASS` with 73
 focused tests, fresh strict digest equality, unchanged authority head, and no
