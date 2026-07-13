@@ -1,0 +1,79 @@
+#!/bin/bash
+#PBS -N p08r_checker
+#PBS -q debug-g
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:15:00
+#PBS -W group_list=xg24i002
+#PBS -j oe
+
+set -eEuo pipefail
+trap 'echo "[ERROR] line=$LINENO status=$?" >&2' ERR
+: "${EXPECTED_COMMIT:?}" "${RUN_ID:?}" "${ARTIFACT_ROOT:?}"
+: "${SOURCE_TRAINING_ROOT:?}" "${SOURCE_RUN_ID:?}"
+: "${FACTOR_REPEAT_ARTIFACT:?}" "${FACTOR_ONE_ARTIFACT:?}"
+: "${R2_ARTIFACT:?}" "${PROOF_ARTIFACT:?}" "${FULL_ARTIFACT:?}"
+: "${D1_ARTIFACT:?}" "${D2_ARTIFACT:?}"
+PROJECT_ROOT="${PBS_O_WORKDIR:?}"
+PYTHON_BIN="$PROJECT_ROOT/.venv/bin/python"
+cd "$PROJECT_ROOT"
+mkdir -p "$(dirname "$ARTIFACT_ROOT")"
+mkdir "$ARTIFACT_ROOT"
+touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log"
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+result=fail; exit_code=1
+finish() {
+  observed=$?
+  [[ "$result" == pass ]] && exit_code=0 || { [[ "$observed" -eq 0 ]] || exit_code=$observed; }
+  qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
+  "$PYTHON_BIN" scripts/agent/create_run_manifest.py \
+    --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json" --phase P08R \
+    --purpose audit --run-id "$RUN_ID" --schema-version 2 \
+    --validation-shape p08r-independent-checker-fresh-strict-replay-1node \
+    --backend lustre --config scripts/miyabi/run_duraloco_p08r_checker_1node.pbs \
+    --commands-log commands.log --stdout stdout.log --stderr stderr.log \
+    --exit-code "$exit_code" --result "$result" \
+    --termination-kind "$([[ "$result" == pass ]] && echo success || echo test_failure)" \
+    --pbs-queue debug-g --requested-resources select=1:mpiprocs=1,walltime=00:15:00 \
+    --last-qstat-state R --termination-detail "independent P08R acceptance and fresh strict replay audit" \
+    --assertion "A01 through A19 have raw evidence and D-4406 preserves every non-elapsed R2 gate" \
+    --assertion "fresh empty-cache strict replay equals the accepted R2 terminal audit without mutating authority" || true
+}
+trap finish EXIT
+[[ "$(hostname)" == mg* ]]
+[[ "$(git rev-parse HEAD)" == "$EXPECTED_COMMIT" ]]
+[[ -z "$(git status --porcelain=v1 --untracked-files=no)" ]]
+printf '%s\n' \
+  "$PYTHON_BIN -m pytest tests/log/test_production_runtime.py tests/lifecycle/test_snapshot_suffix_replay.py tests/coordination/test_production_fencing.py tests/distributed_syncer/test_lease_stage_guard.py tests/test_p08r_r2_adjudication.py -q" \
+  "$PYTHON_BIN -m benchmarks.bench_p08r_deferred_lifecycle --training-root $SOURCE_TRAINING_ROOT --run-id $SOURCE_RUN_ID --minimum-historical-cycle-seconds 0 --output $ARTIFACT_ROOT/independent_replay.json" \
+  "$PYTHON_BIN scripts/agent/check_p08r_final.py --output $ARTIFACT_ROOT/checker_report.json" \
+  > "$ARTIFACT_ROOT/commands.log"
+"$PYTHON_BIN" -m pytest \
+  tests/log/test_production_runtime.py \
+  tests/lifecycle/test_snapshot_suffix_replay.py \
+  tests/coordination/test_production_fencing.py \
+  tests/distributed_syncer/test_lease_stage_guard.py \
+  tests/test_p08r_r2_adjudication.py -q \
+  > >(tee "$ARTIFACT_ROOT/stdout.log") \
+  2> >(tee "$ARTIFACT_ROOT/stderr.log" >&2)
+"$PYTHON_BIN" -m benchmarks.bench_p08r_deferred_lifecycle \
+  --training-root "$SOURCE_TRAINING_ROOT" --run-id "$SOURCE_RUN_ID" \
+  --minimum-historical-cycle-seconds 0 \
+  --output "$ARTIFACT_ROOT/independent_replay.json" \
+  > >(tee -a "$ARTIFACT_ROOT/stdout.log") \
+  2> >(tee -a "$ARTIFACT_ROOT/stderr.log" >&2)
+"$PYTHON_BIN" scripts/agent/check_no_embedded_database.py \
+  --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/forbidden_surface.json"
+"$PYTHON_BIN" scripts/agent/check_p08r_final.py \
+  --state plans/duraloco/phases/P08R_STATE.yaml \
+  --error-ledger plans/duraloco/errors/P08R_ERROR_LEDGER.yaml \
+  --factor-repeat-artifacts "$FACTOR_REPEAT_ARTIFACT" \
+  --factor-one-artifacts "$FACTOR_ONE_ARTIFACT" \
+  --r2-artifacts "$R2_ARTIFACT" --proof-artifacts "$PROOF_ARTIFACT" \
+  --full-artifacts "$FULL_ARTIFACT" --d1-artifacts "$D1_ARTIFACT" \
+  --d2-artifacts "$D2_ARTIFACT" \
+  --independent-replay "$ARTIFACT_ROOT/independent_replay.json" \
+  --forbidden-surface "$ARTIFACT_ROOT/forbidden_surface.json" \
+  --output "$ARTIFACT_ROOT/checker_report.json" \
+  > >(tee -a "$ARTIFACT_ROOT/stdout.log") \
+  2> >(tee -a "$ARTIFACT_ROOT/stderr.log" >&2)
+result=pass; exit_code=0

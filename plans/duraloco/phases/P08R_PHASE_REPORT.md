@@ -142,3 +142,11 @@ P08R-E013 / PBS `2372383.opbs` then passed the corrected real suffix proof
 unchanged source head). Its D-4406 parser incorrectly read counters from the
 `testsuites` root instead of its `testsuite` child and reported zero tests. The
 parser now supports both JUnit shapes; only the small adjudication is rerun.
+
+Adjudication PBS `2372401` passed, and the same-clean-commit combined proof PBS
+`2372403` independently passed 54 focused tests, real historical suffix replay
+(5,973,112,800 first-call bytes, zero warm bytes, 0.260-second warm replay),
+strict equality, unchanged authority head, and D-4406 adjudication. Full
+one-node PBS `2372417` passed 526 tests with one skip; D1 `2372420` and D2
+`2372456` passed. The remaining gate is the independent checker with a fresh
+strict terminal replay.

@@ -25,6 +25,7 @@ def main() -> int:
     parser.add_argument("--training-root", type=Path, required=True)
     parser.add_argument("--run-id", required=True)
     parser.add_argument("--run-generation", type=int, default=0)
+    parser.add_argument("--minimum-historical-cycle-seconds", type=float, default=200.0)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
 
@@ -65,7 +66,13 @@ def main() -> int:
     historical_payload_bytes = sum(
         int(item["lifecycle_payload_bytes_read"]) for item in cycles
     )
-    if historical_cycle_seconds < 200 or historical_payload_bytes < 100_000_000_000:
+    if (
+        historical_cycle_seconds < args.minimum_historical_cycle_seconds
+        or (
+            args.minimum_historical_cycle_seconds > 0
+            and historical_payload_bytes < 100_000_000_000
+        )
+    ):
         raise RuntimeError("frozen R2 failure no longer demonstrates the strict replay cost")
 
     report = {

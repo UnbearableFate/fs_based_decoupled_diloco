@@ -7,14 +7,14 @@ actual_base_commit: ff41499f0960d8b2ee90e513f5487cc8b1dc0a28
 feature_branch: codex/duraloco-p08r-replay-440s
 current_loop: 2
 current_goal: "complete factor-one 440-second and practical R2 recovery gates"
-attempts_for_current_failure: 1
+attempts_for_current_failure: 0
 last_terminal_failure_review: plans/duraloco/phases/P08R_D8R2_FAILURE_REVIEW_2372318.md
 terminal_retry_authorized: false
 terminal_retry_qualification:
-  targeted_1node_benchmark: 2372265.opbs
-  miyabi_1node: 2372277.opbs
-  miyabi_2node: 2372283.opbs
-last_verified_commit: ba0a5c693eb586d5db27b7e304f230d4acd826a8
+  targeted_1node_benchmark: 2372403.opbs
+  miyabi_1node: 2372420.opbs
+  miyabi_2node: 2372456.opbs
+last_verified_commit: ac2d961f148841b14ba7bc628ce1566695571bf0
 checks:
   local_static: static_pass
   targeted_real_prefix_1node: miyabi_1node_pass
@@ -23,7 +23,7 @@ checks:
   miyabi_d2: miyabi_d2_pass
   miyabi_d8: miyabi_d8_pass
   miyabi_d8_repeat: miyabi_d8_pass
-  miyabi_d8_r2: failed
+  miyabi_d8_r2: miyabi_d8_r2_pass
   independent_checker: not_run
 acceptance:
   P08R-A01: {result: pass, evidence: [2372056.opbs, 2372194.opbs, elapsed_contract.json exact runtime and experiment monotonic spans]}
@@ -34,17 +34,17 @@ acceptance:
   P08R-A06: {result: pass, evidence: [2371915.opbs, external jump and CAS ambiguity tests]}
   P08R-A07: {result: pass, evidence: [ProductionReplayCache process-local only, no serialization path]}
   P08R-A08: {result: pass, evidence: [2371915.opbs, 58 focused strict/memo/snapshot tests]}
-  P08R-A09: {result: pass, evidence: [2372186.opbs, 2372189.opbs, authority_replay raw stage events]}
+  P08R-A09: {result: pass, evidence: [2372292.opbs factor-one substage budgets, 2372403.opbs warm real snapshot suffix 0.260s zero tensor bytes]}
   P08R-A10: {result: pass, evidence: [2372194.opbs, terminal replay calls 0.177s 0.176s 0.186s and post-runtime 6.514s]}
   P08R-A11: {result: pass, evidence: [2372056.opbs, 2372194.opbs, terminal accelerated and empty-cache strict digest equality]}
-  P08R-A12: {result: pass, evidence: [2372194.opbs, post-runtime 6.514s is 1.98 percent of runtime and causal stage telemetry PASS]}
-  P08R-A13: {result: pass, evidence: [2372265.opbs, 2372272.opbs, 2372277.opbs]}
-  P08R-A14: {result: pass, evidence: [2372283.opbs, cross-host fence 2 resume and exact attempts]}
+  P08R-A12: {result: pass, evidence: [2372292.opbs factor-one post-runtime 6.453s, 2372318.opbs R2 post-runtime 21.199s within D-4406 absolute budget]}
+  P08R-A13: {result: pass, evidence: [2372403.opbs, 2372417.opbs, 2372420.opbs]}
+  P08R-A14: {result: pass, evidence: [2372456.opbs, cross-host fence 2 resume and exact attempts]}
   P08R-A15: {result: pass, evidence: [2372056.opbs, 2372194.opbs, exactly eight allocated learner hosts and zero dedicated control nodes]}
-  P08R-A16: {result: pass, evidence: [2372056.opbs 340.529s with report recovered by 2372168.opbs, 2372194.opbs 336.920s complete PASS]}
-  P08R-A17: {result: not_run, evidence: []}
-  P08R-A18: {result: not_run, evidence: []}
-  P08R-A19: {result: pass, evidence: [2372272.opbs, forbidden_surface.json finding_count=0]}
+  P08R-A16: {result: pass, evidence: [2372194.opbs 336.920s complete PASS, 2372292.opbs 337.553s complete PASS]}
+  P08R-A17: {result: pass, evidence: [2372318.opbs 527.044s, 2372403.opbs D-4406 adjudication PASS]}
+  P08R-A18: {result: pass, evidence: [2372292.opbs, 2372318.opbs, matched GPU LFE affinity RSS I/O and interference reports PASS]}
+  P08R-A19: {result: pass, evidence: [2372417.opbs, forbidden_surface.json finding_count=0]}
   P08R-A20: {result: not_run, evidence: []}
 open_decisions: []
 open_blockers: []
@@ -77,12 +77,17 @@ artifacts:
   - artifacts/duraloco/P08R/20260713_p08r_d8r2_ba0a5c6_r2/manifest.json
   - artifacts/duraloco/P08R/20260713_p08r_lifecycle_00beea4_r2/manifest.json
   - artifacts/duraloco/P08R/20260713_p08r_lifecycle_81110ce_r3/manifest.json
+  - artifacts/duraloco/P08R/20260713_p08r_adjudication_ac2d961_r1/manifest.json
+  - artifacts/duraloco/P08R/20260713_p08r_lifecycle_ac2d961_r4/manifest.json
+  - artifacts/duraloco/P08R/20260713_p08r_full_ac2d961_r6/manifest.json
+  - artifacts/duraloco/P08R/20260713_p08r_d1_ac2d961_r6/manifest.json
+  - artifacts/duraloco/P08R/20260713_p08r_d2_ac2d961_r5/manifest.json
   - plans/duraloco/phases/P08R_D8_FAILURE_REVIEW_2372056.md
   - plans/duraloco/phases/P08R_D8R2_FAILURE_REVIEW_2372217.md
   - plans/duraloco/phases/P08R_D8R2_FAILURE_REVIEW_2372318.md
 next_action: >-
-  rerun the corrected frozen real suffix benchmark with D-4406 adjudication,
-  then complete the clean 1-node to 2-node ladder and independent check
+  run the independent compute-node checker with fresh strict terminal replay;
+  persist PASS and hand P10 to the verified successor phase without merging main
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
