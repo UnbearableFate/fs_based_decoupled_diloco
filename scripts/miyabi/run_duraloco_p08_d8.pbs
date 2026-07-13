@@ -17,6 +17,7 @@ TRAINING_ROOT="$STORAGE_ROOT/training"
 TRAIN_RUN="$RUN_ID-training"
 experiment_started_ns=$(date +%s%N)
 cd "$PROJECT_ROOT"
+mkdir -p "$(dirname "$ARTIFACT_ROOT")" "$(dirname "$STORAGE_ROOT")"
 if ! mkdir "$STORAGE_ROOT"; then
   echo "refusing reused P08 storage root: $STORAGE_ROOT" >&2
   exit 2

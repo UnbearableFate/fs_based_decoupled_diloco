@@ -56,7 +56,7 @@ trap finish EXIT
 [[ -z "$(git status --porcelain=v1 --untracked-files=no)" ]]
 printf '%s\n' \
   "$PYTHON_BIN -m pytest tests/distributed_syncer/test_lease_stage_guard.py tests/performance_core/test_p08_performance_report.py -q" \
-  "$PYTHON_BIN -m pytest tests/lifecycle/test_snapshot_suffix_replay.py tests/log/test_production_runtime.py -q" \
+  "$PYTHON_BIN -m pytest tests/lifecycle/test_snapshot_suffix_replay.py tests/log/test_production_runtime.py tests/distributed_syncer/test_eight_node_forward_topology_contract.py -q" \
   "$PYTHON_BIN -m benchmarks.bench_p08r_snapshot_suffix_memo --training-root $SOURCE_TRAINING_ROOT --run-id $SOURCE_RUN_ID --output $ARTIFACT_ROOT/snapshot_suffix_benchmark.json" \
   "$PYTHON_BIN scripts/agent/create_p08r_r2_adjudication.py --source-artifacts $SOURCE_ARTIFACT_ROOT --output $ARTIFACT_ROOT/r2_adjudication.json" \
   > "$ARTIFACT_ROOT/commands.log"
@@ -64,7 +64,8 @@ printf '%s\n' \
   tests/distributed_syncer/test_lease_stage_guard.py \
   tests/performance_core/test_p08_performance_report.py \
   tests/lifecycle/test_snapshot_suffix_replay.py \
-  tests/log/test_production_runtime.py -q \
+  tests/log/test_production_runtime.py \
+  tests/distributed_syncer/test_eight_node_forward_topology_contract.py -q \
   > >(tee "$ARTIFACT_ROOT/stdout.log") \
   2> >(tee "$ARTIFACT_ROOT/stderr.log" >&2)
 "$PYTHON_BIN" -m benchmarks.bench_p08r_snapshot_suffix_memo \

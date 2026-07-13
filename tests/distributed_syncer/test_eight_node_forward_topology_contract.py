@@ -32,6 +32,12 @@ def test_forward_d8_wrappers_allocate_and_launch_exactly_eight_hosts() -> None:
         assert "create_p08r_elapsed_report.py" in script
         assert "runtime_started_ns" in script
         assert "runtime_ended_ns" in script
+        assert (
+            'mkdir -p "$(dirname "$ARTIFACT_ROOT")" '
+            '"$(dirname "$STORAGE_ROOT")"' in script
+        )
+        assert 'if ! mkdir "$STORAGE_ROOT"; then' in script
+        assert 'if ! mkdir "$ARTIFACT_ROOT"; then' in script
 
 
 def test_forward_report_binding_is_exactly_eight_nodes() -> None:
