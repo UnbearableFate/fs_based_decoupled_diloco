@@ -7,7 +7,7 @@ actual_base_commit: ff41499f0960d8b2ee90e513f5487cc8b1dc0a28
 feature_branch: codex/duraloco-p08r-replay-440s
 current_loop: 1
 current_goal: "complete the pre-P10 P08R 440-second 50x10 performance gate"
-attempts_for_current_failure: 0
+attempts_for_current_failure: 1
 last_terminal_failure_review: null
 terminal_retry_authorized: false
 terminal_retry_qualification:
@@ -18,7 +18,7 @@ last_verified_commit: 5a85f3372e26564b37ce6254a379d3d1b323d804
 checks:
   local_static: static_pass
   targeted_real_prefix_1node: miyabi_1node_pass
-  full_1node: not_run
+  full_1node: failed
   miyabi_d1: not_run
   miyabi_d2: not_run
   miyabi_d8: not_run
@@ -54,7 +54,8 @@ artifacts:
   - plans/duraloco/errors/P08R_ERROR_LEDGER.yaml
   - artifacts/duraloco/P08R/20260713_p08r_replay_5a85f33_r4/manifest.json
   - artifacts/duraloco/P08R/20260713_p08r_replay_5a85f33_r4/replay_report.json
-next_action: "rerun the targeted benchmark on the telemetry-integrated commit, then full 1-node, D1, and D2 qualification"
+  - artifacts/duraloco/P08R/20260713_p08r_full_fe82a14_r1/manifest.json
+next_action: "rerun targeted and full 1-node on the corrected state-contract fixture commit"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

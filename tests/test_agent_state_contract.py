@@ -167,6 +167,7 @@ def _phase_state(phase: str, acceptance_count: int, *, status: str) -> dict:
         "P06C",
         "P07",
         "P08",
+        "P08R",
         "P09",
         "P10",
         "P11",
@@ -186,6 +187,7 @@ def _phase_state(phase: str, acceptance_count: int, *, status: str) -> dict:
             "P06B": {"miyabi_d8": "miyabi_d8_pass"},
             "P06C": {"miyabi_d8_r2": "miyabi_d8_r2_pass"},
             "P08": {"miyabi_d8_r2": "miyabi_d8_r2_pass"},
+            "P08R": {"miyabi_d8_r2": "miyabi_d8_r2_pass"},
         }
         payload["checks"] = terminal_checks.get(
             phase, {"miyabi_9node": "miyabi_9node_pass"}
@@ -217,11 +219,14 @@ def test_updated_acceptance_counts_and_dependency_graph(tmp_path):
     p08 = _phase_state("P08", 25, status="planned")
     assert _run(tmp_path, p08, previous=p07_completed).returncode == 0
     p08_completed = _phase_state("P08", 25, status="completed")
+    p08r = _phase_state("P08R", 20, status="planned")
+    assert _run(tmp_path, p08r, previous=p08_completed).returncode == 0
+    p08r_completed = _phase_state("P08R", 20, status="completed")
     p10 = _phase_state("P10", 17, status="planned")
-    assert _run(tmp_path, p10, previous=p08_completed).returncode == 0
-    missing_dependency = _run(tmp_path, p10, previous=p07_completed)
+    assert _run(tmp_path, p10, previous=p08r_completed).returncode == 0
+    missing_dependency = _run(tmp_path, p10, previous=p08_completed)
     assert missing_dependency.returncode != 0
-    assert "P08" in missing_dependency.stderr
+    assert "P08R" in missing_dependency.stderr
 
     p12 = _phase_state("P12", 20, status="completed")
     p09 = _phase_state("P09", 16, status="planned")

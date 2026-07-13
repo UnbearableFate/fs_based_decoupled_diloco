@@ -1,6 +1,6 @@
 phase: P08R
 schema: duraloco-error-ledger-v1
-updated_at: "2026-07-13T11:18:00+09:00"
+updated_at: "2026-07-13T11:31:00+09:00"
 entries:
   - error_id: P08R-E001
     attempt_kind: control_plane_orchestration
@@ -111,3 +111,30 @@ entries:
       tensor_payload_bytes=0 while retaining aggregate storage bytes in the raw
       report.
     retry_gate: static_checks_then_same_1node_targeted_shape
+
+  - error_id: P08R-E005
+    attempt_kind: full_1node_repository_qualification
+    pbs_job_id: 2371957.opbs
+    runtime_commit: fe82a1472dfb0b6a8c7ea2718497ef6fa2d8f0b3
+    situation: >-
+      The first full one-node P08R qualification passed ruff, both executable
+      phase-state files, the active-surface database scan, and 514 repository
+      tests with one skip. One repository state-contract test failed.
+    outcome: full_suite_test_failure
+    reason: >-
+      The executable phase checker correctly inserted P08R between P08 and P10,
+      but its unit fixture still asserted the historical direct P08-to-P10
+      dependency. The fixture had not been extended with P08R's 20 acceptance
+      IDs, terminal D8-R2 check, and P08R-to-P10 edge.
+    evidence:
+      - artifacts/duraloco/P08R/20260713_p08r_full_fe82a14_r1/manifest.json
+      - artifacts/duraloco/P08R/20260713_p08r_full_fe82a14_r1/stdout.log
+      - tracejob_2371957_exit_status_1_walltime_35s
+    allocation_nodes: 1
+    tests: {passed: 514, failed: 1, skipped: 1}
+    authority_created: false
+    repair: >-
+      Update the state-contract fixture to construct completed P08R evidence and
+      require P10 to depend on P08R. Rerun the targeted benchmark and full suite
+      on the resulting clean commit before D1 or D2.
+    retry_gate: targeted_1node_then_full_1node_same_commit

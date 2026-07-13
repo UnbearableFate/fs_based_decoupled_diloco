@@ -38,6 +38,9 @@ Every failed try is preserved in
 - P08R-E004 / PBS `2371905.opbs` passed all 58 tests and ran the real prefix,
   but its assertion incorrectly treated required manifest bytes as tensor
   bytes. Logical tensor validation bytes are now recorded separately.
+- P08R-E005 / PBS `2371957.opbs` passed static checks, the database scan, and
+  514 repository tests, but the state-checker's unit fixture still encoded the
+  superseded direct P08-to-P10 dependency instead of P08R-to-P10.
 
 None of these attempts mutated the completed historical source authority.
 `2371888` never started runtime, `2371896` stopped in tests, and `2371905`
