@@ -44,6 +44,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             "H0",
             "M00",
             *[f"P{i:02d}" for i in range(13)],
+            "P08R",
             "P06A",
             "P06B",
             "P06C",

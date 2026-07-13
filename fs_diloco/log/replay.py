@@ -1532,12 +1532,18 @@ def replay_snapshot_suffix(
     owner_id: str | None = None,
     owner_session_id: str | None = None,
     allow_memoized_fallback: bool = True,
+    preflight_get_count: int = 0,
+    preflight_header_bytes: int = 0,
+    preflight_payload_bytes: int = 0,
+    preflight_elapsed_seconds: float = 0.0,
 ) -> ReplayModeResult:
     """Replay from the latest valid pinned snapshot, or strictly fall back."""
 
-    started = time.monotonic()
-    before = _history_get_count(log.backend)
-    header_before, payload_before = _read_counters(log.backend)
+    started = time.monotonic() - preflight_elapsed_seconds
+    before = _history_get_count(log.backend) - preflight_get_count
+    current_header, current_payload = _read_counters(log.backend)
+    header_before = current_header - preflight_header_bytes
+    payload_before = current_payload - preflight_payload_bytes
     cache_entries_before = (
         production_cache.entry_count if production_cache is not None else 0
     )

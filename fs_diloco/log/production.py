@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import time
 from typing import Iterable, Mapping
 
 from fs_diloco.protocol.canonical_json import canonical_bytes, canonical_digest
@@ -312,7 +313,22 @@ class ProductionTransactionalLog:
     def replay_from_snapshot(self) -> ReplayModeResult:
         """Use the newest valid ancestry-pinned snapshot with strict fallback."""
 
+        preflight_started = time.monotonic()
+        gets_before = sum(
+            record.operation == "get" for record in self.backend.history
+        )
+        try:
+            reads_before = self.backend.read_counters
+        except Exception:
+            reads_before = {"header_bytes": 0, "payload_bytes": 0}
         reason = self._prepare_replay_scope(force_full=False)
+        preflight_get_count = sum(
+            record.operation == "get" for record in self.backend.history
+        ) - gets_before
+        try:
+            reads_after = self.backend.read_counters
+        except Exception:
+            reads_after = reads_before
         token = self._owner_token
         result = replay_snapshot_suffix(
             self.transactional,
@@ -322,6 +338,14 @@ class ProductionTransactionalLog:
             reason=reason,
             owner_id=token.owner_id if token is not None else None,
             owner_session_id=token.owner_session_id if token is not None else None,
+            preflight_get_count=preflight_get_count,
+            preflight_header_bytes=(
+                reads_after["header_bytes"] - reads_before["header_bytes"]
+            ),
+            preflight_payload_bytes=(
+                reads_after["payload_bytes"] - reads_before["payload_bytes"]
+            ),
+            preflight_elapsed_seconds=time.monotonic() - preflight_started,
         )
         self.last_replay_telemetry = result.telemetry
         self._bind_replay_cache(result.replay)

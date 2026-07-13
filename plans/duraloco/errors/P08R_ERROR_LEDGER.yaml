@@ -1,6 +1,6 @@
 phase: P08R
 schema: duraloco-error-ledger-v1
-updated_at: "2026-07-13T11:13:00+09:00"
+updated_at: "2026-07-13T11:15:00+09:00"
 entries:
   - error_id: P08R-E001
     attempt_kind: control_plane_orchestration
@@ -47,3 +47,35 @@ entries:
       and pass the exact git rev-parse value rather than a manually completed
       abbreviated hash.
     retry_gate: static_bash_n_then_same_1node_targeted_shape
+
+  - error_id: P08R-E003
+    attempt_kind: targeted_1node_real_prefix_replay
+    pbs_job_id: 2371896.opbs
+    runtime_commit: b32bbd49a407b19c4bc70c46ad9dc25a851259fb
+    situation: >-
+      The repaired one-node wrapper reached the focused compute-node suite on
+      mg0009. Fifty-seven tests passed and one P07 snapshot replay accounting
+      regression failed before the real-prefix benchmark started.
+    outcome: focused_test_failure
+    reason: >-
+      ProductionTransactionalLog performed the mandatory head/scope preflight
+      before replay_snapshot_suffix started its counters. The returned replay
+      telemetry therefore reported 14 gets while caller-observed storage
+      history correctly contained 15. The replay result and digest were
+      correct; the new fail-closed byte attribution contract was incomplete.
+      The EXIT trap then exposed a second wrapper defect: the shared manifest
+      helper did not yet admit the new P08R phase name, so no manifest was
+      created for this failed run.
+    evidence:
+      - artifacts/duraloco/P08R/20260713_p08r_replay_b32bbd4_r2/stdout.log
+      - /work/xg24i002/x10041/duraloco_worktrees/p08r-qualification-1/p08r_replay.o2371896
+      - tracejob_2371896_exit_status_1_walltime_10s
+    allocation_nodes: 1
+    tests: {passed: 57, failed: 1}
+    runtime_started: true
+    real_prefix_benchmark_started: false
+    repair: >-
+      Include preflight gets, header bytes, payload bytes, and elapsed time in
+      the causal replay call counters, and add P08R to the manifest helper's
+      closed phase vocabulary.
+    retry_gate: static_checks_then_same_1node_targeted_shape
