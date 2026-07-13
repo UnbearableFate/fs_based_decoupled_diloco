@@ -49,6 +49,9 @@ Every failed try is preserved in
   assertion. Memoized replay correctly needed zero periodic heartbeats, while
   the report still required at least one. The preserved root-cause review is
   `P08R_D8_FAILURE_REVIEW_2372056.md`.
+- P08R-E008 / PBS `2372108.opbs` was the first smallest one-node recovery
+  benchmark. It failed before opening authority because the new detached-
+  worktree wrapper omitted `PYTHONPATH`, so `fs_diloco` was not importable.
 
 None of these attempts mutated the completed historical source authority.
 `2371888` never started runtime, `2371896` stopped in tests, and `2371905`

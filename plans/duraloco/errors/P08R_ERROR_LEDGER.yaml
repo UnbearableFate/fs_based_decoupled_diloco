@@ -1,6 +1,6 @@
 phase: P08R
 schema: duraloco-error-ledger-v1
-updated_at: "2026-07-13T12:15:00+09:00"
+updated_at: "2026-07-13T12:20:00+09:00"
 entries:
   - error_id: P08R-E001
     attempt_kind: control_plane_orchestration
@@ -204,3 +204,29 @@ entries:
     retry_gate: >-
       smallest one-node report-recovery benchmark, then clean-commit targeted
       replay, full one-node, D1, and D2 qualification before one D8 retry
+
+  - error_id: P08R-E008
+    attempt_kind: targeted_1node_frozen_d8_report_recovery
+    pbs_job_id: 2372108.opbs
+    runtime_commit: 3eefbbb8798f502dc5aa9b678ab2ff60a7112148
+    situation: >-
+      The first smallest-compute report-recovery allocation reached mg0008 and
+      failed before opening the frozen authority or creating a recovered
+      report.
+    outcome: wrapper_import_path_failure
+    reason: >-
+      The new wrapper invoked the repository script by path from a detached
+      worktree but did not export that worktree as PYTHONPATH. Python therefore
+      could not resolve the fs_diloco package and raised ModuleNotFoundError.
+    evidence:
+      - artifacts/duraloco/P08R/20260713_p08r_report_3eefbbb_r1/manifest.json
+      - artifacts/duraloco/P08R/20260713_p08r_report_3eefbbb_r1/stderr.log
+      - tracejob_2372108_exit_status_1_walltime_1s
+    allocation_nodes: 1
+    source_authority_opened: false
+    recovered_report_written: false
+    repair: >-
+      Export the exact PBS_O_WORKDIR project root as PYTHONPATH, matching the
+      production wrappers, then rerun the same read-only one-node benchmark on
+      a fresh artifact root and the resulting clean commit.
+    retry_gate: same_1node_report_recovery_shape_before_qualification_ladder

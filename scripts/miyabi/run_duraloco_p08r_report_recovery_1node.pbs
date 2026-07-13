@@ -30,6 +30,7 @@ if ! mkdir "$ARTIFACT_ROOT"; then
 fi
 touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log"
 export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat
+export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
 
 result=fail
 exit_code=1

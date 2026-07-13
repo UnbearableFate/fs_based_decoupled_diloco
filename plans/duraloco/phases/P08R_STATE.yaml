@@ -60,6 +60,7 @@ artifacts:
   - artifacts/duraloco/P08R/20260713_p08r_d1_9194a03_r2/manifest.json
   - artifacts/duraloco/P08R/20260713_p08r_d2_9194a03_r1/manifest.json
   - artifacts/duraloco/P08R/20260713_p08r_d8_ab605c8_r1/manifest.json
+  - artifacts/duraloco/P08R/20260713_p08r_report_3eefbbb_r1/manifest.json
   - plans/duraloco/phases/P08R_D8_FAILURE_REVIEW_2372056.md
 next_action: >-
   prove the lease-report repair on the frozen failed D8 authority with the
