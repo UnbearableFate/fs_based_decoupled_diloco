@@ -1,0 +1,47 @@
+phase: P08R
+schema: duraloco-error-ledger-v1
+updated_at: "2026-07-13T11:13:00+09:00"
+entries:
+  - error_id: P08R-E001
+    attempt_kind: control_plane_orchestration
+    pbs_job_id: null
+    situation: >-
+      The first command tried to create and enter the detached validation
+      worktree in one tool call while declaring that not-yet-created directory
+      as the command working directory.
+    outcome: failed_before_submission
+    reason: >-
+      Process creation resolves the requested working directory before the
+      shell can execute git worktree add, so the command could not start and
+      qsub was never reached.
+    evidence:
+      - "exec_command CreateProcess: No such file or directory (os error 2)"
+    allocation_nodes: 0
+    repair: >-
+      Create the detached worktree from the existing repository first, then
+      submit from the now-existing validation directory.
+    retry_gate: no_compute_qualification_consumed
+
+  - error_id: P08R-E002
+    attempt_kind: targeted_1node_real_prefix_replay
+    pbs_job_id: 2371888.opbs
+    runtime_commit: a265fa9fb0790e432ca6f6f6ca48022f20f0cd23
+    situation: >-
+      The first one-node targeted replay allocation started on mg0008 and
+      exited before tests or model/log replay began.
+    outcome: wrapper_setup_failure
+    reason: >-
+      The wrapper used mkdir on the fresh leaf artifact directory without
+      first creating its new artifacts/duraloco/P08R parent. mkdir returned
+      ENOENT, and the fail-closed fresh-root guard exited with status 2.
+    evidence:
+      - p08r_replay.o2371888
+      - tracejob_2371888_exit_status_2_walltime_1s
+    allocation_nodes: 1
+    runtime_started: false
+    tests_started: false
+    repair: >-
+      Create only the stable parent with mkdir -p, then retain plain mkdir for
+      the unique leaf so namespace reuse still fails closed. Submit from the
+      clean detached runtime worktree so PBS_O_WORKDIR binds the tested commit.
+    retry_gate: static_bash_n_then_same_1node_targeted_shape
