@@ -46,7 +46,8 @@ def test_r2_adjudication_accepts_old_elapsed_only_failure(tmp_path: Path) -> Non
     for name, payload in payloads.items():
         (source / name).write_text(json.dumps(payload), encoding="utf-8")
     (source / "p07_regression_junit.xml").write_text(
-        '<testsuite tests="30" failures="0" errors="0" skipped="0"/>',
+        '<testsuites><testsuite tests="30" failures="0" errors="0" skipped="0"/>'
+        "</testsuites>",
         encoding="utf-8",
     )
     output = tmp_path / "adjudication.json"

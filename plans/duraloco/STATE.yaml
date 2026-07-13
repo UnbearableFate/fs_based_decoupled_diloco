@@ -76,6 +76,7 @@ artifacts:
   - artifacts/duraloco/P08R/20260713_p08r_d8_ba0a5c6_r3/manifest.json
   - artifacts/duraloco/P08R/20260713_p08r_d8r2_ba0a5c6_r2/manifest.json
   - artifacts/duraloco/P08R/20260713_p08r_lifecycle_00beea4_r2/manifest.json
+  - artifacts/duraloco/P08R/20260713_p08r_lifecycle_81110ce_r3/manifest.json
   - plans/duraloco/phases/P08R_D8_FAILURE_REVIEW_2372056.md
   - plans/duraloco/phases/P08R_D8R2_FAILURE_REVIEW_2372217.md
   - plans/duraloco/phases/P08R_D8R2_FAILURE_REVIEW_2372318.md

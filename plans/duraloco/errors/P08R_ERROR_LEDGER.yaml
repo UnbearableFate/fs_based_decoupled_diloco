@@ -1,6 +1,6 @@
 phase: P08R
 schema: duraloco-error-ledger-v1
-updated_at: "2026-07-13T13:30:00+09:00"
+updated_at: "2026-07-13T13:40:00+09:00"
 entries:
   - error_id: P08R-E001
     attempt_kind: control_plane_orchestration
@@ -377,3 +377,32 @@ entries:
       tensor bytes, while retaining exact strict equality and unchanged-head
       checks. Rerun on a fresh artifact root.
     retry_gate: same_1node_historical_suffix_shape
+
+  - error_id: P08R-E013
+    attempt_kind: targeted_1node_suffix_benchmark_and_r2_adjudication
+    pbs_job_id: 2372383.opbs
+    runtime_commit: 81110ce469b7be1ea8e3c4fbdaf0f57b130a41c2
+    situation: >-
+      The corrected allocation passed 54 focused tests and the frozen real
+      suffix benchmark: the first call read 5973112800 tensor bytes, the warm
+      call read zero, strict equality held, and the source head was unchanged.
+      The following D-4406 adjudication parser failed on valid JUnit XML.
+    outcome: adjudication_junit_parser_failure
+    reason: >-
+      Pytest emitted a testsuites document containing a testsuite child. The
+      new parser read aggregate counters only from the root, obtained tests=0,
+      and incorrectly failed lifecycle_regressions even though the child suite
+      recorded 30 tests with zero failures and errors.
+    evidence:
+      - artifacts/duraloco/P08R/20260713_p08r_lifecycle_81110ce_r3/manifest.json
+      - artifacts/duraloco/P08R/20260713_p08r_lifecycle_81110ce_r3/snapshot_suffix_benchmark.json
+      - artifacts/duraloco/P08R/20260713_p08r_lifecycle_81110ce_r3/stderr.log
+      - tracejob_2372383_exit_status_1_walltime_124s
+    allocation_nodes: 1
+    focused_tests: {passed: 54, failed: 0}
+    suffix_benchmark_status: pass
+    source_authority_mutated: false
+    repair: >-
+      Sum counters from testsuite children when the root is testsuites, retain
+      direct testsuite support, and rerun only the small adjudication job.
+    retry_gate: adjudication_only_1node_then_clean_qualification

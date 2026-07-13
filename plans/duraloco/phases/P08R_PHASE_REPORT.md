@@ -136,3 +136,9 @@ real historical suffix benchmark, but an arbitrary RED assertion demanded more
 than 10 GB on the first call. The actual contract is positive first-call tensor
 bytes and zero warm-call bytes, so the threshold was corrected without changing
 the cache repair.
+
+P08R-E013 / PBS `2372383.opbs` then passed the corrected real suffix proof
+(5,973,112,800 first-call tensor bytes, zero warm bytes, strict equality, and
+unchanged source head). Its D-4406 parser incorrectly read counters from the
+`testsuites` root instead of its `testsuite` child and reported zero tests. The
+parser now supports both JUnit shapes; only the small adjudication is rerun.
