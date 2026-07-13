@@ -421,6 +421,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     committer.add_argument("--hedge-delay-ms", type=int)
     committer.add_argument("--lifecycle-cadence", type=int, default=0)
+    committer.add_argument("--defer-lifecycle-strict-audit", action="store_true")
     committer.add_argument("--terminal-snapshot", action="store_true")
     committer.add_argument("--terminal-strict-audit", action="store_true")
     committer.add_argument("--error-resume", action="store_true")
@@ -475,6 +476,7 @@ def main(argv: list[str] | None = None) -> int:
             replication_factor=args.replication_factor,
             redundancy_policy=redundancy_policy,
             lifecycle_cadence=args.lifecycle_cadence,
+            defer_lifecycle_strict_audit=args.defer_lifecycle_strict_audit,
             terminal_snapshot=args.terminal_snapshot,
             terminal_strict_audit=args.terminal_strict_audit,
             error_resume=args.error_resume,

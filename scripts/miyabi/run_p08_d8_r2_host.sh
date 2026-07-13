@@ -48,6 +48,7 @@ if [[ "$rank" -eq "$primary_rank" || "$rank" -eq "$backup_rank" ]]; then
     --owner-session-id "$RUN_ID-$member_id-committer-session" --threads 8
     --max-prefetch-bytes 1073741824 --replication-factor 2
     --execution-mode hedged --hedge-delay-ms 6000 --lifecycle-cadence 2
+    --defer-lifecycle-strict-audit
     --terminal-strict-audit)
   [[ "$rank" -eq "$primary_rank" ]] || committer+=(--standby)
 fi

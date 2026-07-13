@@ -102,6 +102,52 @@ def test_long_lifecycle_substage_renews_until_worker_finishes(monkeypatch):
     assert any(event == "lifecycle_substage_heartbeat" for event, _ in logger.events)
 
 
+def test_deferred_periodic_strict_audit_requires_terminal_audit():
+    committer_module._validate_lifecycle_audit_configuration(
+        lifecycle_cadence=2,
+        defer_lifecycle_strict_audit=True,
+        terminal_strict_audit=True,
+    )
+    for cadence, terminal in ((0, True), (2, False)):
+        with pytest.raises(ValueError, match="requires lifecycle cadence"):
+            committer_module._validate_lifecycle_audit_configuration(
+                lifecycle_cadence=cadence,
+                defer_lifecycle_strict_audit=True,
+                terminal_strict_audit=terminal,
+            )
+
+
+def test_deferred_lifecycle_fields_preserve_terminal_audit_obligation():
+    replay = SimpleNamespace(committed_state_digest="digest")
+    accelerated = SimpleNamespace(replay=replay)
+    assert committer_module._lifecycle_audit_fields(
+        accelerated=accelerated,
+        strict=None,
+    ) == {
+        "audit_mode": "deferred_terminal_strict",
+        "accelerated_state_digest": "digest",
+        "strict_state_digest": None,
+    }
+    strict = SimpleNamespace(committed_state_digest="digest")
+    assert committer_module._lifecycle_audit_fields(
+        accelerated=accelerated,
+        strict=strict,
+    )["audit_mode"] == "periodic_strict"
+    with pytest.raises(RuntimeError, match="differs"):
+        committer_module._lifecycle_audit_fields(
+            accelerated=accelerated,
+            strict=SimpleNamespace(committed_state_digest="other"),
+        )
+
+
+def test_deferred_lifecycle_mode_skips_periodic_force_full_branch():
+    source = inspect.getsource(committer_module.run_committer)
+    deferred_guard = source.index("if not defer_lifecycle_strict_audit:")
+    strict_replay = source.index("lambda: log.replay(force_full=True)", deferred_guard)
+    audit_fields = source.index("audit_fields = _lifecycle_audit_fields", strict_replay)
+    assert deferred_guard < strict_replay < audit_fields
+
+
 def test_committer_conflict_finalization_publishes_only_authoritative_stop(monkeypatch):
     logger = _Logger()
     initial = SimpleNamespace(authoritative_stop=None, commit_seq=7, commit_id="c-before")

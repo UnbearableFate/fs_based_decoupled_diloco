@@ -63,6 +63,7 @@ finish() {
     --assertion "hedged factor two recovers one recorded executor exception with complete loser-attempt telemetry"
     --assertion "ten single-head transitions, raw profiles, matched eight-node factor-one/R2 interference, and D-0807 gate pass"
     --assertion "runtime and complete-experiment monotonic elapsed contracts are at most 440 seconds"
+    --assertion "periodic lifecycle cycles defer redundant strict replay to the mandatory terminal strict audit"
     --assertion "P07 strict/snapshot replay, capsules, reachability, bounded lifecycle dry-runs, and lifecycle regressions pass")
   [[ -f "$ARTIFACT_ROOT/p08_d8_r2_report.json" ]] && args+=(--stage-metrics-path p08_d8_r2_report.json)
   "$PYTHON_BIN" scripts/agent/create_run_manifest.py "${args[@]}" || true

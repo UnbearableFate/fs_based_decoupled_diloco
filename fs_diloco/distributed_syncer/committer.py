@@ -194,6 +194,41 @@ def _run_lifecycle_substage(
                 logger.event("lifecycle_substage_heartbeat", substage=substage)
 
 
+def _validate_lifecycle_audit_configuration(
+    *,
+    lifecycle_cadence: int,
+    defer_lifecycle_strict_audit: bool,
+    terminal_strict_audit: bool,
+) -> None:
+    if type(lifecycle_cadence) is not int or lifecycle_cadence < 0:
+        raise ValueError("lifecycle cadence must be a non-negative integer")
+    if type(defer_lifecycle_strict_audit) is not bool:
+        raise ValueError("deferred lifecycle strict audit flag must be boolean")
+    if type(terminal_strict_audit) is not bool:
+        raise ValueError("terminal strict audit flag must be boolean")
+    if defer_lifecycle_strict_audit and (
+        lifecycle_cadence == 0 or not terminal_strict_audit
+    ):
+        raise ValueError(
+            "deferred lifecycle strict audit requires lifecycle cadence and "
+            "terminal strict audit"
+        )
+
+
+def _lifecycle_audit_fields(*, accelerated, strict) -> dict[str, object]:
+    if strict is not None and accelerated.replay != strict:
+        raise RuntimeError("snapshot+suffix replay differs from strict replay")
+    return {
+        "audit_mode": (
+            "periodic_strict" if strict is not None else "deferred_terminal_strict"
+        ),
+        "accelerated_state_digest": accelerated.replay.committed_state_digest,
+        "strict_state_digest": (
+            strict.committed_state_digest if strict is not None else None
+        ),
+    }
+
+
 def _wait_for_result(
     backend,
     layout: DistributedLayout,
@@ -546,6 +581,7 @@ def run_committer(
     replication_factor: int = 1,
     redundancy_policy: RedundancyPolicyV1 | None = None,
     lifecycle_cadence: int = 0,
+    defer_lifecycle_strict_audit: bool = False,
     terminal_snapshot: bool = False,
     terminal_strict_audit: bool = False,
     error_resume: bool = False,
@@ -609,12 +645,13 @@ def run_committer(
         raise ValueError("factor-two committer requires a redundancy policy")
     if replication_factor == 1 and redundancy_policy is not None:
         raise ValueError("factor-one committer cannot carry a redundancy policy")
-    if type(lifecycle_cadence) is not int or lifecycle_cadence < 0:
-        raise ValueError("lifecycle cadence must be a non-negative integer")
+    _validate_lifecycle_audit_configuration(
+        lifecycle_cadence=lifecycle_cadence,
+        defer_lifecycle_strict_audit=defer_lifecycle_strict_audit,
+        terminal_strict_audit=terminal_strict_audit,
+    )
     if type(terminal_snapshot) is not bool:
         raise ValueError("terminal snapshot flag must be boolean")
-    if type(terminal_strict_audit) is not bool:
-        raise ValueError("terminal strict audit flag must be boolean")
     if inject_error_after_transitions is not None and (
         type(inject_error_after_transitions) is not int
         or inject_error_after_transitions < 1
@@ -1215,23 +1252,27 @@ def run_committer(
                     logger=logger,
                     stage="lifecycle_accelerated_replay_completed",
                 )
-                strict, loaded_lease = _run_lifecycle_substage(
-                    lambda: log.replay(force_full=True),
-                    substage="strict_replay",
-                    lease_manager=lease_manager,
-                    loaded_lease=loaded_lease,
-                    config=config,
-                    logger=logger,
+                strict = None
+                if not defer_lifecycle_strict_audit:
+                    strict, loaded_lease = _run_lifecycle_substage(
+                        lambda: log.replay(force_full=True),
+                        substage="strict_replay",
+                        lease_manager=lease_manager,
+                        loaded_lease=loaded_lease,
+                        config=config,
+                        logger=logger,
+                    )
+                    loaded_lease = _renew_for_authoritative_stage(
+                        lease_manager=lease_manager,
+                        loaded_lease=loaded_lease,
+                        config=config,
+                        logger=logger,
+                        stage="lifecycle_strict_replay_completed",
+                    )
+                audit_fields = _lifecycle_audit_fields(
+                    accelerated=accelerated,
+                    strict=strict,
                 )
-                loaded_lease = _renew_for_authoritative_stage(
-                    lease_manager=lease_manager,
-                    loaded_lease=loaded_lease,
-                    config=config,
-                    logger=logger,
-                    stage="lifecycle_strict_replay_completed",
-                )
-                if accelerated.replay != strict:
-                    raise RuntimeError("snapshot+suffix replay differs from strict replay")
                 (mark, reachability), loaded_lease = _run_lifecycle_substage(
                     lambda: create_gc_mark(log),
                     substage="reachability",
@@ -1278,7 +1319,7 @@ def run_committer(
                     "covered_commit_seq": accelerated.covered_commit_seq,
                     "suffix_length": accelerated.suffix_length,
                     "snapshot_storage_get_count": accelerated.storage_get_count,
-                    "strict_state_digest": strict.committed_state_digest,
+                    **audit_fields,
                     "mark_id": mark.mark_id,
                     "dry_run": True,
                     "head_commit_id": reachability.head_commit_id,
