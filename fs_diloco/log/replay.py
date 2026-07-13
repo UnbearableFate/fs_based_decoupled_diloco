@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import hashlib
+import time
 from typing import Any, Iterable
 
 from fs_diloco.optimizer.reference_adapter import transition
@@ -71,6 +72,47 @@ class ReplayModeResult:
     suffix_length: int
     fallback_reason: str | None
     storage_get_count: int
+    telemetry: "ReplayCallTelemetry | None" = None
+
+
+@dataclass(frozen=True)
+class ReplayCallTelemetry:
+    """One causal replay call, including storage cost and cache promotion."""
+
+    call_id: str
+    mode: str
+    reason: str
+    owner_id: str | None
+    owner_session_id: str | None
+    head_commit_id: str
+    head_commit_seq: int
+    fencing_epoch: int
+    cache_entries_before: int
+    cache_entries_after: int
+    promoted_entries: int
+    storage_get_count: int
+    storage_header_bytes: int
+    storage_payload_bytes: int
+    elapsed_seconds: float
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "call_id": self.call_id,
+            "mode": self.mode,
+            "reason": self.reason,
+            "owner_id": self.owner_id,
+            "owner_session_id": self.owner_session_id,
+            "head_commit_id": self.head_commit_id,
+            "head_commit_seq": self.head_commit_seq,
+            "fencing_epoch": self.fencing_epoch,
+            "cache_entries_before": self.cache_entries_before,
+            "cache_entries_after": self.cache_entries_after,
+            "promoted_entries": self.promoted_entries,
+            "storage_get_count": self.storage_get_count,
+            "storage_header_bytes": self.storage_header_bytes,
+            "storage_payload_bytes": self.storage_payload_bytes,
+            "elapsed_seconds": self.elapsed_seconds,
+        }
 
 
 @dataclass(frozen=True)
@@ -110,6 +152,26 @@ class ProductionReplayCache:
     @classmethod
     def empty(cls) -> "ProductionReplayCache":
         return cls(set(), {}, {})
+
+    def copy(self) -> "ProductionReplayCache":
+        return ProductionReplayCache(
+            set(self.proposal_payloads),
+            dict(self.params_numels),
+            dict(self.outer_numels),
+        )
+
+    @property
+    def entry_count(self) -> int:
+        return (
+            len(self.proposal_payloads)
+            + len(self.params_numels)
+            + len(self.outer_numels)
+        )
+
+    def replace_from(self, other: "ProductionReplayCache") -> None:
+        self.proposal_payloads = set(other.proposal_payloads)
+        self.params_numels = dict(other.params_numels)
+        self.outer_numels = dict(other.outer_numels)
 
 
 class _SnapshotOverlayBackend:
@@ -1295,6 +1357,48 @@ def _history_get_count(backend) -> int:
         return 0
 
 
+def _read_counters(backend) -> tuple[int, int]:
+    try:
+        counters = backend.read_counters
+        return int(counters["header_bytes"]), int(counters["payload_bytes"])
+    except Exception:
+        return 0, 0
+
+
+def _replay_telemetry(
+    *,
+    call_id: str,
+    mode: str,
+    reason: str,
+    owner_id: str | None,
+    owner_session_id: str | None,
+    result: ReplayResult,
+    cache_entries_before: int,
+    cache_entries_after: int,
+    get_count: int,
+    header_bytes: int,
+    payload_bytes: int,
+    elapsed_seconds: float,
+) -> ReplayCallTelemetry:
+    return ReplayCallTelemetry(
+        call_id=call_id,
+        mode=mode,
+        reason=reason,
+        owner_id=owner_id,
+        owner_session_id=owner_session_id,
+        head_commit_id=result.head_frontier.commit_id,
+        head_commit_seq=result.head_frontier.commit_seq,
+        fencing_epoch=result.head_frontier.fencing_epoch,
+        cache_entries_before=cache_entries_before,
+        cache_entries_after=cache_entries_after,
+        promoted_entries=max(0, cache_entries_after - cache_entries_before),
+        storage_get_count=get_count,
+        storage_header_bytes=header_bytes,
+        storage_payload_bytes=payload_bytes,
+        elapsed_seconds=elapsed_seconds,
+    )
+
+
 def _cache_from_snapshot(snapshot) -> ProductionReplayCache:
     return ProductionReplayCache(
         proposal_payloads=set(snapshot.proposal_payloads),
@@ -1423,10 +1527,20 @@ def replay_snapshot_suffix(
     *,
     production_validation_device: Any = None,
     production_cache: ProductionReplayCache | None = None,
+    call_id: str = "replay-unscoped",
+    reason: str = "authoritative_replay",
+    owner_id: str | None = None,
+    owner_session_id: str | None = None,
+    allow_memoized_fallback: bool = True,
 ) -> ReplayModeResult:
     """Replay from the latest valid pinned snapshot, or strictly fall back."""
 
+    started = time.monotonic()
     before = _history_get_count(log.backend)
+    header_before, payload_before = _read_counters(log.backend)
+    cache_entries_before = (
+        production_cache.entry_count if production_cache is not None else 0
+    )
     fallback_reason: str | None = None
     try:
         snapshot, suffix_length, failures = _find_latest_valid_snapshot(log)
@@ -1449,11 +1563,24 @@ def replay_snapshot_suffix(
             ):
                 raise VerificationError("snapshot replay result differs from current head")
             if production_cache is not None:
-                production_cache.proposal_payloads = set(
-                    verified_cache.proposal_payloads
-                )
-                production_cache.params_numels = dict(verified_cache.params_numels)
-                production_cache.outer_numels = dict(verified_cache.outer_numels)
+                production_cache.replace_from(verified_cache)
+            get_count = _history_get_count(log.backend) - before
+            header_after, payload_after = _read_counters(log.backend)
+            cache_entries_after = verified_cache.entry_count
+            telemetry = _replay_telemetry(
+                call_id=call_id,
+                mode="snapshot_suffix",
+                reason=reason,
+                owner_id=owner_id,
+                owner_session_id=owner_session_id,
+                result=result,
+                cache_entries_before=cache_entries_before,
+                cache_entries_after=cache_entries_after,
+                get_count=get_count,
+                header_bytes=header_after - header_before,
+                payload_bytes=payload_after - payload_before,
+                elapsed_seconds=time.monotonic() - started,
+            )
             return ReplayModeResult(
                 replay=result,
                 mode="snapshot_suffix",
@@ -1461,31 +1588,61 @@ def replay_snapshot_suffix(
                 covered_commit_seq=snapshot.covered_head.commit_seq,
                 suffix_length=suffix_length,
                 fallback_reason=None,
-                storage_get_count=_history_get_count(log.backend) - before,
+                storage_get_count=get_count,
+                telemetry=telemetry,
             )
         fallback_reason = (
             "no_valid_snapshot" if not failures else "invalid_snapshots:" + ",".join(failures)
         )
     except Exception as exc:
         fallback_reason = f"snapshot_discovery_failed:{type(exc).__name__}"
-    verified_cache = ProductionReplayCache.empty()
+    reuse_prefix = (
+        allow_memoized_fallback
+        and fallback_reason == "no_valid_snapshot"
+        and production_cache is not None
+        and production_cache.entry_count > 0
+    )
+    verified_cache = (
+        production_cache.copy() if reuse_prefix else ProductionReplayCache.empty()
+    )
+    mode = "memoized_prefix" if reuse_prefix else "strict_fallback"
     result = replay_log(
         log,
         production_cache=verified_cache,
         production_validation_device=production_validation_device,
     )
     if production_cache is not None:
-        production_cache.proposal_payloads = set(verified_cache.proposal_payloads)
-        production_cache.params_numels = dict(verified_cache.params_numels)
-        production_cache.outer_numels = dict(verified_cache.outer_numels)
+        production_cache.replace_from(verified_cache)
+    get_count = _history_get_count(log.backend) - before
+    header_after, payload_after = _read_counters(log.backend)
+    cache_entries_after = verified_cache.entry_count
+    telemetry = _replay_telemetry(
+        call_id=call_id,
+        mode=mode,
+        reason=(
+            reason
+            if reuse_prefix or reason != "same_owner_replay"
+            else (fallback_reason or reason)
+        ),
+        owner_id=owner_id,
+        owner_session_id=owner_session_id,
+        result=result,
+        cache_entries_before=cache_entries_before,
+        cache_entries_after=cache_entries_after,
+        get_count=get_count,
+        header_bytes=header_after - header_before,
+        payload_bytes=payload_after - payload_before,
+        elapsed_seconds=time.monotonic() - started,
+    )
     return ReplayModeResult(
         replay=result,
-        mode="strict_fallback",
+        mode=mode,
         snapshot_id=None,
         covered_commit_seq=None,
         suffix_length=result.head_frontier.commit_seq,
         fallback_reason=fallback_reason,
-        storage_get_count=_history_get_count(log.backend) - before,
+        storage_get_count=get_count,
+        telemetry=telemetry,
     )
 
 

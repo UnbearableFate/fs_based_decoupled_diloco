@@ -1,0 +1,73 @@
+#!/bin/bash
+#PBS -N p08r_replay
+#PBS -q debug-g
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:20:00
+#PBS -W group_list=xg24i002
+#PBS -j oe
+
+set -eEuo pipefail
+trap 'echo "[ERROR] line=$LINENO status=$?" >&2' ERR
+
+: "${EXPECTED_COMMIT:?set the clean P08R runtime commit}"
+: "${RUN_ID:?set a unique P08R evidence run ID}"
+: "${ARTIFACT_ROOT:?set a fresh P08R artifact root}"
+: "${SOURCE_AUTHORITY_ROOT:?set the completed P08 factor-one authority root}"
+: "${SOURCE_RUN_ID:?set the completed ten-transition production run ID}"
+
+PROJECT_ROOT="${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}"
+PYTHON_BIN="$PROJECT_ROOT/.venv/bin/python"
+cd "$PROJECT_ROOT"
+if ! mkdir "$ARTIFACT_ROOT"; then
+  echo "refusing reused P08R artifact root: $ARTIFACT_ROOT" >&2
+  exit 2
+fi
+touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log"
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat
+module list 2>&1 | cat > "$ARTIFACT_ROOT/modules.log"
+hostname > "$ARTIFACT_ROOT/hostname.log"
+printf 'PBS_JOBID=%s\nPBS_NODEFILE=%s\n' "${PBS_JOBID:-}" "${PBS_NODEFILE:-}" \
+  > "$ARTIFACT_ROOT/pbs_context.log"
+
+result=fail
+exit_code=1
+finish() {
+  observed=$?
+  [[ "$result" == pass ]] && exit_code=0 || { [[ "$observed" -eq 0 ]] || exit_code=$observed; }
+  qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
+  "$PYTHON_BIN" scripts/agent/create_run_manifest.py \
+    --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json" --phase P08R \
+    --purpose benchmark --run-id "$RUN_ID" --schema-version 2 \
+    --validation-shape p08r-real-gpt2-ten-transition-replay-memo-1node \
+    --backend lustre --config scripts/miyabi/run_duraloco_p08r_replay_1node.pbs \
+    --commands-log commands.log --stdout stdout.log --stderr stderr.log \
+    --exit-code "$exit_code" --result "$result" \
+    --termination-kind "$([[ "$result" == pass ]] && echo success || echo test_failure)" \
+    --pbs-queue debug-g --requested-resources select=1:mpiprocs=1,walltime=00:20:00 \
+    --last-qstat-state R \
+    --termination-detail "P08R empty-cache versus same-owner replay on the completed real GPT-2 prefix" \
+    --assertion "strict and memoized state digests match on the frozen ten-transition prefix" \
+    --assertion "steady same-owner replay reads zero prior tensor payload bytes" || true
+}
+trap finish EXIT
+
+[[ "$(hostname)" == mg* ]]
+[[ "$(git rev-parse HEAD)" == "$EXPECTED_COMMIT" ]]
+[[ -z "$(git status --porcelain=v1 --untracked-files=no)" ]]
+printf '%s\n' \
+  "$PYTHON_BIN -m pytest tests/log/test_production_runtime.py tests/lifecycle/test_snapshot_suffix_replay.py tests/coordination/test_production_fencing.py -q" \
+  "$PYTHON_BIN -m benchmarks.bench_production_replay_memo --authority-root $SOURCE_AUTHORITY_ROOT --run-id $SOURCE_RUN_ID --output $ARTIFACT_ROOT/replay_report.json" \
+  > "$ARTIFACT_ROOT/commands.log"
+"$PYTHON_BIN" -m pytest \
+  tests/log/test_production_runtime.py \
+  tests/lifecycle/test_snapshot_suffix_replay.py \
+  tests/coordination/test_production_fencing.py -q \
+  > >(tee "$ARTIFACT_ROOT/stdout.log") \
+  2> >(tee "$ARTIFACT_ROOT/stderr.log" >&2)
+"$PYTHON_BIN" -m benchmarks.bench_production_replay_memo \
+  --authority-root "$SOURCE_AUTHORITY_ROOT" --run-id "$SOURCE_RUN_ID" \
+  --output "$ARTIFACT_ROOT/replay_report.json" \
+  > >(tee -a "$ARTIFACT_ROOT/stdout.log") \
+  2> >(tee "$ARTIFACT_ROOT/stderr.log" >&2)
+result=pass
+exit_code=0

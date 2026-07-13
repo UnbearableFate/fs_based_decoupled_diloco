@@ -355,3 +355,70 @@ def test_forced_full_replay_detects_historical_object_corruption():
         log.replay(force_full=True)
 
     backend._objects[manifest.payload_key] = original
+
+
+def test_no_snapshot_same_process_reuses_verified_prefix_with_byte_attribution():
+    backend, log = _initialize("production-memoized-prefix")
+    manifest = _proposal(log, learner="learner-0", sequence=1, values=[1.0, 2.0])
+    prepared = _prepare(log, manifest, [0.5, 1.0])
+    log.commit_prepared(prepared)
+
+    first = log.replay_from_snapshot()
+    assert first.mode == "memoized_prefix"
+    assert first.telemetry is not None
+    assert first.telemetry.reason == "normal_self_cas"
+
+    large_keys = {
+        manifest.payload_key,
+        prepared.commit.new_params_ref.key,
+        prepared.commit.new_outer_state_ref.key,
+    }
+    history_start = len(backend.history)
+    second = log.replay_from_snapshot()
+    records = backend.history[history_start:]
+
+    assert second.mode == "memoized_prefix"
+    assert second.replay == first.replay
+    assert second.telemetry is not None
+    assert second.telemetry.cache_entries_before > 0
+    assert second.telemetry.promoted_entries == 0
+    assert not any(
+        record.operation == "get" and record.key in large_keys for record in records
+    )
+
+
+def test_external_head_jump_discards_process_local_replay_memo():
+    backend, writer = _initialize("production-external-head-jump")
+    observer = ProductionTransactionalLog.open(
+        backend, writer.spec.run_id, writer.spec.run_generation
+    )
+    initial = observer.replay_from_snapshot()
+    assert initial.mode == "strict_fallback"
+
+    manifest = _proposal(writer, learner="learner-0", sequence=1, values=[1.0, 2.0])
+    prepared = _prepare(writer, manifest, [0.5, 1.0])
+    writer.commit_prepared(prepared)
+    replayed = observer.replay_from_snapshot()
+
+    assert replayed.mode == "strict_fallback"
+    assert replayed.telemetry is not None
+    assert replayed.telemetry.reason == "external_head_jump"
+    assert replayed.telemetry.cache_entries_before == 0
+    assert replayed.replay.head_frontier.commit_seq == 1
+
+
+def test_cas_response_ambiguity_forces_empty_cache_strict_replay():
+    _backend, log = _initialize("production-cas-ambiguity-cache")
+    log.replay_from_snapshot()
+    manifest = _proposal(log, learner="learner-0", sequence=1, values=[1.0, 2.0])
+    prepared = _prepare(log, manifest, [0.5, 1.0])
+
+    with pytest.raises(InjectedLogCrash):
+        log.commit_prepared(prepared, crash_at="after_head_cas")
+    replayed = log.replay_from_snapshot()
+
+    assert replayed.mode == "strict_fallback"
+    assert replayed.telemetry is not None
+    assert replayed.telemetry.reason == "external_head_jump"
+    assert replayed.telemetry.cache_entries_before == 0
+    assert replayed.replay.head_frontier.commit_seq == 1

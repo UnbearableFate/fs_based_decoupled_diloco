@@ -28,6 +28,7 @@ from .model import (
 )
 from .replay import (
     OrphanReport,
+    ReplayCallTelemetry,
     ReplayModeResult,
     ReplayResult,
     ValidatedSnapshotPin,
@@ -56,6 +57,7 @@ __all__ = [
     "ProposalDecision",
     "ReferenceProposal",
     "ReferenceProtocolConfig",
+    "ReplayCallTelemetry",
     "ReplayResult",
     "ReplayModeResult",
     "ValidatedSnapshotPin",

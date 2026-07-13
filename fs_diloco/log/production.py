@@ -47,6 +47,7 @@ from .production_codec import (
 )
 from .replay import (
     ProductionReplayCache,
+    ReplayCallTelemetry,
     ReplayModeResult,
     ReplayResult,
     replay_log,
@@ -71,6 +72,11 @@ class ProductionTransactionalLog:
             raise RunInitializationError("run is not a production safetensors generation")
         self.transactional = transactional
         self._replay_cache = ProductionReplayCache.empty()
+        self._replay_cache_head: tuple[int, str, int] | None = None
+        self._replay_cache_owner_scope: tuple[str, str, int] | None = None
+        self._replay_invalidation_reason = "fresh_open"
+        self._replay_call_sequence = 0
+        self.last_replay_telemetry: ReplayCallTelemetry | None = None
         self._replay_validation_device = None
         self._owner_token: OwnerToken | None = None
         self.last_prepare_lineage_checks = 0
@@ -238,6 +244,53 @@ class ProductionTransactionalLog:
 
         self._replay_validation_device = device
 
+    @staticmethod
+    def _head_identity(head: HeadManifest) -> tuple[int, str, int]:
+        return (head.commit_seq, head.commit_id, head.fencing_epoch)
+
+    def _owner_scope(self) -> tuple[str, str, int] | None:
+        if self._owner_token is None:
+            return None
+        return (
+            self._owner_token.owner_id,
+            self._owner_token.owner_session_id,
+            self._owner_token.fencing_epoch,
+        )
+
+    def clear_replay_cache(self, *, reason: str) -> None:
+        """Discard process-local verified objects without changing authority."""
+
+        self._replay_cache = ProductionReplayCache.empty()
+        self._replay_cache_head = None
+        self._replay_cache_owner_scope = None
+        self._replay_invalidation_reason = reason
+
+    def _prepare_replay_scope(self, *, force_full: bool) -> str:
+        if force_full:
+            self.clear_replay_cache(reason="explicit_verification")
+            return "explicit_verification"
+        observed = self.transactional.load_head().manifest
+        if (
+            self._replay_cache_head is not None
+            and self._replay_cache_head != self._head_identity(observed)
+        ):
+            self.clear_replay_cache(reason="external_head_jump")
+        elif (
+            self._replay_cache_owner_scope is not None
+            and self._replay_cache_owner_scope != self._owner_scope()
+        ):
+            self.clear_replay_cache(reason="ownership_boundary")
+        return self._replay_invalidation_reason
+
+    def _bind_replay_cache(self, result: ReplayResult) -> None:
+        self._replay_cache_head = self._head_identity(result.loaded_head.manifest)
+        self._replay_cache_owner_scope = self._owner_scope()
+        self._replay_invalidation_reason = "same_owner_replay"
+
+    def _next_replay_call_id(self) -> str:
+        self._replay_call_sequence += 1
+        return f"replay-{id(self):x}-{self._replay_call_sequence:08d}"
+
     def replay(self, *, force_full: bool = False) -> ReplayResult:
         """Replay authority, memoizing only verified immutable tensor objects.
 
@@ -246,24 +299,33 @@ class ProductionTransactionalLog:
         object identity was already verified in this process.
         """
 
-        cache = ProductionReplayCache.empty() if force_full else self._replay_cache
+        self._prepare_replay_scope(force_full=force_full)
+        cache = self._replay_cache
         result = replay_log(
             self.transactional,
             production_cache=cache,
             production_validation_device=self._replay_validation_device,
         )
-        if force_full:
-            self._replay_cache = cache
+        self._bind_replay_cache(result)
         return result
 
     def replay_from_snapshot(self) -> ReplayModeResult:
         """Use the newest valid ancestry-pinned snapshot with strict fallback."""
 
-        return replay_snapshot_suffix(
+        reason = self._prepare_replay_scope(force_full=False)
+        token = self._owner_token
+        result = replay_snapshot_suffix(
             self.transactional,
             production_validation_device=self._replay_validation_device,
             production_cache=self._replay_cache,
+            call_id=self._next_replay_call_id(),
+            reason=reason,
+            owner_id=token.owner_id if token is not None else None,
+            owner_session_id=token.owner_session_id if token is not None else None,
         )
+        self.last_replay_telemetry = result.telemetry
+        self._bind_replay_cache(result.replay)
+        return result
 
     def _authoritative_replay(self) -> ReplayResult:
         """Verify current authority from a retained snapshot when available."""
@@ -274,7 +336,7 @@ class ProductionTransactionalLog:
         """Discard every process/owner-scoped optimization and tentative fact."""
 
         self._owner_token = None
-        self._replay_cache = ProductionReplayCache.empty()
+        self.clear_replay_cache(reason="ownership_boundary")
 
     @staticmethod
     def _optimizer_transition_count(replay: ReplayResult) -> int:
@@ -1101,9 +1163,19 @@ class ProductionTransactionalLog:
                 owner_session_id=prepared.commit.owner_session_id,
                 fencing_epoch=prepared.commit.fencing_epoch,
             )
+        if (
+            result.status == "committed"
+            and self._replay_cache_head == self._head_identity(prepared.parent_head.manifest)
+        ):
+            self._replay_cache_head = self._head_identity(prepared.new_head)
+            self._replay_cache_owner_scope = self._owner_scope()
+            self._replay_invalidation_reason = "normal_self_cas"
+        else:
+            self.clear_replay_cache(reason="cas_response_ambiguity")
         return result
 
     def resolve_prepared(self, prepared: PreparedLogTransition) -> CommitResult | None:
+        self.clear_replay_cache(reason="cas_response_ambiguity")
         return self.transactional.resolve_prepared(prepared)
 
     def resolve_mutation(self, *, request_id: str, request_digest: str) -> CommitResult | None:
