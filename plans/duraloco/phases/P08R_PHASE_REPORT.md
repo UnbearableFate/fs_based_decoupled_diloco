@@ -44,16 +44,26 @@ Every failed try is preserved in
 - P08R-E006 / PBS `2371980.opbs` rejected a D1 storage root outside the detached
   validation worktree before authority initialization. The same-commit retry
   `2371983.opbs` used an in-project fresh storage root and passed.
+- P08R-E007 / PBS `2372056.opbs` completed the full eight-node factor-one
+  runtime and elapsed gate in 340.529 seconds, then failed a report-only lease
+  assertion. Memoized replay correctly needed zero periodic heartbeats, while
+  the report still required at least one. The preserved root-cause review is
+  `P08R_D8_FAILURE_REVIEW_2372056.md`.
 
 None of these attempts mutated the completed historical source authority.
 `2371888` never started runtime, `2371896` stopped in tests, and `2371905`
 operated read-only on the preserved P08 prefix.
 
-## Next qualification
+## Terminal failure recovery
 
-On commit `9194a03d660dca97bb748105816e95bf73b5b776`, targeted replay PBS
-`2371964`, full one-node PBS `2371978` (515 passed, one skipped), D1 PBS
-`2371983`, and D2 PBS `2371993` passed in order. The next clean commit adds the
-frozen complete-experiment elapsed report, terminal snapshot, and in-runtime
-terminal strict audit; therefore the same 1-node to 2-node ladder will be
-rerun before any eight-node arm. No ninth node is authorized.
+On commit `ab605c82f2c88a377c151273cfc5f502fbfee3ef`, targeted replay PBS
+`2372031`, full one-node PBS `2372042` (519 passed, one skipped), D1 PBS
+`2372048`, and D2 PBS `2372054` passed in order. PBS `2372056` then proved the
+optimized eight-node runtime itself: ten transitions, terminal snapshot and
+strict audit, runtime 332.885 seconds, and complete experiment 340.529 seconds.
+Its post-runtime report rejected the valid zero-heartbeat fast path.
+
+The eight-node retry is now fail-closed. The report repair must first pass a
+smallest one-node recovery benchmark against the frozen failed authority, then
+targeted replay, full one-node, D1, and D2 on one clean repair commit. Only then
+may one fresh D8 retry be authorized. No ninth node is authorized.

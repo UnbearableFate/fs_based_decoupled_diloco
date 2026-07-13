@@ -1,0 +1,86 @@
+#!/bin/bash
+#PBS -N p08r_report
+#PBS -q debug-g
+#PBS -l select=1:mpiprocs=1
+#PBS -l walltime=00:10:00
+#PBS -W group_list=xg24i002
+#PBS -j oe
+
+set -eEuo pipefail
+trap 'echo "[ERROR] line=$LINENO status=$?" >&2' ERR
+
+: "${EXPECTED_COMMIT:?set the clean P08R repair commit}"
+: "${RUN_ID:?set a unique recovery benchmark run ID}"
+: "${ARTIFACT_ROOT:?set a fresh recovery artifact root}"
+: "${SOURCE_TRAINING_ROOT:?set the frozen failed D8 training root}"
+: "${SOURCE_ARTIFACT_ROOT:?set the frozen failed D8 artifact root}"
+: "${SOURCE_RUN_ID:?set the frozen failed D8 training run ID}"
+: "${SOURCE_COMMIT:?set the frozen failed D8 runtime commit}"
+: "${SOURCE_ELAPSED_SECONDS:?set the frozen failed D8 rounded runtime seconds}"
+
+PROJECT_ROOT="${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}"
+PYTHON_BIN="$PROJECT_ROOT/.venv/bin/python"
+CONFIG="$PROJECT_ROOT/configs/duraloco_milestone_gpt2_8node_50x10.yaml"
+HEAD_PATH="$SOURCE_TRAINING_ROOT/authority/runs/$SOURCE_RUN_ID/generations/00000000/control/head.json"
+cd "$PROJECT_ROOT"
+mkdir -p "$(dirname "$ARTIFACT_ROOT")"
+if ! mkdir "$ARTIFACT_ROOT"; then
+  echo "refusing reused P08R recovery artifact root: $ARTIFACT_ROOT" >&2
+  exit 2
+fi
+touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log"
+export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat
+
+result=fail
+exit_code=1
+finish() {
+  observed=$?
+  [[ "$result" == pass ]] && exit_code=0 || { [[ "$observed" -eq 0 ]] || exit_code=$observed; }
+  qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
+  "$PYTHON_BIN" scripts/agent/create_run_manifest.py \
+    --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json" --phase P08R \
+    --purpose benchmark --run-id "$RUN_ID" --schema-version 2 \
+    --validation-shape p08r-frozen-d8-report-recovery-1node \
+    --backend lustre --model-revision gpt2 --dataset-revision wikitext-2-raw-v1 \
+    --config scripts/miyabi/run_duraloco_p08r_report_recovery_1node.pbs \
+    --commands-log commands.log --stdout stdout.log --stderr stderr.log \
+    --exit-code "$exit_code" --result "$result" \
+    --termination-kind "$([[ "$result" == pass ]] && echo success || echo test_failure)" \
+    --pbs-queue debug-g --requested-resources select=1:mpiprocs=1,walltime=00:10:00 \
+    --last-qstat-state R \
+    --termination-detail "P08R lease-report recovery against frozen failed D8 evidence" \
+    --assertion "the frozen source authority head is unchanged by read-only report recovery" \
+    --assertion "zero periodic lifecycle heartbeats are valid when all mandatory CAS guards are present" || true
+}
+trap finish EXIT
+
+[[ "$(hostname)" == mg* ]]
+[[ "$(git rev-parse HEAD)" == "$EXPECTED_COMMIT" ]]
+[[ -z "$(git status --porcelain=v1 --untracked-files=no)" ]]
+[[ -f "$HEAD_PATH" ]]
+[[ "$(tr -d '[:space:]' < "$SOURCE_ARTIFACT_ROOT/git_commit.log")" == "$SOURCE_COMMIT" ]]
+[[ "$(jq -r '.result' "$SOURCE_ARTIFACT_ROOT/manifest.json")" == fail ]]
+sha256sum "$HEAD_PATH" > "$ARTIFACT_ROOT/source_head_before.sha256"
+printf '%s\n' \
+  "$PYTHON_BIN scripts/agent/create_p08_performance_report.py factor-one --root $SOURCE_TRAINING_ROOT --artifacts $SOURCE_ARTIFACT_ROOT --run-id $SOURCE_RUN_ID --config $CONFIG --elapsed-seconds $SOURCE_ELAPSED_SECONDS --base-report $SOURCE_ARTIFACT_ROOT/factor_one_base_report.json --output $ARTIFACT_ROOT/recovered_p08_d8_report.json" \
+  > "$ARTIFACT_ROOT/commands.log"
+"$PYTHON_BIN" scripts/agent/create_p08_performance_report.py factor-one \
+  --root "$SOURCE_TRAINING_ROOT" --artifacts "$SOURCE_ARTIFACT_ROOT" \
+  --run-id "$SOURCE_RUN_ID" --config "$CONFIG" \
+  --elapsed-seconds "$SOURCE_ELAPSED_SECONDS" \
+  --base-report "$SOURCE_ARTIFACT_ROOT/factor_one_base_report.json" \
+  --output "$ARTIFACT_ROOT/recovered_p08_d8_report.json" \
+  > >(tee "$ARTIFACT_ROOT/stdout.log") \
+  2> >(tee "$ARTIFACT_ROOT/stderr.log" >&2)
+sha256sum "$HEAD_PATH" > "$ARTIFACT_ROOT/source_head_after.sha256"
+cmp "$ARTIFACT_ROOT/source_head_before.sha256" "$ARTIFACT_ROOT/source_head_after.sha256"
+jq -e '
+  .optimizer_transition_count == 10 and
+  .lease_guard.optimizer_head_cas_renewals == 10 and
+  .lease_guard.stop_head_cas_renewals == 1 and
+  .lease_guard.lifecycle_substage_renewals == 0 and
+  .lease_guard.lease_authority_loss_events == 0 and
+  .terminal_audit.status == "PASS"
+' "$ARTIFACT_ROOT/recovered_p08_d8_report.json" > /dev/null
+result=pass
+exit_code=0

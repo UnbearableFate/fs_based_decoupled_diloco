@@ -7,21 +7,21 @@ actual_base_commit: ff41499f0960d8b2ee90e513f5487cc8b1dc0a28
 feature_branch: codex/duraloco-p08r-replay-440s
 current_loop: 2
 current_goal: "complete the pre-P10 P08R 440-second 50x10 performance gate"
-attempts_for_current_failure: 0
-last_terminal_failure_review: null
+attempts_for_current_failure: 1
+last_terminal_failure_review: plans/duraloco/phases/P08R_D8_FAILURE_REVIEW_2372056.md
 terminal_retry_authorized: false
 terminal_retry_qualification:
-  targeted_1node_benchmark: 2371964.opbs
-  miyabi_1node: 2371978.opbs
-  miyabi_2node: 2371993.opbs
-last_verified_commit: 9194a03d660dca97bb748105816e95bf73b5b776
+  targeted_1node_benchmark: null
+  miyabi_1node: null
+  miyabi_2node: null
+last_verified_commit: ab605c82f2c88a377c151273cfc5f502fbfee3ef
 checks:
   local_static: static_pass
   targeted_real_prefix_1node: miyabi_1node_pass
   full_1node: miyabi_1node_pass
   miyabi_d1: miyabi_d1_pass
   miyabi_d2: miyabi_d2_pass
-  miyabi_d8: not_run
+  miyabi_d8: failed
   miyabi_d8_repeat: not_run
   miyabi_d8_r2: not_run
   independent_checker: not_run
@@ -59,7 +59,12 @@ artifacts:
   - artifacts/duraloco/P08R/20260713_p08r_full_9194a03_r2/manifest.json
   - artifacts/duraloco/P08R/20260713_p08r_d1_9194a03_r2/manifest.json
   - artifacts/duraloco/P08R/20260713_p08r_d2_9194a03_r1/manifest.json
-next_action: "rerun the 1-node to 2-node ladder on the terminal-audit elapsed-contract commit"
+  - artifacts/duraloco/P08R/20260713_p08r_d8_ab605c8_r1/manifest.json
+  - plans/duraloco/phases/P08R_D8_FAILURE_REVIEW_2372056.md
+next_action: >-
+  prove the lease-report repair on the frozen failed D8 authority with the
+  smallest one-node benchmark, then rerun the 1-node to 2-node ladder on one
+  clean repair commit before authorizing a single D8 retry
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

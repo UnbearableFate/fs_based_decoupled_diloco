@@ -164,7 +164,6 @@ def _distributed_lease_guard(root: Path) -> dict[str, object]:
         report["optimizer_head_cas_renewals"] != 10
         or report["stop_head_cas_renewals"] != 1
         or report["lifecycle_substage_renewals"] != len(substages)
-        or report["lifecycle_substage_renewals"] < 1
         or report["lease_authority_loss_events"]
     ):
         raise AssertionError("distributed D8 lacks complete long-stage lease guards")

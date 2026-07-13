@@ -48,20 +48,33 @@ def test_lease_guard_accepts_fast_substages_without_fabricated_heartbeats(tmp_pa
             for _ in range(10)
         ],
         {"event_type": "lease_stage_guard", "stage": "stop_head_cas"},
-        {
-            "event_type": "lease_stage_guard",
-            "stage": "lifecycle_substage_heartbeat",
-        },
-        {
-            "event_type": "lifecycle_substage_heartbeat",
-            "substage": "strict_replay",
-        },
     ]
     path = log_dir / "distributed_committer.jsonl"
     path.write_text("".join(f"{__import__('json').dumps(item)}\n" for item in events))
 
     report = _distributed_lease_guard(tmp_path)
 
-    assert report["lifecycle_substage_renewals"] == 1
+    assert report["lifecycle_substage_renewals"] == 0
     assert report["successor_prepare_heartbeats"] == 0
     assert report["stop_prepare_heartbeats"] == 0
+
+
+def test_lease_guard_rejects_heartbeat_without_matching_guard(tmp_path):
+    log_dir = tmp_path / "logs"
+    log_dir.mkdir()
+    events = [
+        *[
+            {"event_type": "lease_stage_guard", "stage": "optimizer_head_cas"}
+            for _ in range(10)
+        ],
+        {"event_type": "lease_stage_guard", "stage": "stop_head_cas"},
+        {
+            "event_type": "lifecycle_substage_heartbeat",
+            "substage": "successor_prepare",
+        },
+    ]
+    path = log_dir / "distributed_committer.jsonl"
+    path.write_text("".join(f"{__import__('json').dumps(item)}\n" for item in events))
+
+    with pytest.raises(AssertionError, match="complete long-stage lease guards"):
+        _distributed_lease_guard(tmp_path)

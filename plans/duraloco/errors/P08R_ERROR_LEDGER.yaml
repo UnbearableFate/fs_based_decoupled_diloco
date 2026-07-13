@@ -1,6 +1,6 @@
 phase: P08R
 schema: duraloco-error-ledger-v1
-updated_at: "2026-07-13T11:43:00+09:00"
+updated_at: "2026-07-13T12:15:00+09:00"
 entries:
   - error_id: P08R-E001
     attempt_kind: control_plane_orchestration
@@ -166,3 +166,41 @@ entries:
       worktree while continuing to preserve immutable reports under the primary
       checkout. PBS 2371983 passed that corrected D1 shape on the same commit.
     retry_gate: same_commit_d1_retry_then_d2
+
+  - error_id: P08R-E007
+    attempt_kind: d8_factor_one_50x10
+    pbs_job_id: 2372056.opbs
+    runtime_commit: ab605c82f2c88a377c151273cfc5f502fbfee3ef
+    situation: >-
+      The first final eight-node P08R factor-one allocation completed all ten
+      optimizer transitions, terminal snapshot, authoritative stop, terminal
+      strict audit, base report, and the 440-second elapsed contract. The
+      wrapper then failed while creating the P08 performance report.
+    outcome: post_runtime_report_assertion_failure
+    reason: >-
+      The distributed lease report required at least one periodic lifecycle
+      heartbeat. Memoized replay made every guarded substage finish before a
+      periodic heartbeat was necessary, producing the valid count zero. The
+      log still had all ten optimizer-head CAS guards, the stop-head CAS guard,
+      two terminal snapshot guards, exact heartbeat/guard equality, and no
+      lease-authority-loss event. The positive heartbeat lower bound was an
+      obsolete performance-dependent proxy rather than a lease-safety rule.
+    evidence:
+      - artifacts/duraloco/P08R/20260713_p08r_d8_ab605c8_r1/manifest.json
+      - artifacts/duraloco/P08R/20260713_p08r_d8_ab605c8_r1/elapsed_contract.json
+      - artifacts/duraloco/P08R/20260713_p08r_d8_ab605c8_r1/factor_one_base_report.json
+      - plans/duraloco/phases/P08R_D8_FAILURE_REVIEW_2372056.md
+      - tracejob_2372056_exit_status_1
+    allocation_nodes: 8
+    optimizer_transitions: 10
+    runtime_elapsed_seconds: 332.884591101
+    experiment_elapsed_seconds: 340.529032553
+    post_runtime_elapsed_seconds: 6.524666222
+    authority_terminal_audit: pass
+    repair: >-
+      Remove only the minimum-one-heartbeat assertion, retain exact emitted
+      heartbeat-to-guard equality and all mandatory CAS/authority-loss gates,
+      and add zero-heartbeat plus unmatched-heartbeat regressions.
+    retry_gate: >-
+      smallest one-node report-recovery benchmark, then clean-commit targeted
+      replay, full one-node, D1, and D2 qualification before one D8 retry
