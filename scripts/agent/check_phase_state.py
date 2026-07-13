@@ -67,6 +67,7 @@ ACCEPTANCE_COUNTS = {
     "P06C": 24,
     "P07": 24,
     "P08": 25,
+    "P08R": 20,
     "P09": 16,
     "P10": 17,
     "P11": 17,
@@ -122,6 +123,7 @@ PHASE_ORDER = (
     "P06C",
     "P07",
     "P08",
+    "P08R",
     "P10",
     "P11",
     "P12",
@@ -141,7 +143,8 @@ PHASE_DEPENDENCIES = {
     "P06C": {"P06B"},
     "P07": {"P06C"},
     "P08": {"P07"},
-    "P10": {"P08"},
+    "P08R": {"P08"},
+    "P10": {"P08R"},
     "P11": {"P10"},
     "P12": {"P11"},
     "P09": {"P12"},
@@ -154,6 +157,7 @@ TERMINAL_RETRY_PHASES = {
     "P06C",
     "P07",
     "P08",
+    "P08R",
     "P09",
     "P10",
     "P11",
@@ -302,6 +306,7 @@ def validate(payload: dict[str, Any], *, root: Path) -> None:
             "P06B": ("miyabi_d8", "miyabi_d8_pass"),
             "P06C": ("miyabi_d8_r2", "miyabi_d8_r2_pass"),
             "P08": ("miyabi_d8_r2", "miyabi_d8_r2_pass"),
+            "P08R": ("miyabi_d8_r2", "miyabi_d8_r2_pass"),
         }
         terminal_key, terminal_value = terminal_checks.get(
             payload["phase"], ("miyabi_9node", "miyabi_9node_pass")

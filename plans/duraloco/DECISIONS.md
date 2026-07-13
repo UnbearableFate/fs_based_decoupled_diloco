@@ -911,3 +911,28 @@ P05+ 的规范性路线决策生效。
 - Choice: P08R and every later current/future DuraLoCo production, qualification, chaos, and formal experiment allocate exactly eight learner nodes and no dedicated syncer, control, audit, spare, or idle ninth node. Learner-hosted LFEs and floating committers remain within those eight hosts. Historical C9 and completed nine-node-allocation artifacts remain read-only evidence and are never required to be rerun.
 - Performance/evidence: manifests must distinguish allocated and active hosts and fail unless both sets contain exactly the same eight hosts. Lifecycle/report work must fit audited resources on those hosts or run after worker exit; it cannot justify an extra allocation. Forward comparisons use D8 factor-one, D8-R2 modes, SACC variants, and conventional checkpoint baselines that fit the same eight-node envelope.
 - Rejected: reserving an idle ninth node to make allocation shapes look matched; reintroducing a dedicated CRS/audit host; or describing an eight-rank job as a nine-node production topology.
+
+## D-4401 — Ownership-bound verified replay memo
+
+- Choice: fresh open, takeover, explicit verification, CAS ambiguity, external head/epoch jump, manual clear, and corruption suspicion begin with empty-cache strict replay. After one complete successful strict replay, the same process and ownership scope may reuse verified immutable proposal, params, and outer-state identities while still replaying every manifest and causal rule. The memo is deletable, non-authoritative, never serialized, and never crosses an ownership boundary.
+- Rejected: constructing an empty cache for every same-owner no-snapshot replay, or persisting a durable cache that could become a second optimizer authority.
+
+## D-4402 — Transactional replay-cache promotion
+
+- Choice: replay mutates only a scratch copy. Newly verified identities replace the live memo only after the complete replay and head binding succeed. Failure, cancellation, corruption, or stale-head detection leaves the previous live memo unchanged or discards it according to the typed invalidation reason.
+- Rejected: incremental mutation of the live memo while a replay is still partial.
+
+## D-4403 — Exact self-CAS versus suspicious head advance
+
+- Choice: only a successful caller-thread CAS of the exact prepared transition can advance the process memo's head binding without discarding its verified prefix. A head change observed outside that return path, a resolved response ambiguity, conflict, or timeout forces empty-cache strict replay.
+- Rejected: treating every monotonic head sequence as a trusted same-owner advance.
+
+## D-4404 — Lifecycle work remains inside eight learner hosts
+
+- Choice: snapshot pins remain authoritative control transitions. Strict replay, reachability, inventory, and dry-run analysis remain read-only and may overlap only within audited CPU/RSS budgets on the eight learner hosts or run after learner/LFE exit. A stale audit result is discarded, and terminal PASS still requires equality with fresh strict replay.
+- Rejected: allocating a ninth audit/control host or letting an audit worker hold an owner token, write the head, or delete objects.
+
+## D-4405 — Incremental RuntimeView remains conditional
+
+- Choice: first qualify ownership-bound memo and existing snapshots. Incremental post-CAS RuntimeView application is permitted only if matched measurements still project above 440 seconds; it must remain deletable, compare against strict replay, and fall back on every ambiguity.
+- Rejected: changing replay semantics before the smaller verified-object reuse is measured.

@@ -94,6 +94,8 @@ class ReplayCallTelemetry:
     storage_header_bytes: int
     storage_payload_bytes: int
     tensor_payload_bytes: int
+    monotonic_start_ns: int
+    monotonic_end_ns: int
     elapsed_seconds: float
 
     def to_dict(self) -> dict[str, object]:
@@ -113,6 +115,8 @@ class ReplayCallTelemetry:
             "storage_header_bytes": self.storage_header_bytes,
             "storage_payload_bytes": self.storage_payload_bytes,
             "tensor_payload_bytes": self.tensor_payload_bytes,
+            "monotonic_start_ns": self.monotonic_start_ns,
+            "monotonic_end_ns": self.monotonic_end_ns,
             "elapsed_seconds": self.elapsed_seconds,
         }
 
@@ -1403,7 +1407,8 @@ def _replay_telemetry(
     header_bytes: int,
     payload_bytes: int,
     tensor_payload_bytes: int,
-    elapsed_seconds: float,
+    monotonic_start_ns: int,
+    monotonic_end_ns: int,
 ) -> ReplayCallTelemetry:
     return ReplayCallTelemetry(
         call_id=call_id,
@@ -1421,7 +1426,9 @@ def _replay_telemetry(
         storage_header_bytes=header_bytes,
         storage_payload_bytes=payload_bytes,
         tensor_payload_bytes=tensor_payload_bytes,
-        elapsed_seconds=elapsed_seconds,
+        monotonic_start_ns=monotonic_start_ns,
+        monotonic_end_ns=monotonic_end_ns,
+        elapsed_seconds=(monotonic_end_ns - monotonic_start_ns) / 1_000_000_000,
     )
 
 
@@ -1561,11 +1568,11 @@ def replay_snapshot_suffix(
     preflight_get_count: int = 0,
     preflight_header_bytes: int = 0,
     preflight_payload_bytes: int = 0,
-    preflight_elapsed_seconds: float = 0.0,
+    call_started_ns: int | None = None,
 ) -> ReplayModeResult:
     """Replay from the latest valid pinned snapshot, or strictly fall back."""
 
-    started = time.monotonic() - preflight_elapsed_seconds
+    started_ns = call_started_ns if call_started_ns is not None else time.monotonic_ns()
     before = _history_get_count(log.backend) - preflight_get_count
     current_header, current_payload = _read_counters(log.backend)
     header_before = current_header - preflight_header_bytes
@@ -1601,6 +1608,7 @@ def replay_snapshot_suffix(
             get_count = _history_get_count(log.backend) - before
             header_after, payload_after = _read_counters(log.backend)
             cache_entries_after = verified_cache.entry_count
+            ended_ns = time.monotonic_ns()
             telemetry = _replay_telemetry(
                 call_id=call_id,
                 mode="snapshot_suffix",
@@ -1614,7 +1622,8 @@ def replay_snapshot_suffix(
                 header_bytes=header_after - header_before,
                 payload_bytes=payload_after - payload_before,
                 tensor_payload_bytes=io_stats.tensor_payload_bytes,
-                elapsed_seconds=time.monotonic() - started,
+                monotonic_start_ns=started_ns,
+                monotonic_end_ns=ended_ns,
             )
             return ReplayModeResult(
                 replay=result,
@@ -1653,6 +1662,7 @@ def replay_snapshot_suffix(
     get_count = _history_get_count(log.backend) - before
     header_after, payload_after = _read_counters(log.backend)
     cache_entries_after = verified_cache.entry_count
+    ended_ns = time.monotonic_ns()
     telemetry = _replay_telemetry(
         call_id=call_id,
         mode=mode,
@@ -1670,7 +1680,8 @@ def replay_snapshot_suffix(
         header_bytes=header_after - header_before,
         payload_bytes=payload_after - payload_before,
         tensor_payload_bytes=io_stats.tensor_payload_bytes,
-        elapsed_seconds=time.monotonic() - started,
+        monotonic_start_ns=started_ns,
+        monotonic_end_ns=ended_ns,
     )
     return ReplayModeResult(
         replay=result,

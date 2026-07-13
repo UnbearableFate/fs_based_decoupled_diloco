@@ -12,11 +12,14 @@ export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat CUDA_VISIBLE_DEVICES=""
 : "${EXPECTED_COMMIT:?EXPECTED_COMMIT is required}"
 : "${RUN_ID:?RUN_ID is required}"
 : "${ARTIFACT_ROOT:?ARTIFACT_ROOT is required}"
+: "${PHASE:=P08}"
+[[ "$PHASE" == P08 || "$PHASE" == P08R ]]
 PROJECT_ROOT="${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}"
 PYTHON_BIN="$PROJECT_ROOT/.venv/bin/python"
 RUFF_BIN="$PROJECT_ROOT/.venv/bin/ruff"
 cd "$PROJECT_ROOT"
-mkdir -p "$ARTIFACT_ROOT"
+mkdir -p "$(dirname "$ARTIFACT_ROOT")"
+mkdir "$ARTIFACT_ROOT"
 touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log" "$ARTIFACT_ROOT/commands.log"
 export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
 
@@ -28,8 +31,8 @@ finish() {
   qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
   "$PYTHON_BIN" scripts/agent/create_run_manifest.py \
     --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json" \
-    --phase P08 --purpose unit --run-id "$RUN_ID" --schema-version 2 \
-    --validation-shape p08-full-regression-and-static-1node \
+    --phase "$PHASE" --purpose unit --run-id "$RUN_ID" --schema-version 2 \
+    --validation-shape "${PHASE,,}-full-regression-and-static-1node" \
     --backend lustre --config scripts/miyabi/run_duraloco_p08_full_1node.pbs \
     --commands-log commands.log --stdout stdout.log --stderr stderr.log \
     --exit-code "$exit_code" --result "$result" \
@@ -58,7 +61,7 @@ run_command() {
 
 run_command "$RUFF_BIN" check fs_diloco tests scripts/agent benchmarks
 run_command "$PYTHON_BIN" scripts/agent/check_phase_state.py plans/duraloco/STATE.yaml
-run_command "$PYTHON_BIN" scripts/agent/check_phase_state.py plans/duraloco/phases/P08_STATE.yaml
+run_command "$PYTHON_BIN" scripts/agent/check_phase_state.py "plans/duraloco/phases/${PHASE}_STATE.yaml"
 run_command "$PYTHON_BIN" scripts/agent/check_no_embedded_database.py \
   --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/forbidden_surface.json"
 run_command "$PYTHON_BIN" -m pytest -q tests --junitxml "$ARTIFACT_ROOT/full-junit.xml"

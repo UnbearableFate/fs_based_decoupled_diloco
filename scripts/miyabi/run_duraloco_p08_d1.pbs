@@ -12,13 +12,16 @@ export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat WANDB_MODE=disabled
 : "${RUN_ID:?RUN_ID is required}"
 : "${ARTIFACT_ROOT:?ARTIFACT_ROOT is required}"
 : "${STORAGE_ROOT:?STORAGE_ROOT is required}"
+: "${PHASE:=P08}"
+[[ "$PHASE" == P08 || "$PHASE" == P08R ]]
 PROJECT_ROOT="${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}"
 PYTHON_BIN="$PROJECT_ROOT/.venv/bin/python"
 CONFIG="$PROJECT_ROOT/configs/fs_diloco_gpt2_wikitext2_1l_debug.yaml"
 TRAINING_ROOT="$STORAGE_ROOT/training"
 TRAIN_RUN="$RUN_ID-training"
 cd "$PROJECT_ROOT"
-mkdir -p "$ARTIFACT_ROOT" "$TRAINING_ROOT"
+mkdir -p "$(dirname "$ARTIFACT_ROOT")" "$(dirname "$STORAGE_ROOT")"
+mkdir "$ARTIFACT_ROOT" "$STORAGE_ROOT" "$TRAINING_ROOT"
 touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log" "$ARTIFACT_ROOT/commands.log"
 export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
 
@@ -32,8 +35,8 @@ finish() {
   qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
   args=(
     --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json"
-    --phase P08 --purpose contract --run-id "$RUN_ID" --schema-version 2
-    --validation-shape p08-d1-v2-direct-streaming-telemetry-real-gpt2
+    --phase "$PHASE" --purpose contract --run-id "$RUN_ID" --schema-version 2
+    --validation-shape "${PHASE,,}-d1-v2-direct-streaming-telemetry-real-gpt2"
     --backend lustre --model-revision gpt2 --dataset-revision wikitext-2-raw-v1
     --config scripts/miyabi/run_duraloco_p08_d1.pbs --commands-log commands.log
     --stdout stdout.log --stderr stderr.log --exit-code "$exit_code" --result "$result"

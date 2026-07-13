@@ -9,13 +9,16 @@
 set -eEuo pipefail
 export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat WANDB_MODE=disabled
 : "${EXPECTED_COMMIT:?}" "${RUN_ID:?}" "${ARTIFACT_ROOT:?}" "${STORAGE_ROOT:?}"
+: "${PHASE:=P08}"
+[[ "$PHASE" == P08 || "$PHASE" == P08R ]]
 PROJECT_ROOT="${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}"
 PYTHON_BIN="$PROJECT_ROOT/.venv/bin/python"
 CONFIG="$PROJECT_ROOT/configs/duraloco_p06c_tiny_2node.yaml"
 TRAINING_ROOT="$STORAGE_ROOT/training"
 TRAIN_RUN="$RUN_ID-training"
 cd "$PROJECT_ROOT"
-mkdir -p "$ARTIFACT_ROOT" "$TRAINING_ROOT"
+mkdir -p "$(dirname "$ARTIFACT_ROOT")" "$(dirname "$STORAGE_ROOT")"
+mkdir "$ARTIFACT_ROOT" "$STORAGE_ROOT" "$TRAINING_ROOT"
 touch "$ARTIFACT_ROOT/stdout.log" "$ARTIFACT_ROOT/stderr.log" "$ARTIFACT_ROOT/commands.log"
 export PYTHONPATH="$PROJECT_ROOT${PYTHONPATH:+:$PYTHONPATH}"
 
@@ -25,7 +28,7 @@ finish() {
   observed=$?
   if [[ "$result" == pass ]]; then exit_code=0; elif [[ "$observed" -ne 0 ]]; then exit_code=$observed; fi
   qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
-  args=(--root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json" --phase P08 --purpose chaos --run-id "$RUN_ID" --schema-version 2 --validation-shape p08-d2-r2-error-stop-fenced-resume --backend lustre --model-revision synthetic-tiny --dataset-revision synthetic-v1 --config scripts/miyabi/run_duraloco_p08_d2_resume_r2.pbs --commands-log commands.log --stdout stdout.log --stderr stderr.log --exit-code "$exit_code" --result "$result" --termination-kind "$([[ "$result" == pass ]] && echo success || echo test_failure)" --pbs-queue debug-g --requested-resources select=2:mpiprocs=1,walltime=00:15:00 --last-qstat-state R --termination-detail "P08 D2-R2 truthful error stop, cross-host fenced resume, exact duplicate attempts" --assertion "error stop remains in ancestry and a new owner resumes under a higher fence without optimizer-state change" --assertion "active-active same-FWO attempts are exact and every attempt has a joinable stage timeline" --assertion "two learner-hosted LFEs remain within audited resource budgets with zero dedicated syncer nodes")
+  args=(--root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json" --phase "$PHASE" --purpose chaos --run-id "$RUN_ID" --schema-version 2 --validation-shape "${PHASE,,}-d2-r2-error-stop-fenced-resume" --backend lustre --model-revision synthetic-tiny --dataset-revision synthetic-v1 --config scripts/miyabi/run_duraloco_p08_d2_resume_r2.pbs --commands-log commands.log --stdout stdout.log --stderr stderr.log --exit-code "$exit_code" --result "$result" --termination-kind "$([[ "$result" == pass ]] && echo success || echo test_failure)" --pbs-queue debug-g --requested-resources select=2:mpiprocs=1,walltime=00:15:00 --last-qstat-state R --termination-detail "P08 D2-R2 truthful error stop, cross-host fenced resume, exact duplicate attempts" --assertion "error stop remains in ancestry and a new owner resumes under a higher fence without optimizer-state change" --assertion "active-active same-FWO attempts are exact and every attempt has a joinable stage timeline" --assertion "two learner-hosted LFEs remain within audited resource budgets with zero dedicated syncer nodes")
   [[ -f "$ARTIFACT_ROOT/d2_report.json" ]] && args+=(--stage-metrics-path d2_report.json)
   "$PYTHON_BIN" scripts/agent/create_run_manifest.py "${args[@]}" || true
 }

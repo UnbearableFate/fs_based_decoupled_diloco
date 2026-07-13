@@ -313,7 +313,7 @@ class ProductionTransactionalLog:
     def replay_from_snapshot(self) -> ReplayModeResult:
         """Use the newest valid ancestry-pinned snapshot with strict fallback."""
 
-        preflight_started = time.monotonic()
+        preflight_started_ns = time.monotonic_ns()
         gets_before = sum(
             record.operation == "get" for record in self.backend.history
         )
@@ -345,7 +345,7 @@ class ProductionTransactionalLog:
             preflight_payload_bytes=(
                 reads_after["payload_bytes"] - reads_before["payload_bytes"]
             ),
-            preflight_elapsed_seconds=time.monotonic() - preflight_started,
+            call_started_ns=preflight_started_ns,
         )
         self.last_replay_telemetry = result.telemetry
         self._bind_replay_cache(result.replay)

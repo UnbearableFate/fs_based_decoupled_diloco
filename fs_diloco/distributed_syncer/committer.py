@@ -83,6 +83,57 @@ def _committed_membership_candidates(selected, membership: MembershipRevisionV1)
     )
 
 
+def _replay_telemetry_payload(log) -> dict[str, object] | None:
+    telemetry = getattr(log, "last_replay_telemetry", None)
+    return telemetry.to_dict() if telemetry is not None else None
+
+
+def _record_replay_telemetry(
+    *,
+    recorder: StageRecorder,
+    log,
+    substage: str,
+    work_order_id: str,
+    membership_revision: int,
+) -> None:
+    payload = _replay_telemetry_payload(log)
+    if payload is None:
+        return
+    recorder.record(
+        "authority_replay",
+        start_ns=int(payload["monotonic_start_ns"]),
+        end_ns=int(payload["monotonic_end_ns"]),
+        work_order_id=work_order_id,
+        commit_seq=int(payload["head_commit_seq"]),
+        head_commit_id=str(payload["head_commit_id"]),
+        fencing_epoch=int(payload["fencing_epoch"]),
+        membership_revision=membership_revision,
+        counters={
+            "cache_entries_before": int(payload["cache_entries_before"]),
+            "cache_entries_after": int(payload["cache_entries_after"]),
+            "promoted_entries": int(payload["promoted_entries"]),
+            "storage_get_count": int(payload["storage_get_count"]),
+            "storage_header_bytes": int(payload["storage_header_bytes"]),
+            "storage_payload_bytes": int(payload["storage_payload_bytes"]),
+            "tensor_payload_bytes": int(payload["tensor_payload_bytes"]),
+        },
+        attributes={
+            "call_id": payload["call_id"],
+            "mode": payload["mode"],
+            "reason": payload["reason"],
+            "owner_id": payload["owner_id"],
+            "owner_session_id": payload["owner_session_id"],
+            "substage": substage,
+        },
+    )
+
+
+def _log_replay_telemetry(*, logger, log, substage: str) -> None:
+    payload = _replay_telemetry_payload(log)
+    if payload is not None:
+        logger.event("authority_replay", substage=substage, **payload)
+
+
 def _renew_for_authoritative_stage(
     *, lease_manager, loaded_lease, config, logger, stage: str
 ):
@@ -298,6 +349,9 @@ def _finalize_committer_stop(
                     config=config,
                     logger=logger,
                 )
+                _log_replay_telemetry(
+                    logger=logger, log=log, substage="stop_prepare"
+                )
                 loaded_lease = _renew_for_authoritative_stage(
                     lease_manager=lease_manager,
                     loaded_lease=loaded_lease,
@@ -313,6 +367,9 @@ def _finalize_committer_stop(
                     loaded_lease=loaded_lease,
                     config=config,
                     logger=logger,
+                )
+                _log_replay_telemetry(
+                    logger=logger, log=log, substage="stop_post_cas_replay"
                 )
                 if view.commit_id != result.commit_id or view.authoritative_stop is None:
                     raise RuntimeError("guarded committer stop and replay-derived view differ")
@@ -916,6 +973,13 @@ def run_committer(
                     config=config,
                     logger=logger,
                 )
+                _record_replay_telemetry(
+                    recorder=stage_recorder,
+                    log=log,
+                    substage="successor_prepare",
+                    work_order_id=order.work_order_id,
+                    membership_revision=order.membership_revision,
+                )
                 stage_recorder.record(
                     "successor_publication",
                     start_ns=successor_started_ns,
@@ -986,6 +1050,13 @@ def run_committer(
                 loaded_lease=loaded_lease,
                 config=config,
                 logger=logger,
+            )
+            _record_replay_telemetry(
+                recorder=stage_recorder,
+                log=log,
+                substage="post_cas_replay",
+                work_order_id=order.work_order_id,
+                membership_revision=order.membership_revision,
             )
             next_renew = time.monotonic() + config.coordination.renew_interval_seconds
             fragments[fragment_id] = decode_production_params(params_data)
