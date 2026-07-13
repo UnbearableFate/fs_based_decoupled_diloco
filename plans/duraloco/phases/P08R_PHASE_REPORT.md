@@ -74,3 +74,10 @@ The eight-node retry is now fail-closed. The report repair must first pass a
 smallest one-node recovery benchmark against the frozen failed authority, then
 targeted replay, full one-node, D1, and D2 on one clean repair commit. Only then
 may one fresh D8 retry be authorized. No ninth node is authorized.
+
+That recovery gate passed on clean runtime commit
+`16e8c4242022c965db3c6fdf30021a5f0c8f4958`: frozen-authority report recovery
+PBS `2372168`, targeted replay PBS `2372171`, full one-node PBS `2372183` (520
+passed, one skipped), D1 PBS `2372186`, and D2 PBS `2372189`. The source head
+digest was unchanged by report recovery. One D8 factor-one retry is explicitly
+authorized on this exact commit; another immediate retry is not.

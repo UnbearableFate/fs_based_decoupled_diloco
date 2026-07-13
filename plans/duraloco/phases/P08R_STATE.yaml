@@ -9,12 +9,12 @@ current_loop: 2
 current_goal: "complete the pre-P10 P08R 440-second 50x10 performance gate"
 attempts_for_current_failure: 1
 last_terminal_failure_review: plans/duraloco/phases/P08R_D8_FAILURE_REVIEW_2372056.md
-terminal_retry_authorized: false
+terminal_retry_authorized: true
 terminal_retry_qualification:
-  targeted_1node_benchmark: null
-  miyabi_1node: null
-  miyabi_2node: null
-last_verified_commit: ab605c82f2c88a377c151273cfc5f502fbfee3ef
+  targeted_1node_benchmark: 2372171.opbs
+  miyabi_1node: 2372186.opbs
+  miyabi_2node: 2372189.opbs
+last_verified_commit: 16e8c4242022c965db3c6fdf30021a5f0c8f4958
 checks:
   local_static: static_pass
   targeted_real_prefix_1node: miyabi_1node_pass
@@ -34,17 +34,17 @@ acceptance:
   P08R-A06: {result: pass, evidence: [2371915.opbs, external jump and CAS ambiguity tests]}
   P08R-A07: {result: pass, evidence: [ProductionReplayCache process-local only, no serialization path]}
   P08R-A08: {result: pass, evidence: [2371915.opbs, 58 focused strict/memo/snapshot tests]}
-  P08R-A09: {result: pass, evidence: [2371983.opbs, 2371993.opbs, authority_replay raw stage events]}
+  P08R-A09: {result: pass, evidence: [2372186.opbs, 2372189.opbs, authority_replay raw stage events]}
   P08R-A10: {result: not_run, evidence: []}
   P08R-A11: {result: not_run, evidence: []}
   P08R-A12: {result: not_run, evidence: []}
-  P08R-A13: {result: pass, evidence: [2371964.opbs, 2371978.opbs, 2371983.opbs]}
-  P08R-A14: {result: pass, evidence: [2371993.opbs, cross-host fence 2 resume and exact attempts]}
+  P08R-A13: {result: pass, evidence: [2372168.opbs, 2372171.opbs, 2372183.opbs, 2372186.opbs]}
+  P08R-A14: {result: pass, evidence: [2372189.opbs, cross-host fence 2 resume and exact attempts]}
   P08R-A15: {result: not_run, evidence: []}
   P08R-A16: {result: not_run, evidence: []}
   P08R-A17: {result: not_run, evidence: []}
   P08R-A18: {result: not_run, evidence: []}
-  P08R-A19: {result: pass, evidence: [2371978.opbs, forbidden_surface.json finding_count=0]}
+  P08R-A19: {result: pass, evidence: [2372183.opbs, forbidden_surface.json finding_count=0]}
   P08R-A20: {result: not_run, evidence: []}
 open_decisions: []
 open_blockers: []
@@ -62,11 +62,15 @@ artifacts:
   - artifacts/duraloco/P08R/20260713_p08r_d8_ab605c8_r1/manifest.json
   - artifacts/duraloco/P08R/20260713_p08r_report_3eefbbb_r1/manifest.json
   - artifacts/duraloco/P08R/20260713_p08r_report_dac69f2_r2/manifest.json
+  - artifacts/duraloco/P08R/20260713_p08r_report_16e8c42_r3/manifest.json
+  - artifacts/duraloco/P08R/20260713_p08r_replay_16e8c42_r8/manifest.json
+  - artifacts/duraloco/P08R/20260713_p08r_full_16e8c42_r4/manifest.json
+  - artifacts/duraloco/P08R/20260713_p08r_d1_16e8c42_r4/manifest.json
+  - artifacts/duraloco/P08R/20260713_p08r_d2_16e8c42_r3/manifest.json
   - plans/duraloco/phases/P08R_D8_FAILURE_REVIEW_2372056.md
 next_action: >-
-  prove the lease-report repair on the frozen failed D8 authority with the
-  smallest one-node benchmark, then rerun the 1-node to 2-node ladder on one
-  clean repair commit before authorizing a single D8 retry
+  use the one authorized D8 factor-one retry on qualified clean runtime commit
+  16e8c4242022c965db3c6fdf30021a5f0c8f4958; do not resubmit again on failure
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null
