@@ -9,6 +9,8 @@ from fs_diloco.coordination import OwnerToken
 from fs_diloco.log import CommitConflict
 from fs_diloco.log.codec import content_ref
 from fs_diloco.log.snapshot import SnapshotManifestV1
+from fs_diloco.log.replay import ProductionReplayCache
+from fs_diloco.log.errors import VerificationError
 from fs_diloco.protocol.schemas import ControlCommitManifest, SnapshotProjection
 from tests.coordination.test_production_fencing import _initialize, _prepare, _proposal
 
@@ -159,6 +161,50 @@ def test_snapshot_suffix_matches_strict_replay_and_avoids_covered_tensor_reads()
         record.operation == "get" and record.key in covered_large_keys
         for record in accelerated_records
     )
+
+
+def test_same_owner_snapshot_suffix_reuses_verified_live_suffix_tensors():
+    backend, log = _initialize("p08r-snapshot-live-suffix-memo")
+    _activate(log)
+    first = _proposal(log, learner="learner-before-snapshot")
+    log.commit_prepared(_prepare(log, first, "optimizer-before-snapshot"))
+    log.commit_snapshot(request_id="snapshot-a")
+    second = _proposal(log, learner="learner-after-snapshot")
+    prepared = _prepare(log, second, "optimizer-after-snapshot")
+    log.commit_prepared(prepared)
+
+    history_start = len(backend.history)
+    accelerated = log.replay_from_snapshot()
+    records = backend.history[history_start:]
+    suffix_large_keys = {
+        second.payload_key,
+        prepared.commit.new_params_ref.key,
+        prepared.commit.new_outer_state_ref.key,
+    }
+
+    assert accelerated.mode == "snapshot_suffix"
+    assert accelerated.telemetry is not None
+    assert accelerated.telemetry.tensor_payload_bytes == 0
+    assert not any(
+        record.operation == "get" and record.key in suffix_large_keys
+        for record in records
+    )
+    assert log.replay_from_snapshot().telemetry.tensor_payload_bytes == 0
+
+
+def test_snapshot_and_live_cache_conflict_never_partially_merges():
+    identity = ("key", "a" * 64, 8)
+    target = ProductionReplayCache(set(), {identity: 2}, {})
+    source = ProductionReplayCache(
+        {("proposal", "b" * 64, 4)},
+        {identity: 3},
+        {},
+    )
+
+    with pytest.raises(VerificationError, match="identity conflict"):
+        target.merge_verified_from(source)
+
+    assert target == ProductionReplayCache(set(), {identity: 2}, {})
 
 
 def test_snapshot_mode_corruption_falls_back_to_equal_strict_replay():

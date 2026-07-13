@@ -179,6 +179,24 @@ class ProductionReplayCache:
         self.params_numels = dict(other.params_numels)
         self.outer_numels = dict(other.outer_numels)
 
+    def merge_verified_from(self, other: "ProductionReplayCache") -> None:
+        """Conflict-check and transactionally union another verified cache."""
+
+        merged = self.copy()
+        merged.proposal_payloads.update(other.proposal_payloads)
+        for target, source, kind in (
+            (merged.params_numels, other.params_numels, "params"),
+            (merged.outer_numels, other.outer_numels, "outer-state"),
+        ):
+            for identity, value in source.items():
+                prior = target.get(identity)
+                if prior is not None and prior != value:
+                    raise VerificationError(
+                        f"verified replay cache {kind} identity conflict"
+                    )
+                target[identity] = value
+        self.replace_from(merged)
+
 
 @dataclass
 class ReplayIOStats:
@@ -1590,6 +1608,8 @@ def replay_snapshot_suffix(
             overlay = _SnapshotOverlayBackend(log.backend, objects)
             overlay_log = TransactionalLog(overlay, log.manifest)
             verified_cache = _cache_from_snapshot(snapshot)
+            if production_cache is not None:
+                verified_cache.merge_verified_from(production_cache)
             io_stats = ReplayIOStats()
             result = replay_log(
                 overlay_log,
