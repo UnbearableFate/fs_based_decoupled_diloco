@@ -93,6 +93,7 @@ class ReplayCallTelemetry:
     storage_get_count: int
     storage_header_bytes: int
     storage_payload_bytes: int
+    tensor_payload_bytes: int
     elapsed_seconds: float
 
     def to_dict(self) -> dict[str, object]:
@@ -111,6 +112,7 @@ class ReplayCallTelemetry:
             "storage_get_count": self.storage_get_count,
             "storage_header_bytes": self.storage_header_bytes,
             "storage_payload_bytes": self.storage_payload_bytes,
+            "tensor_payload_bytes": self.tensor_payload_bytes,
             "elapsed_seconds": self.elapsed_seconds,
         }
 
@@ -172,6 +174,13 @@ class ProductionReplayCache:
         self.proposal_payloads = set(other.proposal_payloads)
         self.params_numels = dict(other.params_numels)
         self.outer_numels = dict(other.outer_numels)
+
+
+@dataclass
+class ReplayIOStats:
+    """Logical large-tensor bytes validated by one replay call."""
+
+    tensor_payload_bytes: int = 0
 
 
 class _SnapshotOverlayBackend:
@@ -805,6 +814,7 @@ def _replay_production_log(
     *,
     cache: ProductionReplayCache | None = None,
     validation_device: Any = None,
+    io_stats: ReplayIOStats | None = None,
 ) -> ReplayResult:
     from .production_codec import (
         PRODUCTION_CODEC,
@@ -927,16 +937,20 @@ def _replay_production_log(
         outer_key = _ref_identity(fragment.outer_state_ref)
         params_numel = cached_params.get(params_key)
         if params_numel is None:
-            params = decode_production_params(
-                verified_get(log.backend, fragment.params_ref, commit_seq=0)
-            )
+            params_data = verified_get(log.backend, fragment.params_ref, commit_seq=0)
+            if io_stats is not None:
+                io_stats.tensor_payload_bytes += len(params_data)
+            params = decode_production_params(params_data)
             params_numel = int(params.numel())
             cached_params[params_key] = params_numel
         outer_numels = cached_outer.get(outer_key)
         if outer_numels is None:
-            outer = decode_production_outer_state(
-                verified_get(log.backend, fragment.outer_state_ref, commit_seq=0)
+            outer_data = verified_get(
+                log.backend, fragment.outer_state_ref, commit_seq=0
             )
+            if io_stats is not None:
+                io_stats.tensor_payload_bytes += len(outer_data)
+            outer = decode_production_outer_state(outer_data)
             outer_numels = frozenset(
                 int(item.numel()) for key, item in outer.items() if key != "step"
             )
@@ -1208,6 +1222,8 @@ def _replay_production_log(
             payload_identity = _ref_identity(payload_ref)
             if payload_identity not in cached_proposals:
                 payload = verified_get(log.backend, payload_ref, commit_seq=index)
+                if io_stats is not None:
+                    io_stats.tensor_payload_bytes += len(payload)
                 validate_production_tensor_payload(
                     payload,
                     tensor_key=proposal.tensor_key,
@@ -1241,16 +1257,22 @@ def _replay_production_log(
         outer_key = _ref_identity(commit.new_outer_state_ref)
         params_numel = cached_params.get(params_key)
         if params_numel is None:
-            new_params = decode_production_params(
-                verified_get(log.backend, commit.new_params_ref, commit_seq=index)
+            params_data = verified_get(
+                log.backend, commit.new_params_ref, commit_seq=index
             )
+            if io_stats is not None:
+                io_stats.tensor_payload_bytes += len(params_data)
+            new_params = decode_production_params(params_data)
             params_numel = int(new_params.numel())
             cached_params[params_key] = params_numel
         outer_numels = cached_outer.get(outer_key)
         if outer_numels is None:
-            new_outer = decode_production_outer_state(
-                verified_get(log.backend, commit.new_outer_state_ref, commit_seq=index)
+            outer_data = verified_get(
+                log.backend, commit.new_outer_state_ref, commit_seq=index
             )
+            if io_stats is not None:
+                io_stats.tensor_payload_bytes += len(outer_data)
+            new_outer = decode_production_outer_state(outer_data)
             outer_numels = frozenset(
                 int(item.numel()) for key, item in new_outer.items() if key != "step"
             )
@@ -1338,6 +1360,7 @@ def replay_log(
     *,
     production_cache: ProductionReplayCache | None = None,
     production_validation_device: Any = None,
+    production_io_stats: ReplayIOStats | None = None,
 ) -> ReplayResult:
     if log.spec.payload_codec == "canonical-float-hex-v1":
         return _replay_reference_log(log)
@@ -1346,6 +1369,7 @@ def replay_log(
             log,
             cache=production_cache,
             validation_device=production_validation_device,
+            io_stats=production_io_stats,
         )
     raise VerificationError(f"unsupported replay payload codec: {log.spec.payload_codec}")
 
@@ -1378,6 +1402,7 @@ def _replay_telemetry(
     get_count: int,
     header_bytes: int,
     payload_bytes: int,
+    tensor_payload_bytes: int,
     elapsed_seconds: float,
 ) -> ReplayCallTelemetry:
     return ReplayCallTelemetry(
@@ -1395,6 +1420,7 @@ def _replay_telemetry(
         storage_get_count=get_count,
         storage_header_bytes=header_bytes,
         storage_payload_bytes=payload_bytes,
+        tensor_payload_bytes=tensor_payload_bytes,
         elapsed_seconds=elapsed_seconds,
     )
 
@@ -1557,10 +1583,12 @@ def replay_snapshot_suffix(
             overlay = _SnapshotOverlayBackend(log.backend, objects)
             overlay_log = TransactionalLog(overlay, log.manifest)
             verified_cache = _cache_from_snapshot(snapshot)
+            io_stats = ReplayIOStats()
             result = replay_log(
                 overlay_log,
                 production_cache=verified_cache,
                 production_validation_device=production_validation_device,
+                production_io_stats=io_stats,
             )
             if (
                 result.loaded_head.manifest != log.load_head().manifest
@@ -1585,6 +1613,7 @@ def replay_snapshot_suffix(
                 get_count=get_count,
                 header_bytes=header_after - header_before,
                 payload_bytes=payload_after - payload_before,
+                tensor_payload_bytes=io_stats.tensor_payload_bytes,
                 elapsed_seconds=time.monotonic() - started,
             )
             return ReplayModeResult(
@@ -1612,10 +1641,12 @@ def replay_snapshot_suffix(
         production_cache.copy() if reuse_prefix else ProductionReplayCache.empty()
     )
     mode = "memoized_prefix" if reuse_prefix else "strict_fallback"
+    io_stats = ReplayIOStats()
     result = replay_log(
         log,
         production_cache=verified_cache,
         production_validation_device=production_validation_device,
+        production_io_stats=io_stats,
     )
     if production_cache is not None:
         production_cache.replace_from(verified_cache)
@@ -1638,6 +1669,7 @@ def replay_snapshot_suffix(
         get_count=get_count,
         header_bytes=header_after - header_before,
         payload_bytes=payload_after - payload_before,
+        tensor_payload_bytes=io_stats.tensor_payload_bytes,
         elapsed_seconds=time.monotonic() - started,
     )
     return ReplayModeResult(

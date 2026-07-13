@@ -1,6 +1,6 @@
 phase: P08R
 schema: duraloco-error-ledger-v1
-updated_at: "2026-07-13T11:15:00+09:00"
+updated_at: "2026-07-13T11:18:00+09:00"
 entries:
   - error_id: P08R-E001
     attempt_kind: control_plane_orchestration
@@ -78,4 +78,36 @@ entries:
       Include preflight gets, header bytes, payload bytes, and elapsed time in
       the causal replay call counters, and add P08R to the manifest helper's
       closed phase vocabulary.
+    retry_gate: static_checks_then_same_1node_targeted_shape
+
+  - error_id: P08R-E004
+    attempt_kind: targeted_1node_real_prefix_replay
+    pbs_job_id: 2371905.opbs
+    runtime_commit: 668101a8aca3e40bd937dffe23b1b9eb2b03ccb3
+    situation: >-
+      The third one-node attempt passed all 58 focused tests, completed the
+      expensive strict and warm reads of the historical ten-transition GPT-2
+      prefix, then failed the benchmark acceptance assertion before writing
+      replay_report.json.
+    outcome: benchmark_measurement_failure
+    reason: >-
+      The benchmark interpreted the POSIX backend's aggregate payload_bytes as
+      tensor-only bytes. Warm replay correctly reread authoritative manifests
+      and head/frontier objects, so aggregate payload bytes were nonzero even
+      though cached proposal/params/outer-state payloads were skipped. The
+      assertion conflated required metadata replay with forbidden historical
+      tensor rereads.
+    evidence:
+      - artifacts/duraloco/P08R/20260713_p08r_replay_668101a_r3/manifest.json
+      - artifacts/duraloco/P08R/20260713_p08r_replay_668101a_r3/stderr.log
+      - tracejob_2371905_exit_status_1_walltime_114s
+    allocation_nodes: 1
+    tests: {passed: 58, failed: 0}
+    real_prefix_benchmark_started: true
+    real_prefix_report_written: false
+    repair: >-
+      Attribute logical proposal/params/outer-state validation bytes separately
+      from backend-wide manifest and metadata payload bytes. Gate warm replay on
+      tensor_payload_bytes=0 while retaining aggregate storage bytes in the raw
+      report.
     retry_gate: static_checks_then_same_1node_targeted_shape

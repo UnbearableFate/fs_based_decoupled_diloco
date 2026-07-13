@@ -80,8 +80,11 @@ def main() -> int:
         raise RuntimeError("strict and memoized replay digests differ")
     if any(call["optimizer_transition_count"] != 10 for call in strict_calls + warm_calls):
         raise RuntimeError("benchmark input is not the frozen ten-transition prefix")
-    prior_payloads = [int(call["storage_payload_bytes"]) for call in warm_calls[1:]]
-    if any(value != 0 for value in prior_payloads):
+    prior_tensor_payloads = [
+        int(call["replay_telemetry"]["tensor_payload_bytes"])
+        for call in warm_calls[1:]
+    ]
+    if any(value != 0 for value in prior_tensor_payloads):
         raise RuntimeError("same-owner warm replay reread verified tensor payload bytes")
 
     strict_total = sum(int(call["elapsed_ns"]) for call in strict_calls)
@@ -100,7 +103,10 @@ def main() -> int:
         "strict_total_payload_bytes": sum(
             int(call["storage_payload_bytes"]) for call in strict_calls
         ),
-        "steady_warm_total_payload_bytes": sum(prior_payloads),
+        "steady_warm_total_storage_payload_bytes": sum(
+            int(call["storage_payload_bytes"]) for call in warm_calls[1:]
+        ),
+        "steady_warm_total_tensor_payload_bytes": sum(prior_tensor_payloads),
         "committed_state_digest": digests.pop(),
         "status": "PASS",
     }

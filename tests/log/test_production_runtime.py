@@ -382,6 +382,7 @@ def test_no_snapshot_same_process_reuses_verified_prefix_with_byte_attribution()
     assert second.telemetry is not None
     assert second.telemetry.cache_entries_before > 0
     assert second.telemetry.promoted_entries == 0
+    assert second.telemetry.tensor_payload_bytes == 0
     assert not any(
         record.operation == "get" and record.key in large_keys for record in records
     )
