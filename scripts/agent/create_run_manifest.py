@@ -116,6 +116,7 @@ def main(argv: list[str] | None = None) -> int:
         "P06C",
         "P07",
         "P08",
+        "P08R",
         "P09",
         "P10",
         "P11",

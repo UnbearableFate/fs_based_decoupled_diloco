@@ -19,12 +19,16 @@ next_phase: P10
 
 Recover the P06B/M00 50×10 wall-clock envelope without weakening any P08
 correctness guarantee. The hard target is **440 seconds or less** for each
-frozen final 50×10 shape:
+frozen eight-node production 50×10 shape:
 
-1. C9/no-LFE control;
-2. D8 factor-one;
-3. D8-R2 with the frozen controlled executor failure and P07 lifecycle
+1. D8 factor-one;
+2. D8-R2 with the frozen controlled executor failure and P07 lifecycle
    integration.
+
+No current or future P08R run may allocate a ninth node. Historical C9 and
+P08 nine-node-allocation artifacts remain evidence of completed phases only;
+they are not rerun, are not an acceptance dependency, and do not define the
+forward production topology.
 
 P08 remains completed. P08R is a pre-P10 performance qualification overlay,
 not a rewrite of the P08 verdict or protocol generation. P10 execution waits
@@ -49,12 +53,12 @@ inside or outside the claim.
 
 The following are immutable across comparisons:
 
-- config: `configs/duraloco_milestone_gpt2_9node_50x10.yaml`;
-- config digest: `bea7c7b32680370e3cc46864d90476d5d542aa4cde80081c80acf4ce3c87179d`;
+- config: `configs/duraloco_milestone_gpt2_8node_50x10.yaml`;
+- config digest: `532dabdeaf3f100ff57eea0f469ab63520197d93f95a6ca797d729c55e2c84d1`;
 - GPT-2, WikiText-2 raw-v1, seed 1337;
 - eight learners, 50 local steps × ten optimizer transitions;
-- nine-node allocation for matched final runs, with the same eight learner
-  hosts and one control/audit host role;
+- exactly eight allocated nodes and eight learner hosts for every final run;
+- no dedicated syncer, control, audit, spare, or idle ninth node;
 - bfloat16 proposal transport, float32 accumulation/committed parameters;
 - one global head, the frozen selection/weighting/outer-optimizer policy, and
   the existing factor-one or hedged-R2 identities;
@@ -69,9 +73,12 @@ timeout or excluding a stage does not improve performance.
 
 | Shape | Current P08 | Historical reference | Key observation |
 |---|---:|---:|---|
-| C9/no-LFE | 834 s | M00 444 s | LFE is absent; slowdown is authority/replay |
 | D8 factor-one | 950 s | P06B 427 s report / 470 s phase summary | GPU and LFE are faster, commit loop is slower |
 | D8-R2 | 725 s | P06C 528 s | snapshots bound replay, lifecycle audits cost 280.82 s |
+
+The historical C9/no-LFE result (834 s) remains diagnostic evidence that the
+regression is in authority/replay rather than learner compute. It is not a
+forward acceptance run.
 
 The P08 factor-one run proves this is not a learner or LFE regression:
 
@@ -121,8 +128,8 @@ Supporting substage gates:
 - warm same-owner replay must read zero bytes from previously verified
   params/outer-state ObjectRefs; it may read manifests and newly introduced
   objects;
-- GPU-step mean regression versus matched no-LFE: ≤ 2% for factor one and
-  ≤ 5% for R2;
+- GPU-step mean regression versus the accepted historical D8 baseline and the
+  new same-commit factor-one repetitions: ≤ 2% for factor one and ≤ 5% for R2;
 - telemetry/report overhead: ≤ 2% runtime and ≤ 25 s absolute post-run.
 
 ## 5. Decisions to freeze before implementation
@@ -150,14 +157,15 @@ same-owner head advance and may retain previously verified immutable objects.
 Any head change not reconciled to that exact request/commit is suspicious and
 forces empty-cache strict replay.
 
-### D-4404 — Snapshot and lifecycle separation
+### D-4404 — Snapshot and lifecycle separation within eight nodes
 
 Snapshot pinning may remain on the authoritative committer path, but strict
 replay, reachability, inventory, and dry-run analysis are read-only audits.
-They may run on the ninth control/audit host against an explicit immutable
-head binding and be overlapped with training. A stale audit result is discarded
-and never affects authority. The terminal report still requires a final audit
-equal to fresh strict replay.
+They may be overlapped only within the fixed CPU/RSS budget of the existing
+eight learner hosts, or deferred until learner/LFE processes exit. They may
+not justify another allocation. A stale audit result is discarded and never
+affects authority. The terminal report still requires a final audit equal to
+fresh strict replay.
 
 ### D-4405 — No incremental-view shortcut without proof
 
@@ -222,10 +230,12 @@ reconstructs the exact terminal digest without rereading an unbounded prefix.
 
 ### Loop 3 — Snapshot/lifecycle critical-path removal
 
-Use the ninth node as a read-only lifecycle/audit worker. Keep snapshot pins,
-single-head CAS, two-snapshot retention, reachability types, capsule roots, and
-dry-run deletion unchanged. Overlap head-bound audit work with subsequent
-learner intervals; reconcile the final head before PASS.
+Keep snapshot pins, single-head CAS, two-snapshot retention, reachability
+types, capsule roots, and dry-run deletion unchanged. First remove redundant
+same-owner replay. If lifecycle work still exceeds budget, run a bounded
+read-only audit worker on an existing learner host using the audited LFE CPU/
+RSS envelope, or defer the final audit until local learner/LFE exit. Reconcile
+the final head before PASS; a ninth host is prohibited.
 
 Failure/cancellation cases:
 
@@ -263,20 +273,21 @@ On one clean implementation commit, execute strictly in order:
 2. full one-node suite and large-object benchmark;
 3. D1 real GPT-2 smoke;
 4. D2 ownership/takeover/ambiguity qualification;
-5. C9/no-LFE 50×10;
-6. D8 factor-one 50×10 twice, sequentially, with fresh namespaces;
-7. D8-R2 controlled-fault/lifecycle 50×10;
-8. independent Checker on a later persistence commit.
+5. D8 factor-one 50×10 twice, sequentially, with fresh namespaces;
+6. D8-R2 controlled-fault/lifecycle 50×10;
+7. independent Checker on a later persistence commit.
 
-Do not run final 9-node arms concurrently; shared-Lustre interference would
-invalidate the 440-second claim. Both factor-one repeats must be ≤ 440 s and
-their experiment elapsed times must differ by no more than 10%. C9, factor-one,
-and R2 must use the same runtime commit/config/seed and matched telemetry.
+Final jobs request exactly `select=8:mpiprocs=1` and launch exactly eight
+learner-host ranks. Do not run final arms concurrently; shared-Lustre
+interference would invalidate the 440-second claim. Both factor-one repeats
+must be ≤ 440 s and their experiment elapsed times must differ by no more than
+10%. Factor-one and R2 must use the same runtime commit/config/seed and matched
+telemetry.
 
-After any non-transient 9-node terminal failure, preserve the failure manifest
+After any non-transient 8-node terminal failure, preserve the failure manifest
 and stage timings, write a root-cause review, prove the repair with the smallest
 compute benchmark, rerun clean 1-node and 2-node qualification, and make only
-one fresh 9-node retry. Never reuse a run namespace.
+one fresh 8-node retry. Never reuse a run namespace.
 
 ## 7. Acceptance IDs
 
@@ -294,7 +305,7 @@ one fresh 9-node retry. Never reuse a run namespace.
 - [ ] P08R-A12: telemetry overhead remains ≤ 2% and all expensive work is attributed;
 - [ ] P08R-A13: one-node real-prefix/full and D1 gates pass;
 - [ ] P08R-A14: D2 takeover/ambiguity/lease qualification passes;
-- [ ] P08R-A15: C9/no-LFE complete experiment ≤ 440 s;
+- [ ] P08R-A15: every final manifest proves exactly eight allocated/active learner nodes and zero dedicated/idle control nodes;
 - [ ] P08R-A16: two sequential D8 factor-one complete experiments are each ≤ 440 s;
 - [ ] P08R-A17: D8-R2 fault+lifecycle complete experiment ≤ 440 s;
 - [ ] P08R-A18: GPU/LFE numeric, interference, affinity, RSS, and I/O gates do not regress;
@@ -313,7 +324,7 @@ The independent Checker must:
 - verify no benchmark switch disables validation, SHA/finite checks, fsync,
   fencing, lease renewal, or lifecycle roots;
 - recompute elapsed time from raw monotonic events and reject missing stages;
-- verify both factor-one repetitions and C9/R2 matched bindings;
+- verify both factor-one repetitions and the R2 matched binding;
 - rerun P07/P08 lifecycle, recovery, and active-surface database regressions;
 - return only `PASS`, `PASS_WITH_FOLLOWUPS`, or `BLOCKED`; completion requires
   PASS or PASS_WITH_FOLLOWUPS with no required-gate follow-up.
@@ -331,7 +342,7 @@ fs_diloco/telemetry/                     replay/lifecycle performance events
 benchmarks/                              real-prefix replay scaling benchmark
 tests/log/                               strict/memo/snapshot equivalence
 tests/distributed_syncer/                owner/head/ambiguity invalidation
-scripts/miyabi/                          1-node, D2, C9, D8, R2, Checker wrappers
+scripts/miyabi/                          1-node, D2, D8, R2, Checker wrappers
 ```
 
 Do not introduce an embedded database, durable replay cache, parallel log,
@@ -343,5 +354,5 @@ Create branch `codex/duraloco-p08r-replay-440s` from the clean P08 persistence
 tip. Before modifying replay, add the real-prefix replay scaling benchmark and
 RED tests proving that no-snapshot fallback currently discards reusable
 verified tensor identities. The first compute allocation is one node only; no
-new 9-node job is authorized until RED→GREEN, full one-node, and D2 pass on one
-clean commit.
+new 8-node job is authorized until RED→GREEN, full one-node, and D2 pass on one
+clean commit. No ninth-node job is part of P08R.

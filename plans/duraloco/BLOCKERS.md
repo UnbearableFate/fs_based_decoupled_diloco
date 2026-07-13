@@ -2,8 +2,9 @@
 
 No correctness blocker is open. P08 completed with independent Checker PASS,
 but P10 execution is intentionally sequenced after the user-requested P08R
-performance gate. The gate requires complete matched 50×10 C9, D8 factor-one,
-and D8-R2 experiments to finish within 440 seconds; its executable plan is
+performance gate. The gate requires complete eight-node 50×10 D8 factor-one
+and D8-R2 experiments to finish within 440 seconds; C9 is historical-only and
+no future run may allocate a ninth node. Its executable plan is
 `plans/duraloco/phases/P08R_440S_OPTIMIZATION_PLAN.md`.
 
 Runtime checks must remain `not_run` until a PBS compute job produces evidence;

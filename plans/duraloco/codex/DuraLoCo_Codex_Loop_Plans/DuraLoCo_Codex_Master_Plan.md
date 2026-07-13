@@ -10,6 +10,11 @@ architecture_target: "learner-hosted distributed fragment syncer"
 
 # DuraLoCo Codex Loop-Engineering Implementation Plans
 
+> Forward-topology amendment (2026-07-13): D-0821 supersedes every executable
+> C9/nine-node reference in P08R and later work. Current/future qualification,
+> chaos, and formal runs use exactly eight learner nodes with no dedicated or
+> idle ninth host. Older C9 text is historical design provenance only.
+
 本目录定义 DuraLoCo 的 SQLite-free、event-sourced、dedicated-syncer-free 主线。当前
 P00–P07（含 M00、P06A、P06B、P06C）均已完成；P07 verified implementation/Checker
 commit 为 `c099adc`，独立 Checker PBS `2369002` 对 P07-A01–A24 给出 `PASS`。下一阶段

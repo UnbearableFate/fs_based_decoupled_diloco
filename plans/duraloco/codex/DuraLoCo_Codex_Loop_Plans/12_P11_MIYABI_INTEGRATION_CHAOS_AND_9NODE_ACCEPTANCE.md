@@ -21,6 +21,10 @@ human_approval_gates:
 
 # P11 — Miyabi Integration、Chaos 与 Dedicated-Syncer-Free Acceptance
 
+> **D-0821 forward amendment:** P11 uses exactly eight learner nodes. Do not
+> submit C9 or allocate a dedicated/idle ninth host. Any older C9/nine-node
+> requirement below is historical planning provenance and is non-executable.
+
 ## 1. 阶段使命
 
 把P06B–P10的distributed syncer主线固化为可重复的Miyabi生产workflow，完成D1、D2、D8和D8-R2的preflight、chaos、artifact packaging与operator drill。C9 dedicated CRS保留为matched reference baseline，但P11的主acceptance是八个learner节点、零专用syncer节点。

@@ -6,14 +6,17 @@
 
 ## 已完成范围
 
-M00–P07 已完成，H0 pre-P08 hardening 也已完成。当前可继承的 runtime commit 是
-`f167a07c49339ba42d14f8a5873fe2c8781884d4`，独立 checker commit 是
-`04e0a8634b0e9d7c4cd55c5593081a0ca969a060`。详细验收与失败记录见：
+M00–P08 已完成。P08 runtime commit 是
+`8492eb4163b406baf67d6d56f100b693dd6aa781`，独立 Checker PBS
+`2371170.opbs` 为 PASS。当前工作是 pre-P10 的 P08R 440 秒性能门。H0
+runtime/checker 仅作为历史依赖证据。详细验收与失败记录见：
 
 - [H0 phase report](../plans/duraloco/phases/H0_PHASE_REPORT.md)
 - [H0 run/failure ledger](../plans/duraloco/phases/H0_RUN_LEDGER.md)
 - [H0 checker report](../plans/duraloco/phases/H0_CHECKER_REPORT.md)
 - [P07 phase report](../plans/duraloco/phases/P07_PHASE_REPORT.md)
+- [P08 phase report](../plans/duraloco/phases/P08_PHASE_REPORT.md)
+- [P08R 440-second plan](../plans/duraloco/phases/P08R_440S_OPTIMIZATION_PLAN.md)
 
 当前实现已经覆盖：单 head-CAS 事务日志、严格 replay、fenced floating committer、learner-hosted
 冗余 fragment execution、membership revision、snapshot+suffix 恢复、可解释 reachability、
@@ -37,6 +40,10 @@ transition、5 次 lifecycle cycle、8 个 exact capsule、executor process loss
 loss 和 authoritative stop，总耗时 752 秒。五次 inventory 的 payload bytes read 均为 0；
 strict replay 对实际读取对象仍执行完整校验。
 
+该九节点 allocation 仅是历史 H0 证据：实际 runtime 只有 8 个 learner host，第九节点
+未承担角色。根据 D-0821，当前 P08R 及后续阶段统一使用严格 8-node allocation；不再提交
+C9 或任何包含 dedicated/idle 第九节点的作业。
+
 ## 为什么最大故障恢复是 89.44 秒
 
 该指标测量“故障发生到下一次 committed transition”，不是单纯的进程重启时间。它包含：
@@ -59,8 +66,9 @@ I/O、验证复用、single-copy publication、materialization 和 proposal cata
 
 ## 尚未完成或不能声称的内容
 
-- P08 尚未完成：POSIX `range_get` 仍通过完整 `get` 后切片；proposal catalog 仍有重复扫描、
-  payload 再验证、全量 materialization/copy 和潜在 O(N²) lineage 路径。
+- P08R 尚未完成：当前 D8 factor-one/R2 完整 50×10 分别为 950/725 秒，目标是在严格
+  8-node allocation 上均不超过 440 秒；主要剩余项是重复 replay、terminal replay 与 lifecycle
+  critical-path 开销。
 - `data.streaming` 是配置字段，但当前训练/性能基线不能据此声称真正端到端 streaming。
 - exact capsule schema、发布、恢复和 synthetic bitwise continuation 已验证；D8 chaos 中 whole-member
   loss 采用 membership removal，不等于自动恢复失败 learner 并无缝重入。

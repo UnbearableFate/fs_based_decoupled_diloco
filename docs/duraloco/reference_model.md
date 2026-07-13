@@ -26,7 +26,7 @@ prepared result 不是第二套 state machine。
 2. memory/POSIX fault tests：storage/commit crash windows；
 3. 1-node compute：真实 runtime、codec、GPU/model 或 focused lifecycle；
 4. 2-node compute：Lustre cross-node locking、visibility、failover；
-5. 9-node/D8-R2：完整 topology、workload、fault schedule 和 lifecycle；
+5. 8-node/D8-R2：完整 topology、workload、fault schedule 和 lifecycle；
 6. independent checker：RED-on-base、GREEN-on-feature、identity/checksum audit。
 
 较低层 PASS 不能替代较高层，较高层也不能追溯性地使未运行的 gate 变成 PASS。

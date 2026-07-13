@@ -362,13 +362,15 @@ def _runtime(args: argparse.Namespace, mode: str) -> int:
 
 
 def _compare(args: argparse.Namespace) -> int:
+    report_paths = {
+        "factor_one": args.factor_one_report,
+        "r2": args.r2_report,
+    }
+    if args.no_lfe_report is not None:
+        report_paths = {"no_lfe": args.no_lfe_report, **report_paths}
     reports = {
         mode: json.loads(path.read_text(encoding="utf-8"))
-        for mode, path in {
-            "no_lfe": args.no_lfe_report,
-            "factor_one": args.factor_one_report,
-            "r2": args.r2_report,
-        }.items()
+        for mode, path in report_paths.items()
     }
     stable_fields = (
         "git_commit",
@@ -396,20 +398,22 @@ def _compare(args: argparse.Namespace) -> int:
     payload = {
         **comparison,
         "status": "PASS",
-        "binding": {field: reports["no_lfe"]["binding"][field] for field in stable_fields},
+        "binding": {
+            field: next(iter(reports.values()))["binding"][field]
+            for field in stable_fields
+        },
         "unmatched_dimensions": {
-            "execution_topology": {
-                "no_lfe": "one dedicated centralized syncer; no learner-hosted executor",
+            "execution_topology": ({
+                "no_lfe": "historical dedicated centralized syncer; no learner-hosted executor",
                 "factor_one": "eight learner-hosted LFEs; replication factor one",
                 "r2": "eight learner-hosted LFEs; hedged factor two and one controlled fault",
-            }
+            } if "no_lfe" in reports else {
+                "factor_one": "eight learner-hosted LFEs; replication factor one",
+                "r2": "eight learner-hosted LFEs; hedged factor two and one controlled fault",
+            })
         },
         "negative_tradeoffs_reported": True,
-        "source_reports": {mode: str(path) for mode, path in {
-            "no_lfe": args.no_lfe_report,
-            "factor_one": args.factor_one_report,
-            "r2": args.r2_report,
-        }.items()},
+        "source_reports": {mode: str(path) for mode, path in report_paths.items()},
     }
     _write(args.output, payload)
     return 0
@@ -463,7 +467,7 @@ def parse_args() -> argparse.Namespace:
         if mode == "factor-one":
             command.add_argument("--base-report", type=Path, required=True)
     compare = subparsers.add_parser("compare")
-    compare.add_argument("--no-lfe-report", type=Path, required=True)
+    compare.add_argument("--no-lfe-report", type=Path)
     compare.add_argument("--factor-one-report", type=Path, required=True)
     compare.add_argument("--r2-report", type=Path, required=True)
     compare.add_argument("--output", type=Path, required=True)

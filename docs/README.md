@@ -54,4 +54,5 @@ baseline 文件因被 traceability 引用而保留，并在文件首部明确标
 - authority、derived/observational 对象和历史兼容路径必须明确区分。
 - 故障和 superseded run 必须写入 `plans/duraloco/phases/` 下的当前 ledger/report。
 - 修改本目录后运行 `scripts/agent/check_docs.py` 和 `check_research_contract.py`。
-- 若改动运行表面，仍需遵守 Miyabi 的 1-node → 2-node → 9-node 验证阶梯。
+- 若改动运行表面，仍需遵守 Miyabi 的 1-node → 2-node → 8-node 验证阶梯；
+  当前及后续实验禁止申请第九节点。

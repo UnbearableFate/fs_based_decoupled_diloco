@@ -21,6 +21,10 @@ human_approval_gates:
 
 # P12 — Formal Experiments、Artifact、Related Work 与 Paper Evidence
 
+> **D-0821 forward amendment:** all current P12 cells use exactly eight learner
+> nodes. Do not submit C9/C9-HA or allocate a dedicated/idle ninth host. Older
+> C9 text below is historical planning provenance and is non-executable.
+
 ## 1. 阶段使命
 
 冻结实验registry并完成DuraLoCo distributed-syncer路线的correctness、resource efficiency、failure-free性能、fault goodput、lifecycle、controller、redundancy和model-quality评估；将所有图表、claim、相关工作差异和artifact reproduction绑定到immutable run manifests。P12可得Supported、Bounded/conditional或Rejected/negative结论，不能通过删除失败数据制造成功。

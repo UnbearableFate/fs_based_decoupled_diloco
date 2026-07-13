@@ -24,12 +24,13 @@ sed -n '1,220p' docs/status.md
 
 当前 DuraLoCo 分布式资格路径使用：
 
-- `configs/duraloco_milestone_gpt2_9node_50x10.yaml`：GPT-2/WikiText-2，50 local × 10 global；
-- `scripts/miyabi/run_duraloco_p07_d1_r2.pbs`：1-node real D1；
-- `scripts/miyabi/run_duraloco_p07_d2_r2.pbs`：2-node tiny failover；
-- `scripts/miyabi/run_duraloco_p07_d8_r2.pbs`：9-node allocation、8 learner/runtime host。
+- `configs/duraloco_milestone_gpt2_8node_50x10.yaml`：GPT-2/WikiText-2，50 local × 10 global；
+- `scripts/miyabi/run_duraloco_p08_d1.pbs`：1-node real D1；
+- `scripts/miyabi/run_duraloco_p08_d2_resume_r2.pbs`：2-node failover；
+- `scripts/miyabi/run_duraloco_p08_d8.pbs`：8-node D8 factor-one；
+- `scripts/miyabi/run_duraloco_p08_d8_r2.pbs`：8-node D8-R2。
 
-`run_1node_debug.pbs`、`run_2node_debug.pbs`、`run_9node_*` 和
+`run_1node_debug.pbs`、`run_2node_debug.pbs` 和
 `scripts/local/run_tiny_2proc_smoke.sh` 是较早的 central-syncer/reference smoke。它们可以用于
 局部调试，但不能替代 P07/H0 的 distributed executor + floating committer 资格证明。
 
@@ -69,10 +70,10 @@ D8 还可能要求上一阶段 factor-one report。实际变量以脚本中的 `
         ↓
 2-node lock/correctness + D2-R2
         ↓
-9-node allocation / D8-R2
+8-node allocation / D8-R2
 ```
 
-不允许用 9-node PASS 反推未运行的 1/2-node gate，也不允许非瞬态 9-node terminal failure 后原样
+不允许用 8-node PASS 反推未运行的 1/2-node gate，也不允许非瞬态 8-node terminal failure 后原样
 立即重投。见 [operations.md](operations.md)。
 
 ## 5. 检查结果

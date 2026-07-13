@@ -18,18 +18,18 @@ authority/runs/<run-id>/generations/<8-digit-generation>/control/head.json
 
 ## 当前状态
 
-- M00–P07 已完成；P08（direct fragment I/O、streaming reducer 与性能治理）尚未实现。
-- H0 hardening 已完成，合格 runtime commit 为
-  `f167a07c49339ba42d14f8a5873fe2c8781884d4`，独立 Checker 为
-  `04e0a8634b0e9d7c4cd55c5593081a0ca969a060`。
-- 最终 9-node allocation / 8-node runtime GPT-2 + WikiText-2 实验完成 50 local × 10 global，
-  总耗时 752 秒，最大故障到下一次提交恢复时间 89.44 秒。
+- M00–P08 已完成；P08 runtime commit 为
+  `8492eb4163b406baf67d6d56f100b693dd6aa781`，独立 Checker PBS
+  `2371170.opbs` 为 PASS。当前工作是 pre-P10 的 P08R 性能恢复门。
+- 历史 H0 的 9-node allocation / 8-node runtime GPT-2 + WikiText-2 实验完成
+  50 local × 10 global，总耗时 752 秒，最大故障到下一次提交恢复时间 89.44 秒。
+  当前及后续生产/资格实验统一为严格 8-node allocation，不再申请第九节点。
 - 当前分支上的精确状态和原始证据入口见 [docs/status.md](docs/status.md) 与
   [plans/duraloco/STATE.yaml](plans/duraloco/STATE.yaml)。
 
 89.44 秒包含安全 lease 失效等待、takeover 后 empty-cache strict replay、proposal 重选和下一次
 transition 的执行/提交；其中 lease 参数 `TTL=45s`、`renew=10s`、`clock skew=2s` 决定了约
-37–47 秒的安全接管窗口。这是当前可接受的正确性基线，不是最终性能目标；P08/P11 仍应优化
+37–47 秒的安全接管窗口。这是当前可接受的正确性基线，不是最终性能目标；P08R/P11 仍应优化
 恢复路径和扫描/I/O 放大，但不能缩短 fencing 安全边界。
 
 ## 从这里开始
@@ -61,7 +61,7 @@ artifacts/duraloco/        PBS 运行产物（环境中存在时）
 
 登录节点只用于查看、编辑、静态检查、提交 PBS 和读取日志。不得在登录节点执行训练、模型
 加载、CUDA/torch/transformers import、数据预处理、`torchrun`、`mpirun` 或 pytest runtime
-测试。运行时验证必须在 PBS compute allocation 内按 1-node → 2-node → 9-node 顺序进行。
+测试。运行时验证必须在 PBS compute allocation 内按 1-node → 2-node → 8-node 顺序进行。
 
 登录节点可执行：
 
@@ -74,9 +74,9 @@ bash -n scripts/miyabi/*.pbs scripts/miyabi/*.sh scripts/local/*.sh
 ```
 
 PBS 脚本提交前必须绑定干净 commit，并显式设置脚本要求的 `EXPECTED_COMMIT`、`RUN_ID`、
-`ARTIFACT_ROOT`、`STORAGE_ROOT` 等变量。不要把旧的 central-syncer smoke 脚本当作当前
-DuraLoCo 分布式资格证明；当前合格入口是 `run_duraloco_p07_d1_r2.pbs`、
-`run_duraloco_p07_d2_r2.pbs` 和 `run_duraloco_p07_d8_r2.pbs`。
+`ARTIFACT_ROOT`、`STORAGE_ROOT` 等变量。不要把旧的 central-syncer 或九节点 allocation
+脚本当作当前 DuraLoCo 分布式资格证明；当前性能恢复入口以 P08R 计划及严格 8-node 的
+`run_duraloco_p08_d8.pbs`、`run_duraloco_p08_d8_r2.pbs` 为准。
 
 ## 通信与兼容范围
 

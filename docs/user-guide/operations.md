@@ -6,17 +6,17 @@
 |---|---|---|
 | Login node | 编辑、`rg/git`、`bash -n`、静态 Python checker、`qsub/qstat`、日志读取 | 训练、模型/数据加载、torch/CUDA/transformers import、pytest runtime、MPI/torchrun |
 | 1-node compute | unit/integration、真实 D1、targeted benchmark | 直接替代 2-node 锁/可见性证据 |
-| 2-node compute | Lustre lock、CAS race、D2-R2 failover | 推断 9-node 性能/故障结果 |
-| 9-node allocation | 8 learner/runtime host 的 D8-R2 terminal experiment | 绕过前两级 qualification |
+| 2-node compute | Lustre lock、CAS race、D2-R2 failover | 推断 8-node 性能/故障结果 |
+| 8-node allocation | 8 learner/runtime host 的 D8/D8-R2 terminal experiment | 绕过前两级 qualification、增加第九节点 |
 
 PBS 中 MPI 只负责在 host 上启动进程。环境通过 `/usr/bin/env` 显式传递，不依赖 MPI `-x`；训练
 数据面本身不是 MPI collective。
 
 ## 当前分布式拓扑
 
-D8-R2 的 allocation 有 9 个节点，但只有前 8 个承载 learner runtime：每个节点一张 learner
-GPU、一个 CPU LFE；其中两个 learner host 还启动 eligible committer candidate。第 9 个节点
-作为 control-plane allocation host 记录在 topology evidence 中，不是专用 stateful syncer。
+D8-R2 的 allocation 严格为 8 个节点，全部承载 learner runtime：每个节点一张 learner
+GPU、一个 CPU LFE；其中两个 learner host 还启动 eligible committer candidate。不存在专用
+syncer、control/audit host、spare 或闲置第九节点；manifest 中 allocated/active host 集合必须相同。
 
 committer CLI：
 
@@ -100,7 +100,7 @@ request ID；real namespace 不提供 destructive apply 入口。
 - `latest.json`、stop file、heartbeat 和 telemetry 不能用于决定恢复 prefix。终止权威是 committed
   stop/error control transition。
 
-## 非瞬态 9-node 失败
+## 非瞬态 8-node 失败
 
 不要原样立即重投。必须：
 
@@ -109,7 +109,7 @@ request ID；real namespace 不提供 destructive apply 入口。
    或 root-cause review；
 3. 用最小 targeted compute benchmark 证明修复；
 4. 在同一个干净 commit 上重新通过 1-node 与 2-node qualification；
-5. 只允许一次新的 9-node attempt，并把 superseded PASS/FAIL 都保留。
+5. 只允许一次新的 8-node attempt，并把 superseded PASS/FAIL 都保留。
 
 queue delay、未运行或日志暂不可见不是 PASS。只有 terminal PBS、artifact audit 和 independent
 checker 共同满足 acceptance 时才能更新 phase 为 completed。

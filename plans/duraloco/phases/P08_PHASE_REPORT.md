@@ -376,3 +376,10 @@ baselines. It targets the confirmed replay/lifecycle control-plane bottleneck,
 not the already-faster learner GPU or LFE. No implementation or new runtime
 experiment has been performed yet; the next authorized action is a one-node
 real-prefix replay scaling benchmark.
+
+On 2026-07-13 the user corrected the forward topology: P08R and later phases
+must not allocate a ninth node. Historical C9 and P08 nine-node-allocation
+artifacts remain immutable evidence, but the P08R gate now contains only
+eight-node D8 factor-one and D8-R2 runs. The previously proposed ninth-node
+audit worker was never implemented and is removed from the plan; lifecycle
+work must fit the existing eight learner hosts or run after their worker exit.

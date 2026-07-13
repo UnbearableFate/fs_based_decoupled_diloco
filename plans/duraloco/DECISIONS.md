@@ -904,3 +904,10 @@ P05+ 的规范性路线决策生效。
 
 - Choice: preserve the P07 lifecycle reporter's 64-object default. P08 R2 binds an explicit 80-object two-interval tail budget: P08 typed resource/attempt evidence adds eight effective-live objects per lifecycle cadence relative to the P07 curve, hence sixteen across the report's three-point/two-interval tail. The measured R2 tail is 229/265/301 (delta 72), while every adjacent cadence remains a constant 36 objects and reclaimable candidates grow 120/182/244. The extension changes only the observational acceptance budget; reachability, two-snapshot retention, dry-run deletion policy, and authority are unchanged.
 - Rejected: silently widening P07, disabling the bounded-window check, treating factor-two attempt/resource objects as leaks, or accepting an unbounded/nonlinear curve.
+
+## D-0821 — Eight-node-only forward production topology
+
+- Context: completed P08 D8/D8-R2 wrappers requested nine nodes but launched only eight learner-host ranks; the ninth host was merely recorded and performed no runtime role. A later draft incorrectly proposed using that idle host for lifecycle audit work.
+- Choice: P08R and every later current/future DuraLoCo production, qualification, chaos, and formal experiment allocate exactly eight learner nodes and no dedicated syncer, control, audit, spare, or idle ninth node. Learner-hosted LFEs and floating committers remain within those eight hosts. Historical C9 and completed nine-node-allocation artifacts remain read-only evidence and are never required to be rerun.
+- Performance/evidence: manifests must distinguish allocated and active hosts and fail unless both sets contain exactly the same eight hosts. Lifecycle/report work must fit audited resources on those hosts or run after worker exit; it cannot justify an extra allocation. Forward comparisons use D8 factor-one, D8-R2 modes, SACC variants, and conventional checkpoint baselines that fit the same eight-node envelope.
+- Rejected: reserving an idle ninth node to make allocation shapes look matched; reintroducing a dedicated CRS/audit host; or describing an eight-rank job as a nine-node production topology.

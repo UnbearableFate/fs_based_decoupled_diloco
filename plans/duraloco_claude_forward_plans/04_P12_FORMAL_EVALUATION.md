@@ -31,8 +31,6 @@ manufactured by deleting unfavorable data.
 
 | Code | Configuration |
 |---|---|
-| C9 | 8 learners + 1 dedicated CRS |
-| C9-HA | 8 learners + dedicated active/standby syncer (P05 fault baseline) |
 | D8 | 8 learner nodes, factor 1, no dedicated syncer |
 | D8-R2-W | D8, factor 2, warm standby |
 | D8-R2-H | D8, factor 2, hedged |
@@ -40,8 +38,9 @@ manufactured by deleting unfavorable data.
 | D8-SACC-ALG | only if the P10 algorithm tier qualified; new generation |
 | checkpoint baseline | conventional checkpoint+restart where available |
 
-Every comparison states node/GPU allocation differences explicitly; never
-wall-clock alone while C9 holds an extra node.
+Every current comparison uses the same eight-node allocation. Historical C9
+results may be cited as archival context but cannot enter a matched statistical
+cell or trigger a new ninth-node run.
 
 ## 3. Candidate research claims
 
@@ -63,8 +62,8 @@ classification pre-reviewed by the checker.
 
 D-1201 endpoints + success criteria; D-1202 matched-token / matched-compute /
 matched-allocation comparison bases; D-1203 seeds/repetitions/confidence
-intervals; D-1204 fault distributions/tapes/controls; D-1205 C9 extra-node
-accounting; D-1206 quality non-inferiority or bounded-difference criteria;
+intervals; D-1204 fault distributions/tapes/controls; D-1205 exact eight-node
+allocation accounting; D-1206 quality non-inferiority or bounded-difference criteria;
 D-1207 exclusion/inconclusive rules; D-1208 science-vs-engineering lineage
 separation; D-1209 artifact licenses/secrets/redaction; D-1210 claim wording
 and related-work priority check.
@@ -80,7 +79,7 @@ validation with zero results present.
 
 ### Loop 2 — Correctness and resilience campaign
 Systematic validation of duplicate execution, fencing, reconfiguration,
-replay, GC, capsules on D8 / D8-R2-W/H / C9-HA with fixed fault tapes and
+replay, GC, and capsules on D8 / D8-R2-W/H with fixed fault tapes and
 no-fault controls. Metrics: double inclusion, mixed state, live deletion,
 divergence blockers, committed progress, RTO/RPO, lost/repeated tokens,
 availability, fault goodput. **Added cell (review H2 regression): injected
@@ -90,10 +89,10 @@ endpoint.** Any safety violation is explained and re-verified after fix, or
 the core claim is Rejected.
 
 ### Loop 3 — Failure-free performance and resource efficiency
-C9 vs D8 vs R2 vs SACC: wall time, useful tokens/s, outer transitions/s,
+D8 factor-one vs R2 vs SACC: wall time, useful tokens/s, outer transitions/s,
 GPU step time, CPU/RSS, Lustre bytes + metadata ops (per-stage counters, not
 one aggregate), publish→adopt latency, duplicate waste, allocation
-efficiency; 8-vs-9-node accounting explicit. Raw manifests reconstruct every
+efficiency; exact eight-node accounting explicit. Raw manifests reconstruct every
 figure; break-even conditions stated.
 
 ### Loop 4 — Redundancy, fault goodput, state-transfer claim
@@ -134,7 +133,7 @@ one retry-lock counterexample. Internal review walks every claim.
 ## 7. Invariants
 
 Results cannot modify preregistered criteria. All failures/cancellations/
-exclusions/retries retain lineage. C9/D8 resource bases explicit.
+exclusions/retries retain lineage. Every current cell uses exactly eight nodes.
 Correctness and quality claims separated. Raw manifests are the analysis
 input; no database dependency. Figures rebuild from the final clean analysis
 commit. P09 non-selection does not affect completion.
@@ -146,8 +145,8 @@ commit. P09 non-selection does not affect completion.
 - [ ] P12-A03: correctness campaign clean (incl. stop-fact truthfulness
       audit) or violations explained/fixed/re-verified.
 - [ ] P12-A04: divergent-duplicate expected-BLOCKED formal evidence.
-- [ ] P12-A05–A07: failure-free overhead, node/GPU efficiency, C9 extra-node
-      accounting, CPU/GPU/Lustre/interference attribution complete.
+- [ ] P12-A05–A07: failure-free overhead, node/GPU efficiency, exact
+      eight-node accounting, and CPU/GPU/Lustre/interference attribution complete.
 - [ ] P12-A08/A09: redundancy break-even + negative regions; fault goodput /
       RTO / RPO / lost-repeated work complete.
 - [ ] P12-A10: zero private optimizer-state transfer on ownership migration,
@@ -184,7 +183,7 @@ automatic public release.
 
 ```text
 Execute P12 formal evaluation. Freeze registry/preregistration first, then run
-C9/C9-HA/D8/D8-R2/SACC correctness (incl. stop-fact truthfulness), resource,
+D8/D8-R2/SACC correctness (incl. stop-fact truthfulness), resource,
 fault, lifecycle, and quality cells. Retain every fail/cancel/exclusion/retry;
 figures rebuild from raw manifests only. Update related-work differentiation
 and the claim–evidence matrix; independent clean reproduction. Supported/

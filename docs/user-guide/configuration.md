@@ -48,7 +48,7 @@ fragment layout、optimizer、dtype 或 redundancy policy 后，需要重新建�
 
 ## D8-R2 合格基线
 
-`configs/duraloco_milestone_gpt2_9node_50x10.yaml` 的关键值：
+`configs/duraloco_milestone_gpt2_8node_50x10.yaml` 的关键值：
 
 ```yaml
 model: {name_or_path: gpt2, dtype: bfloat16}

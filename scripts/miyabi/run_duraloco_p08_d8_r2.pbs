@@ -1,8 +1,8 @@
 #!/bin/bash
-#PBS -N duraloco_p08_r2
+#PBS -N duraloco_p08r_r2
 #PBS -q regular-g
 #PBS -W group_list=xg24i002
-#PBS -l select=9:mpiprocs=1
+#PBS -l select=8:mpiprocs=1
 #PBS -l walltime=00:30:00
 #PBS -j oe
 #PBS -m ae
@@ -11,10 +11,10 @@ set -eEuo pipefail
 export PAGER=cat MODULES_PAGER=cat LMOD_PAGER=cat WANDB_MODE=disabled
 export FS_DILOCO_CAPSULE_CADENCE=1 FS_DILOCO_CAPSULE_MAX_SEQUENCE=1
 : "${EXPECTED_COMMIT:?}" "${RUN_ID:?}" "${ARTIFACT_ROOT:?}" "${STORAGE_ROOT:?}"
-: "${NO_LFE_REPORT:?}" "${FACTOR_ONE_REPORT:?}"
+: "${FACTOR_ONE_REPORT:?}"
 PROJECT_ROOT="${PBS_O_WORKDIR:?PBS_O_WORKDIR is not set}"
 PYTHON_BIN="$PROJECT_ROOT/.venv/bin/python"
-CONFIG="$PROJECT_ROOT/configs/duraloco_milestone_gpt2_9node_50x10.yaml"
+CONFIG="$PROJECT_ROOT/configs/duraloco_milestone_gpt2_8node_50x10.yaml"
 TRAINING_ROOT="$STORAGE_ROOT/training"
 TRAIN_RUN="$RUN_ID-training"
 cd "$PROJECT_ROOT"
@@ -35,17 +35,17 @@ finish() {
   observed=$?
   [[ "$result" == pass ]] && exit_code=0 || { [[ "$observed" -eq 0 ]] || exit_code=$observed; }
   qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
-  args=(--root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json" --phase P08
+  args=(--root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json" --phase P08R
     --purpose experiment --run-id "$RUN_ID" --schema-version 2
-    --validation-shape p08-d8-r2-controlled-executor-fault-gpt2-wikitext2-50x10
+    --validation-shape p08r-d8-r2-eight-node-controlled-fault-gpt2-wikitext2-50x10
     --backend lustre --model-revision gpt2 --dataset-revision wikitext-2-raw-v1
     --config scripts/miyabi/run_duraloco_p08_d8_r2.pbs --commands-log commands.log
     --stdout stdout.log --stderr stderr.log --exit-code "$exit_code" --result "$result"
     --termination-kind "$([[ "$result" == pass ]] && echo success || echo test_failure)"
-    --pbs-queue regular-g --requested-resources select=9:mpiprocs=1,walltime=00:30:00
-    --last-qstat-state R --termination-detail "P08 D8-R2 optimized 50x10, controlled executor fault, matched interference and bundle gate"
+    --pbs-queue regular-g --requested-resources select=8:mpiprocs=1,walltime=00:30:00
+    --last-qstat-state R --termination-detail "P08 D8-R2 eight-node 50x10, controlled executor fault, matched factor-one interference and bundle gate"
     --assertion "hedged factor two recovers one recorded executor exception with complete loser-attempt telemetry"
-    --assertion "ten single-head transitions, raw profiles, matched no-LFE/factor-one/R2 interference, and D-0807 gate pass"
+    --assertion "ten single-head transitions, raw profiles, matched eight-node factor-one/R2 interference, and D-0807 gate pass"
     --assertion "P07 strict/snapshot replay, capsules, reachability, bounded lifecycle dry-runs, and lifecycle regressions pass")
   [[ -f "$ARTIFACT_ROOT/p08_d8_r2_report.json" ]] && args+=(--stage-metrics-path p08_d8_r2_report.json)
   "$PYTHON_BIN" scripts/agent/create_run_manifest.py "${args[@]}" || true
@@ -56,13 +56,12 @@ trap 'echo "[ERROR] P08 D8-R2 failed at line $LINENO" | tee -a "$ARTIFACT_ROOT/s
 [[ "$(hostname)" == mg* ]]
 [[ "$(git rev-parse HEAD)" == "$EXPECTED_COMMIT" ]]
 [[ -z "$(git status --porcelain=v1 --untracked-files=no)" ]]
-[[ -f "$NO_LFE_REPORT" && -f "$FACTOR_ONE_REPORT" ]]
+[[ -f "$FACTOR_ONE_REPORT" ]]
 mapfile -t ALL_HOSTS < <(sort -u "$PBS_NODEFILE")
-[[ "${#ALL_HOSTS[@]}" -eq 9 ]]
-LEARNER_HOSTS=("${ALL_HOSTS[@]:0:8}")
+[[ "${#ALL_HOSTS[@]}" -eq 8 ]]
+LEARNER_HOSTS=("${ALL_HOSTS[@]}")
 printf '%s\n' "${ALL_HOSTS[@]}" | tee "$ARTIFACT_ROOT/hosts.log"
 printf '%s\n' "${LEARNER_HOSTS[@]}" > "$ARTIFACT_ROOT/learner_hosts.log"
-printf '%s\n' "${ALL_HOSTS[8]}" > "$ARTIFACT_ROOT/control_plane_host.log"
 NODE_IDS=$(IFS=,; echo "${LEARNER_HOSTS[*]}")
 git status --short --branch | tee "$ARTIFACT_ROOT/git_status.log"
 git rev-parse HEAD | tee "$ARTIFACT_ROOT/git_commit.log"
@@ -90,7 +89,7 @@ elapsed=$(($(date +%s) - started))
   --config "$CONFIG" --elapsed-seconds "$elapsed" \
   --output "$ARTIFACT_ROOT/p08_d8_r2_report.json" | tee -a "$ARTIFACT_ROOT/stdout.log"
 "$PYTHON_BIN" scripts/agent/create_p08_performance_report.py compare \
-  --no-lfe-report "$NO_LFE_REPORT" --factor-one-report "$FACTOR_ONE_REPORT" \
+  --factor-one-report "$FACTOR_ONE_REPORT" \
   --r2-report "$ARTIFACT_ROOT/p08_d8_r2_report.json" \
   --output "$ARTIFACT_ROOT/interference_report.json" | tee -a "$ARTIFACT_ROOT/stdout.log"
 "$PYTHON_BIN" scripts/agent/create_p08_performance_report.py gate \

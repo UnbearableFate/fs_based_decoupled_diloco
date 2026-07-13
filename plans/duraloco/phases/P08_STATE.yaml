@@ -77,7 +77,10 @@ artifacts:
   - plans/duraloco/phases/P08_CHECKER_REPORT.md
   - artifacts/duraloco/P08/20260713_p08_checker_4dd6dd8_r2/checker_results.json
   - plans/duraloco/phases/P08R_440S_OPTIMIZATION_PLAN.md
-next_action: "execute P08R Loop 0 real-prefix replay RED benchmark on a one-node PBS allocation"
+  - configs/duraloco_milestone_gpt2_8node_50x10.yaml
+  - scripts/miyabi/run_duraloco_p08_d8.pbs
+  - scripts/miyabi/run_duraloco_p08_d8_r2.pbs
+next_action: "execute P08R Loop 0 real-prefix replay RED benchmark on one node, then qualify only the 1->2->8-node ladder"
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

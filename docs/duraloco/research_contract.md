@@ -42,10 +42,11 @@
 
 ## 证据范围
 
-H0 的 terminal 结果绑定 runtime commit `f167a07c49339ba42d14f8a5873fe2c8781884d4`：
+H0 的历史 terminal 结果绑定 runtime commit `f167a07c49339ba42d14f8a5873fe2c8781884d4`：
 9-node allocation、8 GPT-2/WikiText-2 learners、50 local × 10 global、factor-2 LFEs、两个故障注入、
 10 committed transitions、752 秒、最大恢复 89.44 秒。它是该配置和 Miyabi/Lustre 环境的结果，
-不是任意模型规模、后端、故障率或 lease 参数的普遍结论。
+不是任意模型规模、后端、故障率或 lease 参数的普遍结论，也不再定义 forward topology。
+当前及后续实验严格使用 8-node allocation；历史 C9/H0 不得被重新提交为新证据。
 
 Synthetic/in-memory 单元测试证明协议性质，不可表述成 Lustre/GPU/model-quality 证据。所有实验
 主张必须绑定 commit、dirty-tree 状态、config/environment/backend/seed、命令、PBS ID、raw artifact

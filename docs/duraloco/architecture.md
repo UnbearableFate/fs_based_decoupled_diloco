@@ -92,9 +92,9 @@ weights、membership revision、ownership/fencing、backend 和 layout。因此 
 
 ## 当前验证拓扑与兼容路径
 
-H0 D8-R2 在 9-node allocation 上使用前 8 个节点承载 8 learner + 8 LFE，两个 floating
-committer candidate，replication factor 2；第 9 节点是 allocation control-plane host。该拓扑通过
-10 transitions、executor loss、whole-host loss、membership revision 与 lifecycle gate。
+当前 forward D8-R2 使用严格 8-node allocation：8 learner + 8 LFE，两个 floating
+committer candidate，replication factor 2；没有 dedicated syncer、control/audit host 或闲置
+第九节点。历史 H0 使用过 9-node allocation/8-rank runtime，但该 allocation shape 已退休。
 
 `fs_diloco.syncer`、`fs-diloco-syncer` 和早期 `run_*debug.pbs` 仍保留为 central/reference 路径。
 它们不是当前 distributed qualification，不应被描述成 DuraLoCo 的唯一或推荐拓扑。

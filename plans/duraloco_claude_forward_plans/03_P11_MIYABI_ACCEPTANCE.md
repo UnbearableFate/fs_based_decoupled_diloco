@@ -22,13 +22,13 @@ human_approval_gates:
 Solidify the P06B–P10 distributed-syncer mainline into a repeatable Miyabi
 production workflow: preflight, chaos, artifact packaging, and operator drills
 for D1, D2, D8, and D8-R2. The primary acceptance is **eight learner nodes,
-zero dedicated syncer nodes**; C9 (dedicated CRS) remains a matched reference
-baseline only.
+zero dedicated syncer nodes, and no ninth-node allocation**. Historical C9
+evidence is archival only and is not rerun.
 
 Research claim: under a real HPC scheduler, Lustre, and whole-node failures,
 the system keeps a single authority with no global outage (or bounded RTO),
-and the migration of the 9-node 1S+8L workload to 8-node D8 has auditable
-resource-saving and interference evidence.
+and the eight-node D8 topology has auditable resource and interference
+evidence without a hidden control host.
 
 ## 2. Preconditions
 
@@ -43,7 +43,7 @@ module/cache/storage-namespace validation; role placement + capability audit
 (**including the H0 cross-node lock probe as a per-job preflight step, with
 the mount-option evidence recorded in the job manifest**); D1 real acceptance;
 D2 failover/chaos; D8 50×10 terminal acceptance; D8-R2 controlled chaos;
-matched C9 baseline; snapshot/capsule/GC dry-run integration; SACC
+same-topology factor-one baseline; snapshot/capsule/GC dry-run integration; SACC
 fixed/shadow/default validation; fault tapes, authority timelines, stage
 timings, qstat lineage; fail-closed artifact packager; operator runbook +
 recovery drill; terminal-retry lock discipline.
@@ -58,8 +58,8 @@ Repo/ops hygiene items deferred from the code review land in Loop 1:
 - Config validation rejects unsupported `data.streaming: true` (review L28)
   unless implemented by then.
 
-Explicitly not doing: automatic 72 h soaks; runtime on login nodes; C9 as
-production path; new optimizer/protocol generations; deleting failed/
+Explicitly not doing: automatic 72 h soaks; runtime on login nodes; new C9 or
+other ninth-node runs; new optimizer/protocol generations; deleting failed/
 cancelled/operator-terminated runs; disguising operator termination as
 infrastructure failure.
 
@@ -67,7 +67,7 @@ infrastructure failure.
 
 D-1101 exact D8/D8-R2 PBS layout + CPU affinity; D-1102 default production
 controller/redundancy mode; D-1103 fault-tape timing + expected RTO/RPO
-bounds; D-1104 C9 matched alignment; D-1105 terminal criteria + inconclusive
+bounds; D-1104 exact eight-node matched alignment; D-1105 terminal criteria + inconclusive
 classification; D-1106 minimum artifact evidence; D-1107 retry-lock release
 conditions; D-1108 operator drill + authoritative stop; D-1109 optional soak
 approval boundary.
@@ -76,7 +76,7 @@ approval boundary.
 
 ### Loop 1 — PBS/preflight standardization
 Fail-fast checks before submission: commit, modules, storage, namespace,
-topology, forbidden surfaces (hidden syncer node, missing LFE, duplicate GPU
+topology, forbidden surfaces (ninth/hidden syncer node, missing LFE, duplicate GPU
 assignment, login-node runtime, stale plan checksums, SQLite artifacts), and
 the storage capability probe (dir-fsync + cross-node lock). Reusable
 preflight, PBS scripts, manifest skeleton, role/hostname/rank mapping, actual
@@ -108,7 +108,7 @@ state, or live deletion.
 target. Pre-registered topology/terminal/interval/adoption/lifecycle/
 telemetry/controller/resource criteria. Fixed and default production modes at
 least once each on the same clean commit. One LFE kill and one committer
-takeover inside the run (whole-node loss belongs to D8-R2). Matched C9
+takeover inside the run (whole-node loss belongs to D8-R2). Matched factor-one
 comparison + node/GPU-hours + interference. **Stop when:** D8 terminal, or a
 real failure is preserved under the retry discipline and fixed.
 
@@ -133,8 +133,8 @@ read-only store copy, partial bundles, historical failure inclusion.
 
 ## 6. Invariants
 
-No dedicated syncer node in D8/D8-R2. C9 never writes into a distributed
-generation. Head mutation only through the audited committer API; learners/
+No dedicated syncer or ninth node in D8/D8-R2. Historical C9 is never rerun.
+Head mutation only through the audited committer API; learners/
 LFEs have no head-CAS surface. Fault injection never deletes real-failure
 evidence. Retry lock prevents blind same-shape resubmission. Artifacts fail
 closed on missing evidence. Login nodes are control-plane only.
@@ -153,8 +153,9 @@ closed on missing evidence. Login nodes are control-plane only.
       50×10 in the 15-minute target; per-role hostname/session/GPU/affinity/
       ownership traceable; training continues through LFE kill and committer
       takeover.
-- [ ] P11-A11/A12: matched C9 reference complete, outside D8 authority;
-      resources, latency, interference, quality smoke comparable.
+- [ ] P11-A11/A12: matched eight-node factor-one reference complete;
+      resources, latency, interference, and quality smoke comparable with no
+      unmatched host allocation.
 - [ ] P11-A13–A16: D8-R2 chaos campaign passes; whole-node and co-failure
       RTO/RPO/fault-goodput recorded; same-FWO divergence expected-BLOCKED
       artifact complete; lifecycle concurrency causes zero live deletion.
@@ -174,8 +175,8 @@ closed on missing evidence. Login nodes are control-plane only.
 ```text
 Execute P11 Miyabi acceptance. Standardize PBS/preflight (including the storage
 capability and cross-node lock probes and logs/pbs output routing), then climb
-D1→D2→D8→D8-R2. D8/D8-R2 must run on 8 learner nodes with 0 dedicated syncers;
-C9 is a matched reference only. Chaos loops must assert truthful crash
+D1→D2→D8→D8-R2. D8/D8-R2 must run on exactly 8 learner nodes with 0 dedicated
+syncers and no ninth node. Chaos loops must assert truthful crash
 evidence per D-0800. Run fault tapes, lifecycle/controller integration, and
 the artifact/operator drill. Obey the non-transient retry lock and login-node
 discipline. Proceed to P12 when all gates pass.
