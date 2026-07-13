@@ -77,7 +77,7 @@ def main() -> int:
         "failure_ledger_complete": [
             item["error_id"] for item in ledger["entries"]
         ]
-        == [f"P08R-E{index:03d}" for index in range(1, 14)],
+        == [f"P08R-E{index:03d}" for index in range(1, 15)],
         "failure_reasons_recorded": all(
             item.get("situation") and item.get("reason") for item in ledger["entries"]
         ),

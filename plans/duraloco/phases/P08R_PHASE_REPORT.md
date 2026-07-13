@@ -150,3 +150,9 @@ strict equality, unchanged authority head, and D-4406 adjudication. Full
 one-node PBS `2372417` passed 526 tests with one skip; D1 `2372420` and D2
 `2372456` passed. The remaining gate is the independent checker with a fresh
 strict terminal replay.
+
+P08R-E014 / PBS `2372486.opbs` produced an independent checker `PASS` with 73
+focused tests, fresh strict digest equality, unchanged authority head, and no
+follow-ups, but its EXIT manifest used the unsupported purpose `audit`. The
+wrapper now uses the closed `contract` value and the checker is rerun on a fresh
+root; the manifest-less artifact is retained as failed-try evidence.

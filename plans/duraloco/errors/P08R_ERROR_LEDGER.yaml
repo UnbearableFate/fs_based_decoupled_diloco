@@ -1,6 +1,6 @@
 phase: P08R
 schema: duraloco-error-ledger-v1
-updated_at: "2026-07-13T13:40:00+09:00"
+updated_at: "2026-07-13T13:50:00+09:00"
 entries:
   - error_id: P08R-E001
     attempt_kind: control_plane_orchestration
@@ -406,3 +406,32 @@ entries:
       Sum counters from testsuite children when the root is testsuites, retain
       direct testsuite support, and rerun only the small adjudication job.
     retry_gate: adjudication_only_1node_then_clean_qualification
+
+  - error_id: P08R-E014
+    attempt_kind: independent_1node_final_checker
+    pbs_job_id: 2372486.opbs
+    runtime_commit: 0e6da552ec063b3c092199f45beb94ba243a7700
+    situation: >-
+      The first independent checker passed 73 focused tests, independently
+      replayed the accepted R2 authority from snapshot and empty cache strict,
+      proved the head unchanged, and wrote a PASS checker report with no
+      follow-ups. Its EXIT manifest helper rejected the wrapper purpose.
+    outcome: checker_manifest_vocabulary_failure
+    reason: >-
+      The wrapper passed purpose=audit, but the closed manifest vocabulary uses
+      contract for checker runs. create_run_manifest exited with argparse error,
+      leaving the scientifically complete checker artifact without a manifest.
+    evidence:
+      - artifacts/duraloco/P08R/20260713_p08r_checker_0e6da55_r1/checker_report.json
+      - artifacts/duraloco/P08R/20260713_p08r_checker_0e6da55_r1/independent_replay.json
+      - p08r_checker.o2372486
+      - tracejob_2372486_scheduler_exit_0_manifest_missing
+    allocation_nodes: 1
+    focused_tests: {passed: 73, failed: 0}
+    checker_report_status: pass
+    independent_strict_replay_status: pass
+    manifest_written: false
+    repair: >-
+      Use the existing purpose=contract manifest vocabulary and rerun the
+      independent checker on a fresh artifact root.
+    retry_gate: same_independent_checker_shape_fresh_root

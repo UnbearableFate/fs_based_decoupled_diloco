@@ -27,7 +27,7 @@ finish() {
   qstat "$PBS_JOBID" > "$ARTIFACT_ROOT/qstat_final.log" 2>&1 || true
   "$PYTHON_BIN" scripts/agent/create_run_manifest.py \
     --root "$PROJECT_ROOT" --output "$ARTIFACT_ROOT/manifest.json" --phase P08R \
-    --purpose audit --run-id "$RUN_ID" --schema-version 2 \
+    --purpose contract --run-id "$RUN_ID" --schema-version 2 \
     --validation-shape p08r-independent-checker-fresh-strict-replay-1node \
     --backend lustre --config scripts/miyabi/run_duraloco_p08r_checker_1node.pbs \
     --commands-log commands.log --stdout stdout.log --stderr stderr.log \
