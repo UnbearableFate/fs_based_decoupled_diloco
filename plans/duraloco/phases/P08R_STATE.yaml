@@ -76,8 +76,9 @@ artifacts:
   - plans/duraloco/phases/P08R_D8_FAILURE_REVIEW_2372056.md
   - plans/duraloco/phases/P08R_D8R2_FAILURE_REVIEW_2372217.md
 next_action: >-
-  use the one authorized D8-R2 retry on qualified clean runtime commit
-  ba0a5c693eb586d5db27b7e304f230d4acd826a8; do not resubmit again on failure
+  record one matched factor-one baseline on qualified clean runtime commit
+  ba0a5c693eb586d5db27b7e304f230d4acd826a8, then use the one authorized
+  D8-R2 retry against that exact-commit report; do not resubmit on failure
 automatic_progression: true
 requires_human_approval: false
 approval_reason: null

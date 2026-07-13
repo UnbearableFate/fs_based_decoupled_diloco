@@ -109,4 +109,7 @@ The recovery gate passed on clean runtime commit
 digest equality, and proved the authority head unchanged. Focused tests (17),
 full one-node PBS `2372272` (523 passed, one skipped), D1 PBS `2372277`, and D2
 PBS `2372283` all passed. One D8-R2 retry is explicitly authorized on this
-exact commit; another immediate retry is not.
+exact commit; another immediate retry is not. The matched interference gate
+binds factor one and R2 to an identical git commit, so one factor-one baseline
+on `ba0a5c6` is a prerequisite measurement before that R2 retry. It is not an
+R2 resubmission and does not change the one-retry limit.
