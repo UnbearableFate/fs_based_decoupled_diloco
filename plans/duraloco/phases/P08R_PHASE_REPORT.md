@@ -101,3 +101,12 @@ terminal strict audit. The preserved root-cause review is
 `P08R_D8R2_FAILURE_REVIEW_2372217.md`. No D8-R2 resubmission is authorized
 until the opt-in deferral repair passes the smallest compute benchmark and a
 fresh clean-commit 1-node to 2-node ladder.
+
+The recovery gate passed on clean runtime commit
+`ba0a5c693eb586d5db27b7e304f230d4acd826a8`. Frozen-authority benchmark PBS
+`2372265` reduced the conservative terminal-sized periodic read-only cycle to
+1.944 seconds, retained one 52.772-second empty-cache terminal audit with exact
+digest equality, and proved the authority head unchanged. Focused tests (17),
+full one-node PBS `2372272` (523 passed, one skipped), D1 PBS `2372277`, and D2
+PBS `2372283` all passed. One D8-R2 retry is explicitly authorized on this
+exact commit; another immediate retry is not.
