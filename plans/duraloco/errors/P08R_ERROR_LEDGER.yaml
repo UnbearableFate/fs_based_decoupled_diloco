@@ -25,7 +25,7 @@ entries:
   - error_id: P08R-E002
     attempt_kind: targeted_1node_real_prefix_replay
     pbs_job_id: 2371888.opbs
-    runtime_commit: a265fa9fb0790e432ca6f6f6ca48022f20f0cd23
+    runtime_commit: a265fa9a48974d07c70c3f8fddf924c685e91266
     situation: >-
       The first one-node targeted replay allocation started on mg0008 and
       exited before tests or model/log replay began.
@@ -43,5 +43,7 @@ entries:
     repair: >-
       Create only the stable parent with mkdir -p, then retain plain mkdir for
       the unique leaf so namespace reuse still fails closed. Submit from the
-      clean detached runtime worktree so PBS_O_WORKDIR binds the tested commit.
+      clean detached runtime worktree so PBS_O_WORKDIR binds the tested commit,
+      and pass the exact git rev-parse value rather than a manually completed
+      abbreviated hash.
     retry_gate: static_bash_n_then_same_1node_targeted_shape
